@@ -29,6 +29,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.fohbible.ui.theme.FohBibleTheme
 
@@ -45,16 +46,19 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun FohBibleApp() {
     var darkTheme by remember { mutableStateOf(false) }
+    var selectedColor by remember { mutableStateOf<Color?>(null) }
 
     FohBibleTheme(darkTheme = darkTheme) {
         var showNavigationModal by remember { mutableStateOf(false) }
+        var showColorWheel by remember { mutableStateOf(false) }
 
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             topBar = {
                 FohBibleAppBar(
                     onBibleIconClick = { showNavigationModal = true },
-                    onThemeToggle = { darkTheme = !darkTheme }
+                    onThemeToggle = { darkTheme = !darkTheme },
+                    onColorLensClick = { showColorWheel = true }
                 )
             }
         ) { innerPadding ->
@@ -66,6 +70,17 @@ fun FohBibleApp() {
             if (showNavigationModal) {
                 NavigationModal(onDismissRequest = { showNavigationModal = false })
             }
+
+            if (showColorWheel) {
+                ColorWheelDialog(
+                    onDismissRequest = { showColorWheel = false },
+                    onColorSelected = { color ->
+                        selectedColor = color
+                        // TODO: Save the selected color to SharedPreferences or ViewModel
+                    },
+                    initialColor = selectedColor ?: Color.White
+                )
+            }
         }
     }
 }
@@ -73,26 +88,28 @@ fun FohBibleApp() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FohBibleAppBar(
-    modifier: Modifier = Modifier, onBibleIconClick: () -> Unit, onThemeToggle:
-    () -> Unit
+    modifier: Modifier = Modifier,
+    onBibleIconClick: () -> Unit,
+    onThemeToggle: () -> Unit,
+    onColorLensClick: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
     TopAppBar(
-        title = { Text("Home") },
+        title = { Text("FohBible") },
         modifier = modifier,
         actions = {
             IconButton(onClick = onBibleIconClick) {
-                Icon(Icons.Filled.Book, contentDescription = "Bible")
+                Icon(Icons.Filled.Book, contentDescription = "Bible Navigation")
             }
             IconButton(onClick = onThemeToggle) {
                 Icon(Icons.Filled.Brightness6, contentDescription = "Toggle Theme")
             }
-            IconButton(onClick = { /* TODO: Open color scheme picker */ }) {
+            IconButton(onClick = onColorLensClick) {
                 Icon(Icons.Filled.ColorLens, contentDescription = "Color Scheme")
             }
             IconButton(onClick = { showMenu = !showMenu }) {
-                Icon(Icons.Filled.MoreVert, contentDescription = "More")
+                Icon(Icons.Filled.MoreVert, contentDescription = "More Options")
             }
             DropdownMenu(
                 expanded = showMenu,
@@ -136,7 +153,7 @@ fun FohBibleAppBar(
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {
     Text(
-        text = "Hello $name!",
+        text = "Welcome to FohBible!",
         modifier = modifier
     )
 }
@@ -153,6 +170,10 @@ fun GreetingPreview() {
 @Composable
 fun FohBibleAppBarPreview() {
     FohBibleTheme {
-        FohBibleAppBar(onBibleIconClick = {}, onThemeToggle = {})
+        FohBibleAppBar(
+            onBibleIconClick = {},
+            onThemeToggle = {},
+            onColorLensClick = {}
+        )
     }
 }
