@@ -47,7 +47,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.fohbible.ui.theme.FohBibleTheme
 
-data class Book(val book_number: Int, val long_name: String, val short_name: String)
+data class Book(val bookNumber: Int, val longName: String, val shortName: String)
 data class ChapterInfo(val chapter: Int, val verseCount: Int)
 
 fun Color.lighten(amount: Float): Color {
@@ -123,7 +123,7 @@ fun NavigationModal(onDismissRequest: () -> Unit) {
                                 shape = MaterialTheme.shapes.medium
                             ) {
                                 Text(
-                                    text = "${it.long_name}${selectedChapter?.let { c -> " $c"} ?: ""}",
+                                    text = "${it.longName}${selectedChapter?.let { c -> " $c"} ?: ""}",
                                     modifier = Modifier.padding(8.dp),
                                     color = MaterialTheme.colorScheme.onPrimary,
                                     textAlign = TextAlign.Center,
@@ -152,7 +152,7 @@ fun NavigationModal(onDismissRequest: () -> Unit) {
                         if (selectedChapter != null) {
                             item {
                                 Button(onClick = onDismissRequest, modifier = Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 20.dp)) {
-                                    Text(text = "Go to ${it.long_name} $selectedChapter")
+                                    Text(text = "Go to ${it.longName} $selectedChapter")
                                 }
                             }
                         }
@@ -214,7 +214,7 @@ fun BookCard(book: Book, color: Color, onClick: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = book.short_name,
+                text = book.shortName,
                 color = textColor,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,

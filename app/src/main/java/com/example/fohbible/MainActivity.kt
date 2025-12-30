@@ -96,7 +96,7 @@ fun FohBibleAppBar(
     var showMenu by remember { mutableStateOf(false) }
 
     TopAppBar(
-        title = { Text("FohBible") },
+        title = { Text("Home") },
         modifier = modifier,
         actions = {
             IconButton(onClick = onBibleIconClick) {
@@ -153,7 +153,7 @@ fun FohBibleAppBar(
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {
     Text(
-        text = "Welcome to FohBible!",
+        text = "Fount of Hope Bible",
         modifier = modifier
     )
 }
