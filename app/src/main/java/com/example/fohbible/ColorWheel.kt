@@ -37,6 +37,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -48,7 +49,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -142,7 +142,7 @@ fun ColorWheelDialog(
                     contentAlignment = Alignment.Center
                 ) {
                     ColorWheel(
-                        modifier = Modifier.size(300.dp),
+                        modifier = Modifier.size(250.dp),
                         brightness = brightness,
                         onColorSelected = { color ->
                             selectedColor = color
@@ -152,7 +152,7 @@ fun ColorWheelDialog(
                         }
                     )
                 }
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 // Brightness slider
                 Text("Brightness")
                 Slider(
@@ -160,11 +160,11 @@ fun ColorWheelDialog(
                     onValueChange = {
                         brightness = it
                         selectedColor = adjustBrightness(selectedColor, it)
-                        hexInput = "#${(selectedColor.toArgb() and 0xFFFFFF).toString(16).padStart(6, '0').uppercase()}"
+                        hexInput = "#${(selectedColor.toArgb() and 0xFFFFFF).toString(12).padStart(6, '0').uppercase()}"
                     },
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 // Saturation slider
                 Text("Saturation")
                 Slider(
@@ -172,7 +172,7 @@ fun ColorWheelDialog(
                     onValueChange = {
                         saturation = it
                         selectedColor = adjustSaturation(selectedColor, it)
-                        hexInput = "#${(selectedColor.toArgb() and 0xFFFFFF).toString(16).padStart(6, '0').uppercase()}"
+                        hexInput = "#${(selectedColor.toArgb() and 0xFFFFFF).toString(12).padStart(6, '0').uppercase()}"
                     },
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -218,19 +218,20 @@ fun ColorWheelDialog(
                         .fillMaxWidth()
                         .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
                         .border(
-                            width = 2.dp,
+                            width = 1.dp,
                             color = if (isValidHex) MaterialTheme.colorScheme.outline else Color(0xFFFF3B30),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(8.dp)
                         )
-                        .padding(4.dp),
+                        .padding(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
                         modifier = Modifier
                             .size(40.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(5.dp))
                             .background(selectedColor)
                             .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(5.dp))
+
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     TextField(
@@ -259,7 +260,16 @@ fun ColorWheelDialog(
                         singleLine = true,
                         maxLines = 1,
                         placeholder = { Text("#FFFFFF") },
-                        isError = !isValidHex
+                        isError = !isValidHex,
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                            disabledContainerColor = MaterialTheme.colorScheme.surface,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            disabledIndicatorColor = Color.Transparent,
+                            errorIndicatorColor = Color.Transparent
+                        ),
                     )
                 }
                 if (!isValidHex) {
@@ -327,14 +337,13 @@ fun ColorSwatch(
             .background(color)
             .border(
                 width = if (isSelected) 3.dp else 1.dp,
-                color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray,
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
                 shape = CircleShape
             )
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { onClick() }
-            .shadow(if (isSelected) 8.dp else 4.dp, CircleShape)
     )
 }
 
