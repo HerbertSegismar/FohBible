@@ -52,6 +52,11 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.compose.material.icons.extended)
     implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.compiler)
+    implementation(libs.androidx.room.common.jvm)
+    implementation(libs.androidx.compose.remote.creation.core)
+    implementation(libs.guava)
+    implementation(libs.androidx.datastore.core)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -59,4 +64,10 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+}
+
+configurations.all {
+    resolutionStrategy {
+        // No longer forcing listenablefuture, as Guava 33.2.1-android includes it.
+    }
 }

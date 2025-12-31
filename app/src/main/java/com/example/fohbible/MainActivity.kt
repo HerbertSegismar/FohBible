@@ -55,6 +55,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -88,98 +90,115 @@ class MainActivity : ComponentActivity() {
 fun FohBibleApp() {
     var darkTheme by remember { mutableStateOf(false) }
     var selectedColor by remember { mutableStateOf<Color?>(null) }
+    var isCustomColor by remember { mutableStateOf(false) }
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Home) }
 
-    FohBibleTheme(darkTheme = darkTheme) {
-        var showNavigationModal by remember { mutableStateOf(false) }
-        var showColorThemeDialog by remember { mutableStateOf(false) }
-        var showColorWheelDialog by remember { mutableStateOf(false) }
+    LaunchedEffect(selectedColor, darkTheme) {
+        selectedColor?.let {
+            ThemeManager.primaryColor = it
+            ThemeManager.darkTheme = darkTheme
+            ThemeManager.isCustomColor = true
+            isCustomColor = true
+        }
+    }
 
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            topBar = {
-                when (currentScreen) {
-                    is Screen.Home -> HomeAppBar(
-                        onBibleIconClick = { showNavigationModal = true },
-                        onThemeToggle = { darkTheme = !darkTheme },
-                        onColorLensClick = { showColorThemeDialog = true }
-                    )
-                    is Screen.Reading -> ReadingAppBar()
-                    is Screen.Bookmarks -> BookmarksAppBar()
-                    is Screen.Settings -> SettingsAppBar()
-                }
-            },
-            bottomBar = {
-                AppNavigationBar(
-                    currentScreen = currentScreen,
-                    onScreenChange = { screen -> currentScreen = screen }
-                )
-            },
-            floatingActionButton = {
-                if (currentScreen is Screen.Home) {
-                    FloatingActionButton(
-                        onClick = { showNavigationModal = true },
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        shape = CircleShape
-                    ) {
-                        Icon(Icons.Filled.Book, contentDescription = "Open Bible")
-                    }
-                }
-            }
-        ) { innerPadding ->
-            Box(modifier = Modifier.padding(innerPadding)) {
-                when (currentScreen) {
-                    is Screen.Home -> HomeScreen(
-                        modifier = Modifier.fillMaxSize(),
-                        onBibleClick = { showNavigationModal = true }
-                    )
-                    is Screen.Reading -> ReadingScreen()
-                    is Screen.Bookmarks -> BookmarksScreen()
-                    is Screen.Settings -> SettingsScreen()
-                }
+    val themeState = AppThemeState(
+        darkTheme = darkTheme,
+        primaryColor = selectedColor ?: Color(0xFF6200EE),
+        isCustomColor = isCustomColor
+    )
 
-                // Navigation Modal Dialog
-                if (showNavigationModal) {
-                    Dialog(
-                        onDismissRequest = { showNavigationModal = false }
-                    ) {
-                        BibleNavigationDialog(
-                            onDismiss = { showNavigationModal = false }
+    CompositionLocalProvider(LocalAppTheme provides themeState) {
+        FohBibleTheme(darkTheme = darkTheme) {
+            var showNavigationModal by remember { mutableStateOf(false) }
+            var showColorThemeDialog by remember { mutableStateOf(false) }
+            var showColorWheelDialog by remember { mutableStateOf(false) }
+
+            Scaffold(
+                modifier = Modifier.fillMaxSize(),
+                topBar = {
+                    when (currentScreen) {
+                        is Screen.Home -> HomeAppBar(
+                            onBibleIconClick = { showNavigationModal = true },
+                            onThemeToggle = { darkTheme = !darkTheme },
+                            onColorLensClick = { showColorThemeDialog = true }
                         )
+                        is Screen.Reading -> ReadingAppBar()
+                        is Screen.Bookmarks -> BookmarksAppBar()
+                        is Screen.Settings -> SettingsAppBar()
+                    }
+                },
+                bottomBar = {
+                    AppNavigationBar(
+                        currentScreen = currentScreen,
+                        onScreenChange = { screen -> currentScreen = screen }
+                    )
+                },
+                floatingActionButton = {
+                    if (currentScreen is Screen.Home) {
+                        FloatingActionButton(
+                            onClick = { showNavigationModal = true },
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            shape = CircleShape
+                        ) {
+                            Icon(Icons.Filled.Book, contentDescription = "Open Bible")
+                        }
                     }
                 }
+            ) { innerPadding ->
+                Box(modifier = Modifier.padding(innerPadding)) {
+                    when (currentScreen) {
+                        is Screen.Home -> HomeScreen(
+                            modifier = Modifier.fillMaxSize(),
+                            onBibleClick = { showNavigationModal = true }
+                        )
+                        is Screen.Reading -> ReadingScreen()
+                        is Screen.Bookmarks -> BookmarksScreen()
+                        is Screen.Settings -> SettingsScreen()
+                    }
 
-                // Color Theme Dialog (shows preset colors)
-                if (showColorThemeDialog) {
-                    Dialog(
-                        onDismissRequest = { showColorThemeDialog = false }
-                    ) {
-                        UpdatedColorThemeDialog(
-                            onDismiss = { showColorThemeDialog = false },
+                    // Navigation Modal Dialog
+                    if (showNavigationModal) {
+                        Dialog(
+                            onDismissRequest = { showNavigationModal = false }
+                        ) {
+                            BibleNavigationDialog(
+                                onDismiss = { showNavigationModal = false }
+                            )
+                        }
+                    }
+
+                    // Color Theme Dialog (shows preset colors)
+                    if (showColorThemeDialog) {
+                        Dialog(
+                            onDismissRequest = { showColorThemeDialog = false }
+                        ) {
+                            UpdatedColorThemeDialog(
+                                onDismiss = { showColorThemeDialog = false },
+                                onColorSelected = { color ->
+                                    selectedColor = color
+                                    isCustomColor = true
+                                },
+                                onCustomColorClick = {
+                                    showColorThemeDialog = false
+                                    showColorWheelDialog = true
+                                }
+                            )
+                        }
+                    }
+
+                    // Color Wheel Dialog (for custom color selection)
+                    if (showColorWheelDialog) {
+                        ColorWheelDialog(
+                            onDismissRequest = { showColorWheelDialog = false },
                             onColorSelected = { color ->
                                 selectedColor = color
-                                // TODO: Apply the selected color theme to your app
+                                isCustomColor = true
+                                showColorWheelDialog = false
                             },
-                            onCustomColorClick = {
-                                showColorThemeDialog = false
-                                showColorWheelDialog = true
-                            }
+                            initialColor = selectedColor ?: ThemeManager.primaryColor
                         )
                     }
-                }
-
-                // Color Wheel Dialog (for custom color selection)
-                if (showColorWheelDialog) {
-                    ColorWheelDialog(
-                        onDismissRequest = { showColorWheelDialog = false },
-                        onColorSelected = { color ->
-                            selectedColor = color
-                            showColorWheelDialog = false
-                            // TODO: Apply the custom color to your app
-                            // You might want to save this to SharedPreferences or ViewModel
-                        },
-                        initialColor = selectedColor ?: Color.White
-                    )
                 }
             }
         }
@@ -205,8 +224,7 @@ fun UpdatedColorThemeDialog(
         modifier = Modifier
             .fillMaxWidth()
             .height(450.dp),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        shape = RoundedCornerShape(16.dp)
     ) {
         Column(
             modifier = Modifier
@@ -367,12 +385,12 @@ fun HomeAppBar(
             ) {
                 Text(
                     text = "Home",
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
             }
         },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
+            containerColor = MaterialTheme.colorScheme.secondary
         ),
         modifier = modifier,
         actions = {
@@ -439,8 +457,7 @@ fun BibleNavigationDialog(
         modifier = Modifier
             .fillMaxWidth()
             .height(500.dp),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        shape = RoundedCornerShape(16.dp)
     ) {
         Column(
             modifier = Modifier
@@ -618,10 +635,10 @@ fun HomeScreen(
         RecentReading("1 Corinthians 13", "The Love Chapter")
     )
     val quickActions = listOf(
-        QuickAction("Read Bible", Icons.Filled.Book, Color(0xFF4CAF50)),
-        QuickAction("Audio Bible", Icons.AutoMirrored.Filled.VolumeUp, Color(0xFF2196F3)),
-        QuickAction("Reading Plan", Icons.Filled.History, Color(0xFF9C27B0)),
-        QuickAction("Bookmarks", Icons.Filled.Bookmark, Color(0xFFFF9800))
+        QuickAction("Read Bible", Icons.Filled.Book, color = MaterialTheme.colorScheme.primary),
+        QuickAction("Audio Bible", Icons.AutoMirrored.Filled.VolumeUp, color = MaterialTheme.colorScheme.primary),
+        QuickAction("Reading Plan", Icons.Filled.History, color = MaterialTheme.colorScheme.primary),
+        QuickAction("Bookmarks", Icons.Filled.Bookmark, color = MaterialTheme.colorScheme.primary)
     )
 
     LazyColumn(
@@ -665,8 +682,7 @@ fun DailyVerseCard(verse: String) {
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        )
     ) {
         Column(
             modifier = Modifier

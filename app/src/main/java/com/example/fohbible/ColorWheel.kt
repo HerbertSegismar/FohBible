@@ -87,7 +87,7 @@ import android.graphics.Color as AndroidColor
 fun ColorWheelDialog(
     onDismissRequest: () -> Unit,
     onColorSelected: (Color) -> Unit,
-    initialColor: Color = Color.White
+    initialColor: Color = ThemeManager.primaryColor
 ) {
     // State for color selection
     var selectedColor by remember { mutableStateOf(initialColor) }
