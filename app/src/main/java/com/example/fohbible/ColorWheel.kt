@@ -46,7 +46,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -55,7 +54,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -112,11 +110,6 @@ fun ColorWheelDialog(
 
     // Track scroll state
     val scrollState = rememberScrollState()
-    var showHeaderShadow by remember { mutableStateOf(false) }
-
-    LaunchedEffect(scrollState.value) {
-        showHeaderShadow = scrollState.value > 0
-    }
 
     Dialog(
         onDismissRequest = onDismissRequest,
@@ -144,7 +137,6 @@ fun ColorWheelDialog(
                     topBar = {
                         FixedHeader(
                             title = "Color Picker",
-                            showShadow = showHeaderShadow,
                             onBackClick = onDismissRequest
                         )
                     },
@@ -237,6 +229,7 @@ fun ColorWheelDialog(
 
                             // Action Buttons
                             ActionButtonsSection(
+                                selectedColor = selectedColor,
                                 isValidHex = isValidHex,
                                 onCancel = onDismissRequest,
                                 onApply = {
@@ -259,7 +252,6 @@ fun ColorWheelDialog(
 @Composable
 fun FixedHeader(
     title: String,
-    showShadow: Boolean,
     onBackClick: () -> Unit
 ) {
     Box(
@@ -269,12 +261,6 @@ fun FixedHeader(
                 MaterialTheme.colorScheme.surface,
                 RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
             )
-            .shadow(
-                elevation = if (showShadow) 4.dp else 0.dp,
-                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-                clip = true
-            )
-            .padding(bottom = 4.dp)
     ) {
         Row(
             modifier = Modifier
@@ -302,7 +288,7 @@ fun FixedHeader(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold, fontSize = 18.dp.value.sp
                     ),
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
@@ -354,7 +340,7 @@ fun ColorWheelSection(
         ) {
             Box(
                 modifier = Modifier
-                    .size(180.dp)
+                    .size(200.dp)
                     .clip(CircleShape)
                     .background(
                         Brush.radialGradient(
@@ -363,12 +349,12 @@ fun ColorWheelSection(
                                 MaterialTheme.colorScheme.surfaceVariant
                             )
                         )
-                    )
-                    .shadow(4.dp, CircleShape),
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 ImprovedColorWheel(
-                    modifier = Modifier.size(160.dp),
+                    modifier = Modifier.size(195.dp),
+                    selectedColor = selectedColor,
                     brightness = brightness,
                     onColorSelected = onColorSelected
                 )
@@ -406,7 +392,7 @@ fun ColorPreviewSection(
             // Color preview circle
             Box(
                 modifier = Modifier
-                    .size(60.dp)
+                    .size(40.dp)
                     .clip(CircleShape)
                     .background(selectedColor)
                     .border(
@@ -640,10 +626,14 @@ fun ColorPaletteSection(
 
 @Composable
 fun ActionButtonsSection(
+    selectedColor: Color,
     isValidHex: Boolean,
     onCancel: () -> Unit,
     onApply: () -> Unit
 ) {
+    // Calculate appropriate text color based on selected color brightness
+    val buttonTextColor = if (selectedColor.getBrightness() > 0.6f) Color.Black else Color.White
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -654,7 +644,6 @@ fun ActionButtonsSection(
                 .weight(1f)
                 .height(48.dp),
             shape = RoundedCornerShape(12.dp),
-            // FIX: Use the version with enabled parameter
             border = BorderStroke(
                 width = 1.5.dp,
                 color = MaterialTheme.colorScheme.outline.copy(alpha = 1f)
@@ -676,8 +665,8 @@ fun ActionButtonsSection(
                 .height(48.dp),
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
+                containerColor = if (isValidHex) selectedColor else MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                contentColor = if (isValidHex) buttonTextColor else MaterialTheme.colorScheme.onPrimary,
                 disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
                 disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
             ),
@@ -690,7 +679,8 @@ fun ActionButtonsSection(
                 Icon(
                     Icons.Filled.CheckCircle,
                     contentDescription = "Apply",
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(18.dp),
+                    tint = if (isValidHex) buttonTextColor else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                 )
                 Text(
                     text = "Apply",
@@ -749,30 +739,56 @@ fun CompactCircularColorSwatch(
     }
 }
 
-// Improved Color Wheel with better performance
+// Improved Color Wheel with dragging support
 @Composable
 fun ImprovedColorWheel(
     modifier: Modifier = Modifier,
+    selectedColor: Color,
     brightness: Float = 0.5f,
     onColorSelected: (Color) -> Unit
 ) {
-    var selectedAngle by remember { mutableFloatStateOf(0f) }
-    var selectedRadius by remember { mutableFloatStateOf(0.5f) }
+    // Get hue and saturation from the selected color
+    val hsv = FloatArray(3)
+    AndroidColor.colorToHSV(selectedColor.toArgb(), hsv)
+    val hue = hsv[0]
+    val saturation = hsv[1]
 
     Canvas(
         modifier = modifier
             .pointerInput(Unit) {
-                detectTapGestures { offset ->
-                    val radius = min(size.width, size.height) / 2f
-                    val center = Offset(size.width / 2f, size.height / 2f)
-                    val dx = offset.x - center.x
-                    val dy = offset.y - center.y
-                    selectedAngle = ((atan2(dy, dx) * 180f / PI.toFloat() + 360f) % 360f)
-                    val distance = sqrt(dx * dx + dy * dy)
-                    selectedRadius = (distance / radius).coerceIn(0f, 1f)
-                    val color = Color.hsv(selectedAngle, selectedRadius, brightness)
-                    onColorSelected(color)
-                }
+                detectTapGestures(
+                    onPress = { offset ->
+                        // This gives us dragging behavior
+                        val radius = min(size.width, size.height) / 2f
+                        val center = Offset(size.width / 2f, size.height / 2f)
+                        val dx = offset.x - center.x
+                        val dy = offset.y - center.y
+                        val newAngle = ((atan2(dy, dx) * 180f / PI.toFloat() + 360f) % 360f)
+                        val distance = sqrt(dx * dx + dy * dy)
+                        val newSaturation = (distance / radius).coerceIn(0f, 1f)
+                        val color = Color.hsv(newAngle, newSaturation, brightness)
+                        onColorSelected(color)
+
+                        // Wait for release or drag
+                        val released = tryAwaitRelease()
+                        if (!released) {
+                            // User dragged instead of releasing
+                            // The onPress will continue to be called during drag
+                        }
+                    },
+                    onTap = { offset ->
+                        // Handle simple tap
+                        val radius = min(size.width, size.height) / 2f
+                        val center = Offset(size.width / 2f, size.height / 2f)
+                        val dx = offset.x - center.x
+                        val dy = offset.y - center.y
+                        val newAngle = ((atan2(dy, dx) * 180f / PI.toFloat() + 360f) % 360f)
+                        val distance = sqrt(dx * dx + dy * dy)
+                        val newSaturation = (distance / radius).coerceIn(0f, 1f)
+                        val color = Color.hsv(newAngle, newSaturation, brightness)
+                        onColorSelected(color)
+                    }
+                )
             }
     ) {
         val radius = min(size.width, size.height) / 2f
@@ -780,8 +796,8 @@ fun ImprovedColorWheel(
 
         // Draw color wheel
         for (angle in 0 until 360 step 3) {
-            val hue = angle.toFloat()
-            val color = Color.hsv(hue, 1f, brightness)
+            val wheelHue = angle.toFloat()
+            val color = Color.hsv(wheelHue, 1f, brightness)
             drawArc(
                 color = color,
                 startAngle = angle.toFloat(),
@@ -807,9 +823,18 @@ fun ImprovedColorWheel(
         )
 
         // Draw selection indicator
-        val radians = (selectedAngle * PI / 180).toFloat()
-        val indicatorX = center.x + selectedRadius * radius * cos(radians)
-        val indicatorY = center.y + selectedRadius * radius * sin(radians)
+        val radians = (hue * PI / 180).toFloat()
+        val indicatorRadius = saturation * radius
+        val indicatorX = center.x + indicatorRadius * cos(radians)
+        val indicatorY = center.y + indicatorRadius * sin(radians)
+
+        // Draw a line from center to indicator for better visibility
+        drawLine(
+            color = Color.White.copy(alpha = 0.3f),
+            start = center,
+            end = Offset(indicatorX, indicatorY),
+            strokeWidth = 1.dp.toPx()
+        )
 
         // Outer ring
         drawCircle(
@@ -820,11 +845,17 @@ fun ImprovedColorWheel(
         )
 
         // Inner color
-        val selectedColor = Color.hsv(selectedAngle, selectedRadius, brightness)
         drawCircle(
             color = selectedColor,
             center = Offset(indicatorX, indicatorY),
             radius = 8.dp.toPx()
+        )
+
+        // Center dot for reference
+        drawCircle(
+            color = Color.White.copy(alpha = 0.5f),
+            center = center,
+            radius = 2.dp.toPx()
         )
     }
 }
@@ -864,4 +895,3 @@ fun validateHex(hex: String): Boolean {
         false
     }
 }
-

@@ -365,14 +365,8 @@ fun HomeAppBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
-                Icon(
-                    Icons.Filled.Book,
-                    contentDescription = "App Logo",
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Fount of Hope Bible",
+                    text = "Home",
                     fontWeight = FontWeight.Bold
                 )
             }
