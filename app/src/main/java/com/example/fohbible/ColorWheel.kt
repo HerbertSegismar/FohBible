@@ -7,6 +7,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -62,6 +63,8 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -128,7 +131,7 @@ fun ColorWheelDialog(
                     .padding(8.dp),
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = MaterialTheme.colorScheme.inverseOnSurface,
                     contentColor = MaterialTheme.colorScheme.onSurface
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
@@ -288,7 +291,7 @@ fun FixedHeader(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.SemiBold, fontSize = 18.dp.value.sp
+                        fontWeight = FontWeight.SemiBold, fontSize = 20.dp.value.sp
                     ),
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
@@ -392,7 +395,7 @@ fun ColorPreviewSection(
             // Color preview circle
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(30.dp)
                     .clip(CircleShape)
                     .background(selectedColor)
                     .border(
@@ -517,7 +520,7 @@ fun ColorAdjustmentsSection(
                 modifier = Modifier.size(18.dp)
             )
             Text(
-                text = "Adjustments",
+                text = "Color Adjustments",
                 style = MaterialTheme.typography.titleSmall.copy(
                     fontWeight = FontWeight.SemiBold
                 ),
@@ -546,14 +549,10 @@ fun ColorAdjustmentsSection(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Slider(
+            CustomSlider(
                 value = brightness,
                 onValueChange = onBrightnessChange,
-                colors = SliderDefaults.colors(
-                    thumbColor = selectedColor,
-                    activeTrackColor = selectedColor,
-                    inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
-                )
+                thumbColor = selectedColor
             )
         }
 
@@ -578,17 +577,39 @@ fun ColorAdjustmentsSection(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Slider(
+            CustomSlider(
                 value = saturation,
                 onValueChange = onSaturationChange,
-                colors = SliderDefaults.colors(
-                    thumbColor = selectedColor,
-                    activeTrackColor = selectedColor,
-                    inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
-                )
+                thumbColor = selectedColor
             )
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CustomSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    thumbColor: Color
+) {
+    Slider(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = Modifier.fillMaxWidth(),
+        thumb = {
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .background(thumbColor, CircleShape)
+            )
+        },
+        colors = SliderDefaults.colors(
+            thumbColor = thumbColor,
+            activeTrackColor = thumbColor,
+            inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    )
 }
 
 @Composable
@@ -617,7 +638,8 @@ fun ColorPaletteSection(
                 CompactCircularColorSwatch(
                     color = color,
                     isSelected = selectedColor == color,
-                    onClick = { onColorClick(color) }
+                    onClick = { onColorClick(color) },
+                    width = 25.dp
                 )
             }
         }
@@ -695,13 +717,14 @@ fun ActionButtonsSection(
 fun CompactCircularColorSwatch(
     color: Color,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    width: Dp,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
 
     Box(
         modifier = Modifier
-            .size(32.dp)
+            .size(width)
             .clip(CircleShape)
             .background(
                 color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
@@ -756,37 +779,26 @@ fun ImprovedColorWheel(
     Canvas(
         modifier = modifier
             .pointerInput(Unit) {
+                // Use detectDragGestures which gives us continuous drag events
+                detectDragGestures(
+                    onDragStart = { offset ->
+                        updateColorFromOffset(offset, size, brightness, onColorSelected)
+                    },
+                    onDrag = { change, _ ->
+                        change.consume() // Consume the event to prevent scrolling
+                        updateColorFromOffset(change.position, size, brightness, onColorSelected)
+                    },
+                )
+            }
+            .pointerInput(Unit) {
+                // Also handle simple taps
                 detectTapGestures(
                     onPress = { offset ->
-                        // This gives us dragging behavior
-                        val radius = min(size.width, size.height) / 2f
-                        val center = Offset(size.width / 2f, size.height / 2f)
-                        val dx = offset.x - center.x
-                        val dy = offset.y - center.y
-                        val newAngle = ((atan2(dy, dx) * 180f / PI.toFloat() + 360f) % 360f)
-                        val distance = sqrt(dx * dx + dy * dy)
-                        val newSaturation = (distance / radius).coerceIn(0f, 1f)
-                        val color = Color.hsv(newAngle, newSaturation, brightness)
-                        onColorSelected(color)
-
-                        // Wait for release or drag
-                        val released = tryAwaitRelease()
-                        if (!released) {
-                            // User dragged instead of releasing
-                            // The onPress will continue to be called during drag
-                        }
+                        updateColorFromOffset(offset, size, brightness, onColorSelected)
+                        tryAwaitRelease()
                     },
                     onTap = { offset ->
-                        // Handle simple tap
-                        val radius = min(size.width, size.height) / 2f
-                        val center = Offset(size.width / 2f, size.height / 2f)
-                        val dx = offset.x - center.x
-                        val dy = offset.y - center.y
-                        val newAngle = ((atan2(dy, dx) * 180f / PI.toFloat() + 360f) % 360f)
-                        val distance = sqrt(dx * dx + dy * dy)
-                        val newSaturation = (distance / radius).coerceIn(0f, 1f)
-                        val color = Color.hsv(newAngle, newSaturation, brightness)
-                        onColorSelected(color)
+                        updateColorFromOffset(offset, size, brightness, onColorSelected)
                     }
                 )
             }
@@ -858,6 +870,24 @@ fun ImprovedColorWheel(
             radius = 2.dp.toPx()
         )
     }
+}
+
+// Helper function to update color from offset
+private fun updateColorFromOffset(
+    offset: Offset,
+    size: IntSize,
+    brightness: Float,
+    onColorSelected: (Color) -> Unit
+) {
+    val radius = min(size.width, size.height) / 2f
+    val center = Offset(size.width / 2f, size.height / 2f)
+    val dx = offset.x - center.x
+    val dy = offset.y - center.y
+    val newAngle = ((atan2(dy, dx) * 180f / PI.toFloat() + 360f) % 360f)
+    val distance = sqrt(dx * dx + dy * dy)
+    val newSaturation = (distance / radius).coerceIn(0f, 1f)
+    val color = Color.hsv(newAngle, newSaturation, brightness)
+    onColorSelected(color)
 }
 
 // Helper functions
