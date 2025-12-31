@@ -4,6 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,14 +35,13 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -48,11 +50,10 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -64,6 +65,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -117,20 +119,11 @@ fun FohBibleApp() {
             Scaffold(
                 modifier = Modifier.fillMaxSize(),
                 topBar = {
-                    when (currentScreen) {
-                        is Screen.Home -> HomeAppBar(
-                            onBibleIconClick = { showNavigationModal = true },
-                            onThemeToggle = { darkTheme = !darkTheme },
-                            onColorLensClick = { showColorThemeDialog = true }
-                        )
-                        is Screen.Reading -> ReadingAppBar()
-                        is Screen.Bookmarks -> BookmarksAppBar()
-                        is Screen.Settings -> SettingsAppBar()
-                    }
-                },
-                bottomBar = {
-                    AppNavigationBar(
+                    HomeAppBar(
                         currentScreen = currentScreen,
+                        onBibleIconClick = { showNavigationModal = true },
+                        onThemeToggle = { darkTheme = !darkTheme },
+                        onColorLensClick = { showColorThemeDialog = true },
                         onScreenChange = { screen -> currentScreen = screen }
                     )
                 },
@@ -155,6 +148,7 @@ fun FohBibleApp() {
                         is Screen.Reading -> ReadingScreen()
                         is Screen.Bookmarks -> BookmarksScreen()
                         is Screen.Settings -> SettingsScreen()
+                        is Screen.Search -> SearchScreen()
                     }
 
                     // Navigation Modal Dialog
@@ -370,29 +364,127 @@ fun UpdatedColorThemeDialog(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeAppBar(
+    currentScreen: Screen,
     modifier: Modifier = Modifier,
     onBibleIconClick: () -> Unit,
     onThemeToggle: () -> Unit,
-    onColorLensClick: () -> Unit
+    onColorLensClick: () -> Unit,
+    onScreenChange: (Screen) -> Unit
 ) {
-    var showMenu by remember { mutableStateOf(false) }
+    var showNavigationDropdown by remember { mutableStateOf(false) }
 
-    CenterAlignedTopAppBar(
+    // Animate the rotation of the menu icon to X
+    val rotation by animateFloatAsState(
+        targetValue = if (showNavigationDropdown) 180f else 0f,
+        animationSpec = tween(durationMillis = 300),
+        label = "menuIconRotation"
+    )
+
+    // FIX: Ensure all branches return String, not Unit
+    val screenTitle = when (currentScreen) {
+        is Screen.Home -> "Home"
+        is Screen.Reading -> "Reading"
+        is Screen.Bookmarks -> "Bookmarks"
+        is Screen.Settings -> "Settings"
+        is Screen.Search -> "Search"
+    }
+
+    TopAppBar(
         title = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = "Home",
-                    fontWeight = FontWeight.Bold,
-                )
-            }
+            Text(
+                text = screenTitle,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 0.dp),
+                textAlign = TextAlign.Start
+            )
         },
-        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-            containerColor = MaterialTheme.colorScheme.secondary
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.inversePrimary
         ),
         modifier = modifier,
+        navigationIcon = {
+            // Navigation dropdown button with animated icon
+            IconButton(
+                onClick = { showNavigationDropdown = !showNavigationDropdown },
+                modifier = Modifier.rotate(rotation)
+            ) {
+                // Animate between menu and close icons
+                if (showNavigationDropdown) {
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = "Close Navigation",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                } else {
+                    Icon(
+                        Icons.Filled.Menu,
+                        contentDescription = "Open Navigation",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+            // Enhanced DropdownMenu with highlighted active screen
+            DropdownMenu(
+                expanded = showNavigationDropdown,
+                onDismissRequest = { showNavigationDropdown = false },
+                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+            ) {
+                // Helper function to create dropdown items with highlight
+                @Composable
+                fun createDropdownItem(
+                    title: String,
+                    icon: ImageVector,
+                    screen: Screen
+                ) {
+                    val isActive = currentScreen == screen
+                    val backgroundColor by animateColorAsState(
+                        targetValue = if (isActive) MaterialTheme.colorScheme.primaryContainer
+                        else Color.Transparent,
+                        animationSpec = tween(durationMillis = 200),
+                        label = "dropdownBackground"
+                    )
+
+                    val textColor by animateColorAsState(
+                        targetValue = if (isActive) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurface,
+                        animationSpec = tween(durationMillis = 200),
+                        label = "dropdownTextColor"
+                    )
+
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = title,
+                                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+                                color = textColor
+                            )
+                        },
+                        onClick = {
+                            onScreenChange(screen)
+                            showNavigationDropdown = false
+                        },
+                        modifier = Modifier.background(backgroundColor),
+                        leadingIcon = {
+                            Icon(
+                                icon,
+                                contentDescription = title,
+                                tint = if (isActive) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    )
+                }
+
+                // Dropdown items with active screen highlighting
+                createDropdownItem("Home", Icons.Filled.Home, Screen.Home)
+                createDropdownItem("Reading", Icons.Filled.Book, Screen.Reading)
+                createDropdownItem("Bookmarks", Icons.Filled.Bookmark, Screen.Bookmarks)
+                createDropdownItem("Settings", Icons.Filled.Settings, Screen.Settings)
+                createDropdownItem("Search", Icons.Filled.Search, Screen.Search)
+            }
+        },
         actions = {
             IconButton(onClick = onBibleIconClick) {
                 Icon(Icons.Filled.Book, contentDescription = "Bible Navigation")
@@ -402,32 +494,6 @@ fun HomeAppBar(
             }
             IconButton(onClick = onColorLensClick) {
                 Icon(Icons.Filled.ColorLens, contentDescription = "Color Scheme")
-            }
-            IconButton(onClick = { showMenu = !showMenu }) {
-                Icon(Icons.Filled.MoreVert, contentDescription = "More Options")
-            }
-            DropdownMenu(
-                expanded = showMenu,
-                onDismissRequest = { showMenu = false }
-            ) {
-                DropdownMenuItem(
-                    text = { Text("Search") },
-                    onClick = {
-                        showMenu = false
-                    },
-                    leadingIcon = {
-                        Icon(Icons.Filled.Search, contentDescription = "Search")
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Settings") },
-                    onClick = {
-                        showMenu = false
-                    },
-                    leadingIcon = {
-                        Icon(Icons.Filled.Settings, contentDescription = "Settings")
-                    }
-                )
             }
         }
     )
@@ -884,37 +950,6 @@ fun RecentReadingItem(reading: RecentReading) {
     }
 }
 
-@Composable
-fun AppNavigationBar(
-    currentScreen: Screen,
-    onScreenChange: (Screen) -> Unit
-) {
-    val items = listOf(
-        NavigationItem("Home", Icons.Filled.Home, Screen.Home),
-        NavigationItem("Reading", Icons.Filled.Book, Screen.Reading),
-        NavigationItem("Bookmarks", Icons.Filled.Bookmark, Screen.Bookmarks),
-        NavigationItem("Settings", Icons.Filled.Settings, Screen.Settings)
-    )
-
-    NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surfaceVariant
-    ) {
-        items.forEach { item ->
-            NavigationBarItem(
-                selected = currentScreen == item.screen,
-                onClick = { onScreenChange(item.screen) },
-                icon = {
-                    Icon(
-                        imageVector = item.icon,
-                        contentDescription = item.title
-                    )
-                },
-                label = { Text(item.title) }
-            )
-        }
-    }
-}
-
 // Other screens (simplified versions)
 @Composable
 fun ReadingScreen() {
@@ -946,29 +981,14 @@ fun SettingsScreen() {
     }
 }
 
-// AppBar for other screens (simplified)
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReadingAppBar() {
-    CenterAlignedTopAppBar(
-        title = { Text("Reading") }
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun BookmarksAppBar() {
-    CenterAlignedTopAppBar(
-        title = { Text("Bookmarks") }
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun SettingsAppBar() {
-    CenterAlignedTopAppBar(
-        title = { Text("Settings") }
-    )
+fun SearchScreen() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Text("Search Screen")
+    }
 }
 
 // Data classes
@@ -983,17 +1003,12 @@ data class RecentReading(
     val preview: String
 )
 
-data class NavigationItem(
-    val title: String,
-    val icon: ImageVector,
-    val screen: Screen
-)
-
 sealed class Screen {
     object Home : Screen()
     object Reading : Screen()
     object Bookmarks : Screen()
     object Settings : Screen()
+    object Search : Screen()
 }
 
 @Preview(showBackground = true)
@@ -1019,9 +1034,11 @@ fun DailyVerseCardPreview() {
 fun HomeAppBarPreview() {
     FohBibleTheme {
         HomeAppBar(
+            currentScreen = Screen.Home,
             onBibleIconClick = {},
             onThemeToggle = {},
-            onColorLensClick = {}
+            onColorLensClick = {},
+            onScreenChange = {}
         )
     }
 }

@@ -1,4 +1,3 @@
-// Theme.kt (updated)
 package com.example.fohbible.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
