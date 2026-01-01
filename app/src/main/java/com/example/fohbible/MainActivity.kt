@@ -76,6 +76,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.example.fohbible.screens.ReaderScreen
 import com.example.fohbible.ui.theme.FohBibleTheme
 
 class MainActivity : ComponentActivity() {
@@ -145,7 +146,9 @@ fun FohBibleApp() {
                             modifier = Modifier.fillMaxSize(),
                             onBibleClick = { showNavigationModal = true }
                         )
-                        is Screen.Reading -> ReadingScreen()
+                        is Screen.Reader -> ReaderScreen(
+                            onNavigateBack = { currentScreen = Screen.Home }
+                        )
                         is Screen.Bookmarks -> BookmarksScreen()
                         is Screen.Settings -> SettingsScreen()
                         is Screen.Search -> SearchScreen()
@@ -153,15 +156,15 @@ fun FohBibleApp() {
 
                     // Navigation Modal Dialog
                     if (showNavigationModal) {
-                        // In your MainActivity or ViewModel
                         NavigationModal(
                             showNavigationModal = true,
                             onDismissRequest = { showNavigationModal = false },
                             onPassageSelected = { bookName, chapter, verse ->
-                                // Handle passage selection
-                                val viewModel = null
-                                viewModel.loadPassage(bookName, chapter, verse ?: 1)
+                                // Navigate to Reader screen with selected passage
+                                currentScreen = Screen.Reader
                                 showNavigationModal = false
+                                // Here you would typically pass the selected passage to the ReaderScreen
+                                // For now, we'll just navigate
                             }
                         )
                     }
@@ -389,7 +392,7 @@ fun HomeAppBar(
     // FIX: Ensure all branches return String, not Unit
     val screenTitle = when (currentScreen) {
         is Screen.Home -> "Home"
-        is Screen.Reading -> "Reading"
+        is Screen.Reader -> "Reader"
         is Screen.Bookmarks -> "Bookmarks"
         is Screen.Settings -> "Settings"
         is Screen.Search -> "Search"
@@ -485,7 +488,7 @@ fun HomeAppBar(
 
                 // Dropdown items with active screen highlighting
                 createDropdownItem("Home", Icons.Filled.Home, Screen.Home)
-                createDropdownItem("Reading", Icons.Filled.Book, Screen.Reading)
+                createDropdownItem("Reader", Icons.Filled.Book, Screen.Reader)
                 createDropdownItem("Bookmarks", Icons.Filled.Bookmark, Screen.Bookmarks)
                 createDropdownItem("Settings", Icons.Filled.Settings, Screen.Settings)
                 createDropdownItem("Search", Icons.Filled.Search, Screen.Search)
@@ -770,7 +773,7 @@ fun RecentReadingItem(reading: RecentReading) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { /* Navigate to reading */ }
+            .clickable { /* Navigate to Reader */ }
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -827,12 +830,12 @@ fun RecentReadingItem(reading: RecentReading) {
 
 // Other screens (simplified versions)
 @Composable
-fun ReadingScreen() {
+fun ReaderScreen() {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        Text("Reading Screen")
+        Text("Reader Screen")
     }
 }
 
@@ -880,7 +883,7 @@ data class RecentReading(
 
 sealed class Screen {
     object Home : Screen()
-    object Reading : Screen()
+    object Reader : Screen()
     object Bookmarks : Screen()
     object Settings : Screen()
     object Search : Screen()
