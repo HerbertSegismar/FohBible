@@ -1,6 +1,9 @@
 package com.example.fohbible
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,13 +17,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -29,7 +33,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -45,11 +48,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -94,25 +95,31 @@ fun NavigationModal(
     var selectedBook by remember { mutableStateOf<BookUi?>(null) }
     var chapterInput by remember { mutableStateOf("") }
     var verseInput by remember { mutableStateOf("") }
-
-    // Focus requesters for auto-focus
-    val chapterFocusRequester = remember { FocusRequester() }
+    var focusedInput by remember { mutableStateOf<String?>("chapter") }
 
     // Get the selected BibleBook for validation
     val selectedBibleBook by remember(selectedBook) {
+        derivedStateOf { selectedBook?.let { BibleData.getBookByNumber(it.bookNumber) } }
+    }
+
+    val maxVerse by remember(chapterInput, selectedBibleBook) {
         derivedStateOf {
-            selectedBook?.let { BibleData.getBookByNumber(it.bookNumber) }
+            val chapter = chapterInput.toIntOrNull()
+            if (chapter != null && chapter in 1..(selectedBibleBook?.chapters ?: 0)) {
+                selectedBibleBook?.getVersesForChapter(chapter) ?: 0
+            } else {
+                0
+            }
         }
     }
 
     // Validate inputs
-    val isInputValid by remember(chapterInput, verseInput, selectedBibleBook) {
+    val isInputValid by remember(chapterInput, verseInput, selectedBibleBook, maxVerse) {
         derivedStateOf {
             val chapter = chapterInput.toIntOrNull()
             val verse = verseInput.toIntOrNull()
-
             chapter != null && chapter in 1..(selectedBibleBook?.chapters ?: 0) &&
-                    (verse == null || (verse > 0 && verse <= (selectedBibleBook?.getVersesForChapter(chapter) ?: 0)))
+                    (verse == null || (verse in 1..maxVerse))
         }
     }
 
@@ -124,9 +131,10 @@ fun NavigationModal(
         )
     ) {
         Surface(
-            modifier = Modifier.fillMaxSize(),
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.background
+            modifier = Modifier
+                .fillMaxSize(),
+            shape = RoundedCornerShape(4.dp),
+            color = MaterialTheme.colorScheme.surface
         ) {
             Scaffold(
                 modifier = Modifier.fillMaxSize(),
@@ -134,20 +142,19 @@ fun NavigationModal(
                     TopAppBar(
                         title = {
                             Text(
-                                text = when {
-                                    selectedBook == null -> "Select a Book"
-                                    else -> "Enter Chapter & Verse for ${selectedBook?.longName}"
-                                },
-                                fontWeight = FontWeight.SemiBold,
+                                text = if (selectedBook == null) "Select a Book" else "Select Passage for ${selectedBook?.longName}",
+                                fontWeight = FontWeight.Medium,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.primary
                             )
                         },
                         navigationIcon = {
                             IconButton(
                                 onClick = {
                                     if (selectedBook != null) {
-                                        // Clear inputs and go back to book selection
+                                        // Deselect book and clear inputs
                                         selectedBook = null
                                         chapterInput = ""
                                         verseInput = ""
@@ -158,15 +165,15 @@ fun NavigationModal(
                             ) {
                                 Icon(
                                     Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Back"
+                                    contentDescription = "Back",
                                 )
                             }
                         },
                         colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                            navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            titleContentColor = MaterialTheme.colorScheme.onSurface,
+                            navigationIconContentColor = MaterialTheme.colorScheme.onSurface
+                        ),
                     )
                 }
             ) { padding ->
@@ -175,237 +182,170 @@ fun NavigationModal(
                         .padding(padding)
                         .fillMaxSize()
                 ) {
+                    val listState = rememberLazyListState()
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(horizontal = 16.dp),
-                        contentPadding = PaddingValues(vertical = 16.dp)
+                        contentPadding = PaddingValues(bottom = 16.dp, top = 2.dp), // Added bottom padding
+                        state = listState
                     ) {
-                        if (selectedBook == null) {
-                            // Book selection view
+                        // Always show book selection
+                        item { Spacer(modifier = Modifier.height(2.dp)) }
+                        item {
+                            TestamentSection(
+                                title = "Old Testament",
+                                books = oldTestamentBooks,
+                                onBookSelected = { book ->
+                                    selectedBook = book
+                                    chapterInput = ""
+                                    verseInput = ""
+                                },
+                                defaultColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                                textColor = MaterialTheme.colorScheme.primary,
+                                selectedBook = selectedBook
+                            )
+                        }
+                        item { Spacer(modifier = Modifier.height(18.dp)) }
+                        item {
+                            TestamentSection(
+                                title = "New Testament",
+                                books = newTestamentBooks,
+                                onBookSelected = { book ->
+                                    selectedBook = book
+                                    chapterInput = ""
+                                    verseInput = ""
+                                },
+                                defaultColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f),
+                                textColor = MaterialTheme.colorScheme.secondary,
+                                selectedBook = selectedBook
+                            )
+                        }
+
+                        // Show chapter/verse selection if a book is selected
+                        selectedBook?.let { book ->
+                            item { Spacer(modifier = Modifier.height(20.dp)) }
+                            item { BookHeader(book = book) }
+                            item { Spacer(modifier = Modifier.height(16.dp)) }
+                            // Chapter and verse inputs in a row
                             item {
-                                Spacer(modifier = Modifier.height(24.dp))
-                            }
-
-                            item {
-                                TestamentSection(
-                                    title = "Old Testament",
-                                    books = oldTestamentBooks,
-                                    onBookSelected = { book ->
-                                        selectedBook = book
-                                        // Auto-focus chapter input when book is selected
-                                    },
-                                    defaultColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                                    textColor = MaterialTheme.colorScheme.primary
-                                )
-                            }
-
-                            item {
-                                Spacer(modifier = Modifier.height(24.dp))
-                            }
-
-                            item {
-                                TestamentSection(
-                                    title = "New Testament",
-                                    books = newTestamentBooks,
-                                    onBookSelected = { book ->
-                                        selectedBook = book
-                                    },
-                                    defaultColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f),
-                                    textColor = MaterialTheme.colorScheme.secondary
-                                )
-                            }
-                        } else {
-                            // Chapter/Verse input view
-                            selectedBook?.let { book ->
-                                // Book info header
-                                item {
-                                    BookHeader(book = book)
-                                }
-
-                                item {
-                                    Spacer(modifier = Modifier.height(32.dp))
-                                }
-
-                                // Chapter input
-                                item {
-                                    Column {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = "Chapter",
-                                            style = MaterialTheme.typography.titleMedium.copy(
-                                                fontWeight = FontWeight.Medium
+                                            style = MaterialTheme.typography.labelLarge.copy(
+                                                fontWeight = FontWeight.Medium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             ),
                                             modifier = Modifier.padding(bottom = 8.dp)
                                         )
-                                        OutlinedTextField(
+                                        CustomInputDisplay(
                                             value = chapterInput,
-                                            onValueChange = { newValue ->
-                                                if (newValue.all { it.isDigit() }) {
-                                                    chapterInput = newValue
-                                                }
-                                            },
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .focusRequester(chapterFocusRequester),
-                                            placeholder = {
-                                                Text(
-                                                    text = "Enter chapter (1-${book.totalChapters})",
-                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                                )
-                                            },
-                                            singleLine = showNavigationModal,
-                                            keyboardOptions = KeyboardOptions(
-                                                keyboardType = KeyboardType.Number
-                                            ),
-                                            shape = RoundedCornerShape(12.dp),
-                                            isError = chapterInput.isNotEmpty() &&
-                                                    (chapterInput.toIntOrNull() ?: 0) !in 1..book.totalChapters
+                                            hint = "1-${book.totalChapters}",
+                                            isFocused = focusedInput == "chapter",
+                                            isError = chapterInput.isNotEmpty() && (chapterInput.toIntOrNull() ?: 0) !in 1..book.totalChapters,
+                                            onClick = { focusedInput = "chapter" },
+                                            modifier = Modifier.fillMaxWidth()
                                         )
-                                        if (chapterInput.isNotEmpty()) {
-                                            val chapter = chapterInput.toIntOrNull()
-                                            if (chapter != null && chapter !in 1..book.totalChapters) {
-                                                Text(
-                                                    text = "Chapter must be between 1 and ${book.totalChapters}",
-                                                    color = MaterialTheme.colorScheme.error,
-                                                    fontSize = 12.sp,
-                                                    modifier = Modifier.padding(top = 4.dp)
-                                                )
-                                            }
-                                        }
                                     }
-                                }
-
-                                item {
-                                    Spacer(modifier = Modifier.height(24.dp))
-                                }
-
-                                // Verse input (optional)
-                                item {
-                                    Column {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            Text(
-                                                text = "Verse (Optional)",
-                                                style = MaterialTheme.typography.titleMedium.copy(
-                                                    fontWeight = FontWeight.Medium
-                                                )
-                                            )
-                                            Text(
-                                                text = "• Leave empty for entire chapter",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        OutlinedTextField(
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Verse (Optional)",
+                                            style = MaterialTheme.typography.labelLarge.copy(
+                                                fontWeight = FontWeight.Medium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            ),
+                                            modifier = Modifier.padding(bottom = 8.dp)
+                                        )
+                                        CustomInputDisplay(
                                             value = verseInput,
-                                            onValueChange = { newValue ->
-                                                if (newValue.all { it.isDigit() }) {
-                                                    verseInput = newValue
-                                                }
-                                            },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            placeholder = {
-                                                Text(
-                                                    text = "Enter verse number",
-                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                                )
-                                            },
-                                            singleLine = showNavigationModal,
-                                            keyboardOptions = KeyboardOptions(
-                                                keyboardType = KeyboardType.Number
-                                            ),
-                                            shape = RoundedCornerShape(12.dp),
-                                            isError = verseInput.isNotEmpty() &&
-                                                    chapterInput.isNotEmpty() &&
-                                                    chapterInput.toIntOrNull()?.let { chapter ->
-                                                        val verse = verseInput.toIntOrNull()
-                                                        val maxVerse = selectedBibleBook?.getVersesForChapter(chapter)
-                                                        verse != null && maxVerse != null && verse !in 1..maxVerse
-                                                    } == showNavigationModal
+                                            hint = if (maxVerse > 0) "1-$maxVerse" else "",
+                                            isFocused = focusedInput == "verse",
+                                            isError = verseInput.isNotEmpty() && chapterInput.isNotEmpty() && chapterInput.toIntOrNull()?.let { chapter ->
+                                                val verse = verseInput.toIntOrNull()
+                                                verse != null && verse !in 1..maxVerse
+                                            } == true,
+                                            onClick = { focusedInput = "verse" },
+                                            modifier = Modifier.fillMaxWidth()
                                         )
-                                        if (verseInput.isNotEmpty() && chapterInput.isNotEmpty()) {
-                                            val chapter = chapterInput.toIntOrNull()
-                                            val verse = verseInput.toIntOrNull()
-                                            val maxVerse = chapter?.let { selectedBibleBook?.getVersesForChapter(it) }
-
-                                            if (chapter != null && verse != null && maxVerse != null && verse !in 1..maxVerse) {
-                                                Text(
-                                                    text = "Verse must be between 1 and $maxVerse for chapter $chapter",
-                                                    color = MaterialTheme.colorScheme.error,
-                                                    fontSize = 12.sp,
-                                                    modifier = Modifier.padding(top = 4.dp)
-                                                )
-                                            }
-                                        }
                                     }
                                 }
-
-                                item {
-                                    Spacer(modifier = Modifier.height(32.dp))
-                                }
-
-                                // Submit button
-                                item {
-                                    Button(
-                                        onClick = {
+                            }
+                            item { Spacer(modifier = Modifier.height(24.dp)) }
+                            // Custom numpad
+                            item {
+                                NumPad(
+                                    onDigit = { digit ->
+                                        if (focusedInput == "chapter") {
+                                            val newValueChapter = chapterInput + digit
+                                            val numChapter = newValueChapter.toIntOrNull() ?: 0
+                                            val maxChapter = book.totalChapters
+                                            if (numChapter <= maxChapter && numChapter.toString() == newValueChapter) {
+                                                chapterInput = newValueChapter
+                                                // Check if no more inputs allowed
+                                                if (numChapter * 10 > maxChapter) {
+                                                    focusedInput = "verse"
+                                                }
+                                            } else if (chapterInput.isNotEmpty()) {
+                                                val currentNum = chapterInput.toIntOrNull() ?: 0
+                                                if (currentNum in 1..maxChapter) {
+                                                    focusedInput = "verse"
+                                                    // Add digit to verse
+                                                    val newValueVerse = verseInput + digit
+                                                    val numVerse = newValueVerse.toIntOrNull() ?: 0
+                                                    val maxV = maxVerse
+                                                    if (numVerse <= maxV && numVerse.toString() == newValueVerse) {
+                                                        verseInput = newValueVerse
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            // For verse
+                                            val newValue = verseInput + digit
+                                            val num = newValue.toIntOrNull() ?: 0
+                                            val maxV = maxVerse
+                                            if (num <= maxV && num.toString() == newValue) {
+                                                verseInput = newValue
+                                            }
+                                        }
+                                    },
+                                    onBackspace = {
+                                        val isChapter = focusedInput == "chapter"
+                                        val current = if (isChapter) chapterInput else verseInput
+                                        if (current.isNotEmpty()) {
+                                            if (isChapter) chapterInput = current.dropLast(1) else verseInput = current.dropLast(1)
+                                        }
+                                    },
+                                    onClear = {
+                                        chapterInput = ""
+                                        verseInput = ""
+                                        focusedInput = "chapter"
+                                    },
+                                    onConfirm = {
+                                        if (isInputValid) {
                                             val chapter = chapterInput.toInt()
                                             val verse = verseInput.toIntOrNull()
                                             onPassageSelected(book.longName, chapter, verse)
                                             onDismissRequest()
-                                        },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(bottom = 16.dp),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.primary,
-                                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                                            disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                                            disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f)
-                                        ),
-                                        shape = RoundedCornerShape(12.dp),
-                                        enabled = isInputValid
-                                    ) {
-                                        Text(
-                                            text = if (verseInput.isNotEmpty()) {
-                                                "Read ${book.longName} $chapterInput:$verseInput"
-                                            } else {
-                                                "Read ${book.longName} Chapter $chapterInput"
-                                            },
-                                            fontWeight = FontWeight.SemiBold,
-                                            fontSize = 16.sp
-                                        )
-                                    }
-                                }
-
-                                item {
-                                    // Clear button
-                                    Button(
-                                        onClick = {
-                                            chapterInput = ""
-                                            verseInput = ""
-                                        },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                        ),
-                                        shape = RoundedCornerShape(12.dp),
-                                        enabled = chapterInput.isNotEmpty() || verseInput.isNotEmpty()
-                                    ) {
-                                        Text("Clear Input")
-                                    }
-                                }
+                                        }
+                                    },
+                                    isEnabled = isInputValid,
+                                    selectedBook = book,
+                                    chapterInput = chapterInput,
+                                    verseInput = verseInput
+                                )
                             }
                         }
                     }
 
-                    // Auto-focus chapter input when book is selected
+                    // Auto-focus chapter and scroll to inputs when book is selected
                     LaunchedEffect(selectedBook) {
                         if (selectedBook != null) {
-                            chapterFocusRequester.requestFocus()
+                            focusedInput = "chapter"
+                            listState.animateScrollToItem(7) // Index of the inputs Row
                         }
                     }
                 }
@@ -415,18 +355,208 @@ fun NavigationModal(
 }
 
 @Composable
-fun BookHeader(book: BookUi) {
+fun CustomInputDisplay(
+    value: String,
+    hint: String,
+    isFocused: Boolean,
+    isError: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val borderColor = if (isError) MaterialTheme.colorScheme.error
+    else if (isFocused) MaterialTheme.colorScheme.primary
+    else MaterialTheme.colorScheme.outline
+
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = when (book.testament) {
-            Testament.OLD -> MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-            Testament.NEW -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f)
+        modifier = modifier
+            .height(56.dp)
+            .clip(RoundedCornerShape(4.dp))
+            .border(1.dp, borderColor, RoundedCornerShape(4.dp))
+            .clickable(onClick = onClick),
+        color = MaterialTheme.colorScheme.surfaceVariant
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
+        ) {
+            if (value.isNotEmpty()) {
+                Text(
+                    text = value,
+                    modifier = Modifier.align(Alignment.CenterStart),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+            if (hint.isNotEmpty()) {
+                Text(
+                    text = hint,
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    fontSize = 14.sp, // Reduced hint font size
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
+    }
+}
+
+@Composable
+fun NumPad(
+    onDigit: (String) -> Unit,
+    onBackspace: () -> Unit,
+    onClear: () -> Unit,
+    onConfirm: () -> Unit,
+    isEnabled: Boolean,
+    selectedBook: BookUi?,
+    chapterInput: String,
+    verseInput: String,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+            NumButton("1", onDigit, Modifier.weight(1f))
+            NumButton("2", onDigit, Modifier.weight(1f))
+            NumButton("3", onDigit, Modifier.weight(1f))
+            NumButton("4", onDigit, Modifier.weight(1f))
+            NumButton("5", onDigit, Modifier.weight(1f))
+            ActionButton(
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
+                text = null,
+                contentDescription = "Backspace",
+                onClick = onBackspace,
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.weight(1f)
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+            NumButton("6", onDigit, Modifier.weight(1f))
+            NumButton("7", onDigit, Modifier.weight(1f))
+            NumButton("8", onDigit, Modifier.weight(1f))
+            NumButton("9", onDigit, Modifier.weight(1f))
+            NumButton("0", onDigit, Modifier.weight(1f))
+            ActionButton(
+                icon = Icons.Filled.Check,
+                text = null,
+                contentDescription = "Confirm",
+                onClick = onConfirm,
+                containerColor = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                contentColor = if (isEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f),
+                enabled = isEnabled,
+                modifier = Modifier.weight(1f)
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+            ActionButton(
+                icon = null,
+                text = "Clear",
+                contentDescription = "Clear",
+                onClick = onClear,
+                containerColor = MaterialTheme.colorScheme.errorContainer,
+                contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.weight(1f)
+            )
+            ActionButton(
+                icon = null,
+                text = "Go to ${selectedBook?.longName ?: ""} $chapterInput" + if (verseInput.isNotEmpty()) ":$verseInput" else "",
+                contentDescription = "Confirm",
+                onClick = onConfirm,
+                containerColor = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                contentColor = if (isEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f),
+                enabled = isEnabled,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+fun NumButton(
+    digit: String,
+    onClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Button(
+        onClick = { onClick(digit) },
+        shape = RoundedCornerShape(4.dp),
+        modifier = modifier.height(50.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+        ),
+        contentPadding = PaddingValues(0.dp)
+    ) {
+        Text(text = digit, fontSize = 24.sp, fontWeight = FontWeight.Medium)
+    }
+}
+
+@Composable
+fun ActionButton(
+    icon: ImageVector? = null,
+    text: String? = null,
+    contentDescription: String,
+    onClick: () -> Unit,
+    containerColor: Color,
+    contentColor: Color,
+    enabled: Boolean = true,
+    @SuppressLint("ModifierParameter")
+    modifier: Modifier = Modifier
+) {
+    Button(
+        onClick = onClick,
+        shape = RoundedCornerShape(4.dp),
+        modifier = modifier
+            .height(50.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = containerColor,
+            contentColor = contentColor,
+            disabledContainerColor = containerColor.copy(alpha = 0.5f),
+            disabledContentColor = contentColor.copy(alpha = 0.5f)
+        ),
+        contentPadding = PaddingValues(2.dp),
+        enabled = enabled
+    ) {
+        if (text != null) {
+            Text(
+                text = text,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        } else if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                modifier = Modifier.size(28.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun BookHeader(book: BookUi) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth(),
+        shape = RoundedCornerShape(4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = when (book.testament) {
+                Testament.OLD -> MaterialTheme.colorScheme.primaryContainer
+                Testament.NEW -> MaterialTheme.colorScheme.secondaryContainer
+            }
+        )
     ) {
         Row(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(12.dp)
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
@@ -434,22 +564,22 @@ fun BookHeader(book: BookUi) {
             Column {
                 Text(
                     text = book.longName,
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                    fontSize = 20.sp,
                     color = when (book.testament) {
-                        Testament.OLD -> MaterialTheme.colorScheme.primary
-                        Testament.NEW -> MaterialTheme.colorScheme.secondary
+                        Testament.OLD -> MaterialTheme.colorScheme.onPrimaryContainer
+                        Testament.NEW -> MaterialTheme.colorScheme.onSecondaryContainer
                     }
                 )
                 Text(
-                    text = "${book.totalChapters} chapters total",
+                    text = "${book.totalChapters} chapters",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-
             Box(
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(40.dp)
                     .clip(CircleShape)
                     .background(
                         when (book.testament) {
@@ -461,7 +591,7 @@ fun BookHeader(book: BookUi) {
             ) {
                 Text(
                     text = book.shortName,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onPrimary,
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp
                 )
@@ -477,9 +607,10 @@ fun TestamentSection(
     books: List<BookUi>,
     onBookSelected: (BookUi) -> Unit,
     defaultColor: Color,
-    textColor: Color
+    textColor: Color,
+    selectedBook: BookUi?
 ) {
-    Column(modifier = Modifier.padding(bottom = 16.dp)) {
+    Column(modifier = Modifier.padding(bottom = 2.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -487,28 +618,28 @@ fun TestamentSection(
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleLarge,
-                color = textColor,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+                color = textColor
             )
             Text(
                 text = "${books.size} books",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
+        Spacer(modifier = Modifier.height(2.dp))
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             books.forEach { book ->
                 BookCard(
                     book = book,
-                    backgroundColor = defaultColor,
+                    backgroundColor = if (selectedBook?.bookNumber == book.bookNumber) {
+                        textColor.copy(alpha = 0.2f)
+                    } else {
+                        defaultColor
+                    },
                     textColor = textColor,
                     onClick = { onBookSelected(book) }
                 )
@@ -527,32 +658,27 @@ fun BookCard(
 ) {
     Card(
         onClick = onClick,
-        modifier = Modifier.widthIn(min = 60.dp, max = 80.dp),
+        modifier = Modifier
+            .width(50.dp),
+        shape = RoundedCornerShape(4.dp),
         colors = CardDefaults.cardColors(
-            containerColor = backgroundColor
+            containerColor = backgroundColor,
+            contentColor = textColor
         ),
     ) {
         Column(
-            modifier = Modifier.padding(vertical = 12.dp, horizontal = 8.dp),
+            modifier = Modifier.padding(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            verticalArrangement = Arrangement.Center
         ) {
             Text(
                 text = book.shortName,
-                color = textColor,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
-            )
-
-            // Chapter count
-            Text(
-                text = "${book.totalChapters} ch",
-                color = textColor.copy(alpha = 0.7f),
-                style = MaterialTheme.typography.labelSmall,
-                textAlign = TextAlign.Center
             )
         }
     }
@@ -564,8 +690,8 @@ fun NavigationModalPreviewLight() {
     FohBibleTheme(darkTheme = false) {
         NavigationModal(
             onDismissRequest = {},
-            onPassageSelected = TODO(),
-            showNavigationModal = TODO(),
+            onPassageSelected = { _, _, _ -> },
+            showNavigationModal = true
         )
     }
 }
@@ -576,8 +702,8 @@ fun NavigationModalPreviewDark() {
     FohBibleTheme(darkTheme = true) {
         NavigationModal(
             onDismissRequest = {},
-            onPassageSelected = TODO(),
-            showNavigationModal = TODO(),
+            onPassageSelected = { _, _, _ -> },
+            showNavigationModal = true
         )
     }
 }

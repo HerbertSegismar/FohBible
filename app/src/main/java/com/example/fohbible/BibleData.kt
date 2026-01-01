@@ -111,10 +111,6 @@ object BibleData {
 
     val allBooks = oldTestamentBooks + newTestamentBooks
 
-    fun getBookByName(name: String): BibleBook? {
-        return allBooks.find { it.name == name }
-    }
-
     fun getBookByNumber(number: Int): BibleBook? {
         return allBooks.find { it.number == number }
     }
