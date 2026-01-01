@@ -153,13 +153,15 @@ fun FohBibleApp() {
 
                     // Navigation Modal Dialog
                     if (showNavigationModal) {
-                        Dialog(
-                            onDismissRequest = { showNavigationModal = false }
-                        ) {
-                            BibleNavigationDialog(
-                                onDismiss = { showNavigationModal = false }
-                            )
-                        }
+                        NavigationModal(
+                            onDismissRequest = { showNavigationModal = false },
+                            onPassageSelected = { bookName, chapter ->
+                                // Navigate to the selected passage
+                                currentScreen = Screen.Reading
+                                showNavigationModal = false
+                                // TODO: Pass the selected book and chapter to the ReadingScreen
+                            }
+                        )
                     }
 
                     // Color Theme Dialog (shows preset colors)
@@ -497,137 +499,6 @@ fun HomeAppBar(
             }
         }
     )
-}
-
-@Composable
-fun BibleNavigationDialog(
-    onDismiss: () -> Unit
-) {
-    val booksOfBible = listOf(
-        "Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy",
-        "Joshua", "Judges", "Ruth", "1 Samuel", "2 Samuel",
-        "1 Kings", "2 Kings", "1 Chronicles", "2 Chronicles", "Ezra",
-        "Nehemiah", "Esther", "Job", "Psalms", "Proverbs",
-        "Ecclesiastes", "Song of Solomon", "Isaiah", "Jeremiah", "Lamentations",
-        "Ezekiel", "Daniel", "Hosea", "Joel", "Amos",
-        "Obadiah", "Jonah", "Micah", "Nahum", "Habakkuk",
-        "Zephaniah", "Haggai", "Zechariah", "Malachi", "Matthew",
-        "Mark", "Luke", "John", "Acts", "Romans",
-        "1 Corinthians", "2 Corinthians", "Galatians", "Ephesians", "Philippians",
-        "Colossians", "1 Thessalonians", "2 Thessalonians", "1 Timothy", "2 Timothy",
-        "Titus", "Philemon", "Hebrews", "James", "1 Peter",
-        "2 Peter", "1 John", "2 John", "3 John", "Jude", "Revelation"
-    )
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(500.dp),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-        ) {
-            // Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Bible Navigation",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                IconButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Icon(Icons.Filled.Close, contentDescription = "Close")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-            HorizontalDivider()
-
-            // Search Bar
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    Icons.Filled.Search,
-                    contentDescription = "Search",
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Search Bible...",
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-
-            HorizontalDivider()
-
-            // Books List
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(booksOfBible.chunked(3)) { rowBooks ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        rowBooks.forEach { book ->
-                            Text(
-                                text = book,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
-                                    .clickable {
-                                        // Navigate to book
-                                        onDismiss()
-                                    }
-                                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                                color = MaterialTheme.colorScheme.primary,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Quick Actions
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Button(
-                    onClick = { /* Go to random verse */ },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text("Random Verse")
-                }
-                Button(
-                    onClick = { /* Go to daily verse */ },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text("Daily Verse")
-                }
-            }
-        }
-    }
 }
 
 @Composable
