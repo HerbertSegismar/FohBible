@@ -153,13 +153,15 @@ fun FohBibleApp() {
 
                     // Navigation Modal Dialog
                     if (showNavigationModal) {
+                        // In your MainActivity or ViewModel
                         NavigationModal(
+                            showNavigationModal = true,
                             onDismissRequest = { showNavigationModal = false },
-                            onPassageSelected = { bookName, chapter ->
-                                // Navigate to the selected passage
-                                currentScreen = Screen.Reading
+                            onPassageSelected = { bookName, chapter, verse ->
+                                // Handle passage selection
+                                val viewModel = null
+                                viewModel.loadPassage(bookName, chapter, verse ?: 1)
                                 showNavigationModal = false
-                                // TODO: Pass the selected book and chapter to the ReadingScreen
                             }
                         )
                     }
@@ -200,6 +202,8 @@ fun FohBibleApp() {
         }
     }
 }
+
+private fun Nothing?.loadPassage(bookName: String, chapter: Int, i2: Int) {}
 
 @Composable
 fun UpdatedColorThemeDialog(
