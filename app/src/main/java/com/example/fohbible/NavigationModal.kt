@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.example.fohbible.data.PassageSelection
 import com.example.fohbible.ui.theme.FohBibleTheme
 
 // Data class for UI representation
@@ -84,7 +85,7 @@ fun BibleBook.toBookUi(): BookUi {
 @Composable
 fun NavigationModal(
     onDismissRequest: () -> Unit,
-    onPassageSelected: (bookName: String, chapter: Int, verse: Int?) -> Unit = { _, _, _ -> },
+    onPassageSelected: (PassageSelection) -> Unit = { _ -> },
     showNavigationModal: Boolean
 ) {
     // Data from BibleData
@@ -264,7 +265,7 @@ fun NavigationModal(
                                             value = verseInput,
                                             hint = if (maxVerse > 0) "1-$maxVerse" else "",
                                             isFocused = focusedInput == "verse",
-                                            isError = verseInput.isNotEmpty() && chapterInput.isNotEmpty() && chapterInput.toIntOrNull()?.let { chapter ->
+                                            isError = verseInput.isNotEmpty() && chapterInput.isNotEmpty() && chapterInput.toIntOrNull()?.let { _ ->
                                                 val verse = verseInput.toIntOrNull()
                                                 verse != null && verse !in 1..maxVerse
                                             } == true,
@@ -328,7 +329,18 @@ fun NavigationModal(
                                         if (isInputValid) {
                                             val chapter = chapterInput.toInt()
                                             val verse = verseInput.toIntOrNull()
-                                            onPassageSelected(book.longName, chapter, verse)
+                                            selectedBook?.let { book ->
+                                                // Get the BibleBook to get the book number
+                                                val bibleBook = BibleData.getBookByNumber(book.bookNumber)
+                                                onPassageSelected(
+                                                    PassageSelection(
+                                                        bookNumber = book.bookNumber,
+                                                        bookName = bibleBook?.name ?: book.longName,
+                                                        chapter = chapter,
+                                                        verse = verse
+                                                    )
+                                                )
+                                            }
                                             onDismissRequest()
                                         }
                                     },
@@ -690,7 +702,7 @@ fun NavigationModalPreviewLight() {
     FohBibleTheme(darkTheme = false) {
         NavigationModal(
             onDismissRequest = {},
-            onPassageSelected = { _, _, _ -> },
+            onPassageSelected = { /* passageSelection -> */ },
             showNavigationModal = true
         )
     }
@@ -702,7 +714,7 @@ fun NavigationModalPreviewDark() {
     FohBibleTheme(darkTheme = true) {
         NavigationModal(
             onDismissRequest = {},
-            onPassageSelected = { _, _, _ -> },
+            onPassageSelected = { /* passageSelection -> */ },
             showNavigationModal = true
         )
     }

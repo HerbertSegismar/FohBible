@@ -1,6 +1,17 @@
 package com.example.fohbible.screens
 
-import androidx.compose.foundation.layout.*
+import android.util.Log
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,17 +21,35 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.TextFields
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.fohbible.data.BibleRepository
+import com.example.fohbible.data.BibleViewModel
+import com.example.fohbible.data.PassageSelection
 import com.example.fohbible.ui.theme.FohBibleTheme
 
 data class Verse(
@@ -28,80 +57,103 @@ data class Verse(
     val text: String
 )
 
-data class BiblePassage(
-    val bookName: String,
-    val chapterNumber: Int,
-    val verses: List<Verse>
-)
-
 @Composable
 fun ReaderScreen(
-    modifier: Modifier = Modifier,
-    onNavigateBack: () -> Unit = {},
-    passage: BiblePassage? = null
+    passage: PassageSelection?,
+    onNavigateBack: () -> Unit
 ) {
-    // State for bookmark status
-    var isBookmarked by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
-    // State for text size
-    var textSize by remember { mutableStateOf(18.sp) }
+    // Create repository and viewmodel
+    val repository = remember { BibleRepository(context) }
+    val viewModel = remember { BibleViewModel(repository) }
 
-    // Use sample data if no passage is provided
-    val currentPassage = passage ?: samplePassage
+    // Observe verses
+    val verses by viewModel.verses.collectAsState()
 
-    Scaffold(
-        topBar = {
-            ReaderTopAppBar(
-                bookName = currentPassage.bookName,
-                chapterNumber = currentPassage.chapterNumber,
-                isBookmarked = isBookmarked,
-                onBookmarkToggle = { isBookmarked = !isBookmarked },
-                onNavigateBack = onNavigateBack
-            )
-        },
-        floatingActionButton = {
-            ReaderFloatingActions(
-                textSize = textSize,
-                onIncreaseTextSize = {
-                    textSize = (textSize.value + 1).sp
-                },
-                onDecreaseTextSize = {
-                    val newValue = textSize.value - 1
-                    textSize = if (newValue >= 12) newValue.sp else 12.sp
-                }
-            )
+    // Load verses when passage changes
+    LaunchedEffect(passage) {
+        passage?.let {
+            Log.d("ReaderScreen", "Loading passages for ${it.bookName} ${it.chapter}")
+            viewModel.loadVerses(it.bookNumber, it.chapter)
         }
-    ) { innerPadding ->
-        LazyColumn(
+    }
+
+    // Log when verses change
+    LaunchedEffect(verses) {
+        Log.d("ReaderScreen", "Verses updated: ${verses.size} verses")
+        if (verses.isNotEmpty()) {
+            Log.d("ReaderScreen", "First verse: ${verses.first().text.take(50)}...")
+        }
+    }
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        when {
+            passage == null -> {
+                Text("No passage selected")
+            }
+            verses.isEmpty() -> {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Loading verses...")
+                    Text("Book: ${passage.bookNumber}, Chapter: ${passage.chapter}")
+                }
+            }
+            else -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                ) {
+                    // Header
+                    Text(
+                        text = "${passage.bookName} Chapter ${passage.chapter}",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Verses
+                    LazyColumn {
+                        items(verses) { verse ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = "${verse.verseNumber}.",
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = verse.text,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Back button
+        Button(
+            onClick = onNavigateBack,
             modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
         ) {
-            item {
-                PassageHeader(
-                    bookName = currentPassage.bookName,
-                    chapterNumber = currentPassage.chapterNumber,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-            }
-
-            items(currentPassage.verses) { verse ->
-                VerseItem(
-                    verse = verse,
-                    textSize = textSize,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                )
-            }
-
-            item {
-                ChapterNavigation(
-                    currentChapter = currentPassage.chapterNumber,
-                    onPreviousChapter = { /* Will be implemented later */ },
-                    onNextChapter = { /* Will be implemented later */ },
-                    modifier = Modifier.padding(16.dp)
-                )
-                Spacer(modifier = Modifier.height(80.dp))
-            }
+            Text("Back")
         }
     }
 }
@@ -337,41 +389,21 @@ fun ReaderFloatingActions(
     }
 }
 
-// Sample data for preview and development
-private val samplePassage = BiblePassage(
-    bookName = "John",
-    chapterNumber = 3,
-    verses = listOf(
-        Verse(1, "Now there was a man of the Pharisees named Nicodemus, a ruler of the Jews."),
-        Verse(2, "This man came to Jesus by night and said to him, 'Rabbi, we know that you are a teacher come from God, for no one can do these signs that you do unless God is with him.'"),
-        Verse(3, "Jesus answered him, 'Truly, truly, I say to you, unless one is born again he cannot see the kingdom of God.'"),
-        Verse(4, "Nicodemus said to him, 'How can a man be born when he is old? Can he enter a second time into his mother's womb and be born?'"),
-        Verse(5, "Jesus answered, 'Truly, truly, I say to you, unless one is born of water and the Spirit, he cannot enter the kingdom of God.'"),
-        Verse(6, "'That which is born of the flesh is flesh, and that which is born of the Spirit is spirit.'"),
-        Verse(7, "'Do not marvel that I said to you, You must be born again.'"),
-        Verse(8, "'The wind blows where it wishes, and you hear its sound, but you do not know where it comes from or where it goes. So it is with everyone who is born of the Spirit.'"),
-        Verse(9, "Nicodemus said to him, 'How can these things be?'"),
-        Verse(10, "Jesus answered him, 'Are you the teacher of Israel and yet you do not understand these things?'"),
-        Verse(11, "'Truly, truly, I say to you, we speak of what we know, and bear witness to what we have seen, but you do not receive our testimony.'"),
-        Verse(12, "'If I have told you earthly things and you do not believe, how can you believe if I tell you heavenly things?'"),
-        Verse(13, "'No one has ascended into heaven except he who descended from heaven, the Son of Man.'"),
-        Verse(14, "'And as Moses lifted up the serpent in the wilderness, so must the Son of Man be lifted up,'"),
-        Verse(15, "'that whoever believes in him may have eternal life.'"),
-        Verse(16, "'For God so loved the world, that he gave his only Son, that whoever believes in him should not perish but have eternal life.'"),
-        Verse(17, "'For God did not send his Son into the world to condemn the world, but in order that the world might be saved through him.'"),
-        Verse(18, "'Whoever believes in him is not condemned, but whoever does not believe is condemned already, because he has not believed in the name of the only Son of God.'"),
-        Verse(19, "'And this is the judgment: the light has come into the world, and people loved the darkness rather than the light because their works were evil.'"),
-        Verse(20, "'For everyone who does wicked things hates the light and does not come to the light, lest his works should be exposed.'"),
-        Verse(21, "'But whoever does what is true comes to the light, so that it may be clearly seen that his works have been carried out in God.'")
-    )
-)
-
 @Preview(showBackground = true)
 @Composable
 fun ReaderScreenPreview() {
     FohBibleTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
-            ReaderScreen()
+            // Provide dummy values for the preview
+            ReaderScreen(
+                passage = PassageSelection(
+                    bookNumber = 100,
+                    bookName = "Genesis",
+                    chapter = 1,
+                    verse = 1
+                ),
+                onNavigateBack = {} // Empty lambda for preview
+            )
         }
     }
 }
@@ -381,10 +413,14 @@ fun ReaderScreenPreview() {
 fun VerseItemPreview() {
     FohBibleTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
-            VerseItem(
-                verse = Verse(16, "For God so loved the world, that he gave his only Son, that whoever believes in him should not perish but have eternal life."),
-                textSize = 18.sp
-            )
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                VerseItem(
+                    verse = Verse(16, "For God so loved the world, that he gave his only Son, that whoever believes in him should not perish but have eternal life."),
+                    textSize = 18.sp
+                )
+            }
         }
     }
 }

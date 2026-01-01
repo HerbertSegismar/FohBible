@@ -76,6 +76,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.example.fohbible.data.PassageSelection
 import com.example.fohbible.screens.ReaderScreen
 import com.example.fohbible.ui.theme.FohBibleTheme
 
@@ -95,6 +96,7 @@ fun FohBibleApp() {
     var selectedColor by remember { mutableStateOf<Color?>(null) }
     var isCustomColor by remember { mutableStateOf(false) }
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Home) }
+    var selectedPassage by remember { mutableStateOf<PassageSelection?>(null) }
 
     LaunchedEffect(selectedColor, darkTheme) {
         selectedColor?.let {
@@ -125,7 +127,22 @@ fun FohBibleApp() {
                         onBibleIconClick = { showNavigationModal = true },
                         onThemeToggle = { darkTheme = !darkTheme },
                         onColorLensClick = { showColorThemeDialog = true },
-                        onScreenChange = { screen -> currentScreen = screen }
+                        onScreenChange = { screen ->
+                            currentScreen = screen
+                            if (screen is Screen.Reader && selectedPassage == null) {
+                                // Set default passage if none selected
+                                selectedPassage = PassageSelection(
+                                    bookNumber = 100, // Genesis
+                                    bookName = "Genesis",
+                                    chapter = 1,
+                                    verse = 1,
+                                )
+                                // Create a new Reader screen with the passage
+                                currentScreen = Screen.Reader(selectedPassage)
+                            } else {
+                                currentScreen = screen
+                            }
+                        }
                     )
                 },
                 floatingActionButton = {
@@ -142,16 +159,26 @@ fun FohBibleApp() {
             ) { innerPadding ->
                 Box(modifier = Modifier.padding(innerPadding)) {
                     when (currentScreen) {
-                        is Screen.Home -> HomeScreen(
-                            modifier = Modifier.fillMaxSize(),
-                            onBibleClick = { showNavigationModal = true }
-                        )
-                        is Screen.Reader -> ReaderScreen(
-                            onNavigateBack = { currentScreen = Screen.Home }
-                        )
-                        is Screen.Bookmarks -> BookmarksScreen()
-                        is Screen.Settings -> SettingsScreen()
-                        is Screen.Search -> SearchScreen()
+                        Screen.Home -> {
+                            HomeScreen(
+                                modifier = Modifier.fillMaxSize(),
+                                onBibleClick = { showNavigationModal = true }
+                            )
+                        }
+                        is Screen.Reader -> {
+                            // Get the passage from the Screen.Reader instance
+                            val passage = (currentScreen as Screen.Reader).passage ?: selectedPassage
+                            ReaderScreen(
+                                passage = passage,
+                                onNavigateBack = {
+                                    currentScreen = Screen.Home
+                                    selectedPassage = null
+                                }
+                            )
+                        }
+                        Screen.Bookmarks -> BookmarksScreen()
+                        Screen.Settings -> SettingsScreen()
+                        Screen.Search -> SearchScreen()
                     }
 
                     // Navigation Modal Dialog
@@ -159,12 +186,10 @@ fun FohBibleApp() {
                         NavigationModal(
                             showNavigationModal = true,
                             onDismissRequest = { showNavigationModal = false },
-                            onPassageSelected = { bookName, chapter, verse ->
-                                // Navigate to Reader screen with selected passage
-                                currentScreen = Screen.Reader
+                            onPassageSelected = { passage ->
+                                selectedPassage = passage
+                                currentScreen = Screen.Reader(passage)
                                 showNavigationModal = false
-                                // Here you would typically pass the selected passage to the ReaderScreen
-                                // For now, we'll just navigate
                             }
                         )
                     }
@@ -205,8 +230,6 @@ fun FohBibleApp() {
         }
     }
 }
-
-private fun Nothing?.loadPassage(bookName: String, chapter: Int, i2: Int) {}
 
 @Composable
 fun UpdatedColorThemeDialog(
@@ -488,7 +511,7 @@ fun HomeAppBar(
 
                 // Dropdown items with active screen highlighting
                 createDropdownItem("Home", Icons.Filled.Home, Screen.Home)
-                createDropdownItem("Reader", Icons.Filled.Book, Screen.Reader)
+                createDropdownItem("Reader", Icons.Filled.Book, Screen.Reader())
                 createDropdownItem("Bookmarks", Icons.Filled.Bookmark, Screen.Bookmarks)
                 createDropdownItem("Settings", Icons.Filled.Settings, Screen.Settings)
                 createDropdownItem("Search", Icons.Filled.Search, Screen.Search)
@@ -828,17 +851,6 @@ fun RecentReadingItem(reading: RecentReading) {
     }
 }
 
-// Other screens (simplified versions)
-@Composable
-fun ReaderScreen() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text("Reader Screen")
-    }
-}
-
 @Composable
 fun BookmarksScreen() {
     Box(
@@ -883,7 +895,7 @@ data class RecentReading(
 
 sealed class Screen {
     object Home : Screen()
-    object Reader : Screen()
+    data class Reader(val passage: PassageSelection? = null) : Screen() // Updated
     object Bookmarks : Screen()
     object Settings : Screen()
     object Search : Screen()

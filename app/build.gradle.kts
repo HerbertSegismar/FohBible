@@ -57,6 +57,7 @@ dependencies {
     implementation(libs.androidx.compose.remote.creation.core)
     implementation(libs.guava)
     implementation(libs.androidx.datastore.core)
+    implementation(libs.androidx.room.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
