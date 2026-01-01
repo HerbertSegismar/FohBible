@@ -1,6 +1,7 @@
 package com.example.fohbible
 
 import android.annotation.SuppressLint
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -29,6 +30,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -58,8 +60,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.PassageSelection
 import com.example.fohbible.ui.theme.FohBibleTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 // Data class for UI representation
 data class BookUi(
@@ -86,7 +91,8 @@ fun BibleBook.toBookUi(): BookUi {
 fun NavigationModal(
     onDismissRequest: () -> Unit,
     onPassageSelected: (PassageSelection) -> Unit = { _ -> },
-    showNavigationModal: Boolean
+    showNavigationModal: Boolean,
+    databaseHelper: DatabaseHelper? = null
 ) {
     // Data from BibleData
     val oldTestamentBooks = remember { BibleData.oldTestamentBooks.map { it.toBookUi() } }
@@ -98,19 +104,49 @@ fun NavigationModal(
     var verseInput by remember { mutableStateOf("") }
     var focusedInput by remember { mutableStateOf<String?>("chapter") }
 
+    // State for dynamic verse count from database
+    var maxVerse by remember { mutableStateOf(0) }
+    var isLoadingVerseCount by remember { mutableStateOf(false) }
+
     // Get the selected BibleBook for validation
     val selectedBibleBook by remember(selectedBook) {
         derivedStateOf { selectedBook?.let { BibleData.getBookByNumber(it.bookNumber) } }
     }
 
-    val maxVerse by remember(chapterInput, selectedBibleBook) {
-        derivedStateOf {
-            val chapter = chapterInput.toIntOrNull()
-            if (chapter != null && chapter in 1..(selectedBibleBook?.chapters ?: 0)) {
-                selectedBibleBook?.getVersesForChapter(chapter) ?: 0
+    // Update verse count when chapter changes
+    LaunchedEffect(chapterInput, selectedBook) {
+        val chapter = chapterInput.toIntOrNull()
+        val bookNumber = selectedBook?.bookNumber
+
+        if (chapter != null && bookNumber != null && chapter in 1..(selectedBook?.totalChapters ?: 0)) {
+            isLoadingVerseCount = true
+
+            val count = if (databaseHelper != null) {
+                try {
+                    withContext(Dispatchers.IO) {
+                        databaseHelper.getVerseCount(bookNumber, chapter)
+                    }
+                } catch (e: Exception) {
+                    Log.e("NavigationModal", "Error getting verse count from DB: ${e.message}")
+                    // Fallback to static data if database fails
+                    selectedBibleBook?.getVersesForChapter(chapter) ?: 0
+                }
             } else {
-                0
+                // Fallback to static data if no database helper
+                selectedBibleBook?.getVersesForChapter(chapter) ?: 0
             }
+
+            maxVerse = count
+            isLoadingVerseCount = false
+
+            // Clear verse input if it exceeds new maxVerse
+            val currentVerse = verseInput.toIntOrNull()
+            if (currentVerse != null && currentVerse > maxVerse) {
+                verseInput = ""
+            }
+        } else {
+            maxVerse = 0
+            isLoadingVerseCount = false
         }
     }
 
@@ -159,6 +195,7 @@ fun NavigationModal(
                                         selectedBook = null
                                         chapterInput = ""
                                         verseInput = ""
+                                        maxVerse = 0 // Reset maxVerse when deselecting book
                                     } else {
                                         onDismissRequest()
                                     }
@@ -188,7 +225,7 @@ fun NavigationModal(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(horizontal = 16.dp),
-                        contentPadding = PaddingValues(bottom = 16.dp, top = 2.dp), // Added bottom padding
+                        contentPadding = PaddingValues(bottom = 16.dp, top = 2.dp),
                         state = listState
                     ) {
                         // Always show book selection
@@ -201,6 +238,7 @@ fun NavigationModal(
                                     selectedBook = book
                                     chapterInput = ""
                                     verseInput = ""
+                                    maxVerse = 0 // Reset maxVerse when book changes
                                 },
                                 defaultColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
                                 textColor = MaterialTheme.colorScheme.primary,
@@ -216,6 +254,7 @@ fun NavigationModal(
                                     selectedBook = book
                                     chapterInput = ""
                                     verseInput = ""
+                                    maxVerse = 0 // Reset maxVerse when book changes
                                 },
                                 defaultColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f),
                                 textColor = MaterialTheme.colorScheme.secondary,
@@ -263,13 +302,22 @@ fun NavigationModal(
                                         )
                                         CustomInputDisplay(
                                             value = verseInput,
-                                            hint = if (maxVerse > 0) "1-$maxVerse" else "",
+                                            hint = if (maxVerse > 0) {
+                                                "1-$maxVerse"
+                                            } else {
+                                                if (chapterInput.isNotEmpty() && maxVerse == 0 && !isLoadingVerseCount) " " else ""
+                                            },
                                             isFocused = focusedInput == "verse",
                                             isError = verseInput.isNotEmpty() && chapterInput.isNotEmpty() && chapterInput.toIntOrNull()?.let { _ ->
                                                 val verse = verseInput.toIntOrNull()
                                                 verse != null && verse !in 1..maxVerse
                                             } == true,
-                                            onClick = { focusedInput = "verse" },
+                                            isLoading = isLoadingVerseCount,
+                                            onClick = {
+                                                if (chapterInput.isNotEmpty()) {
+                                                    focusedInput = "verse"
+                                                }
+                                            },
                                             modifier = Modifier.fillMaxWidth()
                                         )
                                     }
@@ -286,7 +334,6 @@ fun NavigationModal(
                                             val maxChapter = book.totalChapters
                                             if (numChapter <= maxChapter && numChapter.toString() == newValueChapter) {
                                                 chapterInput = newValueChapter
-                                                // Check if no more inputs allowed
                                                 if (numChapter * 10 > maxChapter) {
                                                     focusedInput = "verse"
                                                 }
@@ -294,11 +341,9 @@ fun NavigationModal(
                                                 val currentNum = chapterInput.toIntOrNull() ?: 0
                                                 if (currentNum in 1..maxChapter) {
                                                     focusedInput = "verse"
-                                                    // Add digit to verse
                                                     val newValueVerse = verseInput + digit
                                                     val numVerse = newValueVerse.toIntOrNull() ?: 0
-                                                    val maxV = maxVerse
-                                                    if (numVerse <= maxV && numVerse.toString() == newValueVerse) {
+                                                    if (numVerse <= maxVerse && numVerse.toString() == newValueVerse) {
                                                         verseInput = newValueVerse
                                                     }
                                                 }
@@ -307,8 +352,7 @@ fun NavigationModal(
                                             // For verse
                                             val newValue = verseInput + digit
                                             val num = newValue.toIntOrNull() ?: 0
-                                            val maxV = maxVerse
-                                            if (num <= maxV && num.toString() == newValue) {
+                                            if (num <= maxVerse && num.toString() == newValue) {
                                                 verseInput = newValue
                                             }
                                         }
@@ -323,6 +367,7 @@ fun NavigationModal(
                                     onClear = {
                                         chapterInput = ""
                                         verseInput = ""
+                                        maxVerse = 0 // Reset maxVerse on clear
                                         focusedInput = "chapter"
                                     },
                                     onConfirm = {
@@ -347,7 +392,8 @@ fun NavigationModal(
                                     isEnabled = isInputValid,
                                     selectedBook = book,
                                     chapterInput = chapterInput,
-                                    verseInput = verseInput
+                                    verseInput = verseInput,
+                                    isLoadingVerseCount = isLoadingVerseCount,
                                 )
                             }
                         }
@@ -357,7 +403,7 @@ fun NavigationModal(
                     LaunchedEffect(selectedBook) {
                         if (selectedBook != null) {
                             focusedInput = "chapter"
-                            listState.animateScrollToItem(7) // Index of the inputs Row
+                            listState.animateScrollToItem(7)
                         }
                     }
                 }
@@ -372,6 +418,7 @@ fun CustomInputDisplay(
     hint: String,
     isFocused: Boolean,
     isError: Boolean,
+    isLoading: Boolean = false,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -401,7 +448,17 @@ fun CustomInputDisplay(
                     fontWeight = FontWeight.Medium
                 )
             }
-            if (hint.isNotEmpty()) {
+
+            if (isLoading) {
+                // Show animated loading indicator
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else if (hint.isNotEmpty()) {
                 Text(
                     text = hint,
                     modifier = Modifier.align(Alignment.CenterEnd),
@@ -424,6 +481,7 @@ fun NumPad(
     selectedBook: BookUi?,
     chapterInput: String,
     verseInput: String,
+    isLoadingVerseCount: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -460,7 +518,7 @@ fun NumPad(
                 onClick = onConfirm,
                 containerColor = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
                 contentColor = if (isEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f),
-                enabled = isEnabled,
+                enabled = isEnabled && !isLoadingVerseCount,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -476,12 +534,18 @@ fun NumPad(
             )
             ActionButton(
                 icon = null,
-                text = "Go to ${selectedBook?.longName ?: ""} $chapterInput" + if (verseInput.isNotEmpty()) ":$verseInput" else "",
+                text = if (isLoadingVerseCount) {
+                    "" // Empty text when loading
+                } else {
+                    val verseText = if (verseInput.isNotEmpty()) ":$verseInput" else ""
+                    "Go to ${selectedBook?.longName ?: ""} $chapterInput$verseText"
+                },
                 contentDescription = "Confirm",
                 onClick = onConfirm,
                 containerColor = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
                 contentColor = if (isEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f),
-                enabled = isEnabled,
+                enabled = isEnabled && !isLoadingVerseCount,
+                isLoading = isLoadingVerseCount,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -517,6 +581,7 @@ fun ActionButton(
     containerColor: Color,
     contentColor: Color,
     enabled: Boolean = true,
+    isLoading: Boolean = false,
     @SuppressLint("ModifierParameter")
     modifier: Modifier = Modifier
 ) {
@@ -532,9 +597,16 @@ fun ActionButton(
             disabledContentColor = contentColor.copy(alpha = 0.5f)
         ),
         contentPadding = PaddingValues(2.dp),
-        enabled = enabled
+        enabled = enabled && !isLoading
     ) {
-        if (text != null) {
+        if (isLoading) {
+            // Show animated loading indicator
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                strokeWidth = 2.dp,
+                color = contentColor
+            )
+        } else if (text != null) {
             Text(
                 text = text,
                 fontSize = 16.sp,
@@ -702,8 +774,9 @@ fun NavigationModalPreviewLight() {
     FohBibleTheme(darkTheme = false) {
         NavigationModal(
             onDismissRequest = {},
-            onPassageSelected = { /* passageSelection -> */ },
-            showNavigationModal = true
+            onPassageSelected = {},
+            showNavigationModal = true,
+            databaseHelper = null
         )
     }
 }
@@ -714,8 +787,9 @@ fun NavigationModalPreviewDark() {
     FohBibleTheme(darkTheme = true) {
         NavigationModal(
             onDismissRequest = {},
-            onPassageSelected = { /* passageSelection -> */ },
-            showNavigationModal = true
+            onPassageSelected = {},
+            showNavigationModal = true,
+            databaseHelper = null
         )
     }
 }

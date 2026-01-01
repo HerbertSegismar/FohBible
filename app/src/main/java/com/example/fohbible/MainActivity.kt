@@ -76,22 +76,35 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.PassageSelection
 import com.example.fohbible.screens.ReaderScreen
 import com.example.fohbible.ui.theme.FohBibleTheme
 
 class MainActivity : ComponentActivity() {
+    private lateinit var databaseHelper: DatabaseHelper
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Initialize DatabaseHelper
+        databaseHelper = DatabaseHelper(this)
+
         setContent {
-            FohBibleApp()
+            FohBibleApp(databaseHelper)
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Close database connection when activity is destroyed
+        databaseHelper.close()
     }
 }
 
 @Composable
-fun FohBibleApp() {
+fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
     var darkTheme by remember { mutableStateOf(false) }
     var selectedColor by remember { mutableStateOf<Color?>(null) }
     var isCustomColor by remember { mutableStateOf(false) }
@@ -132,7 +145,7 @@ fun FohBibleApp() {
                             if (screen is Screen.Reader && selectedPassage == null) {
                                 // Set default passage if none selected
                                 selectedPassage = PassageSelection(
-                                    bookNumber = 100, // Genesis
+                                    bookNumber = 1, // Genesis
                                     bookName = "Genesis",
                                     chapter = 1,
                                     verse = 1,
@@ -170,6 +183,7 @@ fun FohBibleApp() {
                             val passage = (currentScreen as Screen.Reader).passage ?: selectedPassage
                             ReaderScreen(
                                 passage = passage,
+                                databaseHelper = databaseHelper,
                                 onNavigateBack = {
                                     currentScreen = Screen.Home
                                     selectedPassage = null
@@ -190,7 +204,8 @@ fun FohBibleApp() {
                                 selectedPassage = passage
                                 currentScreen = Screen.Reader(passage)
                                 showNavigationModal = false
-                            }
+                            },
+                            databaseHelper = databaseHelper // Pass database helper here
                         )
                     }
 
@@ -895,7 +910,7 @@ data class RecentReading(
 
 sealed class Screen {
     object Home : Screen()
-    data class Reader(val passage: PassageSelection? = null) : Screen() // Updated
+    data class Reader(val passage: PassageSelection? = null) : Screen()
     object Bookmarks : Screen()
     object Settings : Screen()
     object Search : Screen()

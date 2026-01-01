@@ -11,29 +11,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -49,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.fohbible.data.BibleRepository
 import com.example.fohbible.data.BibleViewModel
+import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.PassageSelection
 import com.example.fohbible.ui.theme.FohBibleTheme
 
@@ -60,6 +46,7 @@ data class Verse(
 @Composable
 fun ReaderScreen(
     passage: PassageSelection?,
+    databaseHelper: DatabaseHelper? = null,
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -146,7 +133,6 @@ fun ReaderScreen(
             }
         }
 
-        // Back button
         Button(
             onClick = onNavigateBack,
             modifier = Modifier
@@ -154,93 +140,6 @@ fun ReaderScreen(
                 .padding(16.dp)
         ) {
             Text("Back")
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ReaderTopAppBar(
-    bookName: String,
-    chapterNumber: Int,
-    isBookmarked: Boolean,
-    onBookmarkToggle: () -> Unit,
-    onNavigateBack: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    TopAppBar(
-        title = {
-            Column {
-                Text(
-                    text = bookName,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Chapter $chapterNumber",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                )
-            }
-        },
-        navigationIcon = {
-            IconButton(onClick = onNavigateBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back"
-                )
-            }
-        },
-        actions = {
-            IconButton(onClick = onBookmarkToggle) {
-                Icon(
-                    imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
-                    contentDescription = if (isBookmarked) "Remove Bookmark" else "Add Bookmark",
-                    tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                )
-            }
-            IconButton(onClick = { /* Share functionality */ }) {
-                Icon(
-                    imageVector = Icons.Filled.Share,
-                    contentDescription = "Share"
-                )
-            }
-        },
-        modifier = modifier
-    )
-}
-
-@Composable
-fun PassageHeader(
-    bookName: String,
-    chapterNumber: Int,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = bookName,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Chapter $chapterNumber",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-            )
         }
     }
 }
@@ -284,108 +183,6 @@ fun VerseItem(
             modifier = Modifier.weight(1f),
             textAlign = TextAlign.Justify
         )
-    }
-}
-
-@Composable
-fun ChapterNavigation(
-    currentChapter: Int,
-    onPreviousChapter: () -> Unit,
-    onNextChapter: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Button(
-                onClick = onPreviousChapter,
-                enabled = currentChapter > 1,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.onSurface
-                )
-            ) {
-                Text("Previous")
-            }
-
-            Text(
-                text = "Chapter $currentChapter",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium
-            )
-
-            Button(
-                onClick = onNextChapter,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            ) {
-                Text("Next")
-            }
-        }
-    }
-}
-
-@Composable
-fun ReaderFloatingActions(
-    textSize: androidx.compose.ui.unit.TextUnit,
-    onIncreaseTextSize: () -> Unit,
-    onDecreaseTextSize: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier.padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        // Text size controls
-        ElevatedCard(
-            modifier = Modifier
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.padding(horizontal = 8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.TextFields,
-                    contentDescription = "Text Size",
-                    modifier = Modifier.size(20.dp)
-                )
-
-                IconButton(
-                    onClick = onDecreaseTextSize,
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Text("A", fontSize = 14.sp)
-                }
-
-                Text(
-                    text = "${textSize.value.toInt()}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.width(24.dp),
-                    textAlign = TextAlign.Center
-                )
-
-                IconButton(
-                    onClick = onIncreaseTextSize,
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Text("A", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
     }
 }
 

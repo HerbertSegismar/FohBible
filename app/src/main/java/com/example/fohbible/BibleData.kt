@@ -1,15 +1,29 @@
 package com.example.fohbible
 
+import android.content.Context
+import com.example.fohbible.data.DatabaseHelper
+
 data class BibleBook(
     val name: String,
     val chapters: Int,
     val testament: Testament,
     val abbreviation: String,
-    val number: Int,  // This is the SQLite book number (10, 20, 30, etc.)
-    val standardNumber: Int  // Standard Bible book number (1-66)
+    val number: Int,
+    val standardNumber: Int
 ) {
-    fun getVersesForChapter(chapter: Int): Int {
-        // This would ideally come from a database or JSON file
+    // Make this accept either Context or DatabaseHelper
+    fun getVersesForChapter(chapter: Int, context: Context? = null): Int {
+        return (if (context != null) {
+            // Use DatabaseHelper to get verse count
+            val dbHelper = DatabaseHelper(context)
+            dbHelper.getVerseCount(number, chapter)
+        } else {
+            getDefaultVerseCount(chapter)
+        })
+    }
+
+    private fun getDefaultVerseCount(chapter: Int): Int {
+        // Simple defaults
         return when (name) {
             "Genesis" -> when (chapter) {
                 1 -> 31
@@ -27,11 +41,14 @@ data class BibleBook(
                 119 -> 176
                 else -> 20
             }
+            "John" -> when (chapter) {
+                1 -> 51
+                else -> 30
+            }
             else -> 30
         }
     }
 
-    // Helper to determine testament
     fun getTestament(): String = if (number in 10..460) "OT" else "NT"
 }
 
@@ -40,7 +57,6 @@ enum class Testament {
 }
 
 object BibleData {
-    // Direct mapping from SQLite book numbers to book info
     val BIBLE_BOOKS_MAP = mapOf(
         // Old Testament
         10 to BibleBook("Genesis", 50, Testament.OLD, "Gen", 10, 1),
@@ -122,46 +138,5 @@ object BibleData {
     fun getBookByNumber(bookNumber: Int): BibleBook? {
         return BIBLE_BOOKS_MAP[bookNumber]
     }
-
-    // Get book by standard number
-    fun getBookByStandardNumber(standardNumber: Int): BibleBook? {
-        return allBooks.find { it.standardNumber == standardNumber }
-    }
-
-    // Get book by name (case-insensitive)
-    fun getBookByName(name: String): BibleBook? {
-        return allBooks.find { it.name.equals(name, ignoreCase = true) }
-    }
-
-    // Get testament for a book number
-    fun getTestament(bookNumber: Int): String {
-        return if (bookNumber in 10..460) "OT" else "NT"
-    }
-
-    // Get standard number from SQLite book number
-    fun getStandardNumber(bookNumber: Int): Int? {
-        return BIBLE_BOOKS_MAP[bookNumber]?.standardNumber
-    }
-
-    // Get SQLite book number from standard number
-    fun getSqliteNumber(standardNumber: Int): Int? {
-        return allBooks.find { it.standardNumber == standardNumber }?.number
-    }
 }
 
-// Update PassageSelection to use SQLite book numbers
-data class PassageSelection(
-    val bookNumber: Int,  // SQLite book number (10, 20, etc.)
-    val bookName: String,
-    val chapter: Int
-) {
-    // Helper to get the BibleBook object
-    fun getBibleBook(): BibleBook? {
-        return BibleData.getBookByNumber(bookNumber)
-    }
-
-    // Helper to get testament
-    fun getTestament(): String {
-        return BibleData.getTestament(bookNumber)
-    }
-}
