@@ -1,6 +1,8 @@
 package com.example.fohbible
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -37,11 +39,13 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -69,6 +73,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -78,6 +83,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.PassageSelection
+import com.example.fohbible.data.Verse
 import com.example.fohbible.screens.ReaderScreen
 import com.example.fohbible.ui.theme.FohBibleTheme
 
@@ -98,11 +104,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // Close database connection when activity is destroyed
         databaseHelper.close()
     }
 }
 
+@Suppress("AssignedValueIsNeverRead")
 @Composable
 fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
     var darkTheme by remember { mutableStateOf(false) }
@@ -122,7 +128,7 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
 
     val themeState = AppThemeState(
         darkTheme = darkTheme,
-        primaryColor = selectedColor ?: Color(0xFF6200EE),
+        primaryColor = selectedColor ?: Color(0xFF220F3D),
         isCustomColor = isCustomColor
     )
 
@@ -143,9 +149,8 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
                         onScreenChange = { screen ->
                             currentScreen = screen
                             if (screen is Screen.Reader && selectedPassage == null) {
-                                // Set default passage if none selected
                                 selectedPassage = PassageSelection(
-                                    bookNumber = 1, // Genesis
+                                    bookNumber = 10,
                                     bookName = "Genesis",
                                     chapter = 1,
                                     verse = 1,
@@ -175,7 +180,8 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
                         Screen.Home -> {
                             HomeScreen(
                                 modifier = Modifier.fillMaxSize(),
-                                onBibleClick = { showNavigationModal = true }
+                                onBibleClick = { showNavigationModal = true },
+                                databaseHelper = databaseHelper  // Pass databaseHelper here
                             )
                         }
                         is Screen.Reader -> {
@@ -194,8 +200,6 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
                         Screen.Settings -> SettingsScreen()
                         Screen.Search -> SearchScreen()
                     }
-
-                    // Navigation Modal Dialog
                     if (showNavigationModal) {
                         NavigationModal(
                             showNavigationModal = true,
@@ -205,11 +209,9 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
                                 currentScreen = Screen.Reader(passage)
                                 showNavigationModal = false
                             },
-                            databaseHelper = databaseHelper // Pass database helper here
+                            databaseHelper = databaseHelper
                         )
                     }
-
-                    // Color Theme Dialog (shows preset colors)
                     if (showColorThemeDialog) {
                         Dialog(
                             onDismissRequest = { showColorThemeDialog = false }
@@ -227,8 +229,6 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
                             )
                         }
                     }
-
-                    // Color Wheel Dialog (for custom color selection)
                     if (showColorWheelDialog) {
                         ColorWheelDialog(
                             onDismissRequest = { showColorWheelDialog = false },
@@ -301,7 +301,7 @@ fun UpdatedColorThemeDialog(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(colorOptions.chunked(2)) { rowThemes ->
+                items(colorOptions.chunked(1)) { rowThemes ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -427,7 +427,6 @@ fun HomeAppBar(
         label = "menuIconRotation"
     )
 
-    // FIX: Ensure all branches return String, not Unit
     val screenTitle = when (currentScreen) {
         is Screen.Home -> "Home"
         is Screen.Reader -> "Reader"
@@ -608,14 +607,28 @@ data class ColorTheme(
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
-    onBibleClick: () -> Unit
+    onBibleClick: () -> Unit,
+    databaseHelper: DatabaseHelper? = null
 ) {
-    val dailyVerse = "For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life. - John 3:16"
+    val context = LocalContext.current
+    var dailyVerses by remember { mutableStateOf<List<Verse>?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
+
+    // Load random verses on first composition
+    LaunchedEffect(Unit) {
+        if (dailyVerses == null) {
+            loadRandomVerses(context, databaseHelper) { verses ->
+                dailyVerses = verses
+            }
+        }
+    }
+
     val recentReadings = listOf(
         RecentReading("Psalm 23", "The Lord is my shepherd..."),
         RecentReading("Matthew 6:9-13", "The Lord's Prayer"),
         RecentReading("1 Corinthians 13", "The Love Chapter")
     )
+
     val quickActions = listOf(
         QuickAction("Read Bible", Icons.Filled.Book, color = MaterialTheme.colorScheme.primary),
         QuickAction("Audio Bible", Icons.AutoMirrored.Filled.VolumeUp, color = MaterialTheme.colorScheme.primary),
@@ -632,7 +645,14 @@ fun HomeScreen(
         }
 
         item {
-            DailyVerseCard(verse = dailyVerse)
+            DailyVerseCard(
+                verses = dailyVerses,
+                onRefresh = {
+                    loadRandomVerses(context, databaseHelper) { verses ->
+                        dailyVerses = verses
+                    }
+                }
+            )
         }
 
         item {
@@ -655,8 +675,41 @@ fun HomeScreen(
     }
 }
 
+// Helper function to load random verses
+private fun loadRandomVerses(
+    context: android.content.Context,
+    databaseHelper: DatabaseHelper?,
+    onComplete: (List<Verse>) -> Unit
+) {
+    if (databaseHelper != null) {
+        // Use existing database helper
+        Thread {
+            val verses = databaseHelper.getRandomVerses()
+            Handler(Looper.getMainLooper()).post {
+                onComplete(verses)
+            }
+        }.start()
+    } else {
+        // Create new database helper
+        Thread {
+            val dbHelper = DatabaseHelper(context as MainActivity)
+            val verses = dbHelper.getRandomVerses()
+            dbHelper.close()
+            Handler(Looper.getMainLooper()).post {
+                onComplete(verses)
+            }
+        }.start()
+    }
+}
+
 @Composable
-fun DailyVerseCard(verse: String) {
+fun DailyVerseCard(
+    verse: String = "",
+    verses: List<Verse>? = null,
+    onRefresh: () -> Unit = {}
+) {
+    val isLoading = remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -664,34 +717,120 @@ fun DailyVerseCard(verse: String) {
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer
-        )
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(20.dp)
         ) {
-            Text(
-                text = "Verse of the Day",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Fresh Revelations",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                IconButton(
+                    onClick = {
+                        isLoading.value = true
+                        onRefresh()
+                        // Reset loading state after a delay
+                        Handler(Looper.getMainLooper()).postDelayed({
+                            isLoading.value = false
+                        }, 500)
+                    },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    if (isLoading.value) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Icon(
+                            Icons.Filled.Refresh,
+                            contentDescription = "Refresh",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = verse,
-                style = MaterialTheme.typography.bodyLarge,
-                lineHeight = 24.sp,
-                textAlign = TextAlign.Justify
-            )
+
+            if (verses != null && verses.isNotEmpty()) {
+                val firstVerse = verses.first()
+                val reference = if (verses.size == 1) {
+                    "${firstVerse.bookName ?: ""} ${firstVerse.chapter ?: 0}:${firstVerse.verseNumber}"
+                } else {
+                    val lastVerse = verses.last()
+                    "${firstVerse.bookName ?: ""} ${firstVerse.chapter ?: 0}:${firstVerse.verseNumber}-${lastVerse.verseNumber}"
+                }
+
+                Text(
+                    text = reference,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                verses.forEach { verse ->
+                    Text(
+                        text = "${verse.verseNumber}. ${verse.text}",
+                        style = MaterialTheme.typography.bodyLarge,
+                        lineHeight = 24.sp,
+                        textAlign = TextAlign.Justify,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+            } else if (verse.isNotEmpty()) {
+                // Fallback to hardcoded verse if no random verses
+                Text(
+                    text = verse,
+                    style = MaterialTheme.typography.bodyLarge,
+                    lineHeight = 24.sp,
+                    textAlign = TextAlign.Justify
+                )
+            } else {
+                // Loading state
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    repeat(3) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(20.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
-                    onClick = { /* Save to bookmarks */ },
+                    onClick = {
+                        // Save to bookmarks
+                        verses?.let {
+                            // Implement bookmark saving logic here
+                        }
+                    },
                     modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
@@ -707,7 +846,17 @@ fun DailyVerseCard(verse: String) {
                         .clip(RoundedCornerShape(8.dp))
                         .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
                         .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .clickable { /* Share verse */ }
+                        .clickable {
+                            // Share verse
+                            verses?.let {
+                                val shareText = buildString {
+                                    it.forEach { verse ->
+                                        append("${verse.bookName ?: ""} ${verse.chapter ?: 0}:${verse.verseNumber} ${verse.text}\n")
+                                    }
+                                }
+                                // Implement share logic
+                            }
+                        }
                 )
             }
         }

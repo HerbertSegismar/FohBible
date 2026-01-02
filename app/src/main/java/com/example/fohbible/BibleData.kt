@@ -15,7 +15,7 @@ data class BibleBook(
     fun getVersesForChapter(chapter: Int, context: Context? = null): Int {
         return (if (context != null) {
             // Use DatabaseHelper to get verse count
-            val dbHelper = DatabaseHelper(context)
+            val dbHelper = DatabaseHelper(context as MainActivity)
             dbHelper.getVerseCount(number, chapter)
         } else {
             getDefaultVerseCount(chapter)
@@ -139,4 +139,3 @@ object BibleData {
         return BIBLE_BOOKS_MAP[bookNumber]
     }
 }
-

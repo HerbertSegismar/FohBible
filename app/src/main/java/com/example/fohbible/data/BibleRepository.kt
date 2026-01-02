@@ -3,6 +3,7 @@ package com.example.fohbible.data
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.fohbible.MainActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -10,7 +11,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class BibleRepository(context: Context) {
-    private val databaseHelper = DatabaseHelper(context)
+    private val databaseHelper = DatabaseHelper(context as MainActivity)
 
     fun getVerses(bookNumber: Int, chapter: Int): List<Verse> {
         return databaseHelper.getVerses(bookNumber, chapter)
