@@ -154,8 +154,7 @@ fun DailyVerseCard(
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        )
     ) {
         Column(
             modifier = Modifier

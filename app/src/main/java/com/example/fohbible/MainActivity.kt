@@ -81,8 +81,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
-        // Initialize DatabaseHelper
         databaseHelper = DatabaseHelper(this)
 
         setContent {
@@ -135,18 +133,25 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
                         onThemeToggle = { darkTheme = !darkTheme },
                         onColorLensClick = { showColorThemeDialog = true },
                         onScreenChange = { screen ->
-                            currentScreen = screen
-                            if (screen is Screen.Reader && selectedPassage == null) {
-                                selectedPassage = PassageSelection(
-                                    bookNumber = 10,
-                                    bookName = "Genesis",
-                                    chapter = 1,
-                                    verse = 1,
-                                )
-                                // Create a new Reader screen with the passage
-                                currentScreen = Screen.Reader(selectedPassage)
-                            } else {
-                                currentScreen = screen
+                            when (screen) {
+                                is Screen.Reader -> {
+                                    val readerScreen = if (selectedPassage != null) {
+                                        Screen.Reader(selectedPassage)
+                                    } else {
+                                        Screen.Reader(
+                                            PassageSelection(
+                                                bookNumber = 10,
+                                                bookName = "Genesis",
+                                                chapter = 1,
+                                                verse = 1,
+                                            )
+                                        )
+                                    }
+                                    currentScreen = readerScreen
+                                }
+                                else -> {
+                                    currentScreen = screen
+                                }
                             }
                         }
                     )
@@ -169,12 +174,11 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
                             HomeScreen(
                                 modifier = Modifier.fillMaxSize(),
                                 onBibleClick = { showNavigationModal = true },
-                                databaseHelper = databaseHelper  // Pass databaseHelper here
+                                databaseHelper = databaseHelper
                             )
                         }
                         is Screen.Reader -> {
-                            // Get the passage from the Screen.Reader instance
-                            val passage = (currentScreen as Screen.Reader).passage ?: selectedPassage
+                            val passage = (currentScreen as Screen.Reader).passage
                             ReaderScreen(
                                 passage = passage,
                                 databaseHelper = databaseHelper,
@@ -188,6 +192,7 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
                         Screen.Settings -> SettingsScreen()
                         Screen.Search -> SearchScreen()
                     }
+
                     if (showNavigationModal) {
                         NavigationModal(
                             showNavigationModal = true,
@@ -260,7 +265,6 @@ fun UpdatedColorThemeDialog(
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -283,8 +287,6 @@ fun UpdatedColorThemeDialog(
 
             Spacer(modifier = Modifier.height(8.dp))
             HorizontalDivider()
-
-            // Color Options
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -303,14 +305,11 @@ fun UpdatedColorThemeDialog(
                                 }
                             )
                         }
-                        // Fill empty spaces if row has less than 2 items
                         if (rowThemes.size < 2) {
                             Spacer(modifier = Modifier.weight(1f))
                         }
                     }
                 }
-
-                // Add Custom Color option
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
@@ -319,8 +318,6 @@ fun UpdatedColorThemeDialog(
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
-
-                    // Custom Color Option Card
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -375,8 +372,6 @@ fun UpdatedColorThemeDialog(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-
-            // Action Buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
@@ -498,12 +493,10 @@ fun HomeAppBar(
         ),
         modifier = modifier,
         navigationIcon = {
-            // Navigation dropdown button with animated icon
             IconButton(
                 onClick = { showNavigationDropdown = !showNavigationDropdown },
                 modifier = Modifier.rotate(rotation)
             ) {
-                // Animate between menu and close icons
                 if (showNavigationDropdown) {
                     Icon(
                         Icons.Filled.Close,
@@ -518,20 +511,21 @@ fun HomeAppBar(
                     )
                 }
             }
-            // Enhanced DropdownMenu with highlighted active screen
+
             DropdownMenu(
                 expanded = showNavigationDropdown,
                 onDismissRequest = { showNavigationDropdown = false },
                 modifier = Modifier.background(MaterialTheme.colorScheme.surface)
             ) {
+
                 // Helper function to create dropdown items with highlight
                 @Composable
                 fun createDropdownItem(
                     title: String,
                     icon: ImageVector,
-                    screen: Screen
+                    screen: Screen,
+                    isActive: Boolean
                 ) {
-                    val isActive = currentScreen == screen
                     val backgroundColor by animateColorAsState(
                         targetValue = if (isActive) MaterialTheme.colorScheme.primaryContainer
                         else Color.Transparent,
@@ -569,13 +563,16 @@ fun HomeAppBar(
                         }
                     )
                 }
-
-                // Dropdown items with active screen highlighting
-                createDropdownItem("Home", Icons.Filled.Home, Screen.Home)
-                createDropdownItem("Reader", Icons.Filled.Book, Screen.Reader())
-                createDropdownItem("Bookmarks", Icons.Filled.Bookmark, Screen.Bookmarks)
-                createDropdownItem("Settings", Icons.Filled.Settings, Screen.Settings)
-                createDropdownItem("Search", Icons.Filled.Search, Screen.Search)
+                val isHomeActive = currentScreen is Screen.Home
+                val isReaderActive = currentScreen is Screen.Reader
+                val isBookmarksActive = currentScreen == Screen.Bookmarks
+                val isSettingsActive = currentScreen == Screen.Settings
+                val isSearchActive = currentScreen == Screen.Search
+                createDropdownItem("Home", Icons.Filled.Home, Screen.Home, isHomeActive)
+                createDropdownItem("Reader", Icons.Filled.Book, Screen.Reader(), isReaderActive)
+                createDropdownItem("Bookmarks", Icons.Filled.Bookmark, Screen.Bookmarks, isBookmarksActive)
+                createDropdownItem("Settings", Icons.Filled.Settings, Screen.Settings, isSettingsActive)
+                createDropdownItem("Search", Icons.Filled.Search, Screen.Search, isSearchActive)
             }
         },
         actions = {

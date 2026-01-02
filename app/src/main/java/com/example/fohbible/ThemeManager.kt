@@ -21,8 +21,6 @@ object ThemeManager {
     var primaryColor: Color by mutableStateOf(Color(0xFF6200EE))
     var darkTheme: Boolean by mutableStateOf(false)
     var isCustomColor: Boolean by mutableStateOf(false)
-
-    // Generate color scheme based on primary color
     fun generateColorScheme(primary: Color, isDark: Boolean): AppColorScheme {
         return if (isDark) {
             generateDarkColorScheme(primary)
@@ -32,9 +30,8 @@ object ThemeManager {
     }
 
     private fun generateLightColorScheme(primary: Color): AppColorScheme {
-        // Generate harmonious colors based on primary
-        val secondary = ColorUtils.blendARGB(primary.toArgb(), Color.Yellow.toArgb(), 0.3f)
-        val tertiary = ColorUtils.blendARGB(primary.toArgb(), Color.Cyan.toArgb(), 0.3f)
+        val secondary = ColorUtils.blendARGB(primary.toArgb(), Color.Yellow.toArgb(), 0.4f)
+        val tertiary = ColorUtils.blendARGB(primary.toArgb(), Color.Cyan.toArgb(), 0.4f)
 
         return AppColorScheme(
             primary = primary,
@@ -48,16 +45,15 @@ object ThemeManager {
             surface = Color.White,
             onSurface = Color.Black,
             surfaceVariant = Color(0xFFE0E0E0),
-            primaryContainer = primary.copy(alpha = 0.1f),
-            secondaryContainer = Color(secondary).copy(alpha = 0.1f)
+            primaryContainer = primary.copy(alpha = 0.2f),
+            secondaryContainer = Color(secondary).copy(alpha = 0.2f)
         )
     }
 
     private fun generateDarkColorScheme(primary: Color): AppColorScheme {
-        // Darken the primary color for dark theme
-        val darkPrimary = Color(ColorUtils.blendARGB(primary.toArgb(), Color.Black.toArgb(), 0.2f))
-        val secondary = ColorUtils.blendARGB(primary.toArgb(), Color.Yellow.toArgb(), 0.3f)
-        val tertiary = ColorUtils.blendARGB(primary.toArgb(), Color.Magenta.toArgb(), 0.3f)
+        val darkPrimary = Color(ColorUtils.blendARGB(primary.toArgb(), Color.Black.toArgb(), 0.3f))
+        val secondary = ColorUtils.blendARGB(primary.toArgb(), Color.Yellow.toArgb(), 0.4f)
+        val tertiary = ColorUtils.blendARGB(primary.toArgb(), Color.Magenta.toArgb(), 0.4f)
 
         return AppColorScheme(
             primary = darkPrimary,
@@ -92,8 +88,6 @@ data class AppColorScheme(
     val primaryContainer: Color,
     val secondaryContainer: Color
 )
-
-// Helper extension to get brightness
 fun Color.calculateBrightness(): Float {
     val hsv = FloatArray(3)
     android.graphics.Color.colorToHSV(this.toArgb(), hsv)

@@ -1,6 +1,5 @@
 package com.example.fohbible.screens
 
-import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,26 +50,13 @@ fun ReaderScreen(
 ) {
     val context = LocalContext.current
 
-    // Create repository and viewmodel
     val repository = remember { BibleRepository(context) }
     val viewModel = remember { BibleViewModel(repository) }
-
-    // Observe verses
     val verses by viewModel.verses.collectAsState()
 
-    // Load verses when passage changes
     LaunchedEffect(passage) {
         passage?.let {
-            Log.d("ReaderScreen", "Loading passages for ${it.bookName} ${it.chapter}")
             viewModel.loadVerses(it.bookNumber, it.chapter)
-        }
-    }
-
-    // Log when verses change
-    LaunchedEffect(verses) {
-        Log.d("ReaderScreen", "Verses updated: ${verses.size} verses")
-        if (verses.isNotEmpty()) {
-            Log.d("ReaderScreen", "First verse: ${verses.first().text.take(50)}...")
         }
     }
 
@@ -99,7 +85,6 @@ fun ReaderScreen(
                         .fillMaxSize()
                         .padding(16.dp)
                 ) {
-                    // Header
                     Text(
                         text = "${passage.bookName} Chapter ${passage.chapter}",
                         style = MaterialTheme.typography.headlineMedium,
@@ -108,7 +93,6 @@ fun ReaderScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Verses
                     LazyColumn {
                         items(verses) { verse ->
                             Row(
@@ -155,7 +139,6 @@ fun VerseItem(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.Top
     ) {
-        // Verse number badge
         Surface(
             shape = RoundedCornerShape(8.dp),
             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
@@ -172,8 +155,6 @@ fun VerseItem(
                 )
             }
         }
-
-        // Verse text
         Text(
             text = verse.text,
             style = MaterialTheme.typography.bodyLarge.copy(
@@ -191,15 +172,14 @@ fun VerseItem(
 fun ReaderScreenPreview() {
     FohBibleTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
-            // Provide dummy values for the preview
             ReaderScreen(
                 passage = PassageSelection(
-                    bookNumber = 100,
+                    bookNumber = 10,
                     bookName = "Genesis",
                     chapter = 1,
                     verse = 1
                 ),
-                onNavigateBack = {} // Empty lambda for preview
+                onNavigateBack = {}
             )
         }
     }

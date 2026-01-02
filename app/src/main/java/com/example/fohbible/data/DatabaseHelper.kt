@@ -31,8 +31,6 @@ class DatabaseHelper(private val context: MainActivity) {
 
             if (!dbFile.exists()) {
                 copyDatabaseFromAssets(dbFile)
-            } else {
-                Log.d(tag, "Database exists at: ${dbFile.absolutePath}")
             }
 
             database = SQLiteDatabase.openDatabase(
@@ -40,10 +38,8 @@ class DatabaseHelper(private val context: MainActivity) {
                 null,
                 SQLiteDatabase.OPEN_READONLY
             )
-            Log.d(tag, "Database opened successfully")
 
         } catch (e: Exception) {
-            Log.e(tag, "Error opening database: ${e.message}")
             e.printStackTrace()
         }
     }
@@ -117,10 +113,6 @@ class DatabaseHelper(private val context: MainActivity) {
                 }
             }
 
-            if (verses.isEmpty()) {
-                Log.w(tag, "No verses found for book $bookNumber, chapter $chapter")
-            }
-
         } catch (e: Exception) {
             Log.e(tag, "Error in getVerses: ${e.message}")
             e.printStackTrace()
@@ -137,34 +129,24 @@ class DatabaseHelper(private val context: MainActivity) {
                 return verses
             }
 
-            // Step 1: Get a random book from BibleData
             val allBooks = com.example.fohbible.BibleData.allBooks
             if (allBooks.isEmpty()) {
-                Log.e(tag, "No books found in BibleData")
                 return verses
             }
 
-            // Select a random book
             val randomBook = allBooks[random.nextInt(allBooks.size)]
 
-            // Step 2: Get a random chapter from that book
             val randomChapter = random.nextInt(randomBook.chapters) + 1
 
-            // Step 3: Get the number of verses in that chapter
-            val verseCount = getVerseCount(randomBook.number, randomChapter)
+            val verseCount = getVerseCount(randomBook.customNumber, randomChapter)
             if (verseCount == 0) {
-                Log.w(tag, "No verses found for ${randomBook.name} chapter $randomChapter")
-                // Try again with a different book/chapter
                 return getRandomVerses()
             }
 
-            // Step 4: Determine how many verses to get (1-5, but not more than available)
             val numberOfVerses = minOf(random.nextInt(5) + 1, verseCount)
 
-            // Step 5: Get a random starting verse
             val startVerse = random.nextInt(verseCount - numberOfVerses + 1) + 1
 
-            // Step 6: Query the verses
             val query = """
                 SELECT $COLUMN_VERSE, $COLUMN_TEXT 
                 FROM $VERSES_TABLE 
@@ -178,7 +160,7 @@ class DatabaseHelper(private val context: MainActivity) {
             val cursor = database?.rawQuery(
                 query,
                 arrayOf(
-                    randomBook.number.toString(),
+                    randomBook.customNumber.toString(),
                     randomChapter.toString(),
                     startVerse.toString(),
                     startVerse.toString(),
@@ -196,12 +178,6 @@ class DatabaseHelper(private val context: MainActivity) {
                         Log.e(tag, "Error reading verse: ${e.message}")
                     }
                 }
-            }
-
-            if (verses.isEmpty()) {
-                Log.w(tag, "No verses retrieved for ${randomBook.name} $randomChapter:$startVerse-$numberOfVerses")
-            } else {
-                Log.d(tag, "Retrieved ${verses.size} random verses from ${randomBook.name} $randomChapter")
             }
 
         } catch (e: Exception) {
