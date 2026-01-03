@@ -29,7 +29,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -64,6 +63,7 @@ import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.PassageSelection
 import com.example.fohbible.ui.theme.FohBibleTheme
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 data class BookUi(
@@ -94,18 +94,29 @@ fun NavigationModal(
 ) {
     val oldTestamentBooks = remember { BibleData.oldTestamentBooks.map { it.toBookUi() } }
     val newTestamentBooks = remember { BibleData.newTestamentBooks.map { it.toBookUi() } }
-
     var selectedBook by remember { mutableStateOf<BookUi?>(null) }
     var chapterInput by remember { mutableStateOf("") }
     var verseInput by remember { mutableStateOf("") }
     var focusedInput by remember { mutableStateOf<String?>("chapter") }
-
     var maxVerse by remember { mutableIntStateOf(0) }
     var isLoadingVerseCount by remember { mutableStateOf(false) }
-
     val selectedBibleBook by remember(selectedBook) {
-        derivedStateOf {
-            selectedBook?.let { BibleData.getBookByCustomNumber(it.bookNumber) }
+        derivedStateOf { selectedBook?.let { BibleData.getBookByCustomNumber(it.bookNumber) } }
+    }
+    var showChapterFlash by remember { mutableStateOf(false) }
+    var showVerseFlash by remember { mutableStateOf(false) }
+
+    LaunchedEffect(showChapterFlash) {
+        if (showChapterFlash) {
+            delay(500)
+            showChapterFlash = false
+        }
+    }
+
+    LaunchedEffect(showVerseFlash) {
+        if (showVerseFlash) {
+            delay(500)
+            showVerseFlash = false
         }
     }
 
@@ -113,10 +124,8 @@ fun NavigationModal(
         if (focusedInput == "verse") {
             val chapter = chapterInput.toIntOrNull()
             val bookNumber = selectedBook?.bookNumber
-
             if (chapter != null && bookNumber != null && chapter in 1..(selectedBook?.totalChapters ?: 0)) {
                 isLoadingVerseCount = true
-
                 val count = if (databaseHelper != null) {
                     try {
                         withContext(Dispatchers.IO) {
@@ -128,10 +137,8 @@ fun NavigationModal(
                 } else {
                     selectedBibleBook?.getVersesForChapter(chapter) ?: 0
                 }
-
                 maxVerse = count
                 isLoadingVerseCount = false
-
                 val currentVerse = verseInput.toIntOrNull()
                 if (currentVerse != null && currentVerse > maxVerse) {
                     verseInput = ""
@@ -143,7 +150,6 @@ fun NavigationModal(
         } else {
             val chapter = chapterInput.toIntOrNull()
             val bookNumber = selectedBook?.bookNumber
-
             if (chapter == null || bookNumber == null || chapter !in 1..(selectedBook?.totalChapters ?: 0)) {
                 maxVerse = 0
             }
@@ -184,21 +190,16 @@ fun NavigationModal(
     }
 
     val isInputValid by remember(chapterInput, verseInput, isChapterValid, isVerseValid) {
-        derivedStateOf {
-            isChapterValid && (verseInput.isEmpty() || isVerseValid)
-        }
+        derivedStateOf { isChapterValid && (verseInput.isEmpty() || isVerseValid) }
     }
 
     val chapterHint by remember(selectedBook) {
-        derivedStateOf {
-            selectedBook?.let { "1-${it.totalChapters}" } ?: ""
-        }
+        derivedStateOf { selectedBook?.let { "1-${it.totalChapters}" } ?: "" }
     }
 
     val verseHint by remember(maxVerse, chapterInput, isLoadingVerseCount, focusedInput) {
         derivedStateOf {
             if (focusedInput != "verse" && verseInput.isEmpty()) return@derivedStateOf ""
-
             when {
                 isLoadingVerseCount && focusedInput == "verse" -> "Loading..."
                 chapterInput.isEmpty() -> ""
@@ -227,26 +228,16 @@ fun NavigationModal(
                     TopAppBar(
                         title = {
                             Text(
-                                text = if (selectedBook == null) "Select a Book" else "Select Passage for ${selectedBook?.longName}",
+                                text = if (selectedBook == null) "Select a Book" else "Select passage for ${selectedBook?.longName}",
                                 fontWeight = FontWeight.Medium,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.primary
+                                fontSize = 20.sp,
                             )
                         },
                         navigationIcon = {
                             IconButton(
-                                onClick = {
-                                    if (selectedBook != null) {
-                                        selectedBook = null
-                                        chapterInput = ""
-                                        verseInput = ""
-                                        maxVerse = 0
-                                    } else {
-                                        onDismissRequest()
-                                    }
-                                }
+                                onClick = onDismissRequest
                             ) {
                                 Icon(
                                     Icons.AutoMirrored.Filled.ArrowBack,
@@ -255,9 +246,9 @@ fun NavigationModal(
                             }
                         },
                         colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            titleContentColor = MaterialTheme.colorScheme.onSurface,
-                            navigationIconContentColor = MaterialTheme.colorScheme.onSurface
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            titleContentColor = Color.White,
+                            navigationIconContentColor = Color.White,
                         ),
                     )
                 }
@@ -307,7 +298,6 @@ fun NavigationModal(
                                 selectedBook = selectedBook
                             )
                         }
-
                         selectedBook?.let { book ->
                             item { Spacer(modifier = Modifier.height(20.dp)) }
                             item { BookHeader(book = book) }
@@ -330,7 +320,7 @@ fun NavigationModal(
                                             value = chapterInput,
                                             hint = chapterHint,
                                             isFocused = focusedInput == "chapter",
-                                            isError = isChapterError,
+                                            isError = isChapterError || showChapterFlash,
                                             onClick = { focusedInput = "chapter" },
                                             modifier = Modifier.fillMaxWidth()
                                         )
@@ -348,7 +338,7 @@ fun NavigationModal(
                                             value = verseInput,
                                             hint = verseHint,
                                             isFocused = focusedInput == "verse",
-                                            isError = isVerseError,
+                                            isError = isVerseError || showVerseFlash,
                                             onClick = {
                                                 if (chapterInput.isNotEmpty()) {
                                                     focusedInput = "verse"
@@ -361,24 +351,51 @@ fun NavigationModal(
                             }
                             item { Spacer(modifier = Modifier.height(24.dp)) }
                             item {
+                                val confirm = remember {
+                                    {
+                                        if (isInputValid) {
+                                            val chapter = chapterInput.toInt()
+                                            val verse = verseInput.toIntOrNull()
+                                            val bibleBook = BibleData.getBookByCustomNumber(book.bookNumber)
+                                            onPassageSelected(
+                                                PassageSelection(
+                                                    bookNumber = book.bookNumber,
+                                                    bookName = bibleBook?.name ?: book.longName,
+                                                    chapter = chapter,
+                                                    verse = verse
+                                                )
+                                            )
+                                            onDismissRequest()
+                                        }
+                                    }
+                                }
                                 NumPad(
                                     onDigit = { digit ->
                                         if (focusedInput == "chapter") {
                                             val newValue = chapterInput + digit
                                             val num = newValue.toIntOrNull() ?: 0
                                             val maxChapters = book.totalChapters
-
                                             if (num in 1..maxChapters && num.toString() == newValue) {
                                                 chapterInput = newValue
                                                 if (num * 10 > maxChapters) {
                                                     focusedInput = "verse"
                                                 }
-                                            } else if (chapterInput.isNotEmpty() && chapterInput.toIntOrNull() in 1..maxChapters) {
-                                                focusedInput = "verse"
-                                                val newVerseValue = verseInput + digit
-                                                val verseNum = newVerseValue.toIntOrNull() ?: 0
-                                                if (verseNum in 1..maxVerse && verseNum.toString() == newVerseValue) {
-                                                    verseInput = newVerseValue
+                                            } else {
+                                                val currentNum = chapterInput.toIntOrNull()
+                                                if (chapterInput.isNotEmpty() && currentNum != null && currentNum in 1..maxChapters) {
+                                                    focusedInput = "verse"
+                                                    val newVerseValue = verseInput + digit
+                                                    val verseNum = newVerseValue.toIntOrNull() ?: 0
+                                                    if (verseNum in 1..maxVerse && verseNum.toString() == newVerseValue) {
+                                                        verseInput = newVerseValue
+                                                        if (verseNum * 10 > maxVerse) {
+                                                            confirm()
+                                                        }
+                                                    } else {
+                                                        showVerseFlash = true
+                                                    }
+                                                } else {
+                                                    showChapterFlash = true
                                                 }
                                             }
                                         } else {
@@ -386,6 +403,16 @@ fun NavigationModal(
                                             val num = newValue.toIntOrNull() ?: 0
                                             if (num in 1..maxVerse && num.toString() == newValue) {
                                                 verseInput = newValue
+                                                if (num * 10 > maxVerse) {
+                                                    confirm()
+                                                }
+                                            } else {
+                                                val currentNum = verseInput.toIntOrNull()
+                                                if (verseInput.isNotEmpty() && currentNum != null && currentNum in 1..maxVerse) {
+                                                    confirm()
+                                                } else {
+                                                    showVerseFlash = true
+                                                }
                                             }
                                         }
                                     },
@@ -402,24 +429,7 @@ fun NavigationModal(
                                         maxVerse = 0
                                         focusedInput = "chapter"
                                     },
-                                    onConfirm = {
-                                        if (isInputValid) {
-                                            val chapter = chapterInput.toInt()
-                                            val verse = verseInput.toIntOrNull()
-                                            selectedBook?.let { book ->
-                                                val bibleBook = BibleData.getBookByCustomNumber(book.bookNumber)
-                                                onPassageSelected(
-                                                    PassageSelection(
-                                                        bookNumber = book.bookNumber,
-                                                        bookName = bibleBook?.name ?: book.longName,
-                                                        chapter = chapter,
-                                                        verse = verse
-                                                    )
-                                                )
-                                            }
-                                            onDismissRequest()
-                                        }
-                                    },
+                                    onConfirm = confirm,
                                     isEnabled = isInputValid,
                                     selectedBook = book,
                                     chapterInput = chapterInput,
@@ -429,8 +439,6 @@ fun NavigationModal(
                             }
                         }
                     }
-
-                    // Auto-focus chapter and scroll to inputs when book is selected
                     LaunchedEffect(selectedBook) {
                         if (selectedBook != null) {
                             focusedInput = "chapter"
@@ -452,20 +460,15 @@ fun CustomInputDisplay(
     onClick: () -> Unit,
     @SuppressLint("ModifierParameter") modifier: Modifier = Modifier
 ) {
-    val borderColor = if (isError) MaterialTheme.colorScheme.error
-    else if (isFocused) MaterialTheme.colorScheme.primary
-    else MaterialTheme.colorScheme.outline
-
+    val borderColor = if (isError) MaterialTheme.colorScheme.error else if (isFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
     val borderWidth = if (isError) 2.dp else 1.dp
-
     Surface(
         modifier = modifier
             .height(56.dp)
             .clip(RoundedCornerShape(4.dp))
             .border(borderWidth, borderColor, RoundedCornerShape(4.dp))
             .clickable(onClick = onClick),
-        color = if (isError) MaterialTheme.colorScheme.errorContainer
-        else MaterialTheme.colorScheme.surfaceVariant
+        color = if (isError) MaterialTheme.colorScheme.errorContainer else Color.White
     ) {
         Row(
             modifier = Modifier
@@ -476,18 +479,15 @@ fun CustomInputDisplay(
         ) {
             Text(
                 text = value,
-                color = if (isError) MaterialTheme.colorScheme.onErrorContainer
-                else MaterialTheme.colorScheme.onSurface,
-                fontSize = 18.sp,
+                color = if (isError) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.primary,
+                fontSize = 22.sp,
                 fontWeight = FontWeight.Medium
             )
-
             if (hint.isNotEmpty()) {
                 Text(
                     text = hint,
-                    color = if (isError) MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
-                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                    fontSize = 14.sp,
+                    color = if (isError) MaterialTheme.colorScheme.error.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Medium
                 )
             }
@@ -524,8 +524,8 @@ fun NumPad(
                 text = null,
                 contentDescription = "Backspace",
                 onClick = onBackspace,
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = Color.White,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -540,9 +540,8 @@ fun NumPad(
                 text = null,
                 contentDescription = "Confirm",
                 onClick = onConfirm,
-                containerColor = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                contentColor = if (isEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f),
-                enabled = isEnabled && !isLoadingVerseCount,
+                containerColor = if (isEnabled) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f),
+                contentColor = if (isEnabled) Color.White else Color.White.copy(alpha = 0.5f),
                 modifier = Modifier.weight(1f)
             )
         }
@@ -552,8 +551,8 @@ fun NumPad(
                 text = "Clear",
                 contentDescription = "Clear",
                 onClick = onClear,
-                containerColor = MaterialTheme.colorScheme.errorContainer,
-                contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                containerColor = Color(0xFFF44336),
+                contentColor = Color.White,
                 modifier = Modifier.weight(1f)
             )
             ActionButton(
@@ -566,10 +565,8 @@ fun NumPad(
                 },
                 contentDescription = "Confirm",
                 onClick = onConfirm,
-                containerColor = if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                contentColor = if (isEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f),
-                enabled = isEnabled && !isLoadingVerseCount,
-                isLoading = isLoadingVerseCount,
+                containerColor = if (isEnabled) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f),
+                contentColor = if (isEnabled) Color.White else Color.White.copy(alpha = 0.5f),
                 modifier = Modifier.weight(1f)
             )
         }
@@ -587,8 +584,8 @@ fun NumButton(
         shape = RoundedCornerShape(4.dp),
         modifier = modifier.height(50.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = Color.White
         ),
         contentPadding = PaddingValues(0.dp)
     ) {
@@ -606,8 +603,7 @@ fun ActionButton(
     contentColor: Color,
     enabled: Boolean = true,
     isLoading: Boolean = false,
-    @SuppressLint("ModifierParameter")
-    modifier: Modifier = Modifier
+    @SuppressLint("ModifierParameter") modifier: Modifier = Modifier
 ) {
     Button(
         onClick = onClick,
@@ -623,13 +619,7 @@ fun ActionButton(
         contentPadding = PaddingValues(2.dp),
         enabled = enabled && !isLoading
     ) {
-        if (isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(24.dp),
-                strokeWidth = 2.dp,
-                color = contentColor
-            )
-        } else if (text != null) {
+        if (text != null) {
             Text(
                 text = text,
                 fontSize = 16.sp,
@@ -655,10 +645,7 @@ fun BookHeader(book: BookUi) {
             .fillMaxWidth(),
         shape = RoundedCornerShape(4.dp),
         colors = CardDefaults.cardColors(
-            containerColor = when (book.testament) {
-                Testament.OLD -> MaterialTheme.colorScheme.primaryContainer
-                Testament.NEW -> MaterialTheme.colorScheme.secondaryContainer
-            }
+            containerColor = MaterialTheme.colorScheme.primary
         )
     ) {
         Row(
@@ -673,34 +660,26 @@ fun BookHeader(book: BookUi) {
                     text = book.longName,
                     style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                     fontSize = 20.sp,
-                    color = when (book.testament) {
-                        Testament.OLD -> MaterialTheme.colorScheme.onPrimaryContainer
-                        Testament.NEW -> MaterialTheme.colorScheme.onSecondaryContainer
-                    }
+                    color = Color.White
                 )
                 Text(
                     text = "${book.totalChapters} chapters",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Color.White
                 )
             }
             Box(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(
-                        when (book.testament) {
-                            Testament.OLD -> MaterialTheme.colorScheme.primary
-                            Testament.NEW -> MaterialTheme.colorScheme.secondary
-                        }
-                    ),
+                    .background(Color.White),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = book.shortName,
-                    color = MaterialTheme.colorScheme.onPrimary,
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
+                    fontSize = 12.sp
                 )
             }
         }
@@ -790,6 +769,7 @@ fun BookCard(
         }
     }
 }
+
 @Preview(showBackground = true, name = "Navigation Modal Light")
 @Composable
 fun NavigationModalPreviewLight() {
