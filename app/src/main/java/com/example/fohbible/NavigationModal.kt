@@ -539,8 +539,7 @@ fun NumPad(
                 icon = Icons.Filled.Check,
                 text = null,
                 contentDescription = "Confirm",
-                onClick = onConfirm,
-                containerColor = if (isEnabled) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f),
+                onClick = onConfirm,containerColor = if (isEnabled) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f),
                 contentColor = if (isEnabled) Color.White else Color.White.copy(alpha = 0.5f),
                 modifier = Modifier.weight(1f)
             )
@@ -602,7 +601,6 @@ fun ActionButton(
     containerColor: Color,
     contentColor: Color,
     enabled: Boolean = true,
-    isLoading: Boolean = false,
     @SuppressLint("ModifierParameter") modifier: Modifier = Modifier
 ) {
     Button(
@@ -617,7 +615,7 @@ fun ActionButton(
             disabledContentColor = contentColor.copy(alpha = 0.5f)
         ),
         contentPadding = PaddingValues(2.dp),
-        enabled = enabled && !isLoading
+        enabled = enabled
     ) {
         if (text != null) {
             Text(
