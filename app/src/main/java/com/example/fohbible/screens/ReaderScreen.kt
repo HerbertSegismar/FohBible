@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -45,8 +44,7 @@ data class Verse(
 @Composable
 fun ReaderScreen(
     passage: PassageSelection?,
-    databaseHelper: DatabaseHelper? = null,
-    onNavigateBack: () -> Unit
+    @Suppress("unused") databaseHelper: DatabaseHelper? = null
 ) {
     val context = LocalContext.current
 
@@ -87,7 +85,7 @@ fun ReaderScreen(
                 ) {
                     Text(
                         text = "${passage.bookName} Chapter ${passage.chapter}",
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
 
@@ -115,15 +113,6 @@ fun ReaderScreen(
                     }
                 }
             }
-        }
-
-        Button(
-            onClick = onNavigateBack,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp)
-        ) {
-            Text("Back")
         }
     }
 }
@@ -178,8 +167,7 @@ fun ReaderScreenPreview() {
                     bookName = "Genesis",
                     chapter = 1,
                     verse = 1
-                ),
-                onNavigateBack = {}
+                )
             )
         }
     }

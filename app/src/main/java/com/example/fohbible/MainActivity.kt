@@ -1,9 +1,13 @@
 package com.example.fohbible
 
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.RequiresApi
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -26,6 +30,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Brightness6
@@ -54,6 +59,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -71,8 +77,11 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.PassageSelection
+import com.example.fohbible.screens.BookmarksScreen
 import com.example.fohbible.screens.HomeScreen
 import com.example.fohbible.screens.ReaderScreen
+import com.example.fohbible.screens.SearchScreen
+import com.example.fohbible.screens.SettingsScreen
 import com.example.fohbible.ui.theme.FohBibleTheme
 
 class MainActivity : ComponentActivity() {
@@ -82,7 +91,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         databaseHelper = DatabaseHelper(this)
-
         setContent {
             FohBibleApp(databaseHelper)
         }
@@ -100,8 +108,19 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
     var darkTheme by remember { mutableStateOf(false) }
     var selectedColor by remember { mutableStateOf<Color?>(null) }
     var isCustomColor by remember { mutableStateOf(false) }
-    var currentScreen by remember { mutableStateOf<Screen>(Screen.Home) }
-    var selectedPassage by remember { mutableStateOf<PassageSelection?>(null) }
+    val navigationStack = remember { mutableStateListOf<Screen>(Screen.Home) }
+    val currentScreen = navigationStack.last()
+
+    fun navigateTo(screen: Screen) {
+        navigationStack.add(screen)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    fun goBack() {
+        if (navigationStack.size > 1) {
+            navigationStack.removeLast()
+        }
+    }
 
     LaunchedEffect(selectedColor, darkTheme) {
         selectedColor?.let {
@@ -133,27 +152,20 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
                         onThemeToggle = { darkTheme = !darkTheme },
                         onColorLensClick = { showColorThemeDialog = true },
                         onScreenChange = { screen ->
-                            when (screen) {
-                                is Screen.Reader -> {
-                                    val readerScreen = if (selectedPassage != null) {
-                                        Screen.Reader(selectedPassage)
-                                    } else {
-                                        Screen.Reader(
-                                            PassageSelection(
-                                                bookNumber = 10,
-                                                bookName = "Genesis",
-                                                chapter = 1,
-                                                verse = 1,
-                                            )
-                                        )
-                                    }
-                                    currentScreen = readerScreen
-                                }
-                                else -> {
-                                    currentScreen = screen
-                                }
+                            val targetScreen = when (screen) {
+                                is Screen.Reader -> Screen.Reader(
+                                    PassageSelection(
+                                        bookNumber = 10,
+                                        bookName = "Genesis",
+                                        chapter = 1,
+                                        verse = 1,
+                                    )
+                                )
+                                else -> screen
                             }
-                        }
+                            navigateTo(targetScreen)
+                        },
+                        onBack = if (navigationStack.size > 1) { { goBack() } } else null
                     )
                 },
                 floatingActionButton = {
@@ -169,6 +181,9 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
                 }
             ) { innerPadding ->
                 Box(modifier = Modifier.padding(innerPadding)) {
+                    BackHandler(enabled = navigationStack.size > 1) {
+                        goBack()
+                    }
                     when (currentScreen) {
                         Screen.Home -> {
                             HomeScreen(
@@ -177,20 +192,23 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
                                 databaseHelper = databaseHelper
                             )
                         }
+
                         is Screen.Reader -> {
-                            val passage = (currentScreen as Screen.Reader).passage
+                            val passage = currentScreen.passage ?: PassageSelection(
+                                bookNumber = 10,
+                                bookName = "Genesis",
+                                chapter = 1,
+                                verse = 1
+                            )
                             ReaderScreen(
                                 passage = passage,
-                                databaseHelper = databaseHelper,
-                                onNavigateBack = {
-                                    currentScreen = Screen.Home
-                                    selectedPassage = null
-                                }
+                                databaseHelper = databaseHelper
                             )
                         }
+
                         Screen.Bookmarks -> BookmarksScreen()
-                        Screen.Settings -> SettingsScreen()
                         Screen.Search -> SearchScreen()
+                        Screen.Settings -> SettingsScreen()
                     }
 
                     if (showNavigationModal) {
@@ -198,13 +216,13 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
                             showNavigationModal = true,
                             onDismissRequest = { showNavigationModal = false },
                             onPassageSelected = { passage ->
-                                selectedPassage = passage
-                                currentScreen = Screen.Reader(passage)
+                                navigateTo(Screen.Reader(passage))
                                 showNavigationModal = false
                             },
                             databaseHelper = databaseHelper
                         )
                     }
+
                     if (showColorThemeDialog) {
                         Dialog(
                             onDismissRequest = { showColorThemeDialog = false }
@@ -222,6 +240,7 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
                             )
                         }
                     }
+
                     if (showColorWheelDialog) {
                         ColorWheelDialog(
                             onDismissRequest = { showColorWheelDialog = false },
@@ -275,7 +294,6 @@ fun UpdatedColorThemeDialog(
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.dp.value.sp
-
                 )
                 IconButton(
                     onClick = onDismiss,
@@ -284,7 +302,6 @@ fun UpdatedColorThemeDialog(
                     Icon(Icons.Filled.Close, contentDescription = "Close")
                 }
             }
-
             Spacer(modifier = Modifier.height(8.dp))
             HorizontalDivider()
             LazyColumn(
@@ -370,7 +387,6 @@ fun UpdatedColorThemeDialog(
                     }
                 }
             }
-
             Spacer(modifier = Modifier.height(16.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -458,10 +474,10 @@ fun HomeAppBar(
     onBibleIconClick: () -> Unit,
     onThemeToggle: () -> Unit,
     onColorLensClick: () -> Unit,
-    onScreenChange: (Screen) -> Unit
+    onScreenChange: (Screen) -> Unit,
+    onBack: (() -> Unit)? = null
 ) {
     var showNavigationDropdown by remember { mutableStateOf(false) }
-
     // Animate the rotation of the menu icon to X
     val rotation by animateFloatAsState(
         targetValue = if (showNavigationDropdown) 180f else 0f,
@@ -473,8 +489,8 @@ fun HomeAppBar(
         is Screen.Home -> "Home"
         is Screen.Reader -> "Reader"
         is Screen.Bookmarks -> "Bookmarks"
-        is Screen.Settings -> "Settings"
         is Screen.Search -> "Search"
+        is Screen.Settings -> "Settings"
     }
 
     TopAppBar(
@@ -493,31 +509,43 @@ fun HomeAppBar(
         ),
         modifier = modifier,
         navigationIcon = {
+            if (onBack != null) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                }
+            }
+        },
+        actions = {
+            IconButton(onClick = onBibleIconClick) {
+                Icon(Icons.Filled.Book, contentDescription = "Bible Navigation")
+            }
+            IconButton(onClick = onThemeToggle) {
+                Icon(Icons.Filled.Brightness6, contentDescription = "Toggle Theme")
+            }
+            IconButton(onClick = onColorLensClick) {
+                Icon(Icons.Filled.ColorLens, contentDescription = "Color Scheme")
+            }
             IconButton(
                 onClick = { showNavigationDropdown = !showNavigationDropdown },
                 modifier = Modifier.rotate(rotation)
             ) {
-                if (showNavigationDropdown) {
+                Crossfade(
+                    targetState = showNavigationDropdown,
+                    animationSpec = tween(durationMillis = 300),
+                    label = "iconCrossfade"
+                ) { isOpen ->
                     Icon(
-                        Icons.Filled.Close,
-                        contentDescription = "Close Navigation",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                } else {
-                    Icon(
-                        Icons.Filled.Menu,
-                        contentDescription = "Open Navigation",
-                        tint = MaterialTheme.colorScheme.onSurface
+                        imageVector = if (isOpen) Icons.Filled.Close else Icons.Filled.Menu,
+                        contentDescription = if (isOpen) "Close Navigation" else "Open Navigation",
+                        tint = if (isOpen) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
-
             DropdownMenu(
                 expanded = showNavigationDropdown,
                 onDismissRequest = { showNavigationDropdown = false },
                 modifier = Modifier.background(MaterialTheme.colorScheme.surface)
             ) {
-
                 // Helper function to create dropdown items with highlight
                 @Composable
                 fun createDropdownItem(
@@ -527,19 +555,15 @@ fun HomeAppBar(
                     isActive: Boolean
                 ) {
                     val backgroundColor by animateColorAsState(
-                        targetValue = if (isActive) MaterialTheme.colorScheme.primaryContainer
-                        else Color.Transparent,
+                        targetValue = if (isActive) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
                         animationSpec = tween(durationMillis = 200),
                         label = "dropdownBackground"
                     )
-
                     val textColor by animateColorAsState(
-                        targetValue = if (isActive) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurface,
+                        targetValue = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                         animationSpec = tween(durationMillis = 200),
                         label = "dropdownTextColor"
                     )
-
                     DropdownMenuItem(
                         text = {
                             Text(
@@ -557,72 +581,32 @@ fun HomeAppBar(
                             Icon(
                                 icon,
                                 contentDescription = title,
-                                tint = if (isActive) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     )
                 }
+
                 val isHomeActive = currentScreen is Screen.Home
                 val isReaderActive = currentScreen is Screen.Reader
                 val isBookmarksActive = currentScreen == Screen.Bookmarks
-                val isSettingsActive = currentScreen == Screen.Settings
                 val isSearchActive = currentScreen == Screen.Search
+                val isSettingsActive = currentScreen == Screen.Settings
+
                 createDropdownItem("Home", Icons.Filled.Home, Screen.Home, isHomeActive)
                 createDropdownItem("Reader", Icons.Filled.Book, Screen.Reader(), isReaderActive)
                 createDropdownItem("Bookmarks", Icons.Filled.Bookmark, Screen.Bookmarks, isBookmarksActive)
-                createDropdownItem("Settings", Icons.Filled.Settings, Screen.Settings, isSettingsActive)
                 createDropdownItem("Search", Icons.Filled.Search, Screen.Search, isSearchActive)
-            }
-        },
-        actions = {
-            IconButton(onClick = onBibleIconClick) {
-                Icon(Icons.Filled.Book, contentDescription = "Bible Navigation")
-            }
-            IconButton(onClick = onThemeToggle) {
-                Icon(Icons.Filled.Brightness6, contentDescription = "Toggle Theme")
-            }
-            IconButton(onClick = onColorLensClick) {
-                Icon(Icons.Filled.ColorLens, contentDescription = "Color Scheme")
+                createDropdownItem("Settings", Icons.Filled.Settings, Screen.Settings, isSettingsActive)
             }
         }
     )
-}
-
-@Composable
-fun BookmarksScreen() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text("Bookmarks Screen")
-    }
-}
-
-@Composable
-fun SettingsScreen() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text("Settings Screen")
-    }
-}
-
-@Composable
-fun SearchScreen() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text("Search Screen")
-    }
 }
 
 sealed class Screen {
     object Home : Screen()
     data class Reader(val passage: PassageSelection? = null) : Screen()
     object Bookmarks : Screen()
-    object Settings : Screen()
     object Search : Screen()
+    object Settings : Screen()
 }
