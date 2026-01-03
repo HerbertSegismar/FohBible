@@ -17,6 +17,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -41,6 +42,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -83,6 +85,7 @@ import com.example.fohbible.screens.ReaderScreen
 import com.example.fohbible.screens.SearchScreen
 import com.example.fohbible.screens.SettingsScreen
 import com.example.fohbible.ui.theme.FohBibleTheme
+import androidx.compose.ui.text.style.TextOverflow
 
 class MainActivity : ComponentActivity() {
     private lateinit var databaseHelper: DatabaseHelper
@@ -146,27 +149,51 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
             Scaffold(
                 modifier = Modifier.fillMaxSize(),
                 topBar = {
-                    HomeAppBar(
-                        currentScreen = currentScreen,
-                        onBibleIconClick = { showNavigationModal = true },
-                        onThemeToggle = { darkTheme = !darkTheme },
-                        onColorLensClick = { showColorThemeDialog = true },
-                        onScreenChange = { screen ->
-                            val targetScreen = when (screen) {
-                                is Screen.Reader -> Screen.Reader(
-                                    PassageSelection(
-                                        bookNumber = 10,
-                                        bookName = "Genesis",
-                                        chapter = 1,
-                                        verse = 1,
+                    if (currentScreen is Screen.Reader) {
+                        ReaderAppBar(
+                            currentScreen = currentScreen,
+                            onBibleIconClick = { showNavigationModal = true },
+                            onThemeToggle = { darkTheme = !darkTheme },
+                            onColorLensClick = { showColorThemeDialog = true },
+                            onScreenChange = { screen ->
+                                val targetScreen = when (screen) {
+                                    is Screen.Reader -> Screen.Reader(
+                                        PassageSelection(
+                                            bookNumber = 10,
+                                            bookName = "Genesis",
+                                            chapter = 1,
+                                            verse = 1,
+                                        )
                                     )
-                                )
-                                else -> screen
-                            }
-                            navigateTo(targetScreen)
-                        },
-                        onBack = if (navigationStack.size > 1) { { goBack() } } else null
-                    )
+                                    else -> screen
+                                }
+                                navigateTo(targetScreen)
+                            },
+                            onBack = if (navigationStack.size > 1) { { goBack() } } else null
+                        )
+                    } else {
+                        HomeAppBar(
+                            currentScreen = currentScreen,
+                            onBibleIconClick = { showNavigationModal = true },
+                            onThemeToggle = { darkTheme = !darkTheme },
+                            onColorLensClick = { showColorThemeDialog = true },
+                            onScreenChange = { screen ->
+                                val targetScreen = when (screen) {
+                                    is Screen.Reader -> Screen.Reader(
+                                        PassageSelection(
+                                            bookNumber = 10,
+                                            bookName = "Genesis",
+                                            chapter = 1,
+                                            verse = 1,
+                                        )
+                                    )
+                                    else -> screen
+                                }
+                                navigateTo(targetScreen)
+                            },
+                            onBack = if (navigationStack.size > 1) { { goBack() } } else null
+                        )
+                    }
                 },
                 floatingActionButton = {
                     if (currentScreen is Screen.Home) {
@@ -184,6 +211,7 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
                     BackHandler(enabled = navigationStack.size > 1) {
                         goBack()
                     }
+
                     when (currentScreen) {
                         Screen.Home -> {
                             HomeScreen(
@@ -192,7 +220,6 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
                                 databaseHelper = databaseHelper
                             )
                         }
-
                         is Screen.Reader -> {
                             val passage = currentScreen.passage ?: PassageSelection(
                                 bookNumber = 10,
@@ -205,7 +232,6 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
                                 databaseHelper = databaseHelper
                             )
                         }
-
                         Screen.Bookmarks -> BookmarksScreen()
                         Screen.Search -> SearchScreen()
                         Screen.Settings -> SettingsScreen()
@@ -302,8 +328,10 @@ fun UpdatedColorThemeDialog(
                     Icon(Icons.Filled.Close, contentDescription = "Close")
                 }
             }
+
             Spacer(modifier = Modifier.height(8.dp))
             HorizontalDivider()
+
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -387,7 +415,9 @@ fun UpdatedColorThemeDialog(
                     }
                 }
             }
+
             Spacer(modifier = Modifier.height(16.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
@@ -395,7 +425,7 @@ fun UpdatedColorThemeDialog(
                 Button(
                     onClick = onDismiss,
                     modifier = Modifier.padding(end = 8.dp),
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.surface,
                         contentColor = MaterialTheme.colorScheme.onSurface
                     )
@@ -478,6 +508,7 @@ fun HomeAppBar(
     onBack: (() -> Unit)? = null
 ) {
     var showNavigationDropdown by remember { mutableStateOf(false) }
+
     // Animate the rotation of the menu icon to X
     val rotation by animateFloatAsState(
         targetValue = if (showNavigationDropdown) 180f else 0f,
@@ -497,6 +528,7 @@ fun HomeAppBar(
         title = {
             Text(
                 text = screenTitle,
+                color = Color.White,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -505,25 +537,25 @@ fun HomeAppBar(
             )
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.inversePrimary
+            containerColor = MaterialTheme.colorScheme.primary
         ),
         modifier = modifier,
         navigationIcon = {
             if (onBack != null) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                 }
             }
         },
         actions = {
             IconButton(onClick = onBibleIconClick) {
-                Icon(Icons.Filled.Book, contentDescription = "Bible Navigation")
+                Icon(Icons.Filled.Book, contentDescription = "Bible Navigation", tint = Color.White)
             }
             IconButton(onClick = onThemeToggle) {
-                Icon(Icons.Filled.Brightness6, contentDescription = "Toggle Theme")
+                Icon(Icons.Filled.Brightness6, contentDescription = "Toggle Theme", tint = Color.White)
             }
             IconButton(onClick = onColorLensClick) {
-                Icon(Icons.Filled.ColorLens, contentDescription = "Color Scheme")
+                Icon(Icons.Filled.ColorLens, contentDescription = "Color Scheme", tint = Color.White)
             }
             IconButton(
                 onClick = { showNavigationDropdown = !showNavigationDropdown },
@@ -537,7 +569,7 @@ fun HomeAppBar(
                     Icon(
                         imageVector = if (isOpen) Icons.Filled.Close else Icons.Filled.Menu,
                         contentDescription = if (isOpen) "Close Navigation" else "Open Navigation",
-                        tint = if (isOpen) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        tint = Color.White
                     )
                 }
             }
@@ -564,6 +596,7 @@ fun HomeAppBar(
                         animationSpec = tween(durationMillis = 200),
                         label = "dropdownTextColor"
                     )
+
                     DropdownMenuItem(
                         text = {
                             Text(
@@ -592,6 +625,178 @@ fun HomeAppBar(
                 val isBookmarksActive = currentScreen == Screen.Bookmarks
                 val isSearchActive = currentScreen == Screen.Search
                 val isSettingsActive = currentScreen == Screen.Settings
+
+                createDropdownItem("Home", Icons.Filled.Home, Screen.Home, isHomeActive)
+                createDropdownItem("Reader", Icons.Filled.Book, Screen.Reader(), isReaderActive)
+                createDropdownItem("Bookmarks", Icons.Filled.Bookmark, Screen.Bookmarks, isBookmarksActive)
+                createDropdownItem("Search", Icons.Filled.Search, Screen.Search, isSearchActive)
+                createDropdownItem("Settings", Icons.Filled.Settings, Screen.Settings, isSettingsActive)
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ReaderAppBar(
+    currentScreen: Screen.Reader,
+    modifier: Modifier = Modifier,
+    onBibleIconClick: () -> Unit,
+    onThemeToggle: () -> Unit,
+    onColorLensClick: () -> Unit,
+    onScreenChange: (Screen) -> Unit,
+    onBack: (() -> Unit)? = null
+) {
+    var showNavigationDropdown by remember { mutableStateOf(false) }
+
+    val rotation by animateFloatAsState(
+        targetValue = if (showNavigationDropdown) 180f else 0f,
+        animationSpec = tween(durationMillis = 300),
+        label = "menuIconRotation"
+    )
+
+    TopAppBar(
+        title = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(
+                    onClick = { onBibleIconClick() },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(4.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                    modifier = Modifier
+                        .height(36.dp)
+                        .width(135.dp)
+                        .padding(end = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = currentScreen.passage?.bookName ?: "Reader",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            overflow = TextOverflow.Ellipsis,
+                            maxLines = 1,
+                            modifier = Modifier.weight(1f),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = currentScreen.passage?.chapter?.let { " $it" } ?: "",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+                Button(
+                    onClick = { /* TODO: implement version selection */ },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(4.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Text(
+                        text = "KJ2",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.primary
+        ),
+        modifier = modifier,
+        navigationIcon = {
+            if (onBack != null) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                }
+            }
+        },
+        actions = {
+            IconButton(onClick = onThemeToggle) {
+                Icon(Icons.Filled.Brightness6, contentDescription = "Toggle Theme", tint = Color.White)
+            }
+            IconButton(onClick = onColorLensClick) {
+                Icon(Icons.Filled.ColorLens, contentDescription = "Color Scheme", tint = Color.White)
+            }
+            IconButton(
+                onClick = { showNavigationDropdown = !showNavigationDropdown },
+                modifier = Modifier.rotate(rotation)
+            ) {
+                Crossfade(
+                    targetState = showNavigationDropdown,
+                    animationSpec = tween(durationMillis = 300),
+                    label = "iconCrossfade"
+                ) { isOpen ->
+                    Icon(
+                        imageVector = if (isOpen) Icons.Filled.Close else Icons.Filled.Menu,
+                        contentDescription = if (isOpen) "Close Navigation" else "Open Navigation",
+                        tint = Color.White
+                    )
+                }
+            }
+            DropdownMenu(
+                expanded = showNavigationDropdown,
+                onDismissRequest = { showNavigationDropdown = false },
+                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+            ) {
+                @Composable
+                fun createDropdownItem(
+                    title: String,
+                    icon: ImageVector,
+                    screen: Screen,
+                    isActive: Boolean
+                ) {
+                    val backgroundColor by animateColorAsState(
+                        targetValue = if (isActive) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                        animationSpec = tween(durationMillis = 200),
+                        label = "dropdownBackground"
+                    )
+                    val textColor by animateColorAsState(
+                        targetValue = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                        animationSpec = tween(durationMillis = 200),
+                        label = "dropdownTextColor"
+                    )
+
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = title,
+                                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+                                color = textColor
+                            )
+                        },
+                        onClick = {
+                            onScreenChange(screen)
+                            showNavigationDropdown = false
+                        },
+                        modifier = Modifier.background(backgroundColor),
+                        leadingIcon = {
+                            Icon(
+                                icon,
+                                contentDescription = title,
+                                tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    )
+                }
+
+                val isHomeActive = false
+                val isReaderActive = true
+                val isBookmarksActive = false
+                val isSearchActive = false
+                val isSettingsActive = false
 
                 createDropdownItem("Home", Icons.Filled.Home, Screen.Home, isHomeActive)
                 createDropdownItem("Reader", Icons.Filled.Book, Screen.Reader(), isReaderActive)

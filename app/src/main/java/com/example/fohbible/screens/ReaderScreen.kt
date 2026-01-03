@@ -1,5 +1,4 @@
 package com.example.fohbible.screens
-
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,29 +34,24 @@ import com.example.fohbible.data.BibleViewModel
 import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.PassageSelection
 import com.example.fohbible.ui.theme.FohBibleTheme
-
 data class Verse(
     val verseNumber: Int,
     val text: String
 )
-
 @Composable
 fun ReaderScreen(
     passage: PassageSelection?,
     @Suppress("unused") databaseHelper: DatabaseHelper? = null
 ) {
     val context = LocalContext.current
-
     val repository = remember { BibleRepository(context) }
     val viewModel = remember { BibleViewModel(repository) }
     val verses by viewModel.verses.collectAsState()
-
     LaunchedEffect(passage) {
         passage?.let {
             viewModel.loadVerses(it.bookNumber, it.chapter)
         }
     }
-
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -78,37 +72,27 @@ fun ReaderScreen(
                 }
             }
             else -> {
-                Column(
+                LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(16.dp)
                 ) {
-                    Text(
-                        text = "${passage.bookName} Chapter ${passage.chapter}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    LazyColumn {
-                        items(verses) { verse ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text(
-                                    text = "${verse.verseNumber}.",
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    text = verse.text,
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
+                    items(verses) { verse ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "${verse.verseNumber}.",
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = verse.text,
+                                modifier = Modifier.weight(1f)
+                            )
                         }
                     }
                 }
@@ -116,7 +100,6 @@ fun ReaderScreen(
         }
     }
 }
-
 @Composable
 fun VerseItem(
     verse: Verse,
@@ -155,7 +138,6 @@ fun VerseItem(
         )
     }
 }
-
 @Preview(showBackground = true)
 @Composable
 fun ReaderScreenPreview() {
@@ -172,7 +154,6 @@ fun ReaderScreenPreview() {
         }
     }
 }
-
 @Preview(showBackground = true)
 @Composable
 fun VerseItemPreview() {
