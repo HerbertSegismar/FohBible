@@ -129,7 +129,7 @@ class DatabaseHelper(private val context: MainActivity) {
                 return verses
             }
 
-            val allBooks = com.example.fohbible.BibleData.allBooks
+            val allBooks = BibleData.allBooks
             if (allBooks.isEmpty()) {
                 return verses
             }

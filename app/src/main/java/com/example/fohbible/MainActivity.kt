@@ -125,6 +125,12 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
         }
     }
 
+    fun updateCurrentScreen(newScreen: Screen) {
+        if (navigationStack.isNotEmpty()) {
+            navigationStack[navigationStack.lastIndex] = newScreen
+        }
+    }
+
     LaunchedEffect(selectedColor, darkTheme) {
         selectedColor?.let {
             ThemeManager.primaryColor = it
@@ -211,7 +217,6 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
                     BackHandler(enabled = navigationStack.size > 1) {
                         goBack()
                     }
-
                     when (currentScreen) {
                         Screen.Home -> {
                             HomeScreen(
@@ -227,9 +232,13 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
                                 chapter = 1,
                                 verse = 1
                             )
+
                             ReaderScreen(
                                 passage = passage,
-                                databaseHelper = databaseHelper
+                                databaseHelper = databaseHelper,
+                                onPassageChange = { newPassage ->
+                                    updateCurrentScreen(Screen.Reader(newPassage))
+                                }
                             )
                         }
                         Screen.Bookmarks -> BookmarksScreen()
@@ -328,10 +337,8 @@ fun UpdatedColorThemeDialog(
                     Icon(Icons.Filled.Close, contentDescription = "Close")
                 }
             }
-
             Spacer(modifier = Modifier.height(8.dp))
             HorizontalDivider()
-
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -415,9 +422,7 @@ fun UpdatedColorThemeDialog(
                     }
                 }
             }
-
             Spacer(modifier = Modifier.height(16.dp))
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
@@ -508,7 +513,6 @@ fun HomeAppBar(
     onBack: (() -> Unit)? = null
 ) {
     var showNavigationDropdown by remember { mutableStateOf(false) }
-
     // Animate the rotation of the menu icon to X
     val rotation by animateFloatAsState(
         targetValue = if (showNavigationDropdown) 180f else 0f,
@@ -596,7 +600,6 @@ fun HomeAppBar(
                         animationSpec = tween(durationMillis = 200),
                         label = "dropdownTextColor"
                     )
-
                     DropdownMenuItem(
                         text = {
                             Text(
@@ -648,7 +651,6 @@ fun ReaderAppBar(
     onBack: (() -> Unit)? = null
 ) {
     var showNavigationDropdown by remember { mutableStateOf(false) }
-
     val rotation by animateFloatAsState(
         targetValue = if (showNavigationDropdown) 180f else 0f,
         animationSpec = tween(durationMillis = 300),
@@ -768,7 +770,6 @@ fun ReaderAppBar(
                         animationSpec = tween(durationMillis = 200),
                         label = "dropdownTextColor"
                     )
-
                     DropdownMenuItem(
                         text = {
                             Text(

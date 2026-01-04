@@ -59,8 +59,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.example.fohbible.data.BibleBook
+import com.example.fohbible.data.BibleData
 import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.PassageSelection
+import com.example.fohbible.data.Testament
 import com.example.fohbible.ui.theme.FohBibleTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -100,9 +103,7 @@ fun NavigationModal(
     var focusedInput by remember { mutableStateOf<String?>("chapter") }
     var maxVerse by remember { mutableIntStateOf(0) }
     var isLoadingVerseCount by remember { mutableStateOf(false) }
-    val selectedBibleBook by remember(selectedBook) {
-        derivedStateOf { selectedBook?.let { BibleData.getBookByCustomNumber(it.bookNumber) } }
-    }
+    val selectedBibleBook by remember(selectedBook) { derivedStateOf { selectedBook?.let { BibleData.getBookByCustomNumber(it.bookNumber) } } }
     var showChapterFlash by remember { mutableStateOf(false) }
     var showVerseFlash by remember { mutableStateOf(false) }
 
@@ -276,6 +277,7 @@ fun NavigationModal(
                                     chapterInput = ""
                                     verseInput = ""
                                     maxVerse = 0
+                                    focusedInput = "chapter"
                                 },
                                 defaultColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
                                 textColor = MaterialTheme.colorScheme.primary,
@@ -292,6 +294,7 @@ fun NavigationModal(
                                     chapterInput = ""
                                     verseInput = ""
                                     maxVerse = 0
+                                    focusedInput = "chapter"
                                 },
                                 defaultColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f),
                                 textColor = MaterialTheme.colorScheme.secondary,
@@ -351,16 +354,17 @@ fun NavigationModal(
                             }
                             item { Spacer(modifier = Modifier.height(24.dp)) }
                             item {
-                                val confirm = remember {
+                                val confirm = remember(selectedBook, chapterInput, verseInput) {
                                     {
-                                        if (isInputValid) {
+                                        if (isInputValid && selectedBook != null) {
                                             val chapter = chapterInput.toInt()
                                             val verse = verseInput.toIntOrNull()
-                                            val bibleBook = BibleData.getBookByCustomNumber(book.bookNumber)
+                                            val bibleBook = BibleData.getBookByCustomNumber(
+                                                selectedBook!!.bookNumber)
                                             onPassageSelected(
                                                 PassageSelection(
-                                                    bookNumber = book.bookNumber,
-                                                    bookName = bibleBook?.name ?: book.longName,
+                                                    bookNumber = selectedBook!!.bookNumber,
+                                                    bookName = bibleBook?.name ?: selectedBook!!.longName,
                                                     chapter = chapter,
                                                     verse = verse
                                                 )
@@ -539,7 +543,8 @@ fun NumPad(
                 icon = Icons.Filled.Check,
                 text = null,
                 contentDescription = "Confirm",
-                onClick = onConfirm,containerColor = if (isEnabled) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f),
+                onClick = onConfirm,
+                containerColor = if (isEnabled) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f),
                 contentColor = if (isEnabled) Color.White else Color.White.copy(alpha = 0.5f),
                 modifier = Modifier.weight(1f)
             )
@@ -725,7 +730,9 @@ fun TestamentSection(
                         defaultColor
                     },
                     textColor = textColor,
-                    onClick = { onBookSelected(book) }
+                    onClick = {
+                        onBookSelected(book)
+                    }
                 )
             }
         }
