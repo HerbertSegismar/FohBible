@@ -11,7 +11,7 @@ import com.example.fohbible.ThemeManager
 
 // Define default light color scheme
 private val LightColorScheme = lightColorScheme(
-    primary = Color(0xFF6200EE),
+    primary = Color(0xFF2196F3),
     secondary = Color(0xFF03DAC6),
     tertiary = Color(0xFF3700B3),
     background = Color(0xFFFFFFFF),
@@ -27,7 +27,7 @@ private val LightColorScheme = lightColorScheme(
 
 // Define default dark color scheme
 private val DarkColorScheme = darkColorScheme(
-    primary = Color(0xFFBB86FC),
+    primary = Color(0xFF137CD0),
     secondary = Color(0xFF03DAC6),
     tertiary = Color(0xFF3700B3),
     background = Color(0xFF121212),

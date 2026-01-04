@@ -11,14 +11,14 @@ import androidx.core.graphics.ColorUtils
 
 data class AppThemeState(
     val darkTheme: Boolean = false,
-    val primaryColor: Color = Color(0xFF6200EE), // Default primary color
+    val primaryColor: Color = Color(0xFF2196F3), // Default primary color
     val isCustomColor: Boolean = false
 )
 
 val LocalAppTheme = staticCompositionLocalOf { AppThemeState() }
 
 object ThemeManager {
-    var primaryColor: Color by mutableStateOf(Color(0xFF6200EE))
+    var primaryColor: Color by mutableStateOf(Color(0xFF2196F3))
     var darkTheme: Boolean by mutableStateOf(false)
     var isCustomColor: Boolean by mutableStateOf(false)
     fun generateColorScheme(primary: Color, isDark: Boolean): AppColorScheme {

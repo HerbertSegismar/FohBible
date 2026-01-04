@@ -142,7 +142,7 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
 
     val themeState = AppThemeState(
         darkTheme = darkTheme,
-        primaryColor = selectedColor ?: Color(0xFF220F3D),
+        primaryColor = selectedColor ?: Color(0xFF2196F3),
         isCustomColor = isCustomColor
     )
 
@@ -206,6 +206,7 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
                         FloatingActionButton(
                             onClick = { showNavigationModal = true },
                             containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = Color.White,
                             shape = CircleShape
                         ) {
                             Icon(Icons.Filled.Book, contentDescription = "Open Bible")
