@@ -56,7 +56,7 @@ object ThemeManager {
         val tertiary = ColorUtils.blendARGB(primary.toArgb(), Color.Magenta.toArgb(), 0.4f)
 
         return AppColorScheme(
-            primary = darkPrimary,
+            primary = primary,
             onPrimary = Color.White,
             secondary = Color(secondary),
             onSecondary = Color.White,

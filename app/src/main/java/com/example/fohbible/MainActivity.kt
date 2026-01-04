@@ -513,7 +513,6 @@ fun HomeAppBar(
     onBack: (() -> Unit)? = null
 ) {
     var showNavigationDropdown by remember { mutableStateOf(false) }
-    // Animate the rotation of the menu icon to X
     val rotation by animateFloatAsState(
         targetValue = if (showNavigationDropdown) 180f else 0f,
         animationSpec = tween(durationMillis = 300),
@@ -540,8 +539,9 @@ fun HomeAppBar(
                 textAlign = TextAlign.Start
             )
         },
+        // Use color item option instead of MaterialTheme.colorScheme.primary
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primary
+            containerColor = LocalAppTheme.current.primaryColor
         ),
         modifier = modifier,
         navigationIcon = {
@@ -714,8 +714,9 @@ fun ReaderAppBar(
                 }
             }
         },
+        // Use color item option instead of MaterialTheme.colorScheme.primary
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primary
+            containerColor = LocalAppTheme.current.primaryColor
         ),
         modifier = modifier,
         navigationIcon = {
