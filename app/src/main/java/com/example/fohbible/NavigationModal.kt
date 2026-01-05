@@ -472,7 +472,7 @@ fun CustomInputDisplay(
             .clip(RoundedCornerShape(4.dp))
             .border(borderWidth, borderColor, RoundedCornerShape(4.dp))
             .clickable(onClick = onClick),
-        color = if (isError) MaterialTheme.colorScheme.errorContainer else Color.White
+        color = if (isError) MaterialTheme.colorScheme.errorContainer else Color(0xFFF5F5DC)
     ) {
         Row(
             modifier = Modifier

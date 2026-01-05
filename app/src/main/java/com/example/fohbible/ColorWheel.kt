@@ -70,6 +70,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.graphics.toColorInt
+import com.example.fohbible.ui.theme.ThemeManager
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos

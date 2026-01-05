@@ -1,4 +1,5 @@
 package com.example.fohbible
+
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -78,6 +79,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.ViewModel
 import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.PassageSelection
 import com.example.fohbible.screens.BookmarksScreen
@@ -85,61 +88,76 @@ import com.example.fohbible.screens.HomeScreen
 import com.example.fohbible.screens.ReaderScreen
 import com.example.fohbible.screens.SearchScreen
 import com.example.fohbible.screens.SettingsScreen
+import com.example.fohbible.ui.theme.AppThemeState
+import com.example.fohbible.ui.theme.ColorTheme
+import com.example.fohbible.ui.theme.DefaultPrimaryColor
 import com.example.fohbible.ui.theme.FohBibleTheme
+import com.example.fohbible.ui.theme.LocalAppTheme
+import com.example.fohbible.ui.theme.PredefinedColorThemes
+import com.example.fohbible.ui.theme.ThemeManager
 import com.example.fohbible.utils.BibleVersionUtils
 import com.example.fohbible.utils.BibleVersionUtils.descriptionMap
 
-class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContent {
-            FohBibleApp(this)
-        }
-    }
-}
+class AppViewModel : ViewModel() {
+    var darkTheme by mutableStateOf(false)
+    var selectedColor by mutableStateOf<Color?>(null)
+    var isCustomColor by mutableStateOf(false)
+    val navigationStack = mutableStateListOf<Screen>(Screen.Home)
+    var currentDbName by mutableStateOf("kj2.sqlite3")
+    var currentVersionAbbr by mutableStateOf(BibleVersionUtils.versionMap["kj2.sqlite3"]!!)
 
-@Suppress("AssignedValueIsNeverRead")
-@Composable
-fun FohBibleApp(activity: MainActivity) {
-    var darkTheme by remember { mutableStateOf(false) }
-    var selectedColor by remember { mutableStateOf<Color?>(null) }
-    var isCustomColor by remember { mutableStateOf(false) }
-    val navigationStack = remember { mutableStateListOf<Screen>(Screen.Home) }
-    val currentScreen = navigationStack.last()
     fun navigateTo(screen: Screen) {
         navigationStack.add(screen)
     }
+
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     fun goBack() {
         if (navigationStack.size > 1) {
             navigationStack.removeLast()
         }
     }
+
     fun updateCurrentScreen(newScreen: Screen) {
         if (navigationStack.isNotEmpty()) {
             navigationStack[navigationStack.lastIndex] = newScreen
         }
     }
-    LaunchedEffect(selectedColor, darkTheme) {
-        selectedColor?.let {
+}
+
+class MainActivity : ComponentActivity() {
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContent {
+            val viewModel: AppViewModel = viewModel()
+            FohBibleApp(this, viewModel)
+        }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+@Suppress("AssignedValueIsNeverRead")
+@Composable
+fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
+    val currentScreen = viewModel.navigationStack.last()
+    LaunchedEffect(viewModel.selectedColor, viewModel.darkTheme) {
+        viewModel.selectedColor?.let {
             ThemeManager.primaryColor = it
-            ThemeManager.darkTheme = darkTheme
+            ThemeManager.darkTheme = viewModel.darkTheme
             ThemeManager.isCustomColor = true
-            isCustomColor = true
+            viewModel.isCustomColor = true
         }
     }
     val themeState = AppThemeState(
-        darkTheme = darkTheme,
-        primaryColor = selectedColor ?: Color(0xFF2196F3),
-        isCustomColor = isCustomColor
+        darkTheme = viewModel.darkTheme,
+        primaryColor = viewModel.selectedColor ?: DefaultPrimaryColor,
+        isCustomColor = viewModel.isCustomColor
     )
-    var currentDbName by remember { mutableStateOf("kj2.sqlite3") }
-    var currentVersionAbbr by remember { mutableStateOf(BibleVersionUtils.versionMap["kj2.sqlite3"]!!) }
     var dbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
-    LaunchedEffect(currentDbName) {
+    LaunchedEffect(viewModel.currentDbName) {
         dbHelper?.close()
-        dbHelper = DatabaseHelper(activity, currentDbName)
+        dbHelper = DatabaseHelper(activity, viewModel.currentDbName)
     }
     DisposableEffect(Unit) {
         onDispose {
@@ -147,7 +165,7 @@ fun FohBibleApp(activity: MainActivity) {
         }
     }
     CompositionLocalProvider(LocalAppTheme provides themeState) {
-        FohBibleTheme(darkTheme = darkTheme) {
+        FohBibleTheme(darkTheme = viewModel.darkTheme) {
             var showNavigationModal by remember { mutableStateOf(false) }
             var showColorThemeDialog by remember { mutableStateOf(false) }
             var showColorWheelDialog by remember { mutableStateOf(false) }
@@ -157,15 +175,15 @@ fun FohBibleApp(activity: MainActivity) {
                     if (currentScreen is Screen.Reader) {
                         ReaderAppBar(
                             currentScreen = currentScreen,
-                            currentVersionAbbr = currentVersionAbbr,
+                            currentVersionAbbr = viewModel.currentVersionAbbr,
                             versionMap = BibleVersionUtils.versionMap,
                             descriptionMap = descriptionMap,
                             onBibleIconClick = { showNavigationModal = true },
-                            onThemeToggle = { darkTheme = !darkTheme },
+                            onThemeToggle = { viewModel.darkTheme = !viewModel.darkTheme },
                             onColorLensClick = { showColorThemeDialog = true },
                             onVersionChange = { file, abbr ->
-                                currentDbName = file
-                                currentVersionAbbr = abbr
+                                viewModel.currentDbName = file
+                                viewModel.currentVersionAbbr = abbr
                             },
                             onScreenChange = { screen ->
                                 val targetScreen = when (screen) {
@@ -179,15 +197,15 @@ fun FohBibleApp(activity: MainActivity) {
                                     )
                                     else -> screen
                                 }
-                                navigateTo(targetScreen)
+                                viewModel.navigateTo(targetScreen)
                             },
-                            onBack = if (navigationStack.size > 1) { { goBack() } } else null
+                            onBack = if (viewModel.navigationStack.size > 1) { { viewModel.goBack() } } else null
                         )
                     } else {
                         HomeAppBar(
                             currentScreen = currentScreen,
                             onBibleIconClick = { showNavigationModal = true },
-                            onThemeToggle = { darkTheme = !darkTheme },
+                            onThemeToggle = { viewModel.darkTheme = !viewModel.darkTheme },
                             onColorLensClick = { showColorThemeDialog = true },
                             onScreenChange = { screen ->
                                 val targetScreen = when (screen) {
@@ -201,9 +219,9 @@ fun FohBibleApp(activity: MainActivity) {
                                     )
                                     else -> screen
                                 }
-                                navigateTo(targetScreen)
+                                viewModel.navigateTo(targetScreen)
                             },
-                            onBack = if (navigationStack.size > 1) { { goBack() } } else null
+                            onBack = if (viewModel.navigationStack.size > 1) { { viewModel.goBack() } } else null
                         )
                     }
                 },
@@ -221,8 +239,8 @@ fun FohBibleApp(activity: MainActivity) {
                 }
             ) { innerPadding ->
                 Box(modifier = Modifier.padding(innerPadding)) {
-                    BackHandler(enabled = navigationStack.size > 1) {
-                        goBack()
+                    BackHandler(enabled = viewModel.navigationStack.size > 1) {
+                        viewModel.goBack()
                     }
                     when (currentScreen) {
                         Screen.Home -> {
@@ -243,7 +261,7 @@ fun FohBibleApp(activity: MainActivity) {
                                 passage = passage,
                                 databaseHelper = dbHelper,
                                 onPassageChange = { newPassage ->
-                                    updateCurrentScreen(Screen.Reader(newPassage))
+                                    viewModel.updateCurrentScreen(Screen.Reader(newPassage))
                                 }
                             )
                         }
@@ -256,7 +274,7 @@ fun FohBibleApp(activity: MainActivity) {
                             showNavigationModal = true,
                             onDismissRequest = { showNavigationModal = false },
                             onPassageSelected = { passage ->
-                                navigateTo(Screen.Reader(passage))
+                                viewModel.navigateTo(Screen.Reader(passage))
                                 showNavigationModal = false
                             },
                             databaseHelper = dbHelper
@@ -269,8 +287,8 @@ fun FohBibleApp(activity: MainActivity) {
                             UpdatedColorThemeDialog(
                                 onDismiss = { showColorThemeDialog = false },
                                 onColorSelected = { color ->
-                                    selectedColor = color
-                                    isCustomColor = true
+                                    viewModel.selectedColor = color
+                                    viewModel.isCustomColor = true
                                 },
                                 onCustomColorClick = {
                                     showColorThemeDialog = false
@@ -283,11 +301,11 @@ fun FohBibleApp(activity: MainActivity) {
                         ColorWheelDialog(
                             onDismissRequest = { showColorWheelDialog = false },
                             onColorSelected = { color ->
-                                selectedColor = color
-                                isCustomColor = true
+                                viewModel.selectedColor = color
+                                viewModel.isCustomColor = true
                                 showColorWheelDialog = false
                             },
-                            initialColor = selectedColor ?: ThemeManager.primaryColor
+                            initialColor = viewModel.selectedColor ?: ThemeManager.primaryColor
                         )
                     }
                 }
@@ -302,14 +320,6 @@ fun UpdatedColorThemeDialog(
     onColorSelected: (Color) -> Unit,
     onCustomColorClick: () -> Unit
 ) {
-    val colorOptions = listOf(
-        ColorTheme("Blue Theme", Color(0xFF2196F3), Color(0xFF1976D2)),
-        ColorTheme("Green Theme", Color(0xFF4CAF50), Color(0xFF388E3C)),
-        ColorTheme("Purple Theme", Color(0xFF9C27B0), Color(0xFF7B1FA2)),
-        ColorTheme("Orange Theme", Color(0xFFFF9800), Color(0xFFF57C00)),
-        ColorTheme("Red Theme", Color(0xFFF44336), Color(0xFFD32F2F)),
-        ColorTheme("Teal Theme", Color(0xFF009688), Color(0xFF00796B)),
-    )
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -345,7 +355,7 @@ fun UpdatedColorThemeDialog(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(colorOptions.chunked(1)) { rowThemes ->
+                items(PredefinedColorThemes.chunked(1)) { rowThemes ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -495,11 +505,6 @@ fun ColorOptionItem(
         }
     }
 }
-data class ColorTheme(
-    val name: String,
-    val primaryColor: Color,
-    val secondaryColor: Color
-)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeAppBar(
@@ -668,7 +673,7 @@ fun ReaderAppBar(
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
                     modifier = Modifier
                         .height(36.dp)
-                        .width(135.dp)
+                        .width(120.dp)
                         .padding(end = 8.dp)
                 ) {
                     Row(

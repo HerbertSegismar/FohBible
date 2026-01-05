@@ -5,13 +5,121 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
-import com.example.fohbible.LocalAppTheme
-import com.example.fohbible.ThemeManager
+import androidx.compose.ui.graphics.toArgb
+import androidx.core.graphics.ColorUtils
+import android.graphics.Color as AndroidColor
+
+data class AppThemeState(
+    val darkTheme: Boolean = false,
+    val primaryColor: Color = DefaultPrimaryColor,
+    val isCustomColor: Boolean = false
+)
+
+val LocalAppTheme = staticCompositionLocalOf { AppThemeState() }
+
+object ThemeManager {
+    var primaryColor: Color by mutableStateOf(DefaultPrimaryColor)
+    var darkTheme: Boolean by mutableStateOf(false)
+    var isCustomColor: Boolean by mutableStateOf(false)
+    fun generateColorScheme(primary: Color, isDark: Boolean): AppColorScheme {
+        return if (isDark) {
+            generateDarkColorScheme(primary)
+        } else {
+            generateLightColorScheme(primary)
+        }
+    }
+
+    private fun generateLightColorScheme(primary: Color): AppColorScheme {
+        val secondary = ColorUtils.blendARGB(primary.toArgb(), Color.Yellow.toArgb(), 0.4f)
+        val tertiary = ColorUtils.blendARGB(primary.toArgb(), Color.Cyan.toArgb(), 0.4f)
+
+        return AppColorScheme(
+            primary = primary,
+            onPrimary = if (primary.calculateBrightness() > 0.6f) Color.Black else Color.White,
+            secondary = Color(secondary),
+            onSecondary = Color.Black,
+            tertiary = Color(tertiary),
+            onTertiary = Color.White,
+            background = Color.White,
+            onBackground = Color.Black,
+            surface = Color(0xFFF5F5DC),
+            onSurface = Color.Black,
+            surfaceVariant = Color(0xFFE0E0E0),
+            primaryContainer = Color(0xFFFCF9EA),
+            secondaryContainer = Color(secondary).copy(alpha = 0.2f)
+        )
+    }
+
+    private fun generateDarkColorScheme(primary: Color): AppColorScheme {
+        Color(ColorUtils.blendARGB(primary.toArgb(), Color.Black.toArgb(), 0.3f))
+        val secondary = ColorUtils.blendARGB(primary.toArgb(), Color.Yellow.toArgb(), 0.4f)
+        val tertiary = ColorUtils.blendARGB(primary.toArgb(), Color.Magenta.toArgb(), 0.4f)
+
+        return AppColorScheme(
+            primary = primary,
+            onPrimary = Color.White,
+            secondary = Color(secondary),
+            onSecondary = Color.White,
+            tertiary = Color(tertiary),
+            onTertiary = Color.White,
+            background = Color(0xFF121212),
+            onBackground = Color.White,
+            surface = Color(0xFF020B36),
+            onSurface = Color.White,
+            surfaceVariant = Color(0xFF2D2D2D),
+            primaryContainer = Color(0xFF070017),
+            secondaryContainer = Color(secondary).copy(alpha = 0.2f)
+        )
+    }
+}
+
+data class AppColorScheme(
+    val primary: Color,
+    val onPrimary: Color,
+    val secondary: Color,
+    val onSecondary: Color,
+    val tertiary: Color,
+    val onTertiary: Color,
+    val background: Color,
+    val onBackground: Color,
+    val surface: Color,
+    val onSurface: Color,
+    val surfaceVariant: Color,
+    val primaryContainer: Color,
+    val secondaryContainer: Color
+)
+
+fun Color.calculateBrightness(): Float {
+    val hsv = FloatArray(3)
+    AndroidColor.colorToHSV(this.toArgb(), hsv)
+    return hsv[2]
+}
+
+val DefaultPrimaryColor = Color(0xFF2196F3)
+
+data class ColorTheme(
+    val name: String,
+    val primaryColor: Color,
+    val secondaryColor: Color
+)
+
+val PredefinedColorThemes = listOf(
+    ColorTheme("Blue Theme", Color(0xFF2196F3), Color(0xFF1976D2)),
+    ColorTheme("Green Theme", Color(0xFF4CAF50), Color(0xFF388E3C)),
+    ColorTheme("Purple Theme", Color(0xFF9C27B0), Color(0xFF7B1FA2)),
+    ColorTheme("Orange Theme", Color(0xFFFF9800), Color(0xFFF57C00)),
+    ColorTheme("Red Theme", Color(0xFFF44336), Color(0xFFD32F2F)),
+    ColorTheme("Teal Theme", Color(0xFF009688), Color(0xFF00796B)),
+)
 
 // Define default light color scheme
 private val LightColorScheme = lightColorScheme(
-    primary = Color(0xFF2196F3),
+    primary = DefaultPrimaryColor,
     secondary = Color(0xFF03DAC6),
     tertiary = Color(0xFF3700B3),
     background = Color(0xFFFFFFFF),
@@ -21,7 +129,7 @@ private val LightColorScheme = lightColorScheme(
     onSecondary = Color.Black,
     onBackground = Color.Black,
     onSurface = Color.Black,
-    primaryContainer = Color(0xFFEADDFF),
+    primaryContainer = Color(0xFFFCF9EA),
     secondaryContainer = Color(0xFFC8E6C9)
 )
 
@@ -31,13 +139,13 @@ private val DarkColorScheme = darkColorScheme(
     secondary = Color(0xFF03DAC6),
     tertiary = Color(0xFF3700B3),
     background = Color(0xFF121212),
-    surface = Color(0xFF4B0082),
+    surface = Color(0xFF020B36),
     surfaceVariant = Color(0xFF2D2D2D),
     onPrimary = Color.Black,
     onSecondary = Color.Black,
     onBackground = Color.White,
     onSurface = Color.White,
-    primaryContainer = Color(0xFF4F378B),
+    primaryContainer = Color(0xFF070017),
     secondaryContainer = Color(0xFF1B5E20)
 )
 
