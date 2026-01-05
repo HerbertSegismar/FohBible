@@ -1,8 +1,6 @@
 package com.example.fohbible.data
-
 import android.content.Context
 import com.example.fohbible.MainActivity
-
 data class BibleBook(
     val customNumber: Int,
     val name: String,
@@ -13,18 +11,17 @@ data class BibleBook(
 ) {
     fun getVersesForChapter(chapter: Int, context: Context? = null): Int {
         return if (context != null) {
-            val dbHelper = DatabaseHelper(context as MainActivity)
+            val dbHelper = DatabaseHelper(
+                context as MainActivity,
+                databaseName = "kj2.sqlite3"
+            )
             dbHelper.getVerseCount(customNumber, chapter)
         } else {
             30
         }
     }
 }
-
-enum class Testament {
-    OLD, NEW
-}
-
+enum class Testament { OLD, NEW }
 object BibleData {
     private val allBooksList = listOf(
         BibleBook(10, "Genesis", 50, Testament.OLD, "Gen"),
@@ -66,7 +63,6 @@ object BibleData {
         BibleBook(440, "Haggai", 2, Testament.OLD, "Hag"),
         BibleBook(450, "Zechariah", 14, Testament.OLD, "Zech"),
         BibleBook(460, "Malachi", 4, Testament.OLD, "Mal"),
-
         BibleBook(470, "Matthew", 28, Testament.NEW, "Matt"),
         BibleBook(480, "Mark", 16, Testament.NEW, "Mark"),
         BibleBook(490, "Luke", 24, Testament.NEW, "Luke"),
@@ -95,17 +91,10 @@ object BibleData {
         BibleBook(720, "Jude", 1, Testament.NEW, "Jude"),
         BibleBook(730, "Revelation", 22, Testament.NEW, "Rev")
     )
-
-    private val booksWithStandardNumbers = allBooksList.mapIndexed { index, book ->
-        book.copy(standardNumber = index + 1)
-    }
-
+    private val booksWithStandardNumbers = allBooksList.mapIndexed { index, book -> book.copy(standardNumber = index + 1) }
     val BIBLE_BOOKS_MAP = booksWithStandardNumbers.associateBy { it.customNumber }
-
     val allBooks: List<BibleBook> = booksWithStandardNumbers
     val oldTestamentBooks: List<BibleBook> = allBooks.filter { it.testament == Testament.OLD }
     val newTestamentBooks: List<BibleBook> = allBooks.filter { it.testament == Testament.NEW }
-
     fun getBookByCustomNumber(customNumber: Int): BibleBook? = BIBLE_BOOKS_MAP[customNumber]
-
 }

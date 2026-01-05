@@ -1,5 +1,6 @@
 package com.example.fohbible.screens
 
+import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import androidx.compose.foundation.background
@@ -453,7 +454,7 @@ fun RecentReadingItem(reading: RecentReading) {
 
 // Helper function to load random verses
 private fun loadRandomVerses(
-    context: android.content.Context,
+    context: Context,
     databaseHelper: DatabaseHelper?,
     onComplete: (List<Verse>) -> Unit
 ) {
@@ -468,7 +469,10 @@ private fun loadRandomVerses(
     } else {
         // Create new database helper
         Thread {
-            val dbHelper = DatabaseHelper(context as MainActivity)
+            val dbHelper = DatabaseHelper(
+                context as MainActivity,
+                databaseName = "kj2.sqlite3"
+            )
             val verses = dbHelper.getRandomVerses()
             dbHelper.close()
             Handler(Looper.getMainLooper()).post {

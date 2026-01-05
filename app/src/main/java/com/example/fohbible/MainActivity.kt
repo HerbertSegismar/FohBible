@@ -1,5 +1,4 @@
 package com.example.fohbible
-
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -59,6 +58,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -74,6 +74,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -85,52 +86,39 @@ import com.example.fohbible.screens.ReaderScreen
 import com.example.fohbible.screens.SearchScreen
 import com.example.fohbible.screens.SettingsScreen
 import com.example.fohbible.ui.theme.FohBibleTheme
-import androidx.compose.ui.text.style.TextOverflow
 
 class MainActivity : ComponentActivity() {
-    private lateinit var databaseHelper: DatabaseHelper
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        databaseHelper = DatabaseHelper(this)
         setContent {
-            FohBibleApp(databaseHelper)
+            FohBibleApp(this)
         }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        databaseHelper.close()
     }
 }
 
 @Suppress("AssignedValueIsNeverRead")
 @Composable
-fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
+fun FohBibleApp(activity: MainActivity) {
     var darkTheme by remember { mutableStateOf(false) }
     var selectedColor by remember { mutableStateOf<Color?>(null) }
     var isCustomColor by remember { mutableStateOf(false) }
     val navigationStack = remember { mutableStateListOf<Screen>(Screen.Home) }
     val currentScreen = navigationStack.last()
-
     fun navigateTo(screen: Screen) {
         navigationStack.add(screen)
     }
-
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     fun goBack() {
         if (navigationStack.size > 1) {
             navigationStack.removeLast()
         }
     }
-
     fun updateCurrentScreen(newScreen: Screen) {
         if (navigationStack.isNotEmpty()) {
             navigationStack[navigationStack.lastIndex] = newScreen
         }
     }
-
     LaunchedEffect(selectedColor, darkTheme) {
         selectedColor?.let {
             ThemeManager.primaryColor = it
@@ -139,28 +127,78 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
             isCustomColor = true
         }
     }
-
     val themeState = AppThemeState(
         darkTheme = darkTheme,
         primaryColor = selectedColor ?: Color(0xFF2196F3),
         isCustomColor = isCustomColor
     )
-
+    val versionMap: Map<String, String> = mapOf(
+        "ampc.sqlite3" to "AMPC",
+        "cebB.sqlite3" to "CEBB",
+        "csb17.sqlite3" to "CSB17",
+        "esv.sqlite3" to "ESV",
+        "esvgsb.sqlite3" to "ESVGSB",
+        "hilab82.sqlite3" to "HILAB82",
+        "kj2.sqlite3" to "KJ2",
+        "kjv+.sqlite3" to "KJV+",
+        "logos.sqlite3" to "Logos",
+        "nasb+.sqlite3" to "NASB+",
+        "niv11.sqlite3" to "NIV11",
+        "nkjv.sqlite3" to "NKJV",
+        "nlt15.sqlite3" to "NLT15",
+        "tagab01.sqlite3" to "TAGAB01",
+        "ylt.sqlite3" to "YLT"
+    )
+    val descriptionMap: Map<String, String> = mapOf(
+        "ampc.sqlite3" to "Amplified Bible Classic Edition",
+        "cebB.sqlite3" to "Cebuano Bible",
+        "csb17.sqlite3" to "Christian Standard Bible",
+        "esv.sqlite3" to "English Standard Version",
+        "esvgsb.sqlite3" to "ESV Global Study Bible",
+        "hilab82.sqlite3" to "Hiligaynon Ang Biblia 1982",
+        "kj2.sqlite3" to "King James 2000",
+        "kjv+.sqlite3" to "King James Version 1769",
+        "logos.sqlite3" to "Logos Bible",
+        "nasb+.sqlite3" to "New American Standard Bible",
+        "niv11.sqlite3" to "New International Version",
+        "nkjv.sqlite3" to "New King James Version",
+        "nlt15.sqlite3" to "New Living Translation",
+        "tagab01.sqlite3" to "Tagalog Biblia 2001",
+        "ylt.sqlite3" to "Young's Literal Translation"
+    )
+    var currentDbName by remember { mutableStateOf("kj2.sqlite3") }
+    var currentVersionAbbr by remember { mutableStateOf(versionMap["kj2.sqlite3"]!!) }
+    var dbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
+    LaunchedEffect(currentDbName) {
+        dbHelper?.close()
+        dbHelper = DatabaseHelper(activity, currentDbName)
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            dbHelper?.close()
+        }
+    }
     CompositionLocalProvider(LocalAppTheme provides themeState) {
         FohBibleTheme(darkTheme = darkTheme) {
             var showNavigationModal by remember { mutableStateOf(false) }
             var showColorThemeDialog by remember { mutableStateOf(false) }
             var showColorWheelDialog by remember { mutableStateOf(false) }
-
             Scaffold(
                 modifier = Modifier.fillMaxSize(),
                 topBar = {
                     if (currentScreen is Screen.Reader) {
                         ReaderAppBar(
                             currentScreen = currentScreen,
+                            currentVersionAbbr = currentVersionAbbr,
+                            versionMap = versionMap,
+                            descriptionMap = descriptionMap,
                             onBibleIconClick = { showNavigationModal = true },
                             onThemeToggle = { darkTheme = !darkTheme },
                             onColorLensClick = { showColorThemeDialog = true },
+                            onVersionChange = { file, abbr ->
+                                currentDbName = file
+                                currentVersionAbbr = abbr
+                            },
                             onScreenChange = { screen ->
                                 val targetScreen = when (screen) {
                                     is Screen.Reader -> Screen.Reader(
@@ -223,7 +261,7 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
                             HomeScreen(
                                 modifier = Modifier.fillMaxSize(),
                                 onBibleClick = { showNavigationModal = true },
-                                databaseHelper = databaseHelper
+                                databaseHelper = dbHelper
                             )
                         }
                         is Screen.Reader -> {
@@ -233,10 +271,9 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
                                 chapter = 1,
                                 verse = 1
                             )
-
                             ReaderScreen(
                                 passage = passage,
-                                databaseHelper = databaseHelper,
+                                databaseHelper = dbHelper,
                                 onPassageChange = { newPassage ->
                                     updateCurrentScreen(Screen.Reader(newPassage))
                                 }
@@ -246,7 +283,6 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
                         Screen.Search -> SearchScreen()
                         Screen.Settings -> SettingsScreen()
                     }
-
                     if (showNavigationModal) {
                         NavigationModal(
                             showNavigationModal = true,
@@ -255,10 +291,9 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
                                 navigateTo(Screen.Reader(passage))
                                 showNavigationModal = false
                             },
-                            databaseHelper = databaseHelper
+                            databaseHelper = dbHelper
                         )
                     }
-
                     if (showColorThemeDialog) {
                         Dialog(
                             onDismissRequest = { showColorThemeDialog = false }
@@ -276,7 +311,6 @@ fun FohBibleApp(databaseHelper: DatabaseHelper? = null) {
                             )
                         }
                     }
-
                     if (showColorWheelDialog) {
                         ColorWheelDialog(
                             onDismissRequest = { showColorWheelDialog = false },
@@ -308,7 +342,6 @@ fun UpdatedColorThemeDialog(
         ColorTheme("Red Theme", Color(0xFFF44336), Color(0xFFD32F2F)),
         ColorTheme("Teal Theme", Color(0xFF009688), Color(0xFF00796B)),
     )
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -442,7 +475,6 @@ fun UpdatedColorThemeDialog(
         }
     }
 }
-
 @Composable
 fun ColorOptionItem(
     theme: ColorTheme,
@@ -495,13 +527,11 @@ fun ColorOptionItem(
         }
     }
 }
-
 data class ColorTheme(
     val name: String,
     val primaryColor: Color,
     val secondaryColor: Color
 )
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeAppBar(
@@ -519,7 +549,6 @@ fun HomeAppBar(
         animationSpec = tween(durationMillis = 300),
         label = "menuIconRotation"
     )
-
     val screenTitle = when (currentScreen) {
         is Screen.Home -> "Home"
         is Screen.Reader -> "Reader"
@@ -527,7 +556,6 @@ fun HomeAppBar(
         is Screen.Search -> "Search"
         is Screen.Settings -> "Settings"
     }
-
     TopAppBar(
         title = {
             Text(
@@ -540,7 +568,6 @@ fun HomeAppBar(
                 textAlign = TextAlign.Start
             )
         },
-        // Use color item option instead of MaterialTheme.colorScheme.primary
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = LocalAppTheme.current.primaryColor
         ),
@@ -583,7 +610,6 @@ fun HomeAppBar(
                 onDismissRequest = { showNavigationDropdown = false },
                 modifier = Modifier.background(MaterialTheme.colorScheme.surface)
             ) {
-                // Helper function to create dropdown items with highlight
                 @Composable
                 fun createDropdownItem(
                     title: String,
@@ -623,13 +649,11 @@ fun HomeAppBar(
                         }
                     )
                 }
-
                 val isHomeActive = currentScreen is Screen.Home
                 val isReaderActive = currentScreen is Screen.Reader
                 val isBookmarksActive = currentScreen == Screen.Bookmarks
                 val isSearchActive = currentScreen == Screen.Search
                 val isSettingsActive = currentScreen == Screen.Settings
-
                 createDropdownItem("Home", Icons.Filled.Home, Screen.Home, isHomeActive)
                 createDropdownItem("Reader", Icons.Filled.Book, Screen.Reader(), isReaderActive)
                 createDropdownItem("Bookmarks", Icons.Filled.Bookmark, Screen.Bookmarks, isBookmarksActive)
@@ -639,25 +663,28 @@ fun HomeAppBar(
         }
     )
 }
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReaderAppBar(
     currentScreen: Screen.Reader,
+    currentVersionAbbr: String,
+    versionMap: Map<String, String>,
+    descriptionMap: Map<String, String>,
     modifier: Modifier = Modifier,
     onBibleIconClick: () -> Unit,
     onThemeToggle: () -> Unit,
     onColorLensClick: () -> Unit,
+    onVersionChange: (String, String) -> Unit,
     onScreenChange: (Screen) -> Unit,
     onBack: (() -> Unit)? = null
 ) {
     var showNavigationDropdown by remember { mutableStateOf(false) }
+    var showVersionDropdown by remember { mutableStateOf(false) }
     val rotation by animateFloatAsState(
         targetValue = if (showNavigationDropdown) 180f else 0f,
         animationSpec = tween(durationMillis = 300),
         label = "menuIconRotation"
     )
-
     TopAppBar(
         title = {
             Row(
@@ -697,21 +724,77 @@ fun ReaderAppBar(
                         )
                     }
                 }
-                Button(
-                    onClick = { /* TODO: implement version selection */ },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White
-                    ),
-                    shape = RoundedCornerShape(4.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
-                    modifier = Modifier.height(36.dp)
-                ) {
-                    Text(
-                        text = "KJ2",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                Box {
+                    Button(
+                        onClick = { showVersionDropdown = true },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(4.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Text(
+                            text = currentVersionAbbr,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showVersionDropdown,
+                        onDismissRequest = { showVersionDropdown = false },
+                        modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                    ) {
+                        @Composable
+                        fun createVersionItem(
+                            file: String,
+                            abbr: String,
+                            description: String,
+                            isActive: Boolean
+                        ) {
+                            val backgroundColor by animateColorAsState(
+                                targetValue = if (isActive) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                                animationSpec = tween(durationMillis = 200),
+                                label = "dropdownBackground"
+                            )
+                            val textColor by animateColorAsState(
+                                targetValue = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                animationSpec = tween(durationMillis = 200),
+                                label = "dropdownTextColor"
+                            )
+                            DropdownMenuItem(
+                                text = {
+                                    Column {
+                                        Text(
+                                            text = abbr,
+                                            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+                                            color = textColor
+                                        )
+                                        Text(
+                                            text = description,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    onVersionChange(file, abbr)
+                                    showVersionDropdown = false
+                                },
+                                modifier = Modifier.background(backgroundColor)
+                            )
+                        }
+                        versionMap.forEach { (file, abbr) ->
+                            val desc = descriptionMap[file] ?: "Bible translation"
+                            createVersionItem(
+                                file = file,
+                                abbr = abbr,
+                                description = desc,
+                                isActive = abbr == currentVersionAbbr
+                            )
+                        }
+                    }
                 }
             }
         },
@@ -794,13 +877,11 @@ fun ReaderAppBar(
                         }
                     )
                 }
-
                 val isHomeActive = false
                 val isReaderActive = true
                 val isBookmarksActive = false
                 val isSearchActive = false
                 val isSettingsActive = false
-
                 createDropdownItem("Home", Icons.Filled.Home, Screen.Home, isHomeActive)
                 createDropdownItem("Reader", Icons.Filled.Book, Screen.Reader(), isReaderActive)
                 createDropdownItem("Bookmarks", Icons.Filled.Bookmark, Screen.Bookmarks, isBookmarksActive)
@@ -810,7 +891,6 @@ fun ReaderAppBar(
         }
     )
 }
-
 sealed class Screen {
     object Home : Screen()
     data class Reader(val passage: PassageSelection? = null) : Screen()

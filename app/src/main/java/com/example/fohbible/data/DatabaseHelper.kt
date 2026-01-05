@@ -1,5 +1,4 @@
 package com.example.fohbible.data
-
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import com.example.fohbible.MainActivity
@@ -7,48 +6,39 @@ import java.io.File
 import java.io.FileOutputStream
 import java.util.Random
 
-class DatabaseHelper(private val context: MainActivity) {
+class DatabaseHelper(private val context: MainActivity, private val databaseName: String) {
     private var database: SQLiteDatabase? = null
     private val tag = "DatabaseHelper"
     private val random = Random()
-
     companion object {
-        private const val DATABASE_NAME = "kj2.sqlite3"
         private const val VERSES_TABLE = "verses"
         private const val COLUMN_TEXT = "text"
         private const val COLUMN_BOOK_NUMBER = "book_number"
         private const val COLUMN_CHAPTER = "chapter"
         private const val COLUMN_VERSE = "verse"
     }
-
     init {
         openDatabase()
     }
-
     private fun openDatabase() {
         try {
-            val dbFile = context.getDatabasePath(DATABASE_NAME)
-
+            val dbFile = context.getDatabasePath(databaseName)
             if (!dbFile.exists()) {
                 copyDatabaseFromAssets(dbFile)
             }
-
             database = SQLiteDatabase.openDatabase(
                 dbFile.path,
                 null,
                 SQLiteDatabase.OPEN_READONLY
             )
-
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
-
     private fun copyDatabaseFromAssets(dbFile: File) {
         try {
             dbFile.parentFile?.mkdirs()
-
-            context.assets.open("databases/$DATABASE_NAME").use { inputStream ->
+            context.assets.open("databases/$databaseName").use { inputStream ->
                 FileOutputStream(dbFile).use { outputStream ->
                     inputStream.copyTo(outputStream)
                 }
@@ -57,41 +47,33 @@ class DatabaseHelper(private val context: MainActivity) {
             e.printStackTrace()
         }
     }
-
     fun getVerseCount(bookNumber: Int, chapter: Int): Int {
         var count = 0
         try {
             val query = """
-                SELECT COUNT(*) 
-                FROM $VERSES_TABLE 
-                WHERE $COLUMN_BOOK_NUMBER = ? 
+                SELECT COUNT(*)
+                FROM $VERSES_TABLE
+                WHERE $COLUMN_BOOK_NUMBER = ?
                 AND $COLUMN_CHAPTER = ?
             """.trimIndent()
-
             val cursor = database?.rawQuery(query, arrayOf(bookNumber.toString(), chapter.toString()))
-
             cursor?.use {
                 if (it.moveToFirst()) {
                     count = it.getInt(0)
                 }
             }
-
         } catch (e: Exception) {
             Log.e(tag, "Error in getVerseCount: ${e.message}")
             e.printStackTrace()
         }
-
         return count
     }
-
     fun getVerses(bookNumber: Int, chapter: Int): List<Verse> {
         val verses = mutableListOf<Verse>()
-
         try {
             if (database == null || !database!!.isOpen) {
                 return verses
             }
-
             val cursor = database?.query(
                 VERSES_TABLE,
                 arrayOf(COLUMN_VERSE, COLUMN_TEXT),
@@ -100,7 +82,6 @@ class DatabaseHelper(private val context: MainActivity) {
                 null, null,
                 "$COLUMN_VERSE ASC"
             )
-
             cursor?.use {
                 while (it.moveToNext()) {
                     try {
@@ -112,51 +93,39 @@ class DatabaseHelper(private val context: MainActivity) {
                     }
                 }
             }
-
         } catch (e: Exception) {
             Log.e(tag, "Error in getVerses: ${e.message}")
             e.printStackTrace()
         }
-
         return verses
     }
-
     fun getRandomVerses(): List<Verse> {
         val verses = mutableListOf<Verse>()
-
         try {
             if (database == null || !database!!.isOpen) {
                 return verses
             }
-
             val allBooks = BibleData.allBooks
             if (allBooks.isEmpty()) {
                 return verses
             }
-
             val randomBook = allBooks[random.nextInt(allBooks.size)]
-
             val randomChapter = random.nextInt(randomBook.chapters) + 1
-
             val verseCount = getVerseCount(randomBook.customNumber, randomChapter)
             if (verseCount == 0) {
                 return getRandomVerses()
             }
-
             val numberOfVerses = minOf(random.nextInt(5) + 1, verseCount)
-
             val startVerse = random.nextInt(verseCount - numberOfVerses + 1) + 1
-
             val query = """
-                SELECT $COLUMN_VERSE, $COLUMN_TEXT 
-                FROM $VERSES_TABLE 
-                WHERE $COLUMN_BOOK_NUMBER = ? 
-                AND $COLUMN_CHAPTER = ? 
-                AND $COLUMN_VERSE >= ? 
+                SELECT $COLUMN_VERSE, $COLUMN_TEXT
+                FROM $VERSES_TABLE
+                WHERE $COLUMN_BOOK_NUMBER = ?
+                AND $COLUMN_CHAPTER = ?
+                AND $COLUMN_VERSE >= ?
                 AND $COLUMN_VERSE < ? + ?
                 ORDER BY $COLUMN_VERSE ASC
             """.trimIndent()
-
             val cursor = database?.rawQuery(
                 query,
                 arrayOf(
@@ -167,7 +136,6 @@ class DatabaseHelper(private val context: MainActivity) {
                     numberOfVerses.toString()
                 )
             )
-
             cursor?.use {
                 while (it.moveToNext()) {
                     try {
@@ -179,15 +147,12 @@ class DatabaseHelper(private val context: MainActivity) {
                     }
                 }
             }
-
         } catch (e: Exception) {
             Log.e(tag, "Error in getRandomVerses: ${e.message}")
             e.printStackTrace()
         }
-
         return verses
     }
-
     fun close() {
         database?.close()
         Log.d(tag, "Database closed")
