@@ -30,8 +30,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -61,7 +64,7 @@ fun ReaderScreen(
         primary = MaterialTheme.colorScheme.primary,
         tagColor = MaterialTheme.colorScheme.secondary,
         tagBg = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f),
-        wordsOfJesus = Color(0xFF8B0000),
+        wordsOfJesus = Color(0xFFCB531D),
         searchHighlightBg = Color.Yellow.copy(alpha = 0.3f),
         highlightIcon = MaterialTheme.colorScheme.primary
     )
@@ -220,17 +223,6 @@ fun ReaderScreen(
             }
             val thisVerses = loadedVerses[thisPassage.bookNumber to thisPassage.chapter] ?: emptyList()
 
-            val themeColors = ThemeColors(
-                textColor = MaterialTheme.colorScheme.onBackground,
-                verseNumber = MaterialTheme.colorScheme.primary,
-                primary = MaterialTheme.colorScheme.primary,
-                tagColor = MaterialTheme.colorScheme.secondary,
-                tagBg = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f),
-                wordsOfJesus = Color(0xFF8B0000), // Dark red for Jesus' words
-                searchHighlightBg = Color.Yellow.copy(alpha = 0.3f),
-                highlightIcon = MaterialTheme.colorScheme.primary
-            )
-
             val processor = remember(thisVerses) { VerseTextProcessor() }
             val processedVerses = remember(thisVerses, themeColors) {
                 val result = mutableMapOf<Int, ProcessedVerse>()
@@ -308,21 +300,22 @@ fun ReaderScreen(
                                             .fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        // Verse number
                                         Text(
-                                            text = "${verse.verseNumber}.",
-                                            fontWeight = FontWeight.Bold,
-                                            color = themeColors.verseNumber,
-                                            fontSize = 14.sp,
-                                            modifier = Modifier.alignByBaseline()
-                                        )
-
-                                        // Verse body
-                                        Text(
-                                            text = processedVerse.body,
-                                            modifier = Modifier.weight(1f),
-                                            fontSize = 16.sp,
-                                            lineHeight = 22.sp
+                                            text = buildAnnotatedString {
+                                                withStyle(
+                                                    style = SpanStyle(
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = themeColors.verseNumber,
+                                                        fontSize = 14.sp
+                                                    )
+                                                ) {
+                                                    append("${verse.verseNumber} ")
+                                                }
+                                                append(processedVerse.body)
+                                            },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            fontSize = 18.sp,
+                                            lineHeight = 24.sp
                                         )
                                     }
                                 }
