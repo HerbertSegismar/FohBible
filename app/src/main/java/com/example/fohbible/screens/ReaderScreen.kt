@@ -26,14 +26,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.fohbible.MainActivity
 import com.example.fohbible.data.BibleBook
 import com.example.fohbible.data.BibleData
@@ -41,6 +42,10 @@ import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.PassageSelection
 import com.example.fohbible.data.Verse
 import com.example.fohbible.ui.theme.FohBibleTheme
+import com.example.fohbible.utils.ProcessedVerse
+import com.example.fohbible.utils.ThemeColors
+import com.example.fohbible.utils.VerseTextProcessor
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -50,46 +55,69 @@ fun ReaderScreen(
     databaseHelper: DatabaseHelper?,
     onPassageChange: (PassageSelection) -> Unit = {}
 ) {
+    val themeColors = ThemeColors(
+        textColor = MaterialTheme.colorScheme.onBackground,
+        verseNumber = MaterialTheme.colorScheme.primary,
+        primary = MaterialTheme.colorScheme.primary,
+        tagColor = MaterialTheme.colorScheme.secondary,
+        tagBg = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f),
+        wordsOfJesus = Color(0xFF8B0000),
+        searchHighlightBg = Color.Yellow.copy(alpha = 0.3f),
+        highlightIcon = MaterialTheme.colorScheme.primary
+    )
+
     val coroutineScope = rememberCoroutineScope()
-    // Track current passage - initialize with the passed passage
+
+    // Track current passage - use LaunchedEffect to sync with parent
     var currentPassage by remember { mutableStateOf(passage.copy(verse = 1)) }
+
+    // Sync with parent passage changes using LaunchedEffect
+    LaunchedEffect(passage.bookNumber, passage.chapter) {
+        if (passage.bookNumber != currentPassage.bookNumber || passage.chapter != currentPassage.chapter) {
+            currentPassage = passage.copy(verse = 1)
+        }
+    }
+
     // Get current book info
     val currentBook by remember(currentPassage.bookNumber) {
         derivedStateOf { BibleData.getBookByCustomNumber(currentPassage.bookNumber) }
     }
+
     // Calculate previous and next passages
     val prevPassage by remember(currentPassage, currentBook) {
         derivedStateOf {
             if (currentBook == null) currentPassage else getPreviousPassage(currentPassage, currentBook)
         }
     }
+
     val nextPassage by remember(currentPassage, currentBook) {
         derivedStateOf {
             if (currentBook == null) currentPassage else getNextPassage(currentPassage, currentBook)
         }
     }
+
     val hasPrev by remember(prevPassage) { derivedStateOf { prevPassage != currentPassage } }
     val hasNext by remember(nextPassage) { derivedStateOf { nextPassage != currentPassage } }
-    // FIX: When passage changes from parent, update currentPassage immediately
-    // instead of in a LaunchedEffect
-    if (passage.bookNumber != currentPassage.bookNumber || passage.chapter != currentPassage.chapter) {
-        currentPassage = passage.copy(verse = 1)
-    }
+
     // Track target passage for swipe completion
     var pendingPassageChange by remember { mutableStateOf<PassageSelection?>(null) }
-    // Track loaded verses
+
+    // Track loaded verses - use snapshotFlow to clear when databaseHelper changes
     val loadedVerses = remember { mutableStateMapOf<Pair<Int, Int>, List<Verse>>() }
-    // Clear loaded verses when databaseHelper changes (version change)
+
+    // Clear loaded verses when databaseHelper changes
     LaunchedEffect(databaseHelper) {
         loadedVerses.clear()
     }
-    // Load verses whenever the passage or databaseHelper changes
-    LaunchedEffect(currentPassage, databaseHelper) {
+
+    // Load verses for current, previous, and next passages
+    LaunchedEffect(currentPassage, hasPrev, hasNext, databaseHelper) {
         // Load current passage
         val currentKey = currentPassage.bookNumber to currentPassage.chapter
         if (currentKey !in loadedVerses) {
             loadedVerses[currentKey] = databaseHelper?.getVerses(currentPassage.bookNumber, currentPassage.chapter) ?: emptyList()
         }
+
         // Load previous passage if available
         if (hasPrev) {
             val prevKey = prevPassage.bookNumber to prevPassage.chapter
@@ -97,6 +125,7 @@ fun ReaderScreen(
                 loadedVerses[prevKey] = databaseHelper?.getVerses(prevPassage.bookNumber, prevPassage.chapter) ?: emptyList()
             }
         }
+
         // Load next passage if available
         if (hasNext) {
             val nextKey = nextPassage.bookNumber to nextPassage.chapter
@@ -105,72 +134,67 @@ fun ReaderScreen(
             }
         }
     }
+
     val pagerState = rememberPagerState(
         initialPage = 1,
         pageCount = { 3 }
     )
-    // Track when user starts and ends a swipe
+
+    // Track swipe state
     var isUserSwiping by remember { mutableStateOf(false) }
-    // Listen to drag state changes
-    LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.isScrollInProgress }.collect { isScrolling ->
-            isUserSwiping = isScrolling
-            // If swipe just ended and we have a pending passage change
-            if (!isScrolling && pendingPassageChange != null) {
-                val targetPassage = pendingPassageChange
-                targetPassage?.let { newPassage ->
-                    // FIX: Update currentPassage first, which will trigger recomputation
-                    // of prevPassage and nextPassage
-                    currentPassage = newPassage
-                    onPassageChange(newPassage)
-                    // Reset pager to center
-                    coroutineScope.launch {
-                        pagerState.scrollToPage(1)
+    var swipeCompleted by remember { mutableStateOf(false) }
+
+    // Handle page changes during swipe
+    LaunchedEffect(pagerState.currentPage, pagerState.isScrollInProgress) {
+        if (pagerState.isScrollInProgress) {
+            isUserSwiping = true
+            swipeCompleted = false
+
+            // Only process page changes during active swipe
+            when (pagerState.currentPage) {
+                0 -> {
+                    if (hasPrev && prevPassage != currentPassage) {
+                        pendingPassageChange = prevPassage
                     }
+                }
+                2 -> {
+                    if (hasNext && nextPassage != currentPassage) {
+                        pendingPassageChange = nextPassage
+                    }
+                }
+            }
+        } else if (isUserSwiping) {
+            // Swipe just ended
+            isUserSwiping = false
+
+            // Process pending passage change if any
+            val targetPassage = pendingPassageChange
+            if (targetPassage != null && !swipeCompleted) {
+                swipeCompleted = true
+                currentPassage = targetPassage
+                onPassageChange(targetPassage)
+                pendingPassageChange = null
+
+                // Reset pager to center
+                coroutineScope.launch {
+                    pagerState.scrollToPage(1)
                 }
             }
         }
     }
-    // Handle page changes
-    LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.currentPage }.collect { page ->
-            // Only process if user is swiping (not programmatic scroll)
-            if (isUserSwiping) {
-                when (page) {
-                    0 -> {
-                        // Swiped to previous
-                        if (hasPrev && prevPassage != currentPassage) {
-                            pendingPassageChange = prevPassage
-                        } else {
-                            // Reset to center if no previous chapter
-                            coroutineScope.launch {
-                                pagerState.scrollToPage(1)
-                            }
-                        }
-                    }
-                    2 -> {
-                        // Swiped to next
-                        if (hasNext && nextPassage != currentPassage) {
-                            pendingPassageChange = nextPassage
-                        } else {
-                            // Reset to center if no next chapter
-                            coroutineScope.launch {
-                                pagerState.scrollToPage(1)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    // Reset pager to center when currentPassage changes
+
+    // Reset pager to center when passage changes (non-user initiated)
     LaunchedEffect(currentPassage) {
         if (!isUserSwiping) {
             coroutineScope.launch {
+                // Small delay to ensure any ongoing animations complete
+                delay(50)
                 pagerState.scrollToPage(1)
+                pendingPassageChange = null
             }
         }
     }
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
@@ -195,6 +219,34 @@ fun ReaderScreen(
                 else -> currentPassage
             }
             val thisVerses = loadedVerses[thisPassage.bookNumber to thisPassage.chapter] ?: emptyList()
+
+            val themeColors = ThemeColors(
+                textColor = MaterialTheme.colorScheme.onBackground,
+                verseNumber = MaterialTheme.colorScheme.primary,
+                primary = MaterialTheme.colorScheme.primary,
+                tagColor = MaterialTheme.colorScheme.secondary,
+                tagBg = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f),
+                wordsOfJesus = Color(0xFF8B0000), // Dark red for Jesus' words
+                searchHighlightBg = Color.Yellow.copy(alpha = 0.3f),
+                highlightIcon = MaterialTheme.colorScheme.primary
+            )
+
+            val processor = remember(thisVerses) { VerseTextProcessor() }
+            val processedVerses = remember(thisVerses, themeColors) {
+                val result = mutableMapOf<Int, ProcessedVerse>()
+                for (verse in thisVerses) {
+                    val processed = processor.processVerse(
+                        verseText = verse.text,
+                        baseFontSize = 16.sp,
+                        themeColors = themeColors,
+                        fontFamily = null,
+                        textColor = themeColors.textColor
+                    )
+                    result[verse.verseNumber] = processed
+                }
+                result
+            }
+
             Box(modifier = Modifier.fillMaxSize()) {
                 if (thisVerses.isEmpty()) {
                     Column(
@@ -225,22 +277,76 @@ fun ReaderScreen(
                                 textAlign = TextAlign.Center
                             )
                         }
+
+                        // Display verses with processed text
                         items(thisVerses) { verse ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text(
-                                    text = "${verse.verseNumber}.",
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    text = verse.text,
-                                    modifier = Modifier.weight(1f)
-                                )
+                            val processedVerse = processedVerses[verse.verseNumber]
+
+                            if (processedVerse != null) {
+                                // Display the processed verse with header and body
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp)
+                                ) {
+                                    // Display header if exists
+                                    processedVerse.header?.let { header ->
+                                        if (header.text.isNotEmpty()) {
+                                            Text(
+                                                text = header,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = themeColors.tagColor,
+                                                modifier = Modifier.padding(bottom = 4.dp)
+                                            )
+                                        }
+                                    }
+
+                                    // Display verse number and body
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        // Verse number
+                                        Text(
+                                            text = "${verse.verseNumber}.",
+                                            fontWeight = FontWeight.Bold,
+                                            color = themeColors.verseNumber,
+                                            fontSize = 14.sp,
+                                            modifier = Modifier.alignByBaseline()
+                                        )
+
+                                        // Verse body
+                                        Text(
+                                            text = processedVerse.body,
+                                            modifier = Modifier.weight(1f),
+                                            fontSize = 16.sp,
+                                            lineHeight = 22.sp
+                                        )
+                                    }
+                                }
+                            } else {
+                                // Fallback: display original verse text
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = "${verse.verseNumber}.",
+                                        fontWeight = FontWeight.Bold,
+                                        color = themeColors.verseNumber,
+                                        fontSize = 14.sp
+                                    )
+                                    Text(
+                                        text = verse.text,
+                                        modifier = Modifier.weight(1f),
+                                        fontSize = 16.sp,
+                                        lineHeight = 22.sp
+                                    )
+                                }
                             }
                         }
                     }

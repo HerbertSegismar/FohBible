@@ -1,0 +1,548 @@
+package com.example.fohbible.utils
+
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.sp
+import com.example.fohbible.data.Verse
+
+// Data classes for parsing
+sealed class ParsedNode {
+    data class Text(val content: String) : ParsedNode()
+    data class OpeningTag(val tag: String, val fullTag: String) : ParsedNode()
+    data class ClosingTag(val tag: String) : ParsedNode()
+    data class SelfClosingTag(val tag: String, val fullTag: String) : ParsedNode()
+}
+
+sealed class TreeNode {
+    data class Text(val content: String) : TreeNode()
+    data class SelfClosingTag(val tag: String, val fullTag: String) : TreeNode()
+    data class Element(val tag: String, val fullTag: String, val children: List<TreeNode>) : TreeNode()
+}
+
+data class TraversalContext(
+    val textColor: Color,
+    val isTextContainer: Boolean,
+    val isHeader: Boolean,
+    val currentTag: String?,
+    val baseFontSize: TextUnit
+)
+
+data class ProcessedVerse(
+    val header: AnnotatedString?,
+    val body: AnnotatedString
+)
+
+data class ThemeColors(
+    val textColor: Color,
+    val verseNumber: Color,
+    val primary: Color,
+    val tagColor: Color,
+    val tagBg: Color,
+    val wordsOfJesus: Color,
+    val searchHighlightBg: Color,
+    val highlightIcon: Color
+)
+
+class VerseTextProcessor {
+
+    fun processVerse(
+        verseText: String,
+        baseFontSize: TextUnit,
+        themeColors: ThemeColors,
+        highlight: String? = null,
+        fontFamily: androidx.compose.ui.text.font.FontFamily? = null,
+        onTagPress: ((String) -> Unit)? = null,
+        textColor: Color? = null,
+        onWordPress: ((String) -> Unit)? = null,
+        isHighlighted: Boolean = false
+    ): ProcessedVerse {
+        val nodes = parseXmlTags(verseText)
+        val tree = buildTree(nodes)
+        val initialContext = TraversalContext(
+            textColor = textColor ?: themeColors.textColor,
+            isTextContainer = false,
+            isHeader = false,
+            currentTag = null,
+            baseFontSize = baseFontSize
+        )
+        val (header, body) = traverseTree(tree, initialContext, highlight, themeColors, onTagPress, onWordPress, isHighlighted)
+        return ProcessedVerse(header, body)
+    }
+
+    private fun parseXmlTags(text: String): List<ParsedNode> {
+        if (text.isEmpty()) return emptyList()
+
+        val nodes = mutableListOf<ParsedNode>()
+        var currentText = ""
+        var i = 0
+
+        while (i < text.length) {
+            if (text[i] == '<') {
+                // Save any accumulated text
+                if (currentText.isNotEmpty()) {
+                    nodes.add(ParsedNode.Text(currentText))
+                    currentText = ""
+                }
+
+                val tagEnd = text.indexOf('>', i)
+                if (tagEnd == -1) {
+                    currentText += text.substring(i)
+                    break
+                }
+
+                val fullTag = text.substring(i, tagEnd + 1)
+                if (fullTag.startsWith("</")) {
+                    val tagName = fullTag.substring(2, fullTag.length - 1).trim().split(" ")[0]
+                    nodes.add(ParsedNode.ClosingTag(tagName))
+                } else if (fullTag.endsWith("/>")) {
+                    val tagName = fullTag.substring(1, fullTag.length - 2).trim().split(" ")[0]
+                    nodes.add(ParsedNode.SelfClosingTag(tagName, fullTag))
+                } else {
+                    val tagName = fullTag.substring(1, fullTag.length - 1).trim().split(" ")[0]
+                    nodes.add(ParsedNode.OpeningTag(tagName, fullTag))
+                }
+
+                i = tagEnd + 1
+            } else {
+                currentText += text[i]
+                i++
+            }
+        }
+
+        if (currentText.isNotEmpty()) {
+            nodes.add(ParsedNode.Text(currentText))
+        }
+
+        return nodes
+    }
+
+    private fun buildTree(nodes: List<ParsedNode>): List<TreeNode> {
+        val root = mutableListOf<TreeNode>()
+        val stack = mutableListOf<MutableList<TreeNode>>()
+        var current = root
+
+        for (node in nodes) {
+            when (node) {
+                is ParsedNode.Text -> {
+                    current.add(TreeNode.Text(node.content))
+                }
+                is ParsedNode.OpeningTag -> {
+                    val element = TreeNode.Element(node.tag, node.fullTag, mutableListOf())
+                    current.add(element)
+                    stack.add(current)
+                    current = element.children as MutableList<TreeNode>
+                }
+                is ParsedNode.ClosingTag -> {
+                    if (stack.isNotEmpty()) {
+                        current = stack.removeAt(stack.size - 1)
+                    }
+                }
+                is ParsedNode.SelfClosingTag -> {
+                    current.add(TreeNode.SelfClosingTag(node.tag, node.fullTag))
+                }
+            }
+        }
+
+        return root
+    }
+
+    private fun traverseTree(
+        tree: List<TreeNode>,
+        initialContext: TraversalContext,
+        highlight: String?,
+        themeColors: ThemeColors,
+        onTagPress: ((String) -> Unit)?,
+        onWordPress: ((String) -> Unit)?,
+        isHighlighted: Boolean
+    ): Pair<AnnotatedString?, AnnotatedString> {
+        val headerBuilder = AnnotatedString.Builder()
+        val bodyBuilder = AnnotatedString.Builder()
+
+        for (node in tree) {
+            traverseNode(
+                node,
+                headerBuilder,
+                bodyBuilder,
+                initialContext,
+                highlight,
+                themeColors,
+                onTagPress,
+                onWordPress,
+                isHighlighted
+            )
+        }
+
+        val header = if (headerBuilder.length > 0) headerBuilder.toAnnotatedString() else null
+        val body = bodyBuilder.toAnnotatedString()
+
+        return Pair(header, body)
+    }
+
+    private fun traverseNode(
+        node: TreeNode,
+        headerBuilder: AnnotatedString.Builder,
+        bodyBuilder: AnnotatedString.Builder,
+        context: TraversalContext,
+        highlight: String?,
+        themeColors: ThemeColors,
+        onTagPress: ((String) -> Unit)?,
+        onWordPress: ((String) -> Unit)?,
+        isHighlighted: Boolean
+    ) {
+        when (node) {
+            is TreeNode.Text -> {
+                val builder = if (context.isHeader) headerBuilder else bodyBuilder
+                processTextNode(
+                    node,
+                    builder,
+                    context,
+                    highlight,
+                    themeColors,
+                    onWordPress,
+                    isHighlighted
+                )
+            }
+            is TreeNode.SelfClosingTag -> {
+                val builder = if (context.isHeader) headerBuilder else bodyBuilder
+                processSelfClosingTagNode(
+                    node,
+                    builder,
+                    context,
+                    themeColors,
+                    onTagPress
+                )
+            }
+            is TreeNode.Element -> {
+                // Update context based on tag
+                val newContext = when (node.tag) {
+                    "n" -> context.copy(isHeader = true)
+                    "J" -> context.copy(
+                        isTextContainer = true,
+                        textColor = if (!isHighlighted) themeColors.wordsOfJesus else context.textColor
+                    )
+                    "t" -> context.copy(isTextContainer = true)
+                    else -> context.copy(currentTag = node.tag)
+                }
+
+                // Traverse children
+                for (child in node.children) {
+                    traverseNode(
+                        child,
+                        headerBuilder,
+                        bodyBuilder,
+                        newContext,
+                        highlight,
+                        themeColors,
+                        onTagPress,
+                        onWordPress,
+                        isHighlighted
+                    )
+                }
+            }
+        }
+    }
+
+    private fun processTextNode(
+        node: TreeNode.Text,
+        builder: AnnotatedString.Builder,
+        context: TraversalContext,
+        highlight: String?,
+        themeColors: ThemeColors,
+        onWordPress: ((String) -> Unit)?,
+        isHighlighted: Boolean
+    ) {
+        val text = node.content
+
+        // Check for encircled letters (like ⓐ, ⓑ, etc.)
+        if (hasEncircledLetters(text)) {
+            val parts = splitByEncircledLetters(text)
+            for (part in parts) {
+                if (isEncircledLetter(part)) {
+                    // Style encircled letters differently
+                    withStyle(
+                        builder,
+                        SpanStyle(
+                            fontSize = context.baseFontSize * 1.2f,
+                            color = context.textColor,
+                            letterSpacing = 0.5.sp
+                        )
+                    ) {
+                        append(" $part ")
+                    }
+                } else {
+                    processNormalText(part, builder, context, highlight, themeColors, onWordPress, isHighlighted)
+                }
+            }
+        } else {
+            processNormalText(text, builder, context, highlight, themeColors, onWordPress, isHighlighted)
+        }
+    }
+
+    private fun processNormalText(
+        text: String,
+        builder: AnnotatedString.Builder,
+        context: TraversalContext,
+        highlight: String?,
+        themeColors: ThemeColors,
+        onWordPress: ((String) -> Unit)?,
+        isHighlighted: Boolean
+    ) {
+        if (onWordPress != null && context.isTextContainer) {
+            // Split into words for clickable words
+            val words = splitIntoWords(text)
+            for (word in words) {
+                if (isWord(word) && word.length > 1) {
+                    // Make word clickable (in Compose, we'd need to use ClickableText with annotations)
+                    withStyle(
+                        builder,
+                        SpanStyle(
+                            color = context.textColor,
+                            background = if (highlight != null && word.contains(highlight, ignoreCase = true))
+                                themeColors.searchHighlightBg else Color.Transparent
+                        )
+                    ) {
+                        append(word)
+                    }
+                } else {
+                    // Non-words (punctuation, numbers, whitespace)
+                    withStyle(
+                        builder,
+                        SpanStyle(color = context.textColor)
+                    ) {
+                        append(word)
+                    }
+                }
+            }
+        } else {
+            // Simple text with highlight support
+            if (highlight != null && text.contains(highlight, ignoreCase = true)) {
+                val regex = Regex(escapeRegex(highlight), RegexOption.IGNORE_CASE)
+                var lastIndex = 0
+
+                for (match in regex.findAll(text)) {
+                    // Add text before match
+                    if (match.range.first > lastIndex) {
+                        withStyle(builder, SpanStyle(color = context.textColor)) {
+                            append(text.substring(lastIndex, match.range.first))
+                        }
+                    }
+
+                    // Add highlighted match
+                    withStyle(
+                        builder,
+                        SpanStyle(
+                            color = context.textColor,
+                            background = themeColors.searchHighlightBg
+                        )
+                    ) {
+                        append(match.value)
+                    }
+
+                    lastIndex = match.range.last + 1
+                }
+
+                // Add remaining text
+                if (lastIndex < text.length) {
+                    withStyle(builder, SpanStyle(color = context.textColor)) {
+                        append(text.substring(lastIndex))
+                    }
+                }
+            } else {
+                withStyle(builder, SpanStyle(color = context.textColor)) {
+                    append(text)
+                }
+            }
+        }
+    }
+
+    private fun processSelfClosingTagNode(
+        node: TreeNode.SelfClosingTag,
+        builder: AnnotatedString.Builder,
+        context: TraversalContext,
+        themeColors: ThemeColors,
+        onTagPress: ((String) -> Unit)?
+    ) {
+        val content = extractContentFromTag(node.fullTag)
+        val tagContent = content.trim()
+
+        if (hasEncircledLetters(tagContent)) {
+            val parts = splitByEncircledLetters(tagContent)
+            for (part in parts) {
+                if (isEncircledLetter(part)) {
+                    withStyle(
+                        builder,
+                        SpanStyle(
+                            fontSize = context.baseFontSize * 1.2f,
+                            color = themeColors.tagColor,
+                            background = themeColors.tagBg
+                        )
+                    ) {
+                        append(part)
+                    }
+                } else {
+                    withStyle(
+                        builder,
+                        SpanStyle(
+                            fontSize = context.baseFontSize * 0.8f,
+                            color = themeColors.tagColor,
+                            background = themeColors.tagBg
+                        )
+                    ) {
+                        append(part)
+                    }
+                }
+            }
+        } else {
+            withStyle(
+                builder,
+                SpanStyle(
+                    fontSize = context.baseFontSize * 0.8f,
+                    color = themeColors.tagColor,
+                    background = themeColors.tagBg
+                )
+            ) {
+                append(content)
+            }
+        }
+    }
+
+    // Helper functions
+    private fun hasEncircledLetters(text: String): Boolean {
+        return Regex("[ⓐ-ⓩⓐ-ⓩ]").containsMatchIn(text)
+    }
+
+    private fun isEncircledLetter(text: String): Boolean {
+        return text.matches(Regex("[ⓐ-ⓩⓐ-ⓩ]"))
+    }
+
+    private fun splitByEncircledLetters(text: String): List<String> {
+        val result = mutableListOf<String>()
+        val regex = Regex("([ⓐ-ⓩⓐ-ⓩ])")
+        val matches = regex.findAll(text)
+        var lastIndex = 0
+
+        for (match in matches) {
+            if (match.range.first > lastIndex) {
+                result.add(text.substring(lastIndex, match.range.first))
+            }
+            result.add(match.value)
+            lastIndex = match.range.last + 1
+        }
+
+        if (lastIndex < text.length) {
+            result.add(text.substring(lastIndex))
+        }
+
+        return result
+    }
+
+    private fun extractContentFromTag(tag: String): String {
+        // Extract content from self-closing tags like <wt="word"/>
+        val regex = """<[^>]+="([^"]*)"/>""".toRegex()
+        val match = regex.find(tag)
+        return match?.groupValues?.get(1) ?: ""
+    }
+
+    private fun splitIntoWords(text: String): List<String> {
+        val result = mutableListOf<String>()
+        var i = 0
+
+        while (i < text.length) {
+            val char = text[i]
+
+            when {
+                char.isLetter() -> {
+                    var word = char.toString()
+                    i++
+                    while (i < text.length && text[i].isLetter()) {
+                        word += text[i]
+                        i++
+                    }
+                    result.add(word)
+                }
+                char.isDigit() -> {
+                    var num = char.toString()
+                    i++
+                    while (i < text.length && text[i].isDigit()) {
+                        num += text[i]
+                        i++
+                    }
+                    result.add(num)
+                }
+                !char.isWhitespace() -> {
+                    var punct = char.toString()
+                    i++
+                    while (i < text.length && !text[i].isWhitespace() &&
+                        !text[i].isLetter() && !text[i].isDigit()) {
+                        punct += text[i]
+                        i++
+                    }
+                    result.add(punct)
+                }
+                else -> {
+                    var whitespace = char.toString()
+                    i++
+                    while (i < text.length && text[i].isWhitespace()) {
+                        whitespace += text[i]
+                        i++
+                    }
+                    result.add(whitespace)
+                }
+            }
+        }
+
+        return result
+    }
+
+    private fun isWord(text: String): Boolean {
+        return text.matches(Regex("[a-zA-ZÀ-ÿ]{2,}"))
+    }
+
+    private fun escapeRegex(string: String): String {
+        return string.replace(Regex("[.*+?^${'$'}{}()|\\[\\]\\\\]"), "\\$&")
+    }
+
+    private inline fun withStyle(
+        builder: AnnotatedString.Builder,
+        style: SpanStyle,
+        block: AnnotatedString.Builder.() -> Unit
+    ) {
+        builder.withStyle(style, block)
+    }
+}
+
+// Extension to use in ReaderScreen
+fun preprocessVerses(
+    verses: List<Verse>,
+    baseFontSize: TextUnit,
+    themeColors: ThemeColors,
+    highlight: String? = null,
+    fontFamily: androidx.compose.ui.text.font.FontFamily? = null,
+    onTagPress: ((String, Verse) -> Unit)? = null,
+    onWordPress: ((String) -> Unit)? = null,
+    textColor: Color? = null,
+    isHighlighted: Boolean = false
+): Map<Int, ProcessedVerse> {
+    val processor = VerseTextProcessor()
+    val result = mutableMapOf<Int, ProcessedVerse>()
+
+    for (verse in verses) {
+        val processed = processor.processVerse(
+            verseText = verse.text,
+            baseFontSize = baseFontSize,
+            themeColors = themeColors,
+            highlight = highlight,
+            fontFamily = fontFamily,
+            onTagPress = { content -> onTagPress?.invoke(content, verse) },
+            textColor = textColor,
+            onWordPress = onWordPress,
+            isHighlighted = isHighlighted
+        )
+        result[verse.verseNumber] = processed
+    }
+
+    return result
+}
