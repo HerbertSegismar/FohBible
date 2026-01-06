@@ -1,5 +1,3 @@
-@file:Suppress("AssignedValueIsNeverRead")
-
 package com.example.fohbible.screens
 
 import android.content.Intent
@@ -28,21 +26,27 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCircleOutline
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -54,6 +58,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -70,7 +75,9 @@ import com.example.fohbible.ui.theme.PredefinedColorThemes
 import com.example.fohbible.utils.BibleVersionUtils
 import java.util.Locale
 
-// TODO: Define font families similar to RN Fonts
+private const val MAX_FONT_SIZE = 50
+private const val MIN_FONT_SIZE = 8
+
 val availableFontFamilies = listOf("system", "oswald", "rubik-glitch", "poppins")
 
 // TODO: Define bgTextures similar to RN
@@ -86,27 +93,26 @@ fun getFontFamily(family: String): FontFamily {
     }
 }
 
+@Suppress("AssignedValueIsNeverRead")
 @Composable
 fun SettingsScreen() {
     val viewModel: AppViewModel = viewModel()
     val context = LocalContext.current
 
-    // Additional states
     var showMultiVersion by remember { mutableStateOf(false) }
     var secondaryVersionAbbr by remember { mutableStateOf("") }
+    var showVersionInfoDialog by remember { mutableStateOf(false) }
+    var selectedVersionInfo by remember { mutableStateOf<Pair<String, String>?>(null) }
+
     var bgImageIndex by remember { mutableIntStateOf(0) }
     var customTextureUri by remember { mutableStateOf<String?>(null) }
-
     var showBgModal by remember { mutableStateOf(false) }
     var showFontModal by remember { mutableStateOf(false) }
     var tempFontSize by remember { mutableStateOf(viewModel.fontSize.toString()) }
-
     var showColorWheel by remember { mutableStateOf(false) }
-
     var customColor by remember { mutableStateOf(viewModel.customColor) }
     var isUsingCustomColor by remember { mutableStateOf(viewModel.isCustomColor) }
 
-    // Initialize state from viewModel
     LaunchedEffect(viewModel.isCustomColor, viewModel.customColor) {
         isUsingCustomColor = viewModel.isCustomColor
         customColor = viewModel.customColor
@@ -122,7 +128,6 @@ fun SettingsScreen() {
         }
     }
 
-    // TODO: Load settings from SharedPreferences in LaunchedEffect
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -143,15 +148,80 @@ fun SettingsScreen() {
         }
 
         item {
+            SettingsSection(title = "Bible Version", subtitle = "Choose your preferred translation") {
+                BibleVersionSelector(
+                    title = "Primary Bible Version",
+                    currentAbbr = viewModel.currentVersionAbbr,
+                    description = BibleVersionUtils.descriptionMap[viewModel.currentDbName] ?: "Bible translation",
+                    onVersionSelected = { file, abbr ->
+                        viewModel.currentDbName = file
+                        viewModel.currentVersionAbbr = abbr
+                    },
+                    onInfoClick = { file, abbr ->
+                        selectedVersionInfo = Pair(
+                            abbr,
+                            BibleVersionUtils.descriptionMap[file] ?: "No description available"
+                        )
+                        showVersionInfoDialog = true
+                    }
+                )
+
+                SettingsItem(
+                    title = "Multi-Version Display",
+                    subtitle = "Show two Bible versions side by side"
+                ) {
+                    Switch(
+                        checked = showMultiVersion,
+                        onCheckedChange = { showMultiVersion = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.primary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                        )
+                    )
+                }
+
+                if (showMultiVersion) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    BibleVersionSelector(
+                        title = "Secondary Bible Version",
+                        currentAbbr = secondaryVersionAbbr.ifEmpty { "Select version" },
+                        description = if (secondaryVersionAbbr.isNotEmpty()) {
+                            BibleVersionUtils.versionMap.entries
+                                .find { it.value == secondaryVersionAbbr }
+                                ?.let { BibleVersionUtils.descriptionMap[it.key] }
+                                ?: "Bible translation"
+                        } else {
+                            "Select a secondary version"
+                        },
+                        onVersionSelected = { file, abbr ->
+                            secondaryVersionAbbr = abbr
+                            // TODO: Set secondaryDbName in viewModel
+                            // viewModel.secondaryDbName = file
+                        },
+                        onInfoClick = { file, abbr ->
+                            selectedVersionInfo = Pair(
+                                abbr,
+                                BibleVersionUtils.descriptionMap[file] ?: "No description available"
+                            )
+                            showVersionInfoDialog = true
+                        }
+                    )
+                }
+            }
+        }
+
+        item {
             SettingsSection(title = "Reader Settings", subtitle = "Customize reading experience") {
                 SettingsItem(title = "Dark Mode", subtitle = "Toggle between light and dark themes") {
                     Switch(
                         checked = viewModel.darkTheme,
-                        onCheckedChange = { viewModel.darkTheme = it }
+                        onCheckedChange = { viewModel.darkTheme = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.primary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                        )
                     )
                 }
-
-                HorizontalDivider()
 
                 Column {
                     Text("Color Scheme", style = MaterialTheme.typography.labelLarge)
@@ -171,7 +241,7 @@ fun SettingsScreen() {
                         }
                         item {
                             ColorButton(
-                               color = if (customColor != null) customColor!! else Color(0xFFE1B82F),
+                                color = customColor ?: DefaultPrimaryColor,
                                 name = "Custom",
                                 isSelected = isUsingCustomColor,
                                 onClick = {
@@ -181,8 +251,6 @@ fun SettingsScreen() {
                         }
                     }
                 }
-
-                HorizontalDivider()
 
                 Column {
                     Text("Font Family", style = MaterialTheme.typography.labelLarge)
@@ -198,76 +266,74 @@ fun SettingsScreen() {
                     }
                 }
 
-                HorizontalDivider()
-
-                SettingsItem(title = "Custom Background", subtitle = "Add your own photo as background") {
-                    IconButton(onClick = { imagePickerLauncher.launch("image/*") }) {
-                        Icon(Icons.Default.AddCircleOutline, contentDescription = null)
+                SettingsItem(
+                    title = "Font Size",
+                    subtitle = "Adjust text size for better readability",
+                    onClick = { showFontModal = true }
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = {
+                                viewModel.fontSize = maxOf(MIN_FONT_SIZE, viewModel.fontSize - 1)
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Text("A-", fontWeight = FontWeight.Bold)
+                        }
+                        Text(
+                            "${viewModel.fontSize}",
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
+                        IconButton(
+                            onClick = {
+                                viewModel.fontSize = minOf(MAX_FONT_SIZE, viewModel.fontSize + 1)
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Text("A+", fontWeight = FontWeight.Bold)
+                        }
                     }
-                    // TODO: Show preview if customTextureUri != null
                 }
 
-                SettingsItem(title = "Background Texture", subtitle = "Choose from built-in textures or your custom one", onClick = { showBgModal = true }) {
-                    Text("Texture $bgImageIndex") // TODO: Proper name
+                SettingsItem(
+                    title = "Custom Background",
+                    subtitle = "Add your own photo as background"
+                ) {
+                    IconButton(
+                        onClick = { imagePickerLauncher.launch("image/*") },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(Icons.Default.AddCircleOutline, contentDescription = "Add custom background")
+                    }
+                }
+
+                SettingsItem(
+                    title = "Background Texture",
+                    subtitle = "Choose from built-in textures",
+                    onClick = { showBgModal = true }
+                ) {
                     Icon(Icons.Default.ChevronRight, contentDescription = null)
-                }
-
-                HorizontalDivider()
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Font Size")
-                    Spacer(Modifier.weight(1f))
-                    IconButton(onClick = { viewModel.fontSize = maxOf(8, viewModel.fontSize - 1) }) {
-                        Text("A-")
-                    }
-                    Text(viewModel.fontSize.toString())
-                    IconButton(onClick = { viewModel.fontSize = minOf(50, viewModel.fontSize + 1) }) {
-                        Text("A+")
-                    }
-                }
-
-                SettingsItem(title = "Multi-Version Display", subtitle = "Show two Bible versions side by side") {
-                    Switch(
-                        checked = showMultiVersion,
-                        onCheckedChange = { showMultiVersion = it }
-                    )
-                }
-            }
-        }
-
-        item {
-            SettingsSection(title = "Bible Version", subtitle = "Choose your preferred translation") {
-
-                VersionSelector(
-                    currentAbbr = viewModel.currentVersionAbbr,
-                    onSelect = { file, abbr ->
-                        viewModel.currentDbName = file
-                        viewModel.currentVersionAbbr = abbr
-                    }
-                )
-
-                if (showMultiVersion) {
-                    VersionSelector(
-                        currentAbbr = secondaryVersionAbbr,
-                        onSelect = { _, abbr ->
-                            secondaryVersionAbbr = abbr
-                            // TODO: Set secondaryDbName
-                        },
-                        title = "Secondary Bible Version"
-                    )
                 }
             }
         }
 
         item {
             SettingsSection(title = "More Options", subtitle = "Additional preferences") {
-                SettingsItem(title = "Data & Storage", subtitle = "Manage app data and cache", onClick = { /* TODO: Implement */ }) {
+                SettingsItem(
+                    title = "Data & Storage",
+                    subtitle = "Manage app data and cache",
+                    onClick = { /* TODO: Implement */ }
+                ) {
                     Icon(Icons.Default.ChevronRight, contentDescription = null)
                 }
 
                 HorizontalDivider()
 
-                SettingsItem(title = "About", subtitle = "App version and information", onClick = { /* TODO: Show about dialog */ }) {
+                SettingsItem(
+                    title = "About",
+                    subtitle = "App version and information",
+                    onClick = { /* TODO: Show about dialog */ }
+                ) {
                     Icon(Icons.Default.ChevronRight, contentDescription = null)
                 }
             }
@@ -275,24 +341,64 @@ fun SettingsScreen() {
 
         item {
             SettingsSection(title = "Quick Actions", subtitle = "Common tasks") {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { /* TODO: Reset all settings */ }) {
-                        Icon(Icons.Default.Refresh, contentDescription = null)
-                        Text("Reset Settings")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            // Reset all settings to default
+                            viewModel.fontSize = 18
+                            viewModel.darkTheme = false
+                            viewModel.selectedColor = DefaultPrimaryColor
+                            viewModel.isCustomColor = false
+                            viewModel.selectedFontFamily = "system"
+                            viewModel.currentDbName = "kj2.sqlite3"
+                            viewModel.currentVersionAbbr = BibleVersionUtils.versionMap["kj2.sqlite3"] ?: "KJ2"
+                            secondaryVersionAbbr = ""
+                            showMultiVersion = false
+                            customTextureUri = null
+                            bgImageIndex = 0
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    ) {
+                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
+                        Text("Reset All")
                     }
 
-                    Button(onClick = {
-                        val intent = Intent(Intent.ACTION_SENDTO).apply {
-                            data = "mailto:fountofhopedevotionals@gmail.com".toUri()
-                        }
-                        context.startActivity(intent)
-                    }) {
-                        Icon(Icons.Default.Settings, contentDescription = null)
-                        Text("Send Feedback")
+                    Button(
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_SENDTO).apply {
+                                data = "mailto:fountofhopedevotionals@gmail.com".toUri()
+                                putExtra(Intent.EXTRA_SUBJECT, "FoH Bible App Feedback")
+                            }
+                            context.startActivity(intent)
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
+                        Text("Feedback")
                     }
                 }
             }
         }
+    }
+
+    if (showVersionInfoDialog && selectedVersionInfo != null) {
+        VersionInfoDialog(
+            versionName = selectedVersionInfo!!.first,
+            versionDescription = selectedVersionInfo!!.second,
+            onDismiss = {
+                showVersionInfoDialog = false
+                selectedVersionInfo = null
+            }
+        )
     }
 
     if (showBgModal) {
@@ -314,7 +420,8 @@ fun SettingsScreen() {
             tempSize = tempFontSize,
             onChange = { tempFontSize = it },
             onConfirm = {
-                viewModel.fontSize = tempFontSize.toIntOrNull() ?: viewModel.fontSize
+                val newSize = tempFontSize.toIntOrNull() ?: viewModel.fontSize
+                viewModel.fontSize = newSize.coerceIn(MIN_FONT_SIZE, MAX_FONT_SIZE)
                 showFontModal = false
             },
             onDismiss = { showFontModal = false }
@@ -337,51 +444,247 @@ fun SettingsScreen() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BibleVersionSelector(
+    title: String,
+    currentAbbr: String,
+    description: String,
+    onVersionSelected: (String, String) -> Unit,
+    onInfoClick: (String, String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
+
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded }
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(enabled = true, type = MenuAnchorType.PrimaryEditable)
+                    .clip(RoundedCornerShape(8.dp))
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.outline,
+                        RoundedCornerShape(8.dp)
+                    )
+                    .clickable { expanded = true }
+                    .padding(horizontal = 12.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = currentAbbr,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Info button
+                    IconButton(
+                        onClick = {
+                            val selectedFile = BibleVersionUtils.versionMap.entries
+                                .find { it.value == currentAbbr }
+                                ?.key
+                            if (selectedFile != null) {
+                                onInfoClick(selectedFile, currentAbbr)
+                            }
+                        },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = "Version info",
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+
+                    // Dropdown arrow
+                    Icon(
+                        Icons.Default.ArrowDropDown,
+                        contentDescription = if (expanded) "Collapse" else "Expand",
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+            ) {
+                BibleVersionUtils.versionMap.forEach { (file, abbr) ->
+                    val versionDesc = BibleVersionUtils.descriptionMap[file] ?: "Bible translation"
+
+                    DropdownMenuItem(
+                        text = {
+                            Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                                Text(
+                                    text = abbr,
+                                    fontWeight = if (abbr == currentAbbr) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (abbr == currentAbbr) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = versionDesc,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 2
+                                )
+                            }
+                        },
+                        onClick = {
+                            onVersionSelected(file, abbr)
+                            expanded = false
+                        },
+                        modifier = Modifier.background(
+                            if (abbr == currentAbbr) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                            else Color.Transparent
+                        )
+                    )
+
+                    if (file != BibleVersionUtils.versionMap.keys.last()) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 8.dp),
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun VersionInfoDialog(
+    versionName: String,
+    versionDescription: String,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = versionName,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Description:",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+                Text(
+                    text = versionDescription,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "About Bible Versions:",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+                Text(
+                    text = "Different translations balance word-for-word accuracy with thought-for-thought clarity. Choose based on your study needs.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        }
+    )
+}
+
 @Composable
 fun SettingsSection(title: String, subtitle: String? = null, content: @Composable () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(2.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(title, style = MaterialTheme.typography.titleLarge)
+            Text(
+                title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold
+            )
             subtitle?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(12.dp))
             content()
         }
     }
 }
 
 @Composable
-fun SettingsItem(title: String, subtitle: String? = null, onClick: (() -> Unit)? = null, content: @Composable () -> Unit) {
+fun SettingsItem(
+    title: String,
+    subtitle: String? = null,
+    onClick: (() -> Unit)? = null,
+    content: @Composable () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = onClick != null) { onClick?.invoke() }
-            .padding(vertical = 8.dp),
+            .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(title)
+            Text(
+                title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
+            )
             subtitle?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
             }
         }
         content()
     }
-}
-
-@Composable
-fun HorizontalDivider() {
-    Spacer(
-        modifier = Modifier
-            .height(1.dp)
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-    )
 }
 
 @Composable
@@ -391,26 +694,28 @@ fun ColorButton(color: Color, name: String, isSelected: Boolean, onClick: () -> 
             .clickable { onClick() }
             .border(
                 if (isSelected) 2.dp else 1.dp,
-                if (isSelected) color else MaterialTheme.colorScheme.surfaceVariant,
-                RoundedCornerShape(8.dp)
+                if (isSelected) color else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                RoundedCornerShape(12.dp)
             )
-            .padding(8.dp),
+            .padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
             modifier = Modifier
-                .size(32.dp)
-                .background(color, RoundedCornerShape(4.dp))
+                .size(40.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(color)
                 .border(
                     1.dp,
                     MaterialTheme.colorScheme.surfaceVariant,
-                    RoundedCornerShape(4.dp)
+                    RoundedCornerShape(8.dp)
                 )
         )
         Text(
             text = name,
             style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.padding(top = 4.dp)
+            modifier = Modifier.padding(top = 6.dp),
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
         )
     }
 }
@@ -418,39 +723,23 @@ fun ColorButton(color: Color, name: String, isSelected: Boolean, onClick: () -> 
 @Composable
 fun FontButton(family: String, isSelected: Boolean, onClick: () -> Unit) {
     Text(
-        family.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() },
+        text = family.replaceFirstChar {
+            if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+        },
         modifier = Modifier
             .clickable { onClick() }
             .border(
                 if (isSelected) 2.dp else 1.dp,
-                if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                if (isSelected) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
                 RoundedCornerShape(8.dp)
             )
-            .padding(8.dp),
-        fontFamily = getFontFamily(family)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        fontFamily = getFontFamily(family),
+        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+        color = if (isSelected) MaterialTheme.colorScheme.primary
+        else MaterialTheme.colorScheme.onSurface
     )
-}
-
-@Composable
-fun VersionSelector(currentAbbr: String, onSelect: (String, String) -> Unit, title: String? = null) {
-    var showDropdown by remember { mutableStateOf(false) }
-
-    Column {
-        title?.let {
-            Text(it)
-        }
-        Button(onClick = { showDropdown = true }) {
-            Text(currentAbbr)
-        }
-        DropdownMenu(expanded = showDropdown, onDismissRequest = { showDropdown = false }) {
-            BibleVersionUtils.versionMap.forEach { (file, abbr) ->
-                DropdownMenuItem(text = { Text(abbr) }, onClick = {
-                    onSelect(file, abbr)
-                    showDropdown = false
-                })
-            }
-        }
-    }
 }
 
 @Composable
@@ -463,28 +752,44 @@ fun BgModal(
     onRemoveCustom: () -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
-        Card(shape = RoundedCornerShape(16.dp)) {
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Select Background")
-                LazyColumn {
-                    // TODO: Add items for textures 0 to 33 and custom (34)
-                    item {
-                        Text("None", modifier = Modifier.clickable { onSelect(0) })
+                Text(
+                    "Select Background",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                // TODO: Add LazyRow for texture previews
+                Text("Texture previews will appear here")
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = onPickCustom,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
+                    Text("Choose Custom Image")
+                }
+                if (customUri != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextButton(
+                        onClick = onRemoveCustom,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Remove Custom Image")
                     }
-                    // ... add others
-                    item {
-                        Row {
-                            Text("Custom")
-                            if (customUri != null) {
-                                IconButton(onClick = onRemoveCustom) {
-                                    Icon(Icons.Default.Close, null)
-                                }
-                            } else {
-                                IconButton(onClick = onPickCustom) {
-                                    Icon(Icons.Default.Add, null)
-                                }
-                            }
-                        }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel")
                     }
                 }
             }
@@ -493,19 +798,46 @@ fun BgModal(
 }
 
 @Composable
-fun FontModal(tempSize: String, onChange: (String) -> Unit, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+fun FontModal(
+    tempSize: String,
+    onChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Edit Font Size") },
-        text = {
-            OutlinedTextField(
-                value = tempSize,
-                onValueChange = onChange,
-                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number)
+        title = {
+            Text(
+                "Font Size",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
             )
         },
+        text = {
+            Column {
+                Text(
+                    "Enter font size ($MIN_FONT_SIZE-$MAX_FONT_SIZE):",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = tempSize,
+                    onValueChange = { newValue ->
+                        if (newValue.all { it.isDigit() } || newValue.isEmpty()) {
+                            onChange(newValue)
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Enter font size") }
+                )
+            }
+        },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
+            TextButton(
+                onClick = onConfirm,
+                enabled = tempSize.toIntOrNull()?.let { it in MIN_FONT_SIZE..MAX_FONT_SIZE } ?: false
+            ) {
                 Text("Apply")
             }
         },

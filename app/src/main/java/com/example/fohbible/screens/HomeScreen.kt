@@ -47,16 +47,18 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.fohbible.MainActivity
 import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.Verse
-import com.example.fohbible.ui.theme.FohBibleTheme
+import com.example.fohbible.utils.SimpleVerseProcessor
 
 // Data classes for HomeScreen
 data class QuickAction(
@@ -142,7 +144,6 @@ fun HomeScreen(
 
 @Composable
 fun DailyVerseCard(
-    verse: String = "",
     verses: List<Verse>? = null,
     onRefresh: () -> Unit = {}
 ) {
@@ -178,7 +179,6 @@ fun DailyVerseCard(
                     onClick = {
                         isLoading.value = true
                         onRefresh()
-                        // Reset loading state after a delay
                         Handler(Looper.getMainLooper()).postDelayed({
                             isLoading.value = false
                         }, 500)
@@ -203,13 +203,7 @@ fun DailyVerseCard(
             Spacer(modifier = Modifier.height(12.dp))
 
             if (verses != null && verses.isNotEmpty()) {
-                val firstVerse = verses.first()
-                val reference = if (verses.size == 1) {
-                    "${firstVerse.bookName ?: ""} ${firstVerse.chapter ?: 0}:${firstVerse.verseNumber}"
-                } else {
-                    val lastVerse = verses.last()
-                    "${firstVerse.bookName ?: ""} ${firstVerse.chapter ?: 0}:${firstVerse.verseNumber}-${lastVerse.verseNumber}"
-                }
+                val reference = SimpleVerseProcessor.extractVerseReference(verses)
 
                 Text(
                     text = reference,
@@ -219,24 +213,29 @@ fun DailyVerseCard(
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
-
                 verses.forEach { verse ->
+                    val annotatedText = buildAnnotatedString {
+                        withStyle(
+                            style = SpanStyle(
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                        ) {
+                            append("${verse.verseNumber} ")
+                        }
+                        // Add the verse text
+                        append(SimpleVerseProcessor.stripXmlTags(verse.text))
+                    }
+
                     Text(
-                        text = "${verse.verseNumber}. ${verse.text}",
+                        text = annotatedText,
                         style = MaterialTheme.typography.bodyLarge,
                         lineHeight = 24.sp,
                         textAlign = TextAlign.Justify,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                 }
-            } else if (verse.isNotEmpty()) {
-                // Fallback to hardcoded verse if no random verses
-                Text(
-                    text = verse,
-                    style = MaterialTheme.typography.bodyLarge,
-                    lineHeight = 24.sp,
-                    textAlign = TextAlign.Justify
-                )
             } else {
                 // Loading state
                 Column(
@@ -288,7 +287,8 @@ fun DailyVerseCard(
                             verses?.let {
                                 val shareText = buildString {
                                     it.forEach { verse ->
-                                        append("${verse.bookName ?: ""} ${verse.chapter ?: 0}:${verse.verseNumber} ${verse.text}\n")
+                                        val cleanedText = SimpleVerseProcessor.stripXmlTags(verse.text)
+                                        append("${verse.bookName ?: ""} ${verse.chapter ?: 0}:${verse.verseNumber} $cleanedText\n")
                                     }
                                 }
                                 // Implement share logic
@@ -479,21 +479,5 @@ private fun loadRandomVerses(
                 onComplete(verses)
             }
         }.start()
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    FohBibleTheme {
-        HomeScreen(onBibleClick = {})
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun DailyVerseCardPreview() {
-    FohBibleTheme {
-        DailyVerseCard(verse = "For God so loved the world...")
     }
 }

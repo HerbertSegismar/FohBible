@@ -246,7 +246,6 @@ fun ReaderScreen(
                         verseText = verse.text,
                         baseFontSize = viewModel.fontSize.sp,
                         themeColors = themeColors,
-                        fontFamily = null,
                         textColor = themeColors.textColor
                     )
                     result[verse.verseNumber] = processed

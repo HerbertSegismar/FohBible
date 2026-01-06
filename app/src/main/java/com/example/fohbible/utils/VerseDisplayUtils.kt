@@ -6,7 +6,6 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
-import com.example.fohbible.data.Verse
 
 // Data classes for parsing
 sealed class ParsedNode {
@@ -53,7 +52,6 @@ class VerseTextProcessor {
         baseFontSize: TextUnit,
         themeColors: ThemeColors,
         highlight: String? = null,
-        fontFamily: androidx.compose.ui.text.font.FontFamily? = null,
         onTagPress: ((String) -> Unit)? = null,
         textColor: Color? = null,
         onWordPress: ((String) -> Unit)? = null,
@@ -262,15 +260,14 @@ class VerseTextProcessor {
             for (part in parts) {
                 if (isEncircledLetter(part)) {
                     // Style encircled letters differently
-                    withStyle(
-                        builder,
+                    builder.withStyle(
                         SpanStyle(
                             fontSize = context.baseFontSize * 1.2f,
                             color = context.textColor,
                             letterSpacing = 0.5.sp
                         )
                     ) {
-                        append(" $part ")
+                        builder.append(" $part ")
                     }
                 } else {
                     processNormalText(part, builder, context, highlight, themeColors, onWordPress, isHighlighted)
@@ -295,24 +292,22 @@ class VerseTextProcessor {
             val words = splitIntoWords(text)
             for (word in words) {
                 if (isWord(word) && word.length > 1) {
-                    // Make word clickable (in Compose, we'd need to use ClickableText with annotations)
-                    withStyle(
-                        builder,
+                    // Make word clickable
+                    builder.withStyle(
                         SpanStyle(
                             color = context.textColor,
                             background = if (highlight != null && word.contains(highlight, ignoreCase = true))
                                 themeColors.searchHighlightBg else Color.Transparent
                         )
                     ) {
-                        append(word)
+                        builder.append(word)
                     }
                 } else {
                     // Non-words (punctuation, numbers, whitespace)
-                    withStyle(
-                        builder,
+                    builder.withStyle(
                         SpanStyle(color = context.textColor)
                     ) {
-                        append(word)
+                        builder.append(word)
                     }
                 }
             }
@@ -325,20 +320,19 @@ class VerseTextProcessor {
                 for (match in regex.findAll(text)) {
                     // Add text before match
                     if (match.range.first > lastIndex) {
-                        withStyle(builder, SpanStyle(color = context.textColor)) {
-                            append(text.substring(lastIndex, match.range.first))
+                        builder.withStyle(SpanStyle(color = context.textColor)) {
+                            builder.append(text.substring(lastIndex, match.range.first))
                         }
                     }
 
                     // Add highlighted match
-                    withStyle(
-                        builder,
+                    builder.withStyle(
                         SpanStyle(
                             color = context.textColor,
                             background = themeColors.searchHighlightBg
                         )
                     ) {
-                        append(match.value)
+                        builder.append(match.value)
                     }
 
                     lastIndex = match.range.last + 1
@@ -346,13 +340,13 @@ class VerseTextProcessor {
 
                 // Add remaining text
                 if (lastIndex < text.length) {
-                    withStyle(builder, SpanStyle(color = context.textColor)) {
-                        append(text.substring(lastIndex))
+                    builder.withStyle(SpanStyle(color = context.textColor)) {
+                        builder.append(text.substring(lastIndex))
                     }
                 }
             } else {
-                withStyle(builder, SpanStyle(color = context.textColor)) {
-                    append(text)
+                builder.withStyle(SpanStyle(color = context.textColor)) {
+                    builder.append(text)
                 }
             }
         }
@@ -372,39 +366,36 @@ class VerseTextProcessor {
             val parts = splitByEncircledLetters(tagContent)
             for (part in parts) {
                 if (isEncircledLetter(part)) {
-                    withStyle(
-                        builder,
+                    builder.withStyle(
                         SpanStyle(
                             fontSize = context.baseFontSize * 1.2f,
                             color = themeColors.tagColor,
                             background = themeColors.tagBg
                         )
                     ) {
-                        append(part)
+                        builder.append(part)
                     }
                 } else {
-                    withStyle(
-                        builder,
+                    builder.withStyle(
                         SpanStyle(
                             fontSize = context.baseFontSize * 0.8f,
                             color = themeColors.tagColor,
                             background = themeColors.tagBg
                         )
                     ) {
-                        append(part)
+                        builder.append(part)
                     }
                 }
             }
         } else {
-            withStyle(
-                builder,
+            builder.withStyle(
                 SpanStyle(
                     fontSize = context.baseFontSize * 0.8f,
                     color = themeColors.tagColor,
                     background = themeColors.tagBg
                 )
             ) {
-                append(content)
+                builder.append(content)
             }
         }
     }
@@ -505,44 +496,30 @@ class VerseTextProcessor {
         return string.replace(Regex("[.*+?^${'$'}{}()|\\[\\]\\\\]"), "\\$&")
     }
 
-    private inline fun withStyle(
-        builder: AnnotatedString.Builder,
-        style: SpanStyle,
-        block: AnnotatedString.Builder.() -> Unit
-    ) {
-        builder.withStyle(style, block)
-    }
 }
 
-// Extension to use in ReaderScreen
-fun preprocessVerses(
-    verses: List<Verse>,
-    baseFontSize: TextUnit,
-    themeColors: ThemeColors,
-    highlight: String? = null,
-    fontFamily: androidx.compose.ui.text.font.FontFamily? = null,
-    onTagPress: ((String, Verse) -> Unit)? = null,
-    onWordPress: ((String) -> Unit)? = null,
-    textColor: Color? = null,
-    isHighlighted: Boolean = false
-): Map<Int, ProcessedVerse> {
-    val processor = VerseTextProcessor()
-    val result = mutableMapOf<Int, ProcessedVerse>()
-
-    for (verse in verses) {
-        val processed = processor.processVerse(
-            verseText = verse.text,
-            baseFontSize = baseFontSize,
-            themeColors = themeColors,
-            highlight = highlight,
-            fontFamily = fontFamily,
-            onTagPress = { content -> onTagPress?.invoke(content, verse) },
-            textColor = textColor,
-            onWordPress = onWordPress,
-            isHighlighted = isHighlighted
-        )
-        result[verse.verseNumber] = processed
+// Simple processor for HomeScreen use
+object SimpleVerseProcessor {
+    fun stripXmlTags(text: String): String {
+        return text
+            .replace(Regex("""<[^>]+>"""), "")
+            .replace(Regex("""\s+"""), " ")
+            .trim()
     }
 
-    return result
+    fun extractVerseReference(verses: List<com.example.fohbible.data.Verse>): String {
+        if (verses.isEmpty()) return ""
+        val first = verses.first()
+        return if (verses.size == 1) {
+            "${first.bookName ?: ""} ${first.chapter}:${first.verseNumber}"
+        } else {
+            "${first.bookName ?: ""} ${first.chapter}:${first.verseNumber}-${verses.last().verseNumber}"
+        }
+    }
+
+    fun processVersesForDisplay(verses: List<com.example.fohbible.data.Verse>): List<String> {
+        return verses.map { verse ->
+            "${verse.verseNumber} ${stripXmlTags(verse.text)}"
+        }
+    }
 }
