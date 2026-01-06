@@ -62,6 +62,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -99,6 +100,8 @@ import com.example.fohbible.utils.BibleVersionUtils
 import com.example.fohbible.utils.BibleVersionUtils.descriptionMap
 
 class AppViewModel : ViewModel() {
+
+    var fontSize by mutableIntStateOf(18)
     var darkTheme by mutableStateOf(false)
     var selectedColor by mutableStateOf<Color?>(null)
     var isCustomColor by mutableStateOf(false)

@@ -1,6 +1,10 @@
 package com.example.fohbible.data
+
 import android.content.Context
 import com.example.fohbible.MainActivity
+import com.example.fohbible.data.BibleData.BIBLE_BOOKS_MAP
+
+// Data classes and enums from BibleData.kt
 data class BibleBook(
     val customNumber: Int,
     val name: String,
@@ -11,17 +15,196 @@ data class BibleBook(
 ) {
     fun getVersesForChapter(chapter: Int, context: Context? = null): Int {
         return if (context != null) {
-            val dbHelper = DatabaseHelper(
-                context as MainActivity,
-                databaseName = "kj2.sqlite3"
-            )
+            val dbHelper = DatabaseHelper(context as MainActivity, databaseName = "kj2.sqlite3")
             dbHelper.getVerseCount(customNumber, chapter)
         } else {
             30
         }
     }
 }
+
 enum class Testament { OLD, NEW }
+
+// Utility functions from testamentUtils
+fun getBookInfo(bookNumber: Int): BibleBook? {
+    return BIBLE_BOOKS_MAP[bookNumber]
+}
+
+// Search Scope types
+typealias SearchScope = String
+
+// Search scope constants
+const val SCOPE_WHOLE = "whole"
+const val SCOPE_OLD_TESTAMENT = "old-testament"
+const val SCOPE_NEW_TESTAMENT = "new-testament"
+const val SCOPE_LAW = "law"
+const val SCOPE_HISTORICAL = "historical"
+const val SCOPE_POETIC = "poetic"
+const val SCOPE_MAJOR_PROPHETS = "major-prophets"
+const val SCOPE_MINOR_PROPHETS = "minor-prophets"
+const val SCOPE_GOSPELS = "gospels"
+const val SCOPE_HISTORICAL_NT = "historical-nt"
+const val SCOPE_PAULINE_LETTERS = "pauline-letters"
+const val SCOPE_LETTERS = "letters"
+const val SCOPE_VISION = "vision"
+
+fun createBookScope(bookNumber: Int): SearchScope = "book-$bookNumber"
+
+// Scope ranges
+data class ScopeRange(val start: Int, val end: Int)
+
+val SCOPE_RANGES: Map<String, ScopeRange?> = mapOf(
+    SCOPE_WHOLE to null,
+    SCOPE_OLD_TESTAMENT to ScopeRange(10, 460),
+    SCOPE_NEW_TESTAMENT to ScopeRange(470, 730),
+    SCOPE_LAW to ScopeRange(10, 50),
+    SCOPE_HISTORICAL to ScopeRange(60, 190),
+    SCOPE_POETIC to ScopeRange(220, 260),
+    SCOPE_MAJOR_PROPHETS to ScopeRange(290, 340),
+    SCOPE_MINOR_PROPHETS to ScopeRange(350, 460),
+    SCOPE_GOSPELS to ScopeRange(470, 500),
+    SCOPE_HISTORICAL_NT to ScopeRange(510, 510),
+    SCOPE_PAULINE_LETTERS to ScopeRange(520, 640),
+    SCOPE_LETTERS to ScopeRange(520, 720),  // Kept as is, but now overlaps with pauline-letters; getScopeForBookNumber will prioritize insertion order
+    SCOPE_VISION to ScopeRange(730, 730)
+)
+
+// Scope configuration
+data class ScopeConfig(
+    val label: String,
+    val description: String,
+    val category: String
+)
+
+val SCOPE_CONFIG: Map<String, ScopeConfig> = mapOf(
+    SCOPE_WHOLE to ScopeConfig(
+        label = "Whole Bible",
+        description = "Search all books (Genesis - Revelation)",
+        category = "All"
+    ),
+    SCOPE_OLD_TESTAMENT to ScopeConfig(
+        label = "Old Testament",
+        description = "Genesis - Malachi",
+        category = "Old Testament"
+    ),
+    SCOPE_NEW_TESTAMENT to ScopeConfig(
+        label = "New Testament",
+        description = "Matthew - Revelation",
+        category = "New Testament"
+    ),
+    SCOPE_LAW to ScopeConfig(
+        label = "The Law",
+        description = "Genesis, Exodus, Leviticus, Numbers, Deuteronomy",
+        category = "Old Testament"
+    ),
+    SCOPE_HISTORICAL to ScopeConfig(
+        label = "Historical Books",
+        description = "Joshua, Judges, Ruth, Samuel, Kings, Chronicles, Ezra, Nehemiah, Esther",
+        category = "Old Testament"
+    ),
+    SCOPE_POETIC to ScopeConfig(
+        label = "Poetic Books",
+        description = "Job, Psalms, Proverbs, Ecclesiastes, Song of Solomon",
+        category = "Old Testament"
+    ),
+    SCOPE_MAJOR_PROPHETS to ScopeConfig(
+        label = "Major Prophets",
+        description = "Isaiah, Jeremiah, Lamentations, Ezekiel, Daniel",
+        category = "Old Testament"
+    ),
+    SCOPE_MINOR_PROPHETS to ScopeConfig(
+        label = "Minor Prophets",
+        description = "Hosea, Joel, Amos, Obadiah, Jonah, Micah, Nahum, Habakkuk, Zephaniah, Haggai, Zechariah, Malachi",
+        category = "Old Testament"
+    ),
+    SCOPE_GOSPELS to ScopeConfig(
+        label = "The Gospels",
+        description = "Matthew, Mark, Luke, John",
+        category = "New Testament"
+    ),
+    SCOPE_HISTORICAL_NT to ScopeConfig(
+        label = "Historical Book",
+        description = "Acts",
+        category = "New Testament"
+    ),
+    SCOPE_PAULINE_LETTERS to ScopeConfig(
+        label = "Pauline Letters",
+        description = "Romans, 1 & 2 Corinthians, Galatians, Ephesians, Philippians, Colossians, 1 & 2 Thessalonians, 1 & 2 Timothy, Titus, Philemon",
+        category = "New Testament"
+    ),
+    SCOPE_LETTERS to ScopeConfig(
+        label = "The Letters",
+        description = "Romans to Jude",  // Kept as is; alternatively, update to "Hebrews to Jude" if desired
+        category = "New Testament"
+    ),
+    SCOPE_VISION to ScopeConfig(
+        label = "The Book of Vision",
+        description = "Revelation",
+        category = "New Testament"
+    )
+)
+
+// Utility functions
+fun isBookScope(scope: SearchScope): Boolean {
+    return scope.startsWith("book-")
+}
+
+fun getBookNumberFromScope(scope: SearchScope): Int? {
+    if (isBookScope(scope)) {
+        return scope.removePrefix("book-").toIntOrNull()
+    }
+    return null
+}
+
+fun getScopeConfig(scope: SearchScope): ScopeConfig {
+    if (isBookScope(scope)) {
+        val bookNumber = getBookNumberFromScope(scope)
+        if (bookNumber != null) {
+            val bookInfo = getBookInfo(bookNumber)
+            if (bookInfo != null) {
+                return ScopeConfig(
+                    label = bookInfo.name,
+                    description = "Search only ${bookInfo.name}",
+                    category = "Individual Books"
+                )
+            }
+        }
+        return ScopeConfig(
+            label = "Unknown Book",
+            description = "Search this book",
+            category = "Individual Books"
+        )
+    }
+    return SCOPE_CONFIG[scope] ?: ScopeConfig("Unknown", "Unknown scope", "Unknown")
+}
+
+// Individual book scopes
+val INDIVIDUAL_BOOK_SCOPES: List<SearchScope> = BIBLE_BOOKS_MAP.keys.map { bookNumber ->
+    createBookScope(bookNumber)
+}
+
+// Scope categories
+val SCOPE_CATEGORIES: Map<String, List<SearchScope>> = mapOf(
+    "All" to listOf(SCOPE_WHOLE),
+    "Old Testament" to listOf(
+        SCOPE_OLD_TESTAMENT,
+        SCOPE_LAW,
+        SCOPE_HISTORICAL,
+        SCOPE_POETIC,
+        SCOPE_MAJOR_PROPHETS,
+        SCOPE_MINOR_PROPHETS
+    ),
+    "New Testament" to listOf(
+        SCOPE_NEW_TESTAMENT,
+        SCOPE_GOSPELS,
+        SCOPE_HISTORICAL_NT,
+        SCOPE_PAULINE_LETTERS,
+        SCOPE_LETTERS,
+        SCOPE_VISION
+    ),
+    "Individual Books" to INDIVIDUAL_BOOK_SCOPES
+)
+
 object BibleData {
     private val allBooksList = listOf(
         BibleBook(10, "Genesis", 50, Testament.OLD, "Gen"),
@@ -91,10 +274,15 @@ object BibleData {
         BibleBook(720, "Jude", 1, Testament.NEW, "Jude"),
         BibleBook(730, "Revelation", 22, Testament.NEW, "Rev")
     )
-    private val booksWithStandardNumbers = allBooksList.mapIndexed { index, book -> book.copy(standardNumber = index + 1) }
+
+    private val booksWithStandardNumbers = allBooksList.mapIndexed { index, book ->
+        book.copy(standardNumber = index + 1)
+    }
+
     val BIBLE_BOOKS_MAP = booksWithStandardNumbers.associateBy { it.customNumber }
     val allBooks: List<BibleBook> = booksWithStandardNumbers
     val oldTestamentBooks: List<BibleBook> = allBooks.filter { it.testament == Testament.OLD }
     val newTestamentBooks: List<BibleBook> = allBooks.filter { it.testament == Testament.NEW }
+
     fun getBookByCustomNumber(customNumber: Int): BibleBook? = BIBLE_BOOKS_MAP[customNumber]
 }

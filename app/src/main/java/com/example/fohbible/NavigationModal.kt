@@ -50,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -59,10 +60,25 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.graphics.toColorInt
 import com.example.fohbible.data.BibleBook
 import com.example.fohbible.data.BibleData
 import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.PassageSelection
+import com.example.fohbible.data.SCOPE_GOSPELS
+import com.example.fohbible.data.SCOPE_HISTORICAL
+import com.example.fohbible.data.SCOPE_HISTORICAL_NT
+import com.example.fohbible.data.SCOPE_LAW
+import com.example.fohbible.data.SCOPE_LETTERS
+import com.example.fohbible.data.SCOPE_MAJOR_PROPHETS
+import com.example.fohbible.data.SCOPE_MINOR_PROPHETS
+import com.example.fohbible.data.SCOPE_NEW_TESTAMENT
+import com.example.fohbible.data.SCOPE_OLD_TESTAMENT
+import com.example.fohbible.data.SCOPE_PAULINE_LETTERS
+import com.example.fohbible.data.SCOPE_POETIC
+import com.example.fohbible.data.SCOPE_VISION
+import com.example.fohbible.data.SCOPE_WHOLE
+import com.example.fohbible.data.SCOPE_RANGES
 import com.example.fohbible.data.Testament
 import com.example.fohbible.ui.theme.FohBibleTheme
 import kotlinx.coroutines.Dispatchers
@@ -87,6 +103,34 @@ fun BibleBook.toBookUi(): BookUi {
     )
 }
 
+val scopeColors = mapOf(
+    SCOPE_LAW to "#e88054",
+    SCOPE_HISTORICAL to "#548fe8",
+    SCOPE_POETIC to "#E3DA57",
+    SCOPE_MAJOR_PROPHETS to "#6DF3CE",
+    SCOPE_MINOR_PROPHETS to "#fa6e6e",
+    SCOPE_GOSPELS to "#45F34A",
+    SCOPE_HISTORICAL_NT to "#b17df5",
+    SCOPE_PAULINE_LETTERS to "#f5ab7d",
+    SCOPE_LETTERS to "#46E0F3",
+    SCOPE_VISION to "#F3EA92"
+)
+
+fun getScopeForBookNumber(bookNumber: Int): String? {
+    for ((scope, range) in SCOPE_RANGES) {
+        if (range != null &&
+            bookNumber >= range.start &&
+            bookNumber <= range.end &&
+            scope != SCOPE_WHOLE &&
+            scope != SCOPE_OLD_TESTAMENT &&
+            scope != SCOPE_NEW_TESTAMENT
+        ) {
+            return scope
+        }
+    }
+    return null
+}
+
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun NavigationModal(
@@ -97,13 +141,18 @@ fun NavigationModal(
 ) {
     val oldTestamentBooks = remember { BibleData.oldTestamentBooks.map { it.toBookUi() } }
     val newTestamentBooks = remember { BibleData.newTestamentBooks.map { it.toBookUi() } }
+
     var selectedBook by remember { mutableStateOf<BookUi?>(null) }
     var chapterInput by remember { mutableStateOf("") }
     var verseInput by remember { mutableStateOf("") }
     var focusedInput by remember { mutableStateOf<String?>("chapter") }
     var maxVerse by remember { mutableIntStateOf(0) }
     var isLoadingVerseCount by remember { mutableStateOf(false) }
-    val selectedBibleBook by remember(selectedBook) { derivedStateOf { selectedBook?.let { BibleData.getBookByCustomNumber(it.bookNumber) } } }
+
+    val selectedBibleBook by remember(selectedBook) {
+        derivedStateOf { selectedBook?.let { BibleData.getBookByCustomNumber(it.bookNumber) } }
+    }
+
     var showChapterFlash by remember { mutableStateOf(false) }
     var showVerseFlash by remember { mutableStateOf(false) }
 
@@ -229,10 +278,8 @@ fun NavigationModal(
                     TopAppBar(
                         title = {
                             Text(
-                                text = if (selectedBook == null) "Select a Book" else "Select passage for ${selectedBook?.longName}",
+                                text = "Select Passage",
                                 fontWeight = FontWeight.Medium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
                                 fontSize = 20.sp,
                             )
                         },
@@ -279,7 +326,6 @@ fun NavigationModal(
                                     maxVerse = 0
                                     focusedInput = "chapter"
                                 },
-                                defaultColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
                                 textColor = MaterialTheme.colorScheme.primary,
                                 selectedBook = selectedBook
                             )
@@ -296,7 +342,6 @@ fun NavigationModal(
                                     maxVerse = 0
                                     focusedInput = "chapter"
                                 },
-                                defaultColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f),
                                 textColor = MaterialTheme.colorScheme.secondary,
                                 selectedBook = selectedBook
                             )
@@ -360,7 +405,8 @@ fun NavigationModal(
                                             val chapter = chapterInput.toInt()
                                             val verse = verseInput.toIntOrNull()
                                             val bibleBook = BibleData.getBookByCustomNumber(
-                                                selectedBook!!.bookNumber)
+                                                selectedBook!!.bookNumber
+                                            )
                                             onPassageSelected(
                                                 PassageSelection(
                                                     bookNumber = selectedBook!!.bookNumber,
@@ -464,8 +510,8 @@ fun CustomInputDisplay(
     onClick: () -> Unit,
     @SuppressLint("ModifierParameter") modifier: Modifier = Modifier
 ) {
-    val borderColor = if (isError) MaterialTheme.colorScheme.error else if (isFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-    val borderWidth = if (isError) 2.dp else 1.dp
+    val borderColor = if (isError) MaterialTheme.colorScheme.error else if (isFocused) MaterialTheme.colorScheme.primary else Color.Transparent
+    val borderWidth = 2.dp
     Surface(
         modifier = modifier
             .height(56.dp)
@@ -490,7 +536,7 @@ fun CustomInputDisplay(
             if (hint.isNotEmpty()) {
                 Text(
                     text = hint,
-                    color = if (isError) MaterialTheme.colorScheme.error.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    color = if (isError) MaterialTheme.colorScheme.error.copy(alpha = 0.7f) else Color.Gray.copy(alpha = 0.8f),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Medium
                 )
@@ -695,7 +741,6 @@ fun TestamentSection(
     title: String,
     books: List<BookUi>,
     onBookSelected: (BookUi) -> Unit,
-    defaultColor: Color,
     textColor: Color,
     selectedBook: BookUi?
 ) {
@@ -724,15 +769,9 @@ fun TestamentSection(
             books.forEach { book ->
                 BookCard(
                     book = book,
-                    backgroundColor = if (selectedBook?.bookNumber == book.bookNumber) {
-                        textColor.copy(alpha = 0.2f)
-                    } else {
-                        defaultColor
-                    },
+                    isSelected = selectedBook?.bookNumber == book.bookNumber,
                     textColor = textColor,
-                    onClick = {
-                        onBookSelected(book)
-                    }
+                    onClick = { onBookSelected(book) }
                 )
             }
         }
@@ -743,18 +782,25 @@ fun TestamentSection(
 @Composable
 fun BookCard(
     book: BookUi,
-    backgroundColor: Color,
+    isSelected: Boolean,
     textColor: Color,
     onClick: () -> Unit
 ) {
+    val themeIsDark = MaterialTheme.colorScheme.background.red + MaterialTheme.colorScheme.background.green + MaterialTheme.colorScheme.background.blue < 1.5f
+    val scope = getScopeForBookNumber(book.bookNumber)
+    val hex = scope?.let { scopeColors[it] } ?: if (book.testament == Testament.OLD) "#DC2626" else "#059669"
+    val baseColor = Color(hex.toColorInt())
+    val bgColor = if (themeIsDark) baseColor else lerp(Color.White, baseColor, 0.85f)
+    val borderModifier = if (isSelected) Modifier.border(2.dp, textColor, RoundedCornerShape(4.dp)) else Modifier
     Card(
         onClick = onClick,
         modifier = Modifier
-            .width(50.dp),
+            .width(50.dp)
+            .then(borderModifier),
         shape = RoundedCornerShape(4.dp),
         colors = CardDefaults.cardColors(
-            containerColor = backgroundColor,
-            contentColor = textColor
+            containerColor = bgColor,
+            contentColor = Color(0xFF444c69)
         ),
     ) {
         Column(

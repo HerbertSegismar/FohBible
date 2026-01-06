@@ -67,9 +67,9 @@ object ThemeManager {
             onSecondary = Color.White,
             tertiary = Color(tertiary),
             onTertiary = Color.White,
-            background = Color(0xFF121212),
+            background = Color(0xFF1E1F21),
             onBackground = Color.White,
-            surface = Color(0xFF020B36),
+            surface = Color(0xFF1D2B3F),
             onSurface = Color.White,
             surfaceVariant = Color(0xFF2D2D2D),
             primaryContainer = Color(0xFF070017),
@@ -117,46 +117,13 @@ val PredefinedColorThemes = listOf(
     ColorTheme("Teal Theme", Color(0xFF009688), Color(0xFF00796B)),
 )
 
-// Define default light color scheme
-private val LightColorScheme = lightColorScheme(
-    primary = DefaultPrimaryColor,
-    secondary = Color(0xFF03DAC6),
-    tertiary = Color(0xFF3700B3),
-    background = Color(0xFFFFFFFF),
-    surface = Color(0xFFF5F5DC),
-    surfaceVariant = Color(0xFFE1E1E1),
-    onPrimary = Color.White,
-    onSecondary = Color.Black,
-    onBackground = Color.Black,
-    onSurface = Color.Black,
-    primaryContainer = Color(0xFFFCF9EA),
-    secondaryContainer = Color(0xFFC8E6C9)
-)
-
-// Define default dark color scheme
-private val DarkColorScheme = darkColorScheme(
-    primary = Color(0xFF137CD0),
-    secondary = Color(0xFF03DAC6),
-    tertiary = Color(0xFF3700B3),
-    background = Color(0xFF121212),
-    surface = Color(0xFF020B36),
-    surfaceVariant = Color(0xFF2D2D2D),
-    onPrimary = Color.Black,
-    onSecondary = Color.Black,
-    onBackground = Color.White,
-    onSurface = Color.White,
-    primaryContainer = Color(0xFF070017),
-    secondaryContainer = Color(0xFF1B5E20)
-)
-
 @Composable
 fun FohBibleTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
     val themeState = LocalAppTheme.current
-    val colorScheme = if (themeState.isCustomColor) {
-        // Use custom color scheme
+    val colorScheme = {
         val appColorScheme = ThemeManager.generateColorScheme(themeState.primaryColor, darkTheme)
 
         if (darkTheme) {
@@ -192,13 +159,10 @@ fun FohBibleTheme(
                 secondaryContainer = appColorScheme.secondaryContainer
             )
         }
-    } else {
-        // Use default theme
-        if (darkTheme) DarkColorScheme else LightColorScheme
     }
 
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = colorScheme(),
         typography = Typography,
         content = content
     )

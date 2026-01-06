@@ -1,4 +1,7 @@
+@file:Suppress("AssignedValueIsNeverRead")
+
 package com.example.fohbible.screens
+
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,6 +41,8 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.fohbible.AppViewModel
 import com.example.fohbible.MainActivity
 import com.example.fohbible.data.BibleBook
 import com.example.fohbible.data.BibleData
@@ -68,51 +73,41 @@ fun ReaderScreen(
         searchHighlightBg = Color.Yellow.copy(alpha = 0.3f),
         highlightIcon = MaterialTheme.colorScheme.primary
     )
-
+    val viewModel = viewModel<AppViewModel>()
     val coroutineScope = rememberCoroutineScope()
-
     // Track current passage - use LaunchedEffect to sync with parent
     var currentPassage by remember { mutableStateOf(passage.copy(verse = 1)) }
-
     // Sync with parent passage changes using LaunchedEffect
     LaunchedEffect(passage.bookNumber, passage.chapter) {
         if (passage.bookNumber != currentPassage.bookNumber || passage.chapter != currentPassage.chapter) {
             currentPassage = passage.copy(verse = 1)
         }
     }
-
     // Get current book info
     val currentBook by remember(currentPassage.bookNumber) {
         derivedStateOf { BibleData.getBookByCustomNumber(currentPassage.bookNumber) }
     }
-
     // Calculate previous and next passages
     val prevPassage by remember(currentPassage, currentBook) {
         derivedStateOf {
             if (currentBook == null) currentPassage else getPreviousPassage(currentPassage, currentBook)
         }
     }
-
     val nextPassage by remember(currentPassage, currentBook) {
         derivedStateOf {
             if (currentBook == null) currentPassage else getNextPassage(currentPassage, currentBook)
         }
     }
-
     val hasPrev by remember(prevPassage) { derivedStateOf { prevPassage != currentPassage } }
     val hasNext by remember(nextPassage) { derivedStateOf { nextPassage != currentPassage } }
-
     // Track target passage for swipe completion
     var pendingPassageChange by remember { mutableStateOf<PassageSelection?>(null) }
-
     // Track loaded verses - use snapshotFlow to clear when databaseHelper changes
     val loadedVerses = remember { mutableStateMapOf<Pair<Int, Int>, List<Verse>>() }
-
     // Clear loaded verses when databaseHelper changes
     LaunchedEffect(databaseHelper) {
         loadedVerses.clear()
     }
-
     // Load verses for current, previous, and next passages
     LaunchedEffect(currentPassage, hasPrev, hasNext, databaseHelper) {
         // Load current passage
@@ -120,7 +115,6 @@ fun ReaderScreen(
         if (currentKey !in loadedVerses) {
             loadedVerses[currentKey] = databaseHelper?.getVerses(currentPassage.bookNumber, currentPassage.chapter) ?: emptyList()
         }
-
         // Load previous passage if available
         if (hasPrev) {
             val prevKey = prevPassage.bookNumber to prevPassage.chapter
@@ -128,7 +122,6 @@ fun ReaderScreen(
                 loadedVerses[prevKey] = databaseHelper?.getVerses(prevPassage.bookNumber, prevPassage.chapter) ?: emptyList()
             }
         }
-
         // Load next passage if available
         if (hasNext) {
             val nextKey = nextPassage.bookNumber to nextPassage.chapter
@@ -137,22 +130,18 @@ fun ReaderScreen(
             }
         }
     }
-
     val pagerState = rememberPagerState(
         initialPage = 1,
         pageCount = { 3 }
     )
-
     // Track swipe state
     var isUserSwiping by remember { mutableStateOf(false) }
     var swipeCompleted by remember { mutableStateOf(false) }
-
     // Handle page changes during swipe
     LaunchedEffect(pagerState.currentPage, pagerState.isScrollInProgress) {
         if (pagerState.isScrollInProgress) {
             isUserSwiping = true
             swipeCompleted = false
-
             // Only process page changes during active swipe
             when (pagerState.currentPage) {
                 0 -> {
@@ -169,7 +158,6 @@ fun ReaderScreen(
         } else if (isUserSwiping) {
             // Swipe just ended
             isUserSwiping = false
-
             // Process pending passage change if any
             val targetPassage = pendingPassageChange
             if (targetPassage != null && !swipeCompleted) {
@@ -177,7 +165,6 @@ fun ReaderScreen(
                 currentPassage = targetPassage
                 onPassageChange(targetPassage)
                 pendingPassageChange = null
-
                 // Reset pager to center
                 coroutineScope.launch {
                     pagerState.scrollToPage(1)
@@ -185,7 +172,6 @@ fun ReaderScreen(
             }
         }
     }
-
     // Reset pager to center when passage changes (non-user initiated)
     LaunchedEffect(currentPassage) {
         if (!isUserSwiping) {
@@ -197,7 +183,6 @@ fun ReaderScreen(
             }
         }
     }
-
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
@@ -212,7 +197,7 @@ fun ReaderScreen(
                     2 -> nextPassage
                     else -> currentPassage
                 }
-                "${passageKey.bookNumber}-${passageKey.chapter}-${pageIndex}"
+                "${passageKey.bookNumber}-${passageKey.chapter}-{pageIndex}"
             }
         ) { pageIndex ->
             val thisPassage = when (pageIndex) {
@@ -222,14 +207,13 @@ fun ReaderScreen(
                 else -> currentPassage
             }
             val thisVerses = loadedVerses[thisPassage.bookNumber to thisPassage.chapter] ?: emptyList()
-
             val processor = remember(thisVerses) { VerseTextProcessor() }
             val processedVerses = remember(thisVerses, themeColors) {
                 val result = mutableMapOf<Int, ProcessedVerse>()
                 for (verse in thisVerses) {
                     val processed = processor.processVerse(
                         verseText = verse.text,
-                        baseFontSize = 16.sp,
+                        baseFontSize = viewModel.fontSize.sp,
                         themeColors = themeColors,
                         fontFamily = null,
                         textColor = themeColors.textColor
@@ -238,7 +222,6 @@ fun ReaderScreen(
                 }
                 result
             }
-
             Box(modifier = Modifier.fillMaxSize()) {
                 if (thisVerses.isEmpty()) {
                     Column(
@@ -260,7 +243,7 @@ fun ReaderScreen(
                             // Display chapter header
                             Text(
                                 text = "${thisPassage.bookName} ${thisPassage.chapter}",
-                                style = MaterialTheme.typography.titleLarge,
+                                style = MaterialTheme.typography.titleLarge.copy(fontSize = (viewModel.fontSize + 4f).sp),
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier
@@ -269,11 +252,9 @@ fun ReaderScreen(
                                 textAlign = TextAlign.Center
                             )
                         }
-
                         // Display verses with processed text
                         items(thisVerses) { verse ->
                             val processedVerse = processedVerses[verse.verseNumber]
-
                             if (processedVerse != null) {
                                 // Display the processed verse with header and body
                                 Column(
@@ -293,7 +274,6 @@ fun ReaderScreen(
                                             )
                                         }
                                     }
-
                                     // Display verse number and body
                                     Row(
                                         modifier = Modifier
@@ -306,7 +286,7 @@ fun ReaderScreen(
                                                     style = SpanStyle(
                                                         fontWeight = FontWeight.Bold,
                                                         color = themeColors.verseNumber,
-                                                        fontSize = 14.sp
+                                                        fontSize = (viewModel.fontSize * 0.778f).sp
                                                     )
                                                 ) {
                                                     append("${verse.verseNumber} ")
@@ -314,8 +294,8 @@ fun ReaderScreen(
                                                 append(processedVerse.body)
                                             },
                                             modifier = Modifier.fillMaxWidth(),
-                                            fontSize = 18.sp,
-                                            lineHeight = 24.sp
+                                            fontSize = viewModel.fontSize.sp,
+                                            lineHeight = (viewModel.fontSize * 1.333f).sp
                                         )
                                     }
                                 }
@@ -331,13 +311,13 @@ fun ReaderScreen(
                                         text = "${verse.verseNumber}.",
                                         fontWeight = FontWeight.Bold,
                                         color = themeColors.verseNumber,
-                                        fontSize = 14.sp
+                                        fontSize = (viewModel.fontSize * 0.778f).sp
                                     )
                                     Text(
                                         text = verse.text,
                                         modifier = Modifier.weight(1f),
-                                        fontSize = 16.sp,
-                                        lineHeight = 22.sp
+                                        fontSize = viewModel.fontSize.sp,
+                                        lineHeight = (viewModel.fontSize * 1.333f).sp
                                     )
                                 }
                             }
