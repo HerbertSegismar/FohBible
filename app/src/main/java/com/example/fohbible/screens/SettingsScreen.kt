@@ -1,6 +1,9 @@
+@file:Suppress("AssignedValueIsNeverRead")
+
 package com.example.fohbible.screens
 
 import android.content.Intent
+import android.graphics.Typeface
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -43,6 +46,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -52,6 +56,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -59,15 +64,27 @@ import androidx.compose.ui.window.Dialog
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.fohbible.AppViewModel
+import com.example.fohbible.ColorWheelDialog
+import com.example.fohbible.ui.theme.DefaultPrimaryColor
 import com.example.fohbible.ui.theme.PredefinedColorThemes
 import com.example.fohbible.utils.BibleVersionUtils
 import java.util.Locale
 
-
 // TODO: Define font families similar to RN Fonts
-val availableFontFamilies = listOf("system", "serif", "sans-serif", "oswald", "rubik-glitch", "poppins")
+val availableFontFamilies = listOf("system", "oswald", "rubik-glitch", "poppins")
 
 // TODO: Define bgTextures similar to RN
+@Composable
+fun getFontFamily(family: String): FontFamily {
+    val context = LocalContext.current
+    return when (family) {
+        "system" -> FontFamily.Default
+        "oswald" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Oswald.ttf")) }
+        "rubik-glitch" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/RubikGlitch.ttf")) }
+        "poppins" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Poppins.ttf")) }
+        else -> FontFamily.Default
+    }
+}
 
 @Composable
 fun SettingsScreen() {
@@ -75,29 +92,37 @@ fun SettingsScreen() {
     val context = LocalContext.current
 
     // Additional states
-    var fontFamily by remember { mutableStateOf("system") } // TODO: Move to viewModel and persist
-    var showMultiVersion by remember { mutableStateOf(false) } // TODO: Move to viewModel and persist
-    var secondaryVersionAbbr by remember { mutableStateOf("") } // TODO: Move to viewModel and persist
-    var bgImageIndex by remember { mutableIntStateOf(0) } // TODO: Move to viewModel and persist
-    var customTextureUri by remember { mutableStateOf<String?>(null) } // TODO: Move to viewModel and persist
+    var showMultiVersion by remember { mutableStateOf(false) }
+    var secondaryVersionAbbr by remember { mutableStateOf("") }
+    var bgImageIndex by remember { mutableIntStateOf(0) }
+    var customTextureUri by remember { mutableStateOf<String?>(null) }
 
     var showBgModal by remember { mutableStateOf(false) }
     var showFontModal by remember { mutableStateOf(false) }
     var tempFontSize by remember { mutableStateOf(viewModel.fontSize.toString()) }
 
-    // Image picker for custom texture
+    var showColorWheel by remember { mutableStateOf(false) }
+
+    var customColor by remember { mutableStateOf(viewModel.customColor) }
+    var isUsingCustomColor by remember { mutableStateOf(viewModel.isCustomColor) }
+
+    // Initialize state from viewModel
+    LaunchedEffect(viewModel.isCustomColor, viewModel.customColor) {
+        isUsingCustomColor = viewModel.isCustomColor
+        customColor = viewModel.customColor
+    }
+
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
             customTextureUri = it.toString()
-            bgImageIndex = 34 // Assuming 34 is custom
+            bgImageIndex = 34
             // TODO: Persist uri
         }
     }
 
     // TODO: Load settings from SharedPreferences in LaunchedEffect
-
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -125,7 +150,9 @@ fun SettingsScreen() {
                         onCheckedChange = { viewModel.darkTheme = it }
                     )
                 }
+
                 HorizontalDivider()
+
                 Column {
                     Text("Color Scheme", style = MaterialTheme.typography.labelLarge)
                     Spacer(Modifier.height(8.dp))
@@ -134,25 +161,29 @@ fun SettingsScreen() {
                             ColorButton(
                                 color = theme.primaryColor,
                                 name = theme.name,
-                                isSelected = viewModel.selectedColor == theme.primaryColor,
+                                isSelected = viewModel.selectedColor == theme.primaryColor && !isUsingCustomColor,
                                 onClick = {
                                     viewModel.selectedColor = theme.primaryColor
                                     viewModel.isCustomColor = false
+                                    isUsingCustomColor = false
                                 }
                             )
                         }
                         item {
-                            // Custom color
                             ColorButton(
-                                color = Color.Magenta, // Placeholder
+                               color = if (customColor != null) customColor!! else Color(0xFFE1B82F),
                                 name = "Custom",
-                                isSelected = viewModel.isCustomColor,
-                                onClick = { /* TODO: Open color picker */ }
+                                isSelected = isUsingCustomColor,
+                                onClick = {
+                                    showColorWheel = true
+                                }
                             )
                         }
                     }
                 }
+
                 HorizontalDivider()
+
                 Column {
                     Text("Font Family", style = MaterialTheme.typography.labelLarge)
                     Spacer(Modifier.height(8.dp))
@@ -160,27 +191,29 @@ fun SettingsScreen() {
                         items(availableFontFamilies) { family ->
                             FontButton(
                                 family = family,
-                                isSelected = fontFamily == family,
-                                onClick = {
-                                    fontFamily = family
-                                    /* TODO: Apply font */
-                                }
+                                isSelected = viewModel.selectedFontFamily == family,
+                                onClick = { viewModel.selectedFontFamily = family }
                             )
                         }
                     }
                 }
+
                 HorizontalDivider()
+
                 SettingsItem(title = "Custom Background", subtitle = "Add your own photo as background") {
                     IconButton(onClick = { imagePickerLauncher.launch("image/*") }) {
                         Icon(Icons.Default.AddCircleOutline, contentDescription = null)
                     }
                     // TODO: Show preview if customTextureUri != null
                 }
+
                 SettingsItem(title = "Background Texture", subtitle = "Choose from built-in textures or your custom one", onClick = { showBgModal = true }) {
                     Text("Texture $bgImageIndex") // TODO: Proper name
                     Icon(Icons.Default.ChevronRight, contentDescription = null)
                 }
+
                 HorizontalDivider()
+
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Font Size")
                     Spacer(Modifier.weight(1f))
@@ -192,6 +225,7 @@ fun SettingsScreen() {
                         Text("A+")
                     }
                 }
+
                 SettingsItem(title = "Multi-Version Display", subtitle = "Show two Bible versions side by side") {
                     Switch(
                         checked = showMultiVersion,
@@ -203,7 +237,7 @@ fun SettingsScreen() {
 
         item {
             SettingsSection(title = "Bible Version", subtitle = "Choose your preferred translation") {
-                // Primary version selector
+
                 VersionSelector(
                     currentAbbr = viewModel.currentVersionAbbr,
                     onSelect = { file, abbr ->
@@ -211,8 +245,8 @@ fun SettingsScreen() {
                         viewModel.currentVersionAbbr = abbr
                     }
                 )
+
                 if (showMultiVersion) {
-                    // Secondary version selector
                     VersionSelector(
                         currentAbbr = secondaryVersionAbbr,
                         onSelect = { _, abbr ->
@@ -230,7 +264,9 @@ fun SettingsScreen() {
                 SettingsItem(title = "Data & Storage", subtitle = "Manage app data and cache", onClick = { /* TODO: Implement */ }) {
                     Icon(Icons.Default.ChevronRight, contentDescription = null)
                 }
+
                 HorizontalDivider()
+
                 SettingsItem(title = "About", subtitle = "App version and information", onClick = { /* TODO: Show about dialog */ }) {
                     Icon(Icons.Default.ChevronRight, contentDescription = null)
                 }
@@ -244,13 +280,14 @@ fun SettingsScreen() {
                         Icon(Icons.Default.Refresh, contentDescription = null)
                         Text("Reset Settings")
                     }
+
                     Button(onClick = {
                         val intent = Intent(Intent.ACTION_SENDTO).apply {
                             data = "mailto:fountofhopedevotionals@gmail.com".toUri()
                         }
                         context.startActivity(intent)
                     }) {
-                        Icon(Icons.Default.Settings, contentDescription = null) // Placeholder
+                        Icon(Icons.Default.Settings, contentDescription = null)
                         Text("Send Feedback")
                     }
                 }
@@ -283,6 +320,21 @@ fun SettingsScreen() {
             onDismiss = { showFontModal = false }
         )
     }
+
+    if (showColorWheel) {
+        ColorWheelDialog(
+            onDismissRequest = { showColorWheel = false },
+            onColorSelected = { color ->
+                viewModel.customColor = color
+                viewModel.selectedColor = color
+                viewModel.isCustomColor = true
+                isUsingCustomColor = true
+                customColor = color
+                showColorWheel = false
+            },
+            initialColor = customColor ?: viewModel.selectedColor ?: DefaultPrimaryColor
+        )
+    }
 }
 
 @Composable
@@ -294,7 +346,9 @@ fun SettingsSection(title: String, subtitle: String? = null, content: @Composabl
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(title, style = MaterialTheme.typography.titleLarge)
-            subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+            subtitle?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall)
+            }
             Spacer(Modifier.height(8.dp))
             content()
         }
@@ -312,7 +366,9 @@ fun SettingsItem(title: String, subtitle: String? = null, onClick: (() -> Unit)?
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(title)
-            subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+            subtitle?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall)
+            }
         }
         content()
     }
@@ -333,32 +389,56 @@ fun ColorButton(color: Color, name: String, isSelected: Boolean, onClick: () -> 
     Column(
         modifier = Modifier
             .clickable { onClick() }
-            .border(if (isSelected) 2.dp else 1.dp, if (isSelected) color else MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
+            .border(
+                if (isSelected) 2.dp else 1.dp,
+                if (isSelected) color else MaterialTheme.colorScheme.surfaceVariant,
+                RoundedCornerShape(8.dp)
+            )
             .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(modifier = Modifier.size(32.dp).background(color))
-        Text(name)
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .background(color, RoundedCornerShape(4.dp))
+                .border(
+                    1.dp,
+                    MaterialTheme.colorScheme.surfaceVariant,
+                    RoundedCornerShape(4.dp)
+                )
+        )
+        Text(
+            text = name,
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(top = 4.dp)
+        )
     }
 }
 
 @Composable
 fun FontButton(family: String, isSelected: Boolean, onClick: () -> Unit) {
-    // TODO: Apply font family to text
     Text(
         family.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() },
         modifier = Modifier
             .clickable { onClick() }
-            .border(if (isSelected) 2.dp else 1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
-            .padding(8.dp)
+            .border(
+                if (isSelected) 2.dp else 1.dp,
+                if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                RoundedCornerShape(8.dp)
+            )
+            .padding(8.dp),
+        fontFamily = getFontFamily(family)
     )
 }
 
 @Composable
 fun VersionSelector(currentAbbr: String, onSelect: (String, String) -> Unit, title: String? = null) {
     var showDropdown by remember { mutableStateOf(false) }
+
     Column {
-        title?.let { Text(it) }
+        title?.let {
+            Text(it)
+        }
         Button(onClick = { showDropdown = true }) {
             Text(currentAbbr)
         }
@@ -425,10 +505,14 @@ fun FontModal(tempSize: String, onChange: (String) -> Unit, onConfirm: () -> Uni
             )
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) { Text("Apply") }
+            TextButton(onClick = onConfirm) {
+                Text("Apply")
+            }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
         }
     )
 }

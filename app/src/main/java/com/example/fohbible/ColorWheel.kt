@@ -79,9 +79,6 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import android.graphics.Color as AndroidColor
 
-/**
- * Professional Color Picker Dialog with unified single-container design
- */
 @SuppressLint("FrequentlyChangingValue")
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -97,11 +94,9 @@ fun ColorWheelDialog(
     var hexInput by remember { mutableStateOf("#${(initialColor.toArgb() and 0xFFFFFF).toString(16).padStart(6, '0').uppercase()}") }
     var isValidHex by remember { mutableStateOf(true) }
 
-    // For previewing the color in different contexts
     val lightBackground = Color.White
     val darkBackground = Color.Black
 
-    // Predefined color palette
     val colorPalette = remember {
         listOf(
             Color(0xFFEF4444), Color(0xFFF97316), Color(0xFFF59E0B), Color(0xFFEAB308),

@@ -109,12 +109,12 @@ data class ColorTheme(
 )
 
 val PredefinedColorThemes = listOf(
-    ColorTheme("Blue Theme", Color(0xFF2196F3), Color(0xFF1976D2)),
-    ColorTheme("Green Theme", Color(0xFF4CAF50), Color(0xFF388E3C)),
-    ColorTheme("Purple Theme", Color(0xFF9C27B0), Color(0xFF7B1FA2)),
-    ColorTheme("Orange Theme", Color(0xFFFF9800), Color(0xFFF57C00)),
-    ColorTheme("Red Theme", Color(0xFFF44336), Color(0xFFD32F2F)),
-    ColorTheme("Teal Theme", Color(0xFF009688), Color(0xFF00796B)),
+    ColorTheme("Blue", Color(0xFF2196F3), Color(0xFF1976D2)),
+    ColorTheme("Green", Color(0xFF4CAF50), Color(0xFF388E3C)),
+    ColorTheme("Purple", Color(0xFF9C27B0), Color(0xFF7B1FA2)),
+    ColorTheme("Orange", Color(0xFFFF9800), Color(0xFFF57C00)),
+    ColorTheme("Red", Color(0xFFF44336), Color(0xFFD32F2F)),
+    ColorTheme("Teal", Color(0xFF009688), Color(0xFF00796B)),
 )
 
 @Composable

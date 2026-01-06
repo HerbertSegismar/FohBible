@@ -55,6 +55,8 @@ import com.example.fohbible.utils.ThemeColors
 import com.example.fohbible.utils.VerseTextProcessor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import android.graphics.Typeface
+import androidx.compose.ui.text.font.FontFamily
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -75,18 +77,22 @@ fun ReaderScreen(
     )
     val viewModel = viewModel<AppViewModel>()
     val coroutineScope = rememberCoroutineScope()
+
     // Track current passage - use LaunchedEffect to sync with parent
     var currentPassage by remember { mutableStateOf(passage.copy(verse = 1)) }
+
     // Sync with parent passage changes using LaunchedEffect
     LaunchedEffect(passage.bookNumber, passage.chapter) {
         if (passage.bookNumber != currentPassage.bookNumber || passage.chapter != currentPassage.chapter) {
             currentPassage = passage.copy(verse = 1)
         }
     }
+
     // Get current book info
     val currentBook by remember(currentPassage.bookNumber) {
         derivedStateOf { BibleData.getBookByCustomNumber(currentPassage.bookNumber) }
     }
+
     // Calculate previous and next passages
     val prevPassage by remember(currentPassage, currentBook) {
         derivedStateOf {
@@ -100,14 +106,18 @@ fun ReaderScreen(
     }
     val hasPrev by remember(prevPassage) { derivedStateOf { prevPassage != currentPassage } }
     val hasNext by remember(nextPassage) { derivedStateOf { nextPassage != currentPassage } }
+
     // Track target passage for swipe completion
     var pendingPassageChange by remember { mutableStateOf<PassageSelection?>(null) }
+
     // Track loaded verses - use snapshotFlow to clear when databaseHelper changes
     val loadedVerses = remember { mutableStateMapOf<Pair<Int, Int>, List<Verse>>() }
+
     // Clear loaded verses when databaseHelper changes
     LaunchedEffect(databaseHelper) {
         loadedVerses.clear()
     }
+
     // Load verses for current, previous, and next passages
     LaunchedEffect(currentPassage, hasPrev, hasNext, databaseHelper) {
         // Load current passage
@@ -115,6 +125,7 @@ fun ReaderScreen(
         if (currentKey !in loadedVerses) {
             loadedVerses[currentKey] = databaseHelper?.getVerses(currentPassage.bookNumber, currentPassage.chapter) ?: emptyList()
         }
+
         // Load previous passage if available
         if (hasPrev) {
             val prevKey = prevPassage.bookNumber to prevPassage.chapter
@@ -122,6 +133,7 @@ fun ReaderScreen(
                 loadedVerses[prevKey] = databaseHelper?.getVerses(prevPassage.bookNumber, prevPassage.chapter) ?: emptyList()
             }
         }
+
         // Load next passage if available
         if (hasNext) {
             val nextKey = nextPassage.bookNumber to nextPassage.chapter
@@ -130,13 +142,16 @@ fun ReaderScreen(
             }
         }
     }
+
     val pagerState = rememberPagerState(
         initialPage = 1,
         pageCount = { 3 }
     )
+
     // Track swipe state
     var isUserSwiping by remember { mutableStateOf(false) }
     var swipeCompleted by remember { mutableStateOf(false) }
+
     // Handle page changes during swipe
     LaunchedEffect(pagerState.currentPage, pagerState.isScrollInProgress) {
         if (pagerState.isScrollInProgress) {
@@ -172,6 +187,7 @@ fun ReaderScreen(
             }
         }
     }
+
     // Reset pager to center when passage changes (non-user initiated)
     LaunchedEffect(currentPassage) {
         if (!isUserSwiping) {
@@ -183,6 +199,21 @@ fun ReaderScreen(
             }
         }
     }
+
+    val context = LocalContext.current
+    val systemFont = FontFamily.Default
+    val oswaldFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Oswald.ttf")) }
+    val poppinsFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Poppins.ttf")) }
+    val rubikGlitchFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/RubikGlitch.ttf")) }
+
+    val currentFontFamily = when (viewModel.selectedFontFamily) {
+        "system" -> systemFont
+        "oswald" -> oswaldFont
+        "rubik-glitch" -> rubikGlitchFont
+        "poppins" -> poppinsFont
+        else -> systemFont
+    }
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
@@ -222,6 +253,7 @@ fun ReaderScreen(
                 }
                 result
             }
+
             Box(modifier = Modifier.fillMaxSize()) {
                 if (thisVerses.isEmpty()) {
                     Column(
@@ -249,7 +281,8 @@ fun ReaderScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(bottom = 16.dp),
-                                textAlign = TextAlign.Center
+                                textAlign = TextAlign.Center,
+                                fontFamily = currentFontFamily
                             )
                         }
                         // Display verses with processed text
@@ -270,14 +303,14 @@ fun ReaderScreen(
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 fontWeight = FontWeight.SemiBold,
                                                 color = themeColors.tagColor,
-                                                modifier = Modifier.padding(bottom = 4.dp)
+                                                modifier = Modifier.padding(bottom = 4.dp),
+                                                fontFamily = currentFontFamily
                                             )
                                         }
                                     }
                                     // Display verse number and body
                                     Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth(),
+                                        modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         Text(
@@ -295,7 +328,8 @@ fun ReaderScreen(
                                             },
                                             modifier = Modifier.fillMaxWidth(),
                                             fontSize = viewModel.fontSize.sp,
-                                            lineHeight = (viewModel.fontSize * 1.333f).sp
+                                            lineHeight = (viewModel.fontSize * 1.333f).sp,
+                                            fontFamily = currentFontFamily
                                         )
                                     }
                                 }
@@ -311,13 +345,15 @@ fun ReaderScreen(
                                         text = "${verse.verseNumber}.",
                                         fontWeight = FontWeight.Bold,
                                         color = themeColors.verseNumber,
-                                        fontSize = (viewModel.fontSize * 0.778f).sp
+                                        fontSize = (viewModel.fontSize * 0.778f).sp,
+                                        fontFamily = currentFontFamily
                                     )
                                     Text(
                                         text = verse.text,
                                         modifier = Modifier.weight(1f),
                                         fontSize = viewModel.fontSize.sp,
-                                        lineHeight = (viewModel.fontSize * 1.333f).sp
+                                        lineHeight = (viewModel.fontSize * 1.333f).sp,
+                                        fontFamily = currentFontFamily
                                     )
                                 }
                             }

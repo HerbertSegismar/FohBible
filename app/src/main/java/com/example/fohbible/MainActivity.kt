@@ -1,3 +1,5 @@
+@file:Suppress("VariableNeverRead")
+
 package com.example.fohbible
 
 import android.os.Build
@@ -100,14 +102,17 @@ import com.example.fohbible.utils.BibleVersionUtils
 import com.example.fohbible.utils.BibleVersionUtils.descriptionMap
 
 class AppViewModel : ViewModel() {
-
     var fontSize by mutableIntStateOf(18)
     var darkTheme by mutableStateOf(false)
     var selectedColor by mutableStateOf<Color?>(null)
     var isCustomColor by mutableStateOf(false)
+    var selectedFontFamily by mutableStateOf("system")
     val navigationStack = mutableStateListOf<Screen>(Screen.Home)
     var currentDbName by mutableStateOf("kj2.sqlite3")
     var currentVersionAbbr by mutableStateOf(BibleVersionUtils.versionMap["kj2.sqlite3"]!!)
+
+    // New: Track custom color separately
+    var customColor by mutableStateOf<Color?>(null)
 
     fun navigateTo(screen: Screen) {
         navigationStack.add(screen)
@@ -144,34 +149,44 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     val currentScreen = viewModel.navigationStack.last()
-    LaunchedEffect(viewModel.selectedColor, viewModel.darkTheme) {
+    var isUsingCustomColor by remember { mutableStateOf(viewModel.isCustomColor) }
+    var customColor by remember { mutableStateOf(viewModel.customColor) }
+
+    LaunchedEffect(viewModel.selectedColor, viewModel.darkTheme, viewModel.isCustomColor, viewModel.customColor) {
         viewModel.selectedColor?.let {
             ThemeManager.primaryColor = it
             ThemeManager.darkTheme = viewModel.darkTheme
-            ThemeManager.isCustomColor = true
-            viewModel.isCustomColor = true
+            ThemeManager.isCustomColor = viewModel.isCustomColor
         }
+        isUsingCustomColor = viewModel.isCustomColor
+        customColor = viewModel.customColor
     }
+
     val themeState = AppThemeState(
         darkTheme = viewModel.darkTheme,
         primaryColor = viewModel.selectedColor ?: DefaultPrimaryColor,
         isCustomColor = viewModel.isCustomColor
     )
+
     var dbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
+
     LaunchedEffect(viewModel.currentDbName) {
         dbHelper?.close()
         dbHelper = DatabaseHelper(activity, viewModel.currentDbName)
     }
+
     DisposableEffect(Unit) {
         onDispose {
             dbHelper?.close()
         }
     }
+
     CompositionLocalProvider(LocalAppTheme provides themeState) {
         FohBibleTheme(darkTheme = viewModel.darkTheme) {
             var showNavigationModal by remember { mutableStateOf(false) }
             var showColorThemeDialog by remember { mutableStateOf(false) }
             var showColorWheelDialog by remember { mutableStateOf(false) }
+
             Scaffold(
                 modifier = Modifier.fillMaxSize(),
                 topBar = {
@@ -202,7 +217,9 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 }
                                 viewModel.navigateTo(targetScreen)
                             },
-                            onBack = if (viewModel.navigationStack.size > 1) { { viewModel.goBack() } } else null
+                            onBack = if (viewModel.navigationStack.size > 1) {
+                                { viewModel.goBack() }
+                            } else null
                         )
                     } else {
                         HomeAppBar(
@@ -224,7 +241,9 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 }
                                 viewModel.navigateTo(targetScreen)
                             },
-                            onBack = if (viewModel.navigationStack.size > 1) { { viewModel.goBack() } } else null
+                            onBack = if (viewModel.navigationStack.size > 1) {
+                                { viewModel.goBack() }
+                            } else null
                         )
                     }
                 },
@@ -272,6 +291,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                         Screen.Search -> SearchScreen()
                         Screen.Settings -> SettingsScreen()
                     }
+
                     if (showNavigationModal) {
                         NavigationModal(
                             showNavigationModal = true,
@@ -283,6 +303,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             databaseHelper = dbHelper
                         )
                     }
+
                     if (showColorThemeDialog) {
                         Dialog(
                             onDismissRequest = { showColorThemeDialog = false }
@@ -291,7 +312,8 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 onDismiss = { showColorThemeDialog = false },
                                 onColorSelected = { color ->
                                     viewModel.selectedColor = color
-                                    viewModel.isCustomColor = true
+                                    viewModel.isCustomColor = false
+                                    viewModel.customColor = null
                                 },
                                 onCustomColorClick = {
                                     showColorThemeDialog = false
@@ -300,15 +322,20 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             )
                         }
                     }
+
                     if (showColorWheelDialog) {
                         ColorWheelDialog(
                             onDismissRequest = { showColorWheelDialog = false },
                             onColorSelected = { color ->
                                 viewModel.selectedColor = color
                                 viewModel.isCustomColor = true
+                                viewModel.customColor = color
                                 showColorWheelDialog = false
                             },
-                            initialColor = viewModel.selectedColor ?: ThemeManager.primaryColor
+                            initialColor = if (viewModel.isCustomColor && viewModel.customColor != null)
+                                viewModel.customColor!!
+                            else
+                                viewModel.selectedColor ?: ThemeManager.primaryColor
                         )
                     }
                 }
@@ -456,6 +483,7 @@ fun UpdatedColorThemeDialog(
         }
     }
 }
+
 @Composable
 fun ColorOptionItem(
     theme: ColorTheme,
@@ -508,6 +536,7 @@ fun ColorOptionItem(
         }
     }
 }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeAppBar(
@@ -525,6 +554,7 @@ fun HomeAppBar(
         animationSpec = tween(durationMillis = 300),
         label = "menuIconRotation"
     )
+
     val screenTitle = when (currentScreen) {
         is Screen.Home -> "Home"
         is Screen.Reader -> "Reader"
@@ -532,6 +562,7 @@ fun HomeAppBar(
         is Screen.Search -> "Search"
         is Screen.Settings -> "Settings"
     }
+
     TopAppBar(
         title = {
             Text(
@@ -625,11 +656,13 @@ fun HomeAppBar(
                         }
                     )
                 }
+
                 val isHomeActive = currentScreen is Screen.Home
                 val isReaderActive = currentScreen is Screen.Reader
                 val isBookmarksActive = currentScreen == Screen.Bookmarks
                 val isSearchActive = currentScreen == Screen.Search
                 val isSettingsActive = currentScreen == Screen.Settings
+
                 createDropdownItem("Home", Icons.Filled.Home, Screen.Home, isHomeActive)
                 createDropdownItem("Reader", Icons.Filled.Book, Screen.Reader(), isReaderActive)
                 createDropdownItem("Bookmarks", Icons.Filled.Bookmark, Screen.Bookmarks, isBookmarksActive)
@@ -639,6 +672,7 @@ fun HomeAppBar(
         }
     )
 }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReaderAppBar(
@@ -661,6 +695,7 @@ fun ReaderAppBar(
         animationSpec = tween(durationMillis = 300),
         label = "menuIconRotation"
     )
+
     TopAppBar(
         title = {
             Row(
@@ -761,6 +796,7 @@ fun ReaderAppBar(
                                 modifier = Modifier.background(backgroundColor)
                             )
                         }
+
                         versionMap.forEach { (file, abbr) ->
                             val desc = descriptionMap[file] ?: "Bible translation"
                             createVersionItem(
@@ -852,11 +888,13 @@ fun ReaderAppBar(
                         }
                     )
                 }
+
                 val isHomeActive = false
                 val isReaderActive = true
                 val isBookmarksActive = false
                 val isSearchActive = false
                 val isSettingsActive = false
+
                 createDropdownItem("Home", Icons.Filled.Home, Screen.Home, isHomeActive)
                 createDropdownItem("Reader", Icons.Filled.Book, Screen.Reader(), isReaderActive)
                 createDropdownItem("Bookmarks", Icons.Filled.Bookmark, Screen.Bookmarks, isBookmarksActive)
@@ -866,6 +904,7 @@ fun ReaderAppBar(
         }
     )
 }
+
 sealed class Screen {
     object Home : Screen()
     data class Reader(val passage: PassageSelection? = null) : Screen()
