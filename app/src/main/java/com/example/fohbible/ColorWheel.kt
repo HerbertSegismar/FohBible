@@ -61,6 +61,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -91,7 +93,12 @@ fun ColorWheelDialog(
     var selectedColor by remember { mutableStateOf(initialColor) }
     var brightness by remember { mutableFloatStateOf(initialColor.getBrightness()) }
     var saturation by remember { mutableFloatStateOf(initialColor.getSaturation()) }
-    var hexInput by remember { mutableStateOf("#${(initialColor.toArgb() and 0xFFFFFF).toString(16).padStart(6, '0').uppercase()}") }
+    val initialHex = "#${(initialColor.toArgb() and 0xFFFFFF).toString(16).padStart(6, '0').uppercase()}"
+
+    // Use TextFieldValue to control cursor position
+    var hexTextFieldValue by remember {
+        mutableStateOf(TextFieldValue(initialHex, selection = TextRange(initialHex.length)))
+    }
     var isValidHex by remember { mutableStateOf(true) }
 
     val lightBackground = Color.White
@@ -120,7 +127,6 @@ fun ColorWheelDialog(
         Box(
             modifier = Modifier.fillMaxSize()
         ) {
-            // Main Container with professional background
             Card(
                 modifier = Modifier
                     .fillMaxSize()
@@ -128,7 +134,7 @@ fun ColorWheelDialog(
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.inverseOnSurface,
-                    contentColor = MaterialTheme.colorScheme.onSurface
+                    contentColor = MaterialTheme.colorScheme.onSurface,
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
             ) {
@@ -162,7 +168,8 @@ fun ColorWheelDialog(
                                 onColorSelected = { color ->
                                     selectedColor = color
                                     saturation = color.getSaturation()
-                                    hexInput = "#${(color.toArgb() and 0xFFFFFF).toString(16).padStart(6, '0').uppercase()}"
+                                    val newHex = "#${(color.toArgb() and 0xFFFFFF).toString(16).padStart(6, '0').uppercase()}"
+                                    hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
                                     isValidHex = true
                                 }
                             )
@@ -170,26 +177,36 @@ fun ColorWheelDialog(
                             // Color Preview and Hex Input
                             ColorPreviewSection(
                                 selectedColor = selectedColor,
-                                hexInput = hexInput,
+                                hexTextFieldValue = hexTextFieldValue,
                                 isValidHex = isValidHex,
                                 lightBackground = lightBackground,
                                 darkBackground = darkBackground,
-                                onHexInputChange = { newHex ->
-                                    hexInput = newHex.uppercase()
-                                    if (newHex.length <= 7) {
-                                        if (validateHex(newHex)) {
-                                            try {
-                                                val colorInt = newHex.toColorInt()
-                                                selectedColor = Color(colorInt)
-                                                brightness = selectedColor.getBrightness()
-                                                saturation = selectedColor.getSaturation()
-                                                isValidHex = true
-                                            } catch (_: IllegalArgumentException) {
-                                                isValidHex = false
+                                onHexTextFieldValueChange = { newValue ->
+                                    // Process the input to maintain the "#" prefix
+                                    val processed = processHexInput(newValue.text, newValue.selection)
+
+                                    hexTextFieldValue = processed
+
+                                    // Validate and update color
+                                    if (processed.text.length > 1 && validateHex(processed.text)) {
+                                        try {
+                                            val colorInt = if (processed.text.length == 4) {
+                                                // Handle shorthand hex (#RGB)
+                                                val hexValue = processed.text.substring(1)
+                                                val expanded = "#${hexValue[0]}${hexValue[0]}${hexValue[1]}${hexValue[1]}${hexValue[2]}${hexValue[2]}"
+                                                expanded.toColorInt()
+                                            } else {
+                                                processed.text.toColorInt()
                                             }
-                                        } else {
+                                            selectedColor = Color(colorInt)
+                                            brightness = selectedColor.getBrightness()
+                                            saturation = selectedColor.getSaturation()
+                                            isValidHex = true
+                                        } catch (_: Exception) {
                                             isValidHex = false
                                         }
+                                    } else if (processed.text == "#") {
+                                        isValidHex = false
                                     } else {
                                         isValidHex = false
                                     }
@@ -204,12 +221,14 @@ fun ColorWheelDialog(
                                 onBrightnessChange = {
                                     brightness = it
                                     selectedColor = adjustBrightness(selectedColor, it)
-                                    hexInput = "#${(selectedColor.toArgb() and 0xFFFFFF).toString(16).padStart(6, '0').uppercase()}"
+                                    val newHex = "#${(selectedColor.toArgb() and 0xFFFFFF).toString(16).padStart(6, '0').uppercase()}"
+                                    hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
                                 },
                                 onSaturationChange = {
                                     saturation = it
                                     selectedColor = adjustSaturation(selectedColor, it)
-                                    hexInput = "#${(selectedColor.toArgb() and 0xFFFFFF).toString(16).padStart(6, '0').uppercase()}"
+                                    val newHex = "#${(selectedColor.toArgb() and 0xFFFFFF).toString(16).padStart(6, '0').uppercase()}"
+                                    hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
                                 }
                             )
 
@@ -221,7 +240,8 @@ fun ColorWheelDialog(
                                     selectedColor = color
                                     brightness = color.getBrightness()
                                     saturation = color.getSaturation()
-                                    hexInput = "#${(color.toArgb() and 0xFFFFFF).toString(16).padStart(6, '0').uppercase()}"
+                                    val newHex = "#${(color.toArgb() and 0xFFFFFF).toString(16).padStart(6, '0').uppercase()}"
+                                    hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
                                     isValidHex = true
                                 }
                             )
@@ -248,6 +268,105 @@ fun ColorWheelDialog(
     }
 }
 
+/**
+ * Process hex input to ensure it always starts with # and maintain cursor position
+ */
+private fun processHexInput(input: String, selection: TextRange): TextFieldValue {
+    var processed = input.uppercase()
+    var newSelection = selection
+
+    // Ensure it starts with #
+    if (!processed.startsWith("#")) {
+        processed = "#$processed"
+        newSelection = if (selection.start == 0) {
+            TextRange(1, 1)
+        } else {
+            TextRange(selection.start + 1, selection.end + 1)
+        }
+    }
+
+    // Filter out invalid characters and track cursor position
+    val filtered = StringBuilder()
+    val originalToFilteredMapping = mutableListOf<Int>()
+
+    for (i in processed.indices) {
+        val char = processed[i]
+        if (i == 0 && char == '#') {
+            // Always keep the # at position 0
+            filtered.append('#')
+            originalToFilteredMapping.add(filtered.length - 1)
+        } else if (char.isDigit() || char in 'A'..'F') {
+            filtered.append(char)
+            originalToFilteredMapping.add(filtered.length - 1)
+        } else {
+            // Invalid character - skip it
+            originalToFilteredMapping.add(-1) // Mark as removed
+        }
+    }
+
+    // Limit length to 9 characters (#AARRGGBB format)
+    if (filtered.length > 9) {
+        // Trim from the end
+        filtered.length - 9
+        filtered.delete(9, filtered.length)
+
+        // Update mapping for trimmed characters
+        for (i in originalToFilteredMapping.indices) {
+            if (originalToFilteredMapping[i] >= 9) {
+                originalToFilteredMapping[i] = -1
+            }
+        }
+    }
+
+    // Calculate new cursor position based on mapping
+    val newStart = calculateNewCursorPosition(newSelection.start, originalToFilteredMapping)
+    val newEnd = calculateNewCursorPosition(newSelection.end, originalToFilteredMapping)
+
+    // Ensure cursor stays after the # and within bounds
+    val finalStart = newStart.coerceIn(1, filtered.length)
+    val finalEnd = newEnd.coerceIn(1, filtered.length)
+
+    return TextFieldValue(filtered.toString(), selection = TextRange(finalStart, finalEnd))
+}
+
+/**
+ * Calculate new cursor position based on character mapping
+ * This ensures cursor doesn't jump when invalid characters are entered
+ */
+private fun calculateNewCursorPosition(
+    originalPos: Int,
+    mapping: List<Int>
+): Int {
+    if (originalPos >= mapping.size) {
+        // Cursor is at the end of the original string
+        // Find the last valid position in the filtered string
+        return mapping.lastOrNull { it != -1 }?.plus(1) ?: 1
+    }
+
+    // Find the closest valid position to the original cursor
+    // First try the exact position
+    if (mapping[originalPos] != -1) {
+        return mapping[originalPos] + 1
+    }
+
+    // If exact position is invalid, look left
+    for (i in originalPos - 1 downTo 0) {
+        if (mapping[i] != -1) {
+            return mapping[i] + 1
+        }
+    }
+
+    // If nothing found on the left, look right
+    for (i in originalPos + 1 until mapping.size) {
+        if (mapping[i] != -1) {
+            return mapping[i] + 1
+        }
+    }
+
+    // Default to position 1 (after #)
+    return 1
+}
+
 @Composable
 fun FixedHeader(
     title: String,
@@ -257,7 +376,7 @@ fun FixedHeader(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                MaterialTheme.colorScheme.surface,
+                MaterialTheme.colorScheme.primary,
                 RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
             )
     ) {
@@ -275,7 +394,7 @@ fun FixedHeader(
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = Color.White
                 )
             }
 
@@ -289,14 +408,14 @@ fun FixedHeader(
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.SemiBold, fontSize = 20.dp.value.sp
                     ),
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = Color.White,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = "Customize your color selection",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Color.White
                 )
             }
         }
@@ -362,14 +481,15 @@ fun ColorWheelSection(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ColorPreviewSection(
     selectedColor: Color,
-    hexInput: String,
+    hexTextFieldValue: TextFieldValue,
     isValidHex: Boolean,
     lightBackground: Color,
     darkBackground: Color,
-    onHexInputChange: (String) -> Unit
+    onHexTextFieldValueChange: (TextFieldValue) -> Unit
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -405,14 +525,14 @@ fun ColorPreviewSection(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // Hex input
+                // Hex input using TextFieldValue for better cursor control
                 TextField(
-                    value = hexInput,
-                    onValueChange = onHexInputChange,
+                    value = hexTextFieldValue,
+                    onValueChange = onHexTextFieldValueChange,
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     placeholder = { Text("HEX") },
-                    isError = !isValidHex,
+                    isError = !isValidHex && hexTextFieldValue.text.length > 1,
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.1f),
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.05f),
@@ -427,7 +547,7 @@ fun ColorPreviewSection(
                     )
                 )
 
-                if (!isValidHex) {
+                if (!isValidHex && hexTextFieldValue.text.length > 1) {
                     Text(
                         text = "Invalid hex code",
                         color = MaterialTheme.colorScheme.error,
@@ -913,11 +1033,38 @@ fun adjustSaturation(color: Color, saturation: Float): Color {
     return Color(AndroidColor.HSVToColor(hsv))
 }
 
+/**
+ * Validates a hex color string
+ * Supported formats: #RGB, #RRGGBB, #AARRGGBB
+ */
 fun validateHex(hex: String): Boolean {
+    if (hex.isEmpty() || !hex.startsWith("#")) return false
+
+    // Check valid lengths
+    if (hex.length != 4 && hex.length != 7 && hex.length != 9) return false
+
+    // Check that each character is a valid hex digit
+    for (i in 1 until hex.length) {
+        val char = hex[i].uppercaseChar()
+        if (!(char in '0'..'9' || char in 'A'..'F')) {
+            return false
+        }
+    }
+
     return try {
-        hex.toColorInt()
+        // Try to parse the color to ensure it's valid
+        if (hex.length == 4) {
+            // Expand shorthand hex (#RGB)
+            val hexValue = hex.substring(1)
+            val expanded = "#${hexValue[0]}${hexValue[0]}${hexValue[1]}${hexValue[1]}${hexValue[2]}${hexValue[2]}"
+            expanded.toColorInt()
+        } else {
+            hex.toColorInt()
+        }
         true
     } catch (_: IllegalArgumentException) {
+        false
+    } catch (_: NumberFormatException) {
         false
     }
 }

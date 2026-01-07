@@ -288,7 +288,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             )
                         }
                         Screen.Bookmarks -> BookmarksScreen()
-                        Screen.Search -> SearchScreen()
+                        Screen.Search -> SearchScreen(databaseHelper = dbHelper)
                         Screen.Settings -> SettingsScreen()
                     }
 

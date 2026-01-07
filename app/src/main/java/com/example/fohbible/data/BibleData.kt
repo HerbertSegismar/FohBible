@@ -65,7 +65,7 @@ val SCOPE_RANGES: Map<String, ScopeRange?> = mapOf(
     SCOPE_GOSPELS to ScopeRange(470, 500),
     SCOPE_HISTORICAL_NT to ScopeRange(510, 510),
     SCOPE_PAULINE_LETTERS to ScopeRange(520, 640),
-    SCOPE_LETTERS to ScopeRange(520, 720),  // Kept as is, but now overlaps with pauline-letters; getScopeForBookNumber will prioritize insertion order
+    SCOPE_LETTERS to ScopeRange(520, 720),
     SCOPE_VISION to ScopeRange(730, 730)
 )
 
@@ -74,6 +74,19 @@ data class ScopeConfig(
     val label: String,
     val description: String,
     val category: String
+)
+
+val scopeColors = mapOf(
+    SCOPE_LAW to "#e88054",
+    SCOPE_HISTORICAL to "#548fe8",
+    SCOPE_POETIC to "#E3DA57",
+    SCOPE_MAJOR_PROPHETS to "#6DF3CE",
+    SCOPE_MINOR_PROPHETS to "#fa6e6e",
+    SCOPE_GOSPELS to "#45F34A",
+    SCOPE_HISTORICAL_NT to "#b17df5",
+    SCOPE_PAULINE_LETTERS to "#f5ab7d",
+    SCOPE_LETTERS to "#46E0F3",
+    SCOPE_VISION to "#F3EA92"
 )
 
 val SCOPE_CONFIG: Map<String, ScopeConfig> = mapOf(

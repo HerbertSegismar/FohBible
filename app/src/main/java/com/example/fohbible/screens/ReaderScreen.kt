@@ -75,6 +75,7 @@ fun ReaderScreen(
         searchHighlightBg = Color.Yellow.copy(alpha = 0.3f),
         highlightIcon = MaterialTheme.colorScheme.primary
     )
+
     val viewModel = viewModel<AppViewModel>()
     val coroutineScope = rememberCoroutineScope()
 
@@ -106,6 +107,20 @@ fun ReaderScreen(
     }
     val hasPrev by remember(prevPassage) { derivedStateOf { prevPassage != currentPassage } }
     val hasNext by remember(nextPassage) { derivedStateOf { nextPassage != currentPassage } }
+
+    // Build list of passages for pager
+    val passages by remember(currentPassage, prevPassage, nextPassage, hasPrev, hasNext) {
+        derivedStateOf {
+            buildList {
+                if (hasPrev) add(prevPassage)
+                add(currentPassage)
+                if (hasNext) add(nextPassage)
+            }
+        }
+    }
+
+    val pageCount by remember(passages) { derivedStateOf { passages.size } }
+    val currentOffset by remember(hasPrev) { derivedStateOf { if (hasPrev) 1 else 0 } }
 
     // Track target passage for swipe completion
     var pendingPassageChange by remember { mutableStateOf<PassageSelection?>(null) }
@@ -144,8 +159,8 @@ fun ReaderScreen(
     }
 
     val pagerState = rememberPagerState(
-        initialPage = 1,
-        pageCount = { 3 }
+        initialPage = currentOffset,
+        pageCount = { pageCount }
     )
 
     // Track swipe state
@@ -157,18 +172,11 @@ fun ReaderScreen(
         if (pagerState.isScrollInProgress) {
             isUserSwiping = true
             swipeCompleted = false
-            // Only process page changes during active swipe
-            when (pagerState.currentPage) {
-                0 -> {
-                    if (hasPrev && prevPassage != currentPassage) {
-                        pendingPassageChange = prevPassage
-                    }
-                }
-                2 -> {
-                    if (hasNext && nextPassage != currentPassage) {
-                        pendingPassageChange = nextPassage
-                    }
-                }
+            val offset = if (hasPrev) 1 else 0
+            if (pagerState.currentPage < offset) {
+                if (hasPrev) pendingPassageChange = prevPassage
+            } else if (pagerState.currentPage > offset) {
+                if (hasNext) pendingPassageChange = nextPassage
             }
         } else if (isUserSwiping) {
             // Swipe just ended
@@ -180,9 +188,12 @@ fun ReaderScreen(
                 currentPassage = targetPassage
                 onPassageChange(targetPassage)
                 pendingPassageChange = null
-                // Reset pager to center
+                // Reset will be handled by the other LaunchedEffect
+            } else {
+                // No change (edge swipe), reset to center
                 coroutineScope.launch {
-                    pagerState.scrollToPage(1)
+                    val offset = if (hasPrev) 1 else 0
+                    pagerState.scrollToPage(offset)
                 }
             }
         }
@@ -194,7 +205,8 @@ fun ReaderScreen(
             coroutineScope.launch {
                 // Small delay to ensure any ongoing animations complete
                 delay(50)
-                pagerState.scrollToPage(1)
+                val offset = if (hasPrev) 1 else 0
+                pagerState.scrollToPage(offset)
                 pendingPassageChange = null
             }
         }
@@ -222,22 +234,13 @@ fun ReaderScreen(
             state = pagerState,
             modifier = Modifier.fillMaxSize(),
             key = { pageIndex ->
-                val passageKey = when (pageIndex) {
-                    0 -> prevPassage
-                    1 -> currentPassage
-                    2 -> nextPassage
-                    else -> currentPassage
-                }
-                "${passageKey.bookNumber}-${passageKey.chapter}-{pageIndex}"
+                val passageKey = passages[pageIndex]
+                "${passageKey.bookNumber}-${passageKey.chapter}"
             }
         ) { pageIndex ->
-            val thisPassage = when (pageIndex) {
-                0 -> if (hasPrev) prevPassage else currentPassage
-                1 -> currentPassage
-                2 -> if (hasNext) nextPassage else currentPassage
-                else -> currentPassage
-            }
+            val thisPassage = passages[pageIndex]
             val thisVerses = loadedVerses[thisPassage.bookNumber to thisPassage.chapter] ?: emptyList()
+
             val processor = remember(thisVerses) { VerseTextProcessor() }
             val processedVerses = remember(thisVerses, themeColors) {
                 val result = mutableMapOf<Int, ProcessedVerse>()
@@ -366,6 +369,7 @@ fun ReaderScreen(
 
 fun getPreviousPassage(current: PassageSelection, currentBook: BibleBook?): PassageSelection {
     if (currentBook == null) return current
+    if (currentBook.chapters <= 2 && current.chapter == 1) return current
     return if (current.chapter == 1) {
         // If at first chapter, find previous book's last chapter
         val prevBook = BibleData.getBookByCustomNumber(current.bookNumber - 1)
@@ -377,7 +381,7 @@ fun getPreviousPassage(current: PassageSelection, currentBook: BibleBook?): Pass
                 verse = 1
             )
         } else {
-            // If no previous book, stay at first chapter of current book
+            // If no previous book, wrap to last chapter of current book
             current.copy(chapter = currentBook.chapters, verse = 1)
         }
     } else {
@@ -388,6 +392,7 @@ fun getPreviousPassage(current: PassageSelection, currentBook: BibleBook?): Pass
 
 fun getNextPassage(current: PassageSelection, currentBook: BibleBook?): PassageSelection {
     if (currentBook == null) return current
+    if (currentBook.chapters <= 2 && current.chapter == currentBook.chapters) return current
     return if (current.chapter == currentBook.chapters) {
         // If at last chapter, find next book's first chapter
         val nextBook = BibleData.getBookByCustomNumber(current.bookNumber + 1)

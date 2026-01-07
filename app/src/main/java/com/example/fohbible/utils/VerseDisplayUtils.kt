@@ -516,10 +516,4 @@ object SimpleVerseProcessor {
             "${first.bookName ?: ""} ${first.chapter}:${first.verseNumber}-${verses.last().verseNumber}"
         }
     }
-
-    fun processVersesForDisplay(verses: List<com.example.fohbible.data.Verse>): List<String> {
-        return verses.map { verse ->
-            "${verse.verseNumber} ${stripXmlTags(verse.text)}"
-        }
-    }
 }

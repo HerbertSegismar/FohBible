@@ -65,21 +65,12 @@ import com.example.fohbible.data.BibleBook
 import com.example.fohbible.data.BibleData
 import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.PassageSelection
-import com.example.fohbible.data.SCOPE_GOSPELS
-import com.example.fohbible.data.SCOPE_HISTORICAL
-import com.example.fohbible.data.SCOPE_HISTORICAL_NT
-import com.example.fohbible.data.SCOPE_LAW
-import com.example.fohbible.data.SCOPE_LETTERS
-import com.example.fohbible.data.SCOPE_MAJOR_PROPHETS
-import com.example.fohbible.data.SCOPE_MINOR_PROPHETS
 import com.example.fohbible.data.SCOPE_NEW_TESTAMENT
 import com.example.fohbible.data.SCOPE_OLD_TESTAMENT
-import com.example.fohbible.data.SCOPE_PAULINE_LETTERS
-import com.example.fohbible.data.SCOPE_POETIC
-import com.example.fohbible.data.SCOPE_VISION
-import com.example.fohbible.data.SCOPE_WHOLE
 import com.example.fohbible.data.SCOPE_RANGES
+import com.example.fohbible.data.SCOPE_WHOLE
 import com.example.fohbible.data.Testament
+import com.example.fohbible.data.scopeColors
 import com.example.fohbible.ui.theme.FohBibleTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -102,19 +93,6 @@ fun BibleBook.toBookUi(): BookUi {
         totalChapters = chapters
     )
 }
-
-val scopeColors = mapOf(
-    SCOPE_LAW to "#e88054",
-    SCOPE_HISTORICAL to "#548fe8",
-    SCOPE_POETIC to "#E3DA57",
-    SCOPE_MAJOR_PROPHETS to "#6DF3CE",
-    SCOPE_MINOR_PROPHETS to "#fa6e6e",
-    SCOPE_GOSPELS to "#45F34A",
-    SCOPE_HISTORICAL_NT to "#b17df5",
-    SCOPE_PAULINE_LETTERS to "#f5ab7d",
-    SCOPE_LETTERS to "#46E0F3",
-    SCOPE_VISION to "#F3EA92"
-)
 
 fun getScopeForBookNumber(bookNumber: Int): String? {
     for ((scope, range) in SCOPE_RANGES) {
