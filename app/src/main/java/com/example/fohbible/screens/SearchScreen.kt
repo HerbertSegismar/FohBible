@@ -68,16 +68,6 @@ import com.example.fohbible.data.isBookScope
 import com.example.fohbible.data.getBookNumberFromScope
 import com.example.fohbible.data.SCOPE_CATEGORIES
 import com.example.fohbible.data.SCOPE_RANGES
-import com.example.fohbible.data.SCOPE_GOSPELS
-import com.example.fohbible.data.SCOPE_HISTORICAL
-import com.example.fohbible.data.SCOPE_HISTORICAL_NT
-import com.example.fohbible.data.SCOPE_LAW
-import com.example.fohbible.data.SCOPE_LETTERS
-import com.example.fohbible.data.SCOPE_MAJOR_PROPHETS
-import com.example.fohbible.data.SCOPE_MINOR_PROPHETS
-import com.example.fohbible.data.SCOPE_PAULINE_LETTERS
-import com.example.fohbible.data.SCOPE_POETIC
-import com.example.fohbible.data.SCOPE_VISION
 import com.example.fohbible.data.SearchScope
 import com.example.fohbible.ui.theme.LocalAppTheme
 import com.example.fohbible.utils.ThemeColors
@@ -146,7 +136,7 @@ fun DatabaseHelper.searchVerses(query: String, options: SearchOptions? = null): 
 
 data class Verse(
     val verse: Int,
-    val text: String,
+    val text: String?,
     val bookNumber: Int = 0,
     val chapter: Int = 0,
     val bookName: String? = null,
@@ -440,7 +430,7 @@ fun ScopeDropdown(
     val currentConfig = getScopeConfig(scope)
 
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onToggle),
+        modifier = Modifier.fillMaxWidth().padding(8.dp).clickable(onClick = onToggle),
         colors = CardDefaults.cardColors(containerColor = colors["primary"] as Color),
         shape = RoundedCornerShape(8.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)

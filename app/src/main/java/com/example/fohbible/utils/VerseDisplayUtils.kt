@@ -48,7 +48,7 @@ data class ThemeColors(
 class VerseTextProcessor {
 
     fun processVerse(
-        verseText: String,
+        verseText: String?,
         baseFontSize: TextUnit,
         themeColors: ThemeColors,
         highlight: String? = null,
@@ -57,7 +57,7 @@ class VerseTextProcessor {
         onWordPress: ((String) -> Unit)? = null,
         isHighlighted: Boolean = false
     ): ProcessedVerse {
-        val nodes = parseXmlTags(verseText)
+        val nodes = parseXmlTags(verseText ?: "")
         val tree = buildTree(nodes)
         val initialContext = TraversalContext(
             textColor = textColor ?: themeColors.textColor,

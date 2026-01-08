@@ -107,10 +107,7 @@ fun HomeScreen(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        item {
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-
+        item { Spacer(modifier = Modifier.height(8.dp)) }
         item {
             DailyVerseCard(
                 verses = dailyVerses,
@@ -118,10 +115,10 @@ fun HomeScreen(
                     loadRandomVerses(context, databaseHelper) { verses ->
                         dailyVerses = verses
                     }
-                }
+                },
+                databaseHelper = databaseHelper ?: DatabaseHelper(context as MainActivity, "kj2.sqlite3")
             )
         }
-
         item {
             Text(
                 text = "Quick Access",
@@ -131,23 +128,29 @@ fun HomeScreen(
             )
             QuickActionsGrid(actions = quickActions, onBibleClick = onBibleClick)
         }
-
         item {
             RecentReadingsSection(readings = recentReadings)
         }
-
-        item {
-            Spacer(modifier = Modifier.height(80.dp))
-        }
+        item { Spacer(modifier = Modifier.height(80.dp)) }
     }
 }
 
 @Composable
 fun DailyVerseCard(
     verses: List<Verse>? = null,
-    onRefresh: () -> Unit = {}
+    onRefresh: () -> Unit = {},
+    databaseHelper: DatabaseHelper
 ) {
     val isLoading = remember { mutableStateOf(false) }
+    var isBookmarked by remember(verses) { mutableStateOf(false) }
+
+    // Check if the verses are already bookmarked
+    LaunchedEffect(verses) {
+        if (verses != null && verses.isNotEmpty()) {
+            val isSaved = checkIfBookmarked(verses.first(), databaseHelper)
+            isBookmarked = isSaved
+        }
+    }
 
     Card(
         modifier = Modifier
@@ -174,7 +177,6 @@ fun DailyVerseCard(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
-
                 IconButton(
                     onClick = {
                         isLoading.value = true
@@ -199,19 +201,15 @@ fun DailyVerseCard(
                     }
                 }
             }
-
             Spacer(modifier = Modifier.height(12.dp))
-
             if (verses != null && verses.isNotEmpty()) {
                 val reference = SimpleVerseProcessor.extractVerseReference(verses)
-
                 Text(
                     text = reference,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
                 )
-
                 Spacer(modifier = Modifier.height(8.dp))
                 verses.forEach { verse ->
                     val annotatedText = buildAnnotatedString {
@@ -227,7 +225,6 @@ fun DailyVerseCard(
                         // Add the verse text
                         append(SimpleVerseProcessor.stripXmlTags(verse.text))
                     }
-
                     Text(
                         text = annotatedText,
                         style = MaterialTheme.typography.bodyLarge,
@@ -252,9 +249,7 @@ fun DailyVerseCard(
                     }
                 }
             }
-
             Spacer(modifier = Modifier.height(16.dp))
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -262,15 +257,19 @@ fun DailyVerseCard(
             ) {
                 IconButton(
                     onClick = {
-                        // Save to bookmarks
-                        verses?.let {
-                            // Implement bookmark saving logic here
+                        verses?.let { verseList ->
+                            if (isBookmarked) {
+                                removeFromBookmarks(verseList, databaseHelper)
+                            } else {
+                                saveToBookmarks(verseList, databaseHelper)
+                            }
+                            isBookmarked = !isBookmarked
                         }
                     },
                     modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
-                        Icons.Filled.BookmarkBorder,
+                        imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
                         contentDescription = "Bookmark",
                         tint = MaterialTheme.colorScheme.primary
                     )
@@ -314,6 +313,7 @@ fun QuickActionsGrid(
         actions.forEach { action ->
             QuickActionItem(action = action, onClick = {
                 if (action.title == "Read Bible") onBibleClick()
+                // Add handlers for other actions if needed
             })
         }
     }
@@ -380,9 +380,7 @@ fun RecentReadingsSection(readings: List<RecentReading>) {
                 modifier = Modifier.clickable { /* Navigate to all readings */ }
             )
         }
-
         Spacer(modifier = Modifier.height(12.dp))
-
         readings.forEachIndexed { index, reading ->
             RecentReadingItem(reading = reading)
             if (index < readings.lastIndex) {
@@ -423,7 +421,6 @@ fun RecentReadingItem(reading: RecentReading) {
                 modifier = Modifier.size(24.dp)
             )
         }
-
         Column(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -441,7 +438,6 @@ fun RecentReadingItem(reading: RecentReading) {
                 overflow = TextOverflow.Ellipsis
             )
         }
-
         IconButton(onClick = { /* Bookmark */ }) {
             Icon(
                 Icons.Filled.BookmarkBorder,
@@ -480,4 +476,25 @@ private fun loadRandomVerses(
             }
         }.start()
     }
+}
+
+// Helper functions for bookmarks (assume DatabaseHelper has addBookmark, removeBookmark, isBookmarked methods)
+private fun saveToBookmarks(verses: List<Verse>, databaseHelper: DatabaseHelper) {
+    Thread {
+        verses.forEach { verse ->
+            databaseHelper.addBookmark(verse)
+        }
+    }.start()
+}
+
+private fun removeFromBookmarks(verses: List<Verse>, databaseHelper: DatabaseHelper) {
+    Thread {
+        verses.forEach { verse ->
+            databaseHelper.removeBookmark(verse)
+        }
+    }.start()
+}
+
+private fun checkIfBookmarked(verse: Verse, databaseHelper: DatabaseHelper): Boolean {
+    return databaseHelper.isBookmarked(verse)
 }
