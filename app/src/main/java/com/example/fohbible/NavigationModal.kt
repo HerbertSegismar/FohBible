@@ -96,13 +96,7 @@ fun BibleBook.toBookUi(): BookUi {
 
 fun getScopeForBookNumber(bookNumber: Int): String? {
     for ((scope, range) in SCOPE_RANGES) {
-        if (range != null &&
-            bookNumber >= range.start &&
-            bookNumber <= range.end &&
-            scope != SCOPE_WHOLE &&
-            scope != SCOPE_OLD_TESTAMENT &&
-            scope != SCOPE_NEW_TESTAMENT
-        ) {
+        if (range != null && bookNumber >= range.start && bookNumber <= range.end && scope != SCOPE_WHOLE && scope != SCOPE_OLD_TESTAMENT && scope != SCOPE_NEW_TESTAMENT) {
             return scope
         }
     }
@@ -119,18 +113,13 @@ fun NavigationModal(
 ) {
     val oldTestamentBooks = remember { BibleData.oldTestamentBooks.map { it.toBookUi() } }
     val newTestamentBooks = remember { BibleData.newTestamentBooks.map { it.toBookUi() } }
-
     var selectedBook by remember { mutableStateOf<BookUi?>(null) }
     var chapterInput by remember { mutableStateOf("") }
     var verseInput by remember { mutableStateOf("") }
     var focusedInput by remember { mutableStateOf<String?>("chapter") }
     var maxVerse by remember { mutableIntStateOf(0) }
     var isLoadingVerseCount by remember { mutableStateOf(false) }
-
-    val selectedBibleBook by remember(selectedBook) {
-        derivedStateOf { selectedBook?.let { BibleData.getBookByCustomNumber(it.bookNumber) } }
-    }
-
+    val selectedBibleBook by remember(selectedBook) { derivedStateOf { selectedBook?.let { BibleData.getBookByCustomNumber(it.bookNumber) } } }
     var showChapterFlash by remember { mutableStateOf(false) }
     var showVerseFlash by remember { mutableStateOf(false) }
 
@@ -381,7 +370,7 @@ fun NavigationModal(
                                     {
                                         if (isInputValid && selectedBook != null) {
                                             val chapter = chapterInput.toInt()
-                                            val verse = verseInput.toIntOrNull()
+                                            val verse = verseInput.toIntOrNull() ?: 1
                                             val bibleBook = BibleData.getBookByCustomNumber(
                                                 selectedBook!!.bookNumber
                                             )

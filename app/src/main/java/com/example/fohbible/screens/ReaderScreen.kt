@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.CircularProgressIndicator
@@ -56,6 +57,7 @@ import com.example.fohbible.utils.VerseTextProcessor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import android.graphics.Typeface
+import androidx.compose.foundation.background
 import androidx.compose.ui.text.font.FontFamily
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -65,6 +67,7 @@ fun ReaderScreen(
     databaseHelper: DatabaseHelper?,
     onPassageChange: (PassageSelection) -> Unit = {}
 ) {
+    val viewModel = viewModel<AppViewModel>()
     val themeColors = ThemeColors(
         textColor = MaterialTheme.colorScheme.onBackground,
         verseNumber = MaterialTheme.colorScheme.primary,
@@ -72,20 +75,23 @@ fun ReaderScreen(
         tagColor = MaterialTheme.colorScheme.secondary,
         tagBg = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f),
         wordsOfJesus = Color(0xFFCB531D),
-        searchHighlightBg = Color.Yellow.copy(alpha = 0.3f),
+        searchHighlightBg = if (viewModel.darkTheme) Color(0xFF81D4FA).copy(alpha = 0.3f) else Color.Yellow.copy(alpha = 0.3f),
         highlightIcon = MaterialTheme.colorScheme.primary
     )
 
-    val viewModel = viewModel<AppViewModel>()
     val coroutineScope = rememberCoroutineScope()
 
     // Track current passage - use LaunchedEffect to sync with parent
     var currentPassage by remember { mutableStateOf(passage.copy(verse = 1)) }
+    var targetVerse by remember { mutableStateOf(passage.verse) }
 
     // Sync with parent passage changes using LaunchedEffect
-    LaunchedEffect(passage.bookNumber, passage.chapter) {
+    LaunchedEffect(passage.bookNumber, passage.chapter, passage.verse) {
         if (passage.bookNumber != currentPassage.bookNumber || passage.chapter != currentPassage.chapter) {
             currentPassage = passage.copy(verse = 1)
+            targetVerse = passage.verse
+        } else {
+            targetVerse = passage.verse
         }
     }
 
@@ -118,7 +124,6 @@ fun ReaderScreen(
             }
         }
     }
-
     val pageCount by remember(passages) { derivedStateOf { passages.size } }
     val currentOffset by remember(hasPrev) { derivedStateOf { if (hasPrev) 1 else 0 } }
 
@@ -186,6 +191,7 @@ fun ReaderScreen(
             if (targetPassage != null && !swipeCompleted) {
                 swipeCompleted = true
                 currentPassage = targetPassage
+                targetVerse = targetPassage.verse
                 onPassageChange(targetPassage)
                 pendingPassageChange = null
                 // Reset will be handled by the other LaunchedEffect
@@ -217,7 +223,6 @@ fun ReaderScreen(
     val oswaldFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Oswald.ttf")) }
     val poppinsFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Poppins.ttf")) }
     val rubikGlitchFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/RubikGlitch.ttf")) }
-
     val currentFontFamily = when (viewModel.selectedFontFamily) {
         "system" -> systemFont
         "oswald" -> oswaldFont
@@ -240,7 +245,6 @@ fun ReaderScreen(
         ) { pageIndex ->
             val thisPassage = passages[pageIndex]
             val thisVerses = loadedVerses[thisPassage.bookNumber to thisPassage.chapter] ?: emptyList()
-
             val processor = remember(thisVerses) { VerseTextProcessor() }
             val processedVerses = remember(thisVerses, themeColors) {
                 val result = mutableMapOf<Int, ProcessedVerse>()
@@ -255,6 +259,8 @@ fun ReaderScreen(
                 }
                 result
             }
+            val isCurrentPage = thisPassage.bookNumber == currentPassage.bookNumber && thisPassage.chapter == currentPassage.chapter
+            var highlightedVerse by remember { mutableStateOf<Int?>(null) }
 
             Box(modifier = Modifier.fillMaxSize()) {
                 if (thisVerses.isEmpty()) {
@@ -268,10 +274,12 @@ fun ReaderScreen(
                         Text("Loading verses...")
                     }
                 } else {
+                    val lazyListState = rememberLazyListState()
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(16.dp)
+                            .padding(16.dp),
+                        state = lazyListState
                     ) {
                         item {
                             // Display chapter header
@@ -290,12 +298,14 @@ fun ReaderScreen(
                         // Display verses with processed text
                         items(thisVerses) { verse ->
                             val processedVerse = processedVerses[verse.verseNumber]
+                            val isHighlighted = verse.verseNumber == highlightedVerse
                             if (processedVerse != null) {
                                 // Display the processed verse with header and body
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(vertical = 8.dp)
+                                        .then(if (isHighlighted) Modifier.background(themeColors.searchHighlightBg) else Modifier)
                                 ) {
                                     // Display header if exists
                                     processedVerse.header?.let { header ->
@@ -340,7 +350,8 @@ fun ReaderScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 8.dp),
+                                        .padding(vertical = 8.dp)
+                                        .then(if (isHighlighted) Modifier.background(themeColors.searchHighlightBg) else Modifier),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Text(
@@ -357,6 +368,20 @@ fun ReaderScreen(
                                         lineHeight = (viewModel.fontSize * 1.333f).sp,
                                         fontFamily = currentFontFamily
                                     )
+                                }
+                            }
+                        }
+                    }
+                    if (isCurrentPage) {
+                        LaunchedEffect(targetVerse, thisVerses) {
+                            targetVerse?.let { it1 ->
+                                if (thisVerses.isNotEmpty() && it1 > 0) {
+                                    val verseIndex = thisVerses.indexOfFirst { it.verseNumber == targetVerse }.takeIf { it >= 0 } ?: 0
+                                    val itemIndex = verseIndex + 1 // +1 for header
+                                    lazyListState.animateScrollToItem(itemIndex)
+                                    highlightedVerse = targetVerse
+                                    delay(2000)
+                                    highlightedVerse = null
                                 }
                             }
                         }

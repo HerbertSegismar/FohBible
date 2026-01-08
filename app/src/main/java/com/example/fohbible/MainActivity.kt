@@ -110,7 +110,6 @@ class AppViewModel : ViewModel() {
     val navigationStack = mutableStateListOf<Screen>(Screen.Home)
     var currentDbName by mutableStateOf("kj2.sqlite3")
     var currentVersionAbbr by mutableStateOf(BibleVersionUtils.versionMap["kj2.sqlite3"]!!)
-
     // New: Track custom color separately
     var customColor by mutableStateOf<Color?>(null)
 
@@ -213,6 +212,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                             verse = 1,
                                         )
                                     )
+
                                     else -> screen
                                 }
                                 viewModel.navigateTo(targetScreen)
@@ -237,6 +237,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                             verse = 1,
                                         )
                                     )
+
                                     else -> screen
                                 }
                                 viewModel.navigateTo(targetScreen)
@@ -272,6 +273,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 databaseHelper = dbHelper
                             )
                         }
+
                         is Screen.Reader -> {
                             val passage = currentScreen.passage ?: PassageSelection(
                                 bookNumber = 10,
@@ -287,6 +289,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 }
                             )
                         }
+
                         Screen.Bookmarks -> BookmarksScreen()
                         Screen.Search -> SearchScreen(databaseHelper = dbHelper)
                         Screen.Settings -> SettingsScreen()
@@ -332,10 +335,8 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 viewModel.customColor = color
                                 showColorWheelDialog = false
                             },
-                            initialColor = if (viewModel.isCustomColor && viewModel.customColor != null)
-                                viewModel.customColor!!
-                            else
-                                viewModel.selectedColor ?: ThemeManager.primaryColor
+                            initialColor = if (viewModel.isCustomColor && viewModel.customColor != null) viewModel.customColor!! else viewModel.selectedColor
+                                ?: ThemeManager.primaryColor
                         )
                     }
                 }
