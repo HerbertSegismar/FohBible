@@ -112,6 +112,12 @@ class AppViewModel : ViewModel() {
     var currentVersionAbbr by mutableStateOf(BibleVersionUtils.versionMap["kj2.sqlite3"]!!)
     // New: Track custom color separately
     var customColor by mutableStateOf<Color?>(null)
+    // Multi-version fields
+    var multiVersion by mutableStateOf(false)
+    var secondaryDbName by mutableStateOf<String?>("")
+    var secondaryVersionAbbr by mutableStateOf("")
+    var multiViewLayout by mutableStateOf("horizontal")
+    var scrollSync by mutableStateOf(true)
 
     fun navigateTo(screen: Screen) {
         navigationStack.add(screen)
@@ -168,16 +174,12 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     )
 
     var dbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
-
     LaunchedEffect(viewModel.currentDbName) {
         dbHelper?.close()
         dbHelper = DatabaseHelper(activity, viewModel.currentDbName)
     }
-
     DisposableEffect(Unit) {
-        onDispose {
-            dbHelper?.close()
-        }
+        onDispose { dbHelper?.close() }
     }
 
     CompositionLocalProvider(LocalAppTheme provides themeState) {
@@ -212,7 +214,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                             verse = 1,
                                         )
                                     )
-
                                     else -> screen
                                 }
                                 viewModel.navigateTo(targetScreen)
@@ -237,7 +238,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                             verse = 1,
                                         )
                                     )
-
                                     else -> screen
                                 }
                                 viewModel.navigateTo(targetScreen)
@@ -273,7 +273,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 databaseHelper = dbHelper
                             )
                         }
-
                         is Screen.Reader -> {
                             val passage = currentScreen.passage ?: PassageSelection(
                                 bookNumber = 10,
@@ -289,7 +288,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 }
                             )
                         }
-
                         Screen.Bookmarks -> BookmarksScreen()
                         Screen.Search -> SearchScreen(databaseHelper = dbHelper)
                         Screen.Settings -> SettingsScreen()
@@ -335,8 +333,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 viewModel.customColor = color
                                 showColorWheelDialog = false
                             },
-                            initialColor = if (viewModel.isCustomColor && viewModel.customColor != null) viewModel.customColor!! else viewModel.selectedColor
-                                ?: ThemeManager.primaryColor
+                            initialColor = if (viewModel.isCustomColor && viewModel.customColor != null) viewModel.customColor!! else viewModel.selectedColor ?: ThemeManager.primaryColor
                         )
                     }
                 }
@@ -436,13 +433,7 @@ fun UpdatedColorThemeDialog(
                                     .background(
                                         Brush.sweepGradient(
                                             colors = listOf(
-                                                Color.Red,
-                                                Color.Yellow,
-                                                Color.Green,
-                                                Color.Cyan,
-                                                Color.Blue,
-                                                Color.Magenta,
-                                                Color.Red
+                                                Color.Red, Color.Yellow, Color.Green, Color.Cyan, Color.Blue, Color.Magenta, Color.Red
                                             )
                                         )
                                     )
@@ -477,9 +468,7 @@ fun UpdatedColorThemeDialog(
                         containerColor = MaterialTheme.colorScheme.surface,
                         contentColor = MaterialTheme.colorScheme.onSurface
                     )
-                ) {
-                    Text("Cancel")
-                }
+                ) { Text("Cancel") }
             }
         }
     }
@@ -555,7 +544,6 @@ fun HomeAppBar(
         animationSpec = tween(durationMillis = 300),
         label = "menuIconRotation"
     )
-
     val screenTitle = when (currentScreen) {
         is Screen.Home -> "Home"
         is Screen.Reader -> "Reader"

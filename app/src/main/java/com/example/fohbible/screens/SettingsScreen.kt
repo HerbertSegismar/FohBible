@@ -81,6 +81,7 @@ private const val MIN_FONT_SIZE = 8
 val availableFontFamilies = listOf("system", "oswald", "rubik-glitch", "poppins")
 
 // TODO: Define bgTextures similar to RN
+
 @Composable
 fun getFontFamily(family: String): FontFamily {
     val context = LocalContext.current
@@ -98,12 +99,8 @@ fun getFontFamily(family: String): FontFamily {
 fun SettingsScreen() {
     val viewModel: AppViewModel = viewModel()
     val context = LocalContext.current
-
-    var showMultiVersion by remember { mutableStateOf(false) }
-    var secondaryVersionAbbr by remember { mutableStateOf("") }
     var showVersionInfoDialog by remember { mutableStateOf(false) }
     var selectedVersionInfo by remember { mutableStateOf<Pair<String, String>?>(null) }
-
     var bgImageIndex by remember { mutableIntStateOf(0) }
     var customTextureUri by remember { mutableStateOf<String?>(null) }
     var showBgModal by remember { mutableStateOf(false) }
@@ -123,8 +120,7 @@ fun SettingsScreen() {
     ) { uri: Uri? ->
         uri?.let {
             customTextureUri = it.toString()
-            bgImageIndex = 34
-            // TODO: Persist uri
+            bgImageIndex = 34 // TODO: Persist uri
         }
     }
 
@@ -171,8 +167,8 @@ fun SettingsScreen() {
                     subtitle = "Show two Bible versions side by side"
                 ) {
                     Switch(
-                        checked = showMultiVersion,
-                        onCheckedChange = { showMultiVersion = it },
+                        checked = viewModel.multiVersion,
+                        onCheckedChange = { viewModel.multiVersion = it },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = MaterialTheme.colorScheme.primary,
                             checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
@@ -180,23 +176,22 @@ fun SettingsScreen() {
                     )
                 }
 
-                if (showMultiVersion) {
+                if (viewModel.multiVersion) {
                     Spacer(modifier = Modifier.height(8.dp))
                     BibleVersionSelector(
                         title = "Secondary Bible Version",
-                        currentAbbr = secondaryVersionAbbr.ifEmpty { "Select version" },
-                        description = if (secondaryVersionAbbr.isNotEmpty()) {
+                        currentAbbr = viewModel.secondaryVersionAbbr.ifEmpty { "Select version" },
+                        description = if (viewModel.secondaryVersionAbbr.isNotEmpty()) {
                             BibleVersionUtils.versionMap.entries
-                                .find { it.value == secondaryVersionAbbr }
+                                .find { it.value == viewModel.secondaryVersionAbbr }
                                 ?.let { BibleVersionUtils.descriptionMap[it.key] }
                                 ?: "Bible translation"
                         } else {
                             "Select a secondary version"
                         },
                         onVersionSelected = { file, abbr ->
-                            secondaryVersionAbbr = abbr
-                            // TODO: Set secondaryDbName in viewModel
-                            // viewModel.secondaryDbName = file
+                            viewModel.secondaryDbName = file
+                            viewModel.secondaryVersionAbbr = abbr
                         },
                         onInfoClick = { file, abbr ->
                             selectedVersionInfo = Pair(
@@ -206,6 +201,43 @@ fun SettingsScreen() {
                             showVersionInfoDialog = true
                         }
                     )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    SettingsItem(
+                        title = "Multi-View Layout",
+                        subtitle = "Horizontal or vertical arrangement"
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                text = "Horizontal",
+                                modifier = Modifier
+                                    .clickable { viewModel.multiViewLayout = "horizontal" }
+                                    .background(if (viewModel.multiViewLayout == "horizontal") MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent)
+                                    .padding(8.dp)
+                            )
+                            Text(
+                                text = "Vertical",
+                                modifier = Modifier
+                                    .clickable { viewModel.multiViewLayout = "vertical" }
+                                    .background(if (viewModel.multiViewLayout == "vertical") MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent)
+                                    .padding(8.dp)
+                            )
+                        }
+                    }
+
+                    SettingsItem(
+                        title = "Scroll Sync",
+                        subtitle = "Synchronize scrolling between versions"
+                    ) {
+                        Switch(
+                            checked = viewModel.scrollSync,
+                            onCheckedChange = { viewModel.scrollSync = it },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                            )
+                        )
+                    }
                 }
             }
         }
@@ -244,9 +276,7 @@ fun SettingsScreen() {
                                 color = customColor ?: DefaultPrimaryColor,
                                 name = "Custom",
                                 isSelected = isUsingCustomColor,
-                                onClick = {
-                                    showColorWheel = true
-                                }
+                                onClick = { showColorWheel = true }
                             )
                         }
                     }
@@ -273,9 +303,7 @@ fun SettingsScreen() {
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(
-                            onClick = {
-                                viewModel.fontSize = maxOf(MIN_FONT_SIZE, viewModel.fontSize - 1)
-                            },
+                            onClick = { viewModel.fontSize = maxOf(MIN_FONT_SIZE, viewModel.fontSize - 1) },
                             modifier = Modifier.size(32.dp)
                         ) {
                             Text("A-", fontWeight = FontWeight.Bold)
@@ -285,9 +313,7 @@ fun SettingsScreen() {
                             modifier = Modifier.padding(horizontal = 8.dp)
                         )
                         IconButton(
-                            onClick = {
-                                viewModel.fontSize = minOf(MAX_FONT_SIZE, viewModel.fontSize + 1)
-                            },
+                            onClick = { viewModel.fontSize = minOf(MAX_FONT_SIZE, viewModel.fontSize + 1) },
                             modifier = Modifier.size(32.dp)
                         ) {
                             Text("A+", fontWeight = FontWeight.Bold)
@@ -326,9 +352,7 @@ fun SettingsScreen() {
                 ) {
                     Icon(Icons.Default.ChevronRight, contentDescription = null)
                 }
-
                 HorizontalDivider()
-
                 SettingsItem(
                     title = "About",
                     subtitle = "App version and information",
@@ -355,8 +379,11 @@ fun SettingsScreen() {
                             viewModel.selectedFontFamily = "system"
                             viewModel.currentDbName = "kj2.sqlite3"
                             viewModel.currentVersionAbbr = BibleVersionUtils.versionMap["kj2.sqlite3"] ?: "KJ2"
-                            secondaryVersionAbbr = ""
-                            showMultiVersion = false
+                            viewModel.multiVersion = false
+                            viewModel.secondaryDbName = ""
+                            viewModel.secondaryVersionAbbr = ""
+                            viewModel.multiViewLayout = "horizontal"
+                            viewModel.scrollSync = true
                             customTextureUri = null
                             bgImageIndex = 0
                         },
@@ -370,7 +397,6 @@ fun SettingsScreen() {
                         Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
                         Text("Reset All")
                     }
-
                     Button(
                         onClick = {
                             val intent = Intent(Intent.ACTION_SENDTO).apply {
@@ -495,7 +521,6 @@ fun BibleVersionSelector(
                         maxLines = 1
                     )
                 }
-
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // Info button
                     IconButton(
@@ -515,7 +540,6 @@ fun BibleVersionSelector(
                             modifier = Modifier.size(16.dp)
                         )
                     }
-
                     // Dropdown arrow
                     Icon(
                         Icons.Default.ArrowDropDown,
@@ -532,15 +556,13 @@ fun BibleVersionSelector(
             ) {
                 BibleVersionUtils.versionMap.forEach { (file, abbr) ->
                     val versionDesc = BibleVersionUtils.descriptionMap[file] ?: "Bible translation"
-
                     DropdownMenuItem(
                         text = {
                             Column(modifier = Modifier.padding(vertical = 4.dp)) {
                                 Text(
                                     text = abbr,
                                     fontWeight = if (abbr == currentAbbr) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (abbr == currentAbbr) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurface
+                                    color = if (abbr == currentAbbr) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
                                     text = versionDesc,
@@ -555,11 +577,9 @@ fun BibleVersionSelector(
                             expanded = false
                         },
                         modifier = Modifier.background(
-                            if (abbr == currentAbbr) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                            else Color.Transparent
+                            if (abbr == currentAbbr) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent
                         )
                     )
-
                     if (file != BibleVersionUtils.versionMap.keys.last()) {
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 8.dp),
@@ -601,9 +621,7 @@ fun VersionInfoDialog(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-
                 Spacer(modifier = Modifier.height(16.dp))
-
                 Text(
                     text = "About Bible Versions:",
                     style = MaterialTheme.typography.labelMedium,
@@ -618,9 +636,7 @@ fun VersionInfoDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Close")
-            }
+            TextButton(onClick = onDismiss) { Text("Close") }
         }
     )
 }
@@ -723,22 +739,18 @@ fun ColorButton(color: Color, name: String, isSelected: Boolean, onClick: () -> 
 @Composable
 fun FontButton(family: String, isSelected: Boolean, onClick: () -> Unit) {
     Text(
-        text = family.replaceFirstChar {
-            if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
-        },
+        text = family.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() },
         modifier = Modifier
             .clickable { onClick() }
             .border(
                 if (isSelected) 2.dp else 1.dp,
-                if (isSelected) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
                 RoundedCornerShape(8.dp)
             )
             .padding(horizontal = 16.dp, vertical = 10.dp),
         fontFamily = getFontFamily(family),
         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-        color = if (isSelected) MaterialTheme.colorScheme.primary
-        else MaterialTheme.colorScheme.onSurface
+        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
     )
 }
 
@@ -788,9 +800,7 @@ fun BgModal(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Cancel")
-                    }
+                    TextButton(onClick = onDismiss) { Text("Cancel") }
                 }
             }
         }
@@ -837,14 +847,10 @@ fun FontModal(
             TextButton(
                 onClick = onConfirm,
                 enabled = tempSize.toIntOrNull()?.let { it in MIN_FONT_SIZE..MAX_FONT_SIZE } ?: false
-            ) {
-                Text("Apply")
-            }
+            ) { Text("Apply") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
+            TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
 }
