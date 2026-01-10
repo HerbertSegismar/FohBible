@@ -42,6 +42,8 @@ import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -270,7 +272,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                     BackHandler(enabled = viewModel.navigationStack.size > 1) {
                         viewModel.goBack()
                     }
-
                     when (currentScreen) {
                         Screen.Home -> {
                             HomeScreen(
@@ -415,10 +416,8 @@ fun VersionSelectionDialog(
                     Icon(Icons.Filled.Close, contentDescription = "Close")
                 }
             }
-
             Spacer(modifier = Modifier.height(8.dp))
             HorizontalDivider()
-
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -457,9 +456,7 @@ fun VersionSelectionDialog(
                     }
                 }
             }
-
             Spacer(modifier = Modifier.height(16.dp))
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
@@ -472,7 +469,7 @@ fun VersionSelectionDialog(
                         contentColor = MaterialTheme.colorScheme.onSurface
                     )
                 ) {
-                    Text("Cancel")
+                    Text("Close")
                 }
             }
         }
@@ -505,7 +502,7 @@ fun UpdatedColorThemeDialog(
                     text = "Choose Theme Color",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 18.dp.value.sp
+                    fontSize = 18.sp
                 )
                 IconButton(
                     onClick = onDismiss,
@@ -514,10 +511,8 @@ fun UpdatedColorThemeDialog(
                     Icon(Icons.Filled.Close, contentDescription = "Close")
                 }
             }
-
             Spacer(modifier = Modifier.height(8.dp))
             HorizontalDivider()
-
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -601,9 +596,7 @@ fun UpdatedColorThemeDialog(
                     }
                 }
             }
-
             Spacer(modifier = Modifier.height(16.dp))
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
@@ -745,9 +738,7 @@ fun HomeAppBar(
         modifier = modifier,
         navigationIcon = {
             if (onBack != null) {
-                IconButton(onClick = {
-                    onBack()
-                }) {
+                IconButton(onClick = { onBack() }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.rotate(backAnimatedRotation))
                 }
             }
@@ -891,9 +882,16 @@ fun ReaderAppBar(
         animationSpec = tween(durationMillis = 300),
         label = "backRotation"
     )
+    var syncTargetRotation by remember { mutableFloatStateOf(0f) }
+    val syncAnimatedRotation by animateFloatAsState(
+        targetValue = syncTargetRotation,
+        animationSpec = tween(durationMillis = 300),
+        label = "syncRotation"
+    )
 
     TopAppBar(
         title = {
+            if (!viewModel.multiVersion){
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -949,7 +947,28 @@ fun ReaderAppBar(
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
+                if (viewModel.multiVersion) {
+                    Button(
+                        onClick = { viewModel.showSecondaryVersionDropdown = true },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(4.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                        modifier = Modifier
+                            .height(36.dp)
+                            .padding(end = 0.dp)
+                    ) {
+                        Text(
+                            text = viewModel.secondaryVersionAbbr,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             }
+        }
         },
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = LocalAppTheme.current.primaryColor
@@ -958,9 +977,7 @@ fun ReaderAppBar(
         navigationIcon = {
             if (onBack != null) {
                 IconButton(
-                    onClick = {
-                        onBack()
-                    },
+                    onClick = { onBack() },
                     modifier = Modifier.size(40.dp)
                 ) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.rotate(backAnimatedRotation))
@@ -1048,6 +1065,22 @@ fun ReaderAppBar(
                 createItem("Vertical") {
                     viewModel.multiVersion = true
                     viewModel.multiViewLayout = "vertical"
+                }
+            }
+            if (viewModel.multiVersion) {
+                IconButton(
+                    onClick = {
+                        syncTargetRotation += 180f
+                        viewModel.scrollSync = !viewModel.scrollSync
+                    },
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        if (viewModel.scrollSync) Icons.Filled.Link else Icons.Filled.LinkOff,
+                        contentDescription = "Toggle Scroll Sync",
+                        tint = Color.White,
+                        modifier = Modifier.rotate(syncAnimatedRotation)
+                    )
                 }
             }
             IconButton(

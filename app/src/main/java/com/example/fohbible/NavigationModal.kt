@@ -281,7 +281,7 @@ fun NavigationModal(
                         contentPadding = PaddingValues(bottom = 16.dp, top = 2.dp),
                         state = listState
                     ) {
-                        item { Spacer(modifier = Modifier.height(2.dp)) }
+                        item { Spacer(modifier = Modifier.height(16.dp)) }
                         item {
                             TestamentSection(
                                 title = "Old Testament",
@@ -297,7 +297,7 @@ fun NavigationModal(
                                 selectedBook = selectedBook
                             )
                         }
-                        item { Spacer(modifier = Modifier.height(18.dp)) }
+                        item { Spacer(modifier = Modifier.height(16.dp)) }
                         item {
                             TestamentSection(
                                 title = "New Testament",

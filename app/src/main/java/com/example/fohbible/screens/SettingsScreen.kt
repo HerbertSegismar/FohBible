@@ -78,9 +78,7 @@ import java.util.Locale
 private const val MAX_FONT_SIZE = 50
 private const val MIN_FONT_SIZE = 8
 
-val availableFontFamilies = listOf("system", "oswald", "rubik-glitch", "poppins")
-
-// TODO: Define bgTextures similar to RN
+val availableFontFamilies = listOf("system", "oswald", "rubik-glitch", "poppins") // TODO: Define bgTextures similar to RN
 
 @Composable
 fun getFontFamily(family: String): FontFamily {
@@ -467,7 +465,6 @@ fun BibleVersionSelector(
     onInfoClick: (String, String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = title,

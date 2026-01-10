@@ -1,17 +1,15 @@
 @file:Suppress("AssignedValueIsNeverRead")
-
 package com.example.fohbible.screens
-
 import android.graphics.Typeface
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,10 +20,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -54,6 +55,8 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -94,11 +97,9 @@ fun ReaderScreen(
         highlightIcon = MaterialTheme.colorScheme.primary
     )
     val coroutineScope = rememberCoroutineScope()
-
     // Track current passage - use LaunchedEffect to sync with parent
     var currentPassage by remember { mutableStateOf(passage.copy(verse = 1)) }
     var targetVerse by remember { mutableStateOf(passage.verse) }
-
     // Sync with parent passage changes using LaunchedEffect
     LaunchedEffect(passage.bookNumber, passage.chapter, passage.verse) {
         if (passage.bookNumber != currentPassage.bookNumber || passage.chapter != currentPassage.chapter) {
@@ -108,12 +109,10 @@ fun ReaderScreen(
             targetVerse = passage.verse
         }
     }
-
     // Get current book info
     val currentBook by remember(currentPassage.bookNumber) {
         derivedStateOf { BibleData.getBookByCustomNumber(currentPassage.bookNumber) }
     }
-
     // Calculate previous and next passages
     val prevPassage by remember(currentPassage, currentBook) {
         derivedStateOf {
@@ -127,7 +126,6 @@ fun ReaderScreen(
     }
     val hasPrev by remember(prevPassage) { derivedStateOf { prevPassage != currentPassage } }
     val hasNext by remember(nextPassage) { derivedStateOf { nextPassage != currentPassage } }
-
     // Build list of passages for pager
     val passages by remember(currentPassage, prevPassage, nextPassage, hasPrev, hasNext) {
         derivedStateOf {
@@ -140,17 +138,13 @@ fun ReaderScreen(
     }
     val pageCount by remember(passages) { derivedStateOf { passages.size } }
     val currentOffset by remember(hasPrev) { derivedStateOf { if (hasPrev) 1 else 0 } }
-
     // Track target passage for swipe completion
     var pendingPassageChange by remember { mutableStateOf<PassageSelection?>(null) }
-
     // Track loaded verses for primary and secondary
     val primaryLoadedVerses = remember { mutableStateMapOf<Pair<Int, Int>, List<Verse>>() }
     val secondaryLoadedVerses = remember { mutableStateMapOf<Pair<Int, Int>, List<Verse>>() }
-
     // Clear loaded verses when databaseHelper changes
     LaunchedEffect(databaseHelper) { primaryLoadedVerses.clear() }
-
     // Secondary database helper
     val context = LocalContext.current
     var secondaryDatabaseHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
@@ -163,7 +157,6 @@ fun ReaderScreen(
         }
     }
     LaunchedEffect(secondaryDatabaseHelper) { secondaryLoadedVerses.clear() }
-
     // Load verses for current, previous, and next passages for primary and secondary if multi-version
     LaunchedEffect(currentPassage, hasPrev, hasNext, databaseHelper, secondaryDatabaseHelper, viewModel.multiVersion) {
         // Load primary
@@ -183,7 +176,6 @@ fun ReaderScreen(
                 primaryLoadedVerses[nextKey] = databaseHelper?.getVerses(nextPassage.bookNumber, nextPassage.chapter) ?: emptyList()
             }
         }
-
         // Load secondary if multi-version enabled and helper exists
         if (viewModel.multiVersion && secondaryDatabaseHelper != null) {
             if (currentKey !in secondaryLoadedVerses) {
@@ -203,16 +195,13 @@ fun ReaderScreen(
             }
         }
     }
-
     val pagerState = rememberPagerState(
         initialPage = currentOffset,
         pageCount = { pageCount }
     )
-
     // Track swipe state
     var isUserSwiping by remember { mutableStateOf(false) }
     var swipeCompleted by remember { mutableStateOf(false) }
-
     // Handle page changes during swipe
     LaunchedEffect(pagerState.currentPage, pagerState.isScrollInProgress) {
         if (pagerState.isScrollInProgress) {
@@ -245,7 +234,6 @@ fun ReaderScreen(
             }
         }
     }
-
     // Reset pager to center when passage changes (non-user initiated)
     LaunchedEffect(currentPassage) {
         if (!isUserSwiping) {
@@ -258,7 +246,6 @@ fun ReaderScreen(
             }
         }
     }
-
     val contextFont = LocalContext.current
     val systemFont = FontFamily.Default
     val oswaldFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/Oswald.ttf")) }
@@ -271,23 +258,19 @@ fun ReaderScreen(
         "poppins" -> poppinsFont
         else -> systemFont
     }
-
     var isButtonVisible by remember { mutableStateOf(true) }
     val buttonAlpha by animateFloatAsState(if (isButtonVisible) 1f else 0.2f, label = "buttonAlpha")
     val scope = rememberCoroutineScope()
-
     fun scheduleFade() {
         scope.launch {
             delay(3000)
             isButtonVisible = false
         }
     }
-
     LaunchedEffect(currentPassage) {
         isButtonVisible = true
         scheduleFade()
     }
-
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
@@ -312,7 +295,6 @@ fun ReaderScreen(
             val effectiveMultiVersion = viewModel.multiVersion && secondaryDatabaseHelper != null
             val secondaryVerses = if (effectiveMultiVersion) secondaryLoadedVerses[thisPassage.bookNumber to thisPassage.chapter] ?: emptyList() else emptyList()
             val isCurrentPage = thisPassage.bookNumber == currentPassage.bookNumber && thisPassage.chapter == currentPassage.chapter
-
             Box(modifier = Modifier.fillMaxSize()) {
                 if (primaryVerses.isEmpty()) {
                     Column(
@@ -327,7 +309,6 @@ fun ReaderScreen(
                 } else {
                     val primaryState = rememberScrollState()
                     val secondaryState = if (effectiveMultiVersion) rememberScrollState() else null
-
                     if (effectiveMultiVersion) {
                         // Sync logic using snapshotFlow
                         if (viewModel.scrollSync && secondaryState != null) {
@@ -358,7 +339,6 @@ fun ReaderScreen(
                                 }
                             }
                         }
-
                         if (viewModel.multiViewLayout == "horizontal") {
                             Row(
                                 modifier = Modifier.fillMaxSize()
@@ -489,7 +469,6 @@ fun ReaderScreen(
         }
     }
 }
-
 @Composable
 fun ChapterView(
     passage: PassageSelection,
@@ -518,142 +497,174 @@ fun ChapterView(
         }
         result
     }
-
     var highlightedVerse by remember { mutableStateOf<Int?>(null) }
     val offsets = remember { mutableStateMapOf<Int, Float>() }
-
-    Column(
-        modifier = modifier
-            .verticalScroll(state)
-            .padding(16.dp)
-    ) {
+    Column(modifier = modifier) {
         // Display chapter header as clickable buttons
-        if (viewModel.multiVersion){
+        if (viewModel.multiVersion) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(themeColors.tagBg)
+                    .background(themeColors.primary)
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "${passage.bookName} ${passage.chapter}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
+                // Chapter navigation button - styled like TopAppBar
+                Button(
+                    onClick = { viewModel.showNavigationModal = true },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(4.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
                     modifier = Modifier
-                        .clickable { viewModel.showNavigationModal = true }
-                        .padding(end = 8.dp),
-                    fontFamily = currentFontFamily
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                Text(
-                    text = versionAbbr,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .clickable {
-                            if (isPrimary) {
-                                viewModel.showPrimaryVersionDropdown = true
-                            } else {
-                                viewModel.showSecondaryVersionDropdown = true
-                            }
-                        },
-                    fontFamily = currentFontFamily
-                )
+                        .height(36.dp)
+                        .weight(1f)
+                        .padding(end = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = passage.bookName,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            overflow = TextOverflow.Ellipsis,
+                            maxLines = 1,
+                            modifier = Modifier.weight(1f),
+                            color = MaterialTheme.colorScheme.primary,
+                            textAlign = TextAlign.Start
+                        )
+                        Text(
+                            text = passage.chapter.let { " $it" },
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
+                // Version selection button - styled like TopAppBar
+                Button(
+                    onClick = {
+                        if (isPrimary) {
+                            viewModel.showPrimaryVersionDropdown = true
+                        } else {
+                            viewModel.showSecondaryVersionDropdown = true
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(4.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Text(
+                        text = versionAbbr,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
 
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(state)
+                .padding(12.dp)
+        ) {
+            Spacer(modifier = Modifier.height(16.dp))
 
-        Spacer(modifier = Modifier.height(16.dp))
+            // Display verses with processed text
+            verses.forEach { verse ->
+                val processedVerse = processedVerses[verse.verseNumber]
+                val isHighlighted = verse.verseNumber == highlightedVerse
 
-        // Display verses with processed text
-        verses.forEach { verse ->
-            val processedVerse = processedVerses[verse.verseNumber]
-            val isHighlighted = verse.verseNumber == highlightedVerse
-
-            if (processedVerse != null) {
-                // Display the processed verse with header and body
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp)
-                        .then(if (isHighlighted) Modifier.background(themeColors.searchHighlightBg) else Modifier)
-                        .onGloballyPositioned { coords ->
-                            offsets[verse.verseNumber] = coords.positionInParent().y
+                if (processedVerse != null) {
+                    // Display the processed verse with header and body
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
+                            .then(if (isHighlighted) Modifier.background(themeColors.searchHighlightBg) else Modifier)
+                            .onGloballyPositioned { coords ->
+                                offsets[verse.verseNumber] = coords.positionInParent().y
+                            }
+                    ) {
+                        // Display header if exists
+                        processedVerse.header?.let { header ->
+                            if (header.text.isNotEmpty()) {
+                                Text(
+                                    text = header,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = themeColors.tagColor,
+                                    modifier = Modifier.padding(bottom = 4.dp),
+                                    fontFamily = currentFontFamily
+                                )
+                            }
                         }
-                ) {
-                    // Display header if exists
-                    processedVerse.header?.let { header ->
-                        if (header.text.isNotEmpty()) {
+
+                        // Display verse number and body
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             Text(
-                                text = header,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = themeColors.tagColor,
-                                modifier = Modifier.padding(bottom = 4.dp),
+                                text = buildAnnotatedString {
+                                    withStyle(
+                                        style = SpanStyle(
+                                            fontWeight = FontWeight.Bold,
+                                            color = themeColors.verseNumber,
+                                            fontSize = (viewModel.fontSize * 0.778f).sp
+                                        )
+                                    ) {
+                                        append("${verse.verseNumber} ")
+                                    }
+                                    append(processedVerse.body)
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                fontSize = viewModel.fontSize.sp,
+                                lineHeight = (viewModel.fontSize * 1.333f).sp,
                                 fontFamily = currentFontFamily
                             )
                         }
                     }
-
-                    // Display verse number and body
+                } else {
+                    // Fallback: display original verse text
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
+                            .then(if (isHighlighted) Modifier.background(themeColors.searchHighlightBg) else Modifier)
+                            .onGloballyPositioned { coords ->
+                                offsets[verse.verseNumber] = coords.positionInParent().y
+                            },
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            text = buildAnnotatedString {
-                                withStyle(
-                                    style = SpanStyle(
-                                        fontWeight = FontWeight.Bold,
-                                        color = themeColors.verseNumber,
-                                        fontSize = (viewModel.fontSize * 0.778f).sp
-                                    )
-                                ) {
-                                    append("${verse.verseNumber} ")
-                                }
-                                append(processedVerse.body)
-                            },
-                            modifier = Modifier.fillMaxWidth(),
+                            text = "${verse.verseNumber}.",
+                            fontWeight = FontWeight.Bold,
+                            color = themeColors.verseNumber,
+                            fontSize = (viewModel.fontSize * 0.778f).sp,
+                            fontFamily = currentFontFamily
+                        )
+                        Text(
+                            text = verse.text,
+                            modifier = Modifier.weight(1f),
                             fontSize = viewModel.fontSize.sp,
                             lineHeight = (viewModel.fontSize * 1.333f).sp,
                             fontFamily = currentFontFamily
                         )
                     }
                 }
-            } else {
-                // Fallback: display original verse text
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp)
-                        .then(if (isHighlighted) Modifier.background(themeColors.searchHighlightBg) else Modifier)
-                        .onGloballyPositioned { coords ->
-                            offsets[verse.verseNumber] = coords.positionInParent().y
-                        },
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "${verse.verseNumber}.",
-                        fontWeight = FontWeight.Bold,
-                        color = themeColors.verseNumber,
-                        fontSize = (viewModel.fontSize * 0.778f).sp,
-                        fontFamily = currentFontFamily
-                    )
-                    Text(
-                        text = verse.text,
-                        modifier = Modifier.weight(1f),
-                        fontSize = viewModel.fontSize.sp,
-                        lineHeight = (viewModel.fontSize * 1.333f).sp,
-                        fontFamily = currentFontFamily
-                    )
-                }
             }
         }
     }
-
     if (isCurrentPage) {
         LaunchedEffect(targetVerse, verses) {
             targetVerse?.let { v ->
@@ -669,7 +680,6 @@ fun ChapterView(
         }
     }
 }
-
 fun getPreviousPassage(current: PassageSelection, currentBook: BibleBook?): PassageSelection {
     if (currentBook == null) return current
     if (currentBook.chapters <= 2 && current.chapter == 1) return current
@@ -679,7 +689,6 @@ fun getPreviousPassage(current: PassageSelection, currentBook: BibleBook?): Pass
         current.copy(chapter = current.chapter - 1, verse = null)
     }
 }
-
 fun getNextPassage(current: PassageSelection, currentBook: BibleBook?): PassageSelection {
     if (currentBook == null) return current
     if (currentBook.chapters <= 2 && current.chapter == currentBook.chapters) return current
@@ -689,7 +698,6 @@ fun getNextPassage(current: PassageSelection, currentBook: BibleBook?): PassageS
         current.copy(chapter = current.chapter + 1, verse = null)
     }
 }
-
 @Preview(showBackground = true)
 @Composable
 fun ReaderScreenPreview() {
