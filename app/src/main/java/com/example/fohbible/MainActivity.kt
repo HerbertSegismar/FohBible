@@ -121,6 +121,12 @@ class AppViewModel : ViewModel() {
     var secondaryVersionAbbr by mutableStateOf(BibleVersionUtils.versionMap["kj2.sqlite3"]!!)
     var multiViewLayout by mutableStateOf("horizontal")
     var scrollSync by mutableStateOf(true)
+    var isReaderFullScreen by mutableStateOf(false)
+    var showNavigationModal by mutableStateOf(false)
+    var showPrimaryVersionDropdown by mutableStateOf(false)
+    var showSecondaryVersionDropdown by mutableStateOf(false)
+    var showColorThemeDialog by mutableStateOf(false)
+    var showColorWheelDialog by mutableStateOf(false)
 
     fun navigateTo(screen: Screen) {
         navigationStack.add(screen)
@@ -191,74 +197,66 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
 
     CompositionLocalProvider(LocalAppTheme provides themeState) {
         FohBibleTheme(darkTheme = viewModel.darkTheme) {
-            var showNavigationModal by remember { mutableStateOf(false) }
-            var showColorThemeDialog by remember { mutableStateOf(false) }
-            var showColorWheelDialog by remember { mutableStateOf(false) }
-
             Scaffold(
                 modifier = Modifier.fillMaxSize(),
                 topBar = {
-                    if (currentScreen is Screen.Reader) {
-                        ReaderAppBar(
-                            currentScreen = currentScreen,
-                            currentVersionAbbr = viewModel.currentVersionAbbr,
-                            versionMap = BibleVersionUtils.versionMap,
-                            descriptionMap = descriptionMap,
-                            onBibleIconClick = { showNavigationModal = true },
-                            onThemeToggle = { viewModel.darkTheme = !viewModel.darkTheme },
-                            onColorLensClick = { showColorThemeDialog = true },
-                            onVersionChange = { file, abbr ->
-                                viewModel.currentDbName = file
-                                viewModel.currentVersionAbbr = abbr
-                            },
-                            onScreenChange = { screen ->
-                                val targetScreen = when (screen) {
-                                    is Screen.Reader -> Screen.Reader(
-                                        PassageSelection(
-                                            bookNumber = 10,
-                                            bookName = "Genesis",
-                                            chapter = 1,
-                                            verse = 1,
+                    if (currentScreen !is Screen.Reader || !viewModel.isReaderFullScreen) {
+                        if (currentScreen is Screen.Reader) {
+                            ReaderAppBar(
+                                currentScreen = currentScreen,
+                                currentVersionAbbr = viewModel.currentVersionAbbr,
+                                onBibleIconClick = { viewModel.showNavigationModal = true },
+                                onThemeToggle = { viewModel.darkTheme = !viewModel.darkTheme },
+                                onColorLensClick = { viewModel.showColorThemeDialog = true },
+                                onScreenChange = { screen ->
+                                    val targetScreen = when (screen) {
+                                        is Screen.Reader -> Screen.Reader(
+                                            PassageSelection(
+                                                bookNumber = 10,
+                                                bookName = "Genesis",
+                                                chapter = 1,
+                                                verse = 1,
+                                            )
                                         )
-                                    )
-                                    else -> screen
-                                }
-                                viewModel.navigateTo(targetScreen)
-                            },
-                            onBack = if (viewModel.navigationStack.size > 1) {
-                                { viewModel.goBack() }
-                            } else null
-                        )
-                    } else {
-                        HomeAppBar(
-                            currentScreen = currentScreen,
-                            onBibleIconClick = { showNavigationModal = true },
-                            onThemeToggle = { viewModel.darkTheme = !viewModel.darkTheme },
-                            onColorLensClick = { showColorThemeDialog = true },
-                            onScreenChange = { screen ->
-                                val targetScreen = when (screen) {
-                                    is Screen.Reader -> Screen.Reader(
-                                        PassageSelection(
-                                            bookNumber = 10,
-                                            bookName = "Genesis",
-                                            chapter = 1,
-                                            verse = 1,
+                                        else -> screen
+                                    }
+                                    viewModel.navigateTo(targetScreen)
+                                },
+                                onBack = if (viewModel.navigationStack.size > 1) {
+                                    { viewModel.goBack() }
+                                } else null
+                            )
+                        } else {
+                            HomeAppBar(
+                                currentScreen = currentScreen,
+                                onBibleIconClick = { viewModel.showNavigationModal = true },
+                                onThemeToggle = { viewModel.darkTheme = !viewModel.darkTheme },
+                                onColorLensClick = { viewModel.showColorThemeDialog = true },
+                                onScreenChange = { screen ->
+                                    val targetScreen = when (screen) {
+                                        is Screen.Reader -> Screen.Reader(
+                                            PassageSelection(
+                                                bookNumber = 10,
+                                                bookName = "Genesis",
+                                                chapter = 1,
+                                                verse = 1,
+                                            )
                                         )
-                                    )
-                                    else -> screen
-                                }
-                                viewModel.navigateTo(targetScreen)
-                            },
-                            onBack = if (viewModel.navigationStack.size > 1) {
-                                { viewModel.goBack() }
-                            } else null
-                        )
+                                        else -> screen
+                                    }
+                                    viewModel.navigateTo(targetScreen)
+                                },
+                                onBack = if (viewModel.navigationStack.size > 1) {
+                                    { viewModel.goBack() }
+                                } else null
+                            )
+                        }
                     }
                 },
                 floatingActionButton = {
                     if (currentScreen is Screen.Home) {
                         FloatingActionButton(
-                            onClick = { showNavigationModal = true },
+                            onClick = { viewModel.showNavigationModal = true },
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = Color.White,
                             shape = CircleShape
@@ -277,7 +275,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                         Screen.Home -> {
                             HomeScreen(
                                 modifier = Modifier.fillMaxSize(),
-                                onBibleClick = { showNavigationModal = true },
+                                onBibleClick = { viewModel.showNavigationModal = true },
                                 databaseHelper = dbHelper
                             )
                         }
@@ -301,49 +299,180 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                         Screen.Settings -> SettingsScreen()
                     }
 
-                    if (showNavigationModal) {
+                    if (viewModel.showNavigationModal) {
                         NavigationModal(
                             showNavigationModal = true,
-                            onDismissRequest = { showNavigationModal = false },
+                            onDismissRequest = { viewModel.showNavigationModal = false },
                             onPassageSelected = { passage ->
                                 viewModel.navigateTo(Screen.Reader(passage))
-                                showNavigationModal = false
+                                viewModel.showNavigationModal = false
                             },
                             databaseHelper = dbHelper
                         )
                     }
 
-                    if (showColorThemeDialog) {
+                    if (viewModel.showPrimaryVersionDropdown) {
+                        Dialog(onDismissRequest = { viewModel.showPrimaryVersionDropdown = false }) {
+                            VersionSelectionDialog(
+                                onDismiss = { viewModel.showPrimaryVersionDropdown = false },
+                                onVersionSelected = { file, abbr ->
+                                    viewModel.currentDbName = file
+                                    viewModel.currentVersionAbbr = abbr
+                                },
+                                currentAbbr = viewModel.currentVersionAbbr,
+                                versionMap = BibleVersionUtils.versionMap,
+                                descriptionMap = descriptionMap
+                            )
+                        }
+                    }
+
+                    if (viewModel.showSecondaryVersionDropdown) {
+                        Dialog(onDismissRequest = { viewModel.showSecondaryVersionDropdown = false }) {
+                            VersionSelectionDialog(
+                                onDismiss = { viewModel.showSecondaryVersionDropdown = false },
+                                onVersionSelected = { file, abbr ->
+                                    viewModel.secondaryDbName = file
+                                    viewModel.secondaryVersionAbbr = abbr
+                                },
+                                currentAbbr = viewModel.secondaryVersionAbbr,
+                                versionMap = BibleVersionUtils.versionMap,
+                                descriptionMap = descriptionMap
+                            )
+                        }
+                    }
+
+                    if (viewModel.showColorThemeDialog) {
                         Dialog(
-                            onDismissRequest = { showColorThemeDialog = false }
+                            onDismissRequest = { viewModel.showColorThemeDialog = false }
                         ) {
                             UpdatedColorThemeDialog(
-                                onDismiss = { showColorThemeDialog = false },
+                                onDismiss = { viewModel.showColorThemeDialog = false },
                                 onColorSelected = { color ->
                                     viewModel.selectedColor = color
                                     viewModel.isCustomColor = false
                                     viewModel.customColor = null
                                 },
                                 onCustomColorClick = {
-                                    showColorThemeDialog = false
-                                    showColorWheelDialog = true
+                                    viewModel.showColorThemeDialog = false
+                                    viewModel.showColorWheelDialog = true
                                 }
                             )
                         }
                     }
 
-                    if (showColorWheelDialog) {
+                    if (viewModel.showColorWheelDialog) {
                         ColorWheelDialog(
-                            onDismissRequest = { showColorWheelDialog = false },
+                            onDismissRequest = { viewModel.showColorWheelDialog = false },
                             onColorSelected = { color ->
                                 viewModel.selectedColor = color
                                 viewModel.isCustomColor = true
                                 viewModel.customColor = color
-                                showColorWheelDialog = false
+                                viewModel.showColorWheelDialog = false
                             },
                             initialColor = if (viewModel.isCustomColor && viewModel.customColor != null) viewModel.customColor!! else viewModel.selectedColor ?: ThemeManager.primaryColor
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun VersionSelectionDialog(
+    onDismiss: () -> Unit,
+    onVersionSelected: (String, String) -> Unit,
+    currentAbbr: String,
+    versionMap: Map<String, String>,
+    descriptionMap: Map<String, String>
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(450.dp),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Choose Bible Version",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(Icons.Filled.Close, contentDescription = "Close")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalDivider()
+
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(versionMap.entries.toList()) { entry ->
+                    val file = entry.key
+                    val abbr = entry.value
+                    val desc = descriptionMap[file] ?: "Bible translation"
+                    val isActive = abbr == currentAbbr
+                    val backgroundColor by animateColorAsState(
+                        if (isActive) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                        animationSpec = tween(durationMillis = 200)
+                    )
+                    val textColor by animateColorAsState(
+                        if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                        animationSpec = tween(durationMillis = 200)
+                    )
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onVersionSelected(file, abbr) },
+                        colors = CardDefaults.cardColors(containerColor = backgroundColor)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = abbr,
+                                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+                                color = textColor
+                            )
+                            Text(
+                                text = desc,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier.padding(end = 8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.onSurface
+                    )
+                ) {
+                    Text("Cancel")
                 }
             }
         }
@@ -724,19 +853,15 @@ fun HomeAppBar(
 fun ReaderAppBar(
     currentScreen: Screen.Reader,
     currentVersionAbbr: String,
-    versionMap: Map<String, String>,
-    descriptionMap: Map<String, String>,
     modifier: Modifier = Modifier,
     onBibleIconClick: () -> Unit,
     onThemeToggle: () -> Unit,
     onColorLensClick: () -> Unit,
-    onVersionChange: (String, String) -> Unit,
     onScreenChange: (Screen) -> Unit,
     onBack: (() -> Unit)? = null
 ) {
     val viewModel: AppViewModel = viewModel()
     var showNavigationDropdown by remember { mutableStateOf(false) }
-    var showVersionDropdown by remember { mutableStateOf(false) }
     var showMultiDropdown by remember { mutableStateOf(false) }
     val rotation by animateFloatAsState(
         targetValue = if (showNavigationDropdown) 180f else 0f,
@@ -774,7 +899,7 @@ fun ReaderAppBar(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Button(
-                    onClick = { onBibleIconClick() },
+                    onClick = onBibleIconClick,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color.White
                     ),
@@ -806,78 +931,23 @@ fun ReaderAppBar(
                         )
                     }
                 }
-                Box {
-                    Button(
-                        onClick = { showVersionDropdown = true },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.White
-                        ),
-                        shape = RoundedCornerShape(4.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
-                        modifier = Modifier.height(36.dp)
-                    ) {
-                        Text(
-                            text = currentVersionAbbr,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = showVersionDropdown,
-                        onDismissRequest = { showVersionDropdown = false },
-                        modifier = Modifier.background(MaterialTheme.colorScheme.surface)
-                    ) {
-                        @Composable
-                        fun createVersionItem(
-                            file: String,
-                            abbr: String,
-                            description: String,
-                            isActive: Boolean
-                        ) {
-                            val backgroundColor by animateColorAsState(
-                                targetValue = if (isActive) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                                animationSpec = tween(durationMillis = 200),
-                                label = "dropdownBackground"
-                            )
-                            val textColor by animateColorAsState(
-                                targetValue = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                animationSpec = tween(durationMillis = 200),
-                                label = "dropdownTextColor"
-                            )
-                            DropdownMenuItem(
-                                text = {
-                                    Column {
-                                        Text(
-                                            text = abbr,
-                                            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-                                            color = textColor
-                                        )
-                                        Text(
-                                            text = description,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                        )
-                                    }
-                                },
-                                onClick = {
-                                    onVersionChange(file, abbr)
-                                    showVersionDropdown = false
-                                },
-                                modifier = Modifier.background(backgroundColor)
-                            )
-                        }
-
-                        versionMap.forEach { (file, abbr) ->
-                            val desc = descriptionMap[file] ?: "Bible translation"
-                            createVersionItem(
-                                file = file,
-                                abbr = abbr,
-                                description = desc,
-                                isActive = abbr == currentVersionAbbr
-                            )
-                        }
-                    }
+                Button(
+                    onClick = { viewModel.showPrimaryVersionDropdown = true },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(4.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                    modifier = Modifier
+                        .height(36.dp)
+                        .padding(end = if (viewModel.multiVersion) 8.dp else 0.dp)
+                ) {
+                    Text(
+                        text = currentVersionAbbr,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         },

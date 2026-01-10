@@ -3,8 +3,11 @@
 package com.example.fohbible.screens
 
 import android.graphics.Typeface
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,11 +18,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -35,7 +44,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
@@ -43,7 +54,6 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -262,13 +272,36 @@ fun ReaderScreen(
         else -> systemFont
     }
 
+    var isButtonVisible by remember { mutableStateOf(true) }
+    val buttonAlpha by animateFloatAsState(if (isButtonVisible) 1f else 0.2f, label = "buttonAlpha")
+    val scope = rememberCoroutineScope()
+
+    fun scheduleFade() {
+        scope.launch {
+            delay(3000)
+            isButtonVisible = false
+        }
+    }
+
+    LaunchedEffect(currentPassage) {
+        isButtonVisible = true
+        scheduleFade()
+    }
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
         HorizontalPager(
             state = pagerState,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectTapGestures {
+                        isButtonVisible = true
+                        scheduleFade()
+                    }
+                },
             key = { pageIndex ->
                 val passageKey = passages[pageIndex]
                 "${passageKey.bookNumber}-${passageKey.chapter}"
@@ -339,6 +372,7 @@ fun ReaderScreen(
                                     isCurrentPage = isCurrentPage,
                                     targetVerse = targetVerse,
                                     versionAbbr = viewModel.currentVersionAbbr,
+                                    isPrimary = true,
                                     state = primaryState,
                                     modifier = Modifier.weight(1f)
                                 )
@@ -363,6 +397,7 @@ fun ReaderScreen(
                                             isCurrentPage = isCurrentPage,
                                             targetVerse = targetVerse,
                                             versionAbbr = viewModel.secondaryVersionAbbr,
+                                            isPrimary = false,
                                             state = secondaryState!!,
                                             modifier = Modifier.fillMaxSize()
                                         )
@@ -382,6 +417,7 @@ fun ReaderScreen(
                                     isCurrentPage = isCurrentPage,
                                     targetVerse = targetVerse,
                                     versionAbbr = viewModel.currentVersionAbbr,
+                                    isPrimary = true,
                                     state = primaryState,
                                     modifier = Modifier.weight(1f)
                                 )
@@ -406,6 +442,7 @@ fun ReaderScreen(
                                             isCurrentPage = isCurrentPage,
                                             targetVerse = targetVerse,
                                             versionAbbr = viewModel.secondaryVersionAbbr,
+                                            isPrimary = false,
                                             state = secondaryState!!,
                                             modifier = Modifier.fillMaxSize()
                                         )
@@ -423,12 +460,32 @@ fun ReaderScreen(
                             isCurrentPage = isCurrentPage,
                             targetVerse = targetVerse,
                             versionAbbr = viewModel.currentVersionAbbr,
+                            isPrimary = true,
                             state = primaryState,
                             modifier = Modifier.fillMaxSize()
                         )
                     }
                 }
             }
+        }
+        FloatingActionButton(
+            onClick = {
+                viewModel.isReaderFullScreen = !viewModel.isReaderFullScreen
+                isButtonVisible = true
+                scheduleFade()
+            },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 8.dp)
+                .size(50.dp)
+                .alpha(buttonAlpha),
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = Color.White
+        ) {
+            Icon(
+                imageVector = if (viewModel.isReaderFullScreen) Icons.Filled.FullscreenExit else Icons.Filled.Fullscreen,
+                contentDescription = if (viewModel.isReaderFullScreen) "Exit Fullscreen" else "Enter Fullscreen"
+            )
         }
     }
 }
@@ -443,6 +500,7 @@ fun ChapterView(
     isCurrentPage: Boolean,
     targetVerse: Int?,
     versionAbbr: String,
+    isPrimary: Boolean,
     state: androidx.compose.foundation.ScrollState,
     modifier: Modifier = Modifier
 ) {
@@ -460,6 +518,7 @@ fun ChapterView(
         }
         result
     }
+
     var highlightedVerse by remember { mutableStateOf<Int?>(null) }
     val offsets = remember { mutableStateMapOf<Int, Float>() }
 
@@ -468,25 +527,49 @@ fun ChapterView(
             .verticalScroll(state)
             .padding(16.dp)
     ) {
-        // Display chapter header
-        Text(
-            text = "${passage.bookName} ${passage.chapter} $versionAbbr",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
+        // Display chapter header as clickable buttons
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
                 .background(themeColors.tagBg)
-                .padding(vertical = 14.dp),
-            textAlign = TextAlign.Center,
-            fontFamily = currentFontFamily
-        )
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "${passage.bookName} ${passage.chapter}",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .clickable { viewModel.showNavigationModal = true }
+                    .padding(end = 8.dp),
+                fontFamily = currentFontFamily
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = versionAbbr,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .clickable {
+                        if (isPrimary) {
+                            viewModel.showPrimaryVersionDropdown = true
+                        } else {
+                            viewModel.showSecondaryVersionDropdown = true
+                        }
+                    },
+                fontFamily = currentFontFamily
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Display verses with processed text
         verses.forEach { verse ->
             val processedVerse = processedVerses[verse.verseNumber]
             val isHighlighted = verse.verseNumber == highlightedVerse
+
             if (processedVerse != null) {
                 // Display the processed verse with header and body
                 Column(
@@ -511,6 +594,7 @@ fun ChapterView(
                             )
                         }
                     }
+
                     // Display verse number and body
                     Row(
                         modifier = Modifier.fillMaxWidth(),
