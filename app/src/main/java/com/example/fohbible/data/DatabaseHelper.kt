@@ -4,7 +4,6 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
-import com.example.fohbible.MainActivity
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Random

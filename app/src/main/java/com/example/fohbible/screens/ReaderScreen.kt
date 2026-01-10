@@ -2,10 +2,10 @@
 
 package com.example.fohbible.screens
 
-import android.annotation.SuppressLint
 import android.graphics.Typeface
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,6 +32,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -61,8 +62,9 @@ import com.example.fohbible.utils.ThemeColors
 import com.example.fohbible.utils.VerseTextProcessor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
-@SuppressLint("FrequentlyChangingValue")
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ReaderScreen(
@@ -146,8 +148,8 @@ fun ReaderScreen(
     var secondaryDatabaseHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     LaunchedEffect(viewModel.multiVersion, viewModel.secondaryDbName) {
         secondaryDatabaseHelper?.close()
-        secondaryDatabaseHelper = if (viewModel.multiVersion && viewModel.secondaryDbName != null && viewModel.secondaryDbName!!.isNotEmpty()) {
-            DatabaseHelper(context as MainActivity, viewModel.secondaryDbName!!)
+        secondaryDatabaseHelper = if (viewModel.multiVersion && viewModel.secondaryDbName.isNotEmpty()) {
+            DatabaseHelper(context as MainActivity, viewModel.secondaryDbName)
         } else {
             null
         }
@@ -298,35 +300,32 @@ fun ReaderScreen(
                     val secondaryState = if (effectiveMultiVersion) rememberScrollState() else null
 
                     if (effectiveMultiVersion) {
+                        // Sync logic using snapshotFlow
                         if (viewModel.scrollSync && secondaryState != null) {
-                            val ignorePrimaryChange = remember { mutableStateOf(false) }
-                            val ignoreSecondaryChange = remember { mutableStateOf(false) }
-
-                            LaunchedEffect(primaryState.value) {
-                                if (ignorePrimaryChange.value) {
-                                    ignorePrimaryChange.value = false
-                                    return@LaunchedEffect
-                                }
-                                val pMax = primaryState.maxValue.toFloat()
-                                val sMax = secondaryState.maxValue.toFloat()
-                                if (pMax > 0f && sMax > 0f) {
-                                    ignoreSecondaryChange.value = true
-                                    val target = (primaryState.value / pMax * sMax).toInt()
-                                    secondaryState.animateScrollTo(target)
+                            LaunchedEffect(primaryState) {
+                                snapshotFlow { primaryState.value }.collect { _ ->
+                                    val pMax = primaryState.maxValue.coerceAtLeast(1)
+                                    val sMax = secondaryState.maxValue.coerceAtLeast(1)
+                                    val fraction = primaryState.value.toFloat() / pMax
+                                    val targetS = (fraction * sMax).roundToInt()
+                                    val currentS = secondaryState.value
+                                    val deltaS = targetS - currentS
+                                    if (abs(deltaS) > 5) { // Epsilon to avoid loops and minor discrepancies
+                                        secondaryState.scrollBy(deltaS.toFloat())
+                                    }
                                 }
                             }
-
-                            LaunchedEffect(secondaryState.value) {
-                                if (ignoreSecondaryChange.value) {
-                                    ignoreSecondaryChange.value = false
-                                    return@LaunchedEffect
-                                }
-                                val pMax = primaryState.maxValue.toFloat()
-                                val sMax = secondaryState.maxValue.toFloat()
-                                if (pMax > 0f && sMax > 0f) {
-                                    ignorePrimaryChange.value = true
-                                    val target = (secondaryState.value / sMax * pMax).toInt()
-                                    primaryState.animateScrollTo(target)
+                            LaunchedEffect(secondaryState) {
+                                snapshotFlow { secondaryState.value }.collect { _ ->
+                                    val pMax = primaryState.maxValue.coerceAtLeast(1)
+                                    val sMax = secondaryState.maxValue.coerceAtLeast(1)
+                                    val fraction = secondaryState.value.toFloat() / sMax
+                                    val targetP = (fraction * pMax).roundToInt()
+                                    val currentP = primaryState.value
+                                    val deltaP = targetP - currentP
+                                    if (abs(deltaP) > 5) { // Epsilon to avoid loops and minor discrepancies
+                                        primaryState.scrollBy(deltaP.toFloat())
+                                    }
                                 }
                             }
                         }
@@ -492,6 +491,7 @@ fun ChapterView(
         verses.forEach { verse ->
             val processedVerse = processedVerses[verse.verseNumber]
             val isHighlighted = verse.verseNumber == highlightedVerse
+
             if (processedVerse != null) {
                 // Display the processed verse with header and body
                 Column(
@@ -516,6 +516,7 @@ fun ChapterView(
                             )
                         }
                     }
+
                     // Display verse number and body
                     Row(
                         modifier = Modifier.fillMaxWidth(),

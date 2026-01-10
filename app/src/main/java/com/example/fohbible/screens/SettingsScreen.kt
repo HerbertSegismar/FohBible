@@ -380,8 +380,8 @@ fun SettingsScreen() {
                             viewModel.currentDbName = "kj2.sqlite3"
                             viewModel.currentVersionAbbr = BibleVersionUtils.versionMap["kj2.sqlite3"] ?: "KJ2"
                             viewModel.multiVersion = false
-                            viewModel.secondaryDbName = ""
-                            viewModel.secondaryVersionAbbr = ""
+                            viewModel.secondaryDbName = "nkjv.sqlite3"
+                            viewModel.secondaryVersionAbbr = BibleVersionUtils.versionMap["kj2.sqlite3"] ?: "KJ2"
                             viewModel.multiViewLayout = "horizontal"
                             viewModel.scrollSync = true
                             customTextureUri = null
