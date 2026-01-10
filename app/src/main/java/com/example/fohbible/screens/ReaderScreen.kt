@@ -2,7 +2,10 @@
 
 package com.example.fohbible.screens
 
+import android.annotation.SuppressLint
+import android.graphics.Typeface
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,11 +15,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -30,13 +32,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
@@ -56,13 +60,9 @@ import com.example.fohbible.utils.ProcessedVerse
 import com.example.fohbible.utils.ThemeColors
 import com.example.fohbible.utils.VerseTextProcessor
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
-import android.graphics.Typeface
-import androidx.compose.foundation.background
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.ui.text.font.FontFamily
 
+@SuppressLint("FrequentlyChangingValue")
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ReaderScreen(
@@ -104,10 +104,14 @@ fun ReaderScreen(
 
     // Calculate previous and next passages
     val prevPassage by remember(currentPassage, currentBook) {
-        derivedStateOf { if (currentBook == null) currentPassage else getPreviousPassage(currentPassage, currentBook) }
+        derivedStateOf {
+            if (currentBook == null) currentPassage else getPreviousPassage(currentPassage, currentBook)
+        }
     }
     val nextPassage by remember(currentPassage, currentBook) {
-        derivedStateOf { if (currentBook == null) currentPassage else getNextPassage(currentPassage, currentBook) }
+        derivedStateOf {
+            if (currentBook == null) currentPassage else getNextPassage(currentPassage, currentBook)
+        }
     }
     val hasPrev by remember(prevPassage) { derivedStateOf { prevPassage != currentPassage } }
     val hasNext by remember(nextPassage) { derivedStateOf { nextPassage != currentPassage } }
@@ -133,7 +137,9 @@ fun ReaderScreen(
     val secondaryLoadedVerses = remember { mutableStateMapOf<Pair<Int, Int>, List<Verse>>() }
 
     // Clear loaded verses when databaseHelper changes
-    LaunchedEffect(databaseHelper) { primaryLoadedVerses.clear() }
+    LaunchedEffect(databaseHelper) {
+        primaryLoadedVerses.clear()
+    }
 
     // Secondary database helper
     val context = LocalContext.current
@@ -146,7 +152,9 @@ fun ReaderScreen(
             null
         }
     }
-    LaunchedEffect(secondaryDatabaseHelper) { secondaryLoadedVerses.clear() }
+    LaunchedEffect(secondaryDatabaseHelper) {
+        secondaryLoadedVerses.clear()
+    }
 
     // Load verses for current, previous, and next passages for primary and secondary if multi-version
     LaunchedEffect(currentPassage, hasPrev, hasNext, databaseHelper, secondaryDatabaseHelper, viewModel.multiVersion) {
@@ -286,62 +294,47 @@ fun ReaderScreen(
                         Text("Loading verses...")
                     }
                 } else {
-                    val primaryState = rememberLazyListState()
-                    val secondaryState = if (effectiveMultiVersion) rememberLazyListState() else null
-
-                    var syncing by remember { mutableStateOf(false) }
-
-                    if (viewModel.scrollSync && effectiveMultiVersion && secondaryState != null) {
-                        LaunchedEffect(primaryState) {
-                            snapshotFlow { primaryState.firstVisibleItemIndex to primaryState.firstVisibleItemScrollOffset }
-                                .distinctUntilChanged()
-                                .collect { (index, offset) ->
-                                    if (!syncing) {
-                                        syncing = true
-                                        val verseNumber = if (index > 0 && index - 1 < primaryVerses.size) {
-                                            primaryVerses[index - 1].verseNumber
-                                        } else if (index == 0) {
-                                            if (primaryVerses.isNotEmpty()) primaryVerses[0].verseNumber else 1
-                                        } else {
-                                            return@collect
-                                        }
-                                        val secondaryVerseIndex = secondaryVerses.indexOfFirst { it.verseNumber == verseNumber }
-                                        if (secondaryVerseIndex >= 0) {
-                                            val secondaryItemIndex = secondaryVerseIndex + 1
-                                            secondaryState.animateScrollToItem(secondaryItemIndex, offset)
-                                        }
-                                        syncing = false
-                                    }
-                                }
-                        }
-
-                        LaunchedEffect(secondaryState) {
-                            snapshotFlow { secondaryState.firstVisibleItemIndex to secondaryState.firstVisibleItemScrollOffset }
-                                .distinctUntilChanged()
-                                .collect { (index, offset) ->
-                                    if (!syncing) {
-                                        syncing = true
-                                        val verseNumber = if (index > 0 && index - 1 < secondaryVerses.size) {
-                                            secondaryVerses[index - 1].verseNumber
-                                        } else if (index == 0) {
-                                            if (secondaryVerses.isNotEmpty()) secondaryVerses[0].verseNumber else 1
-                                        } else {
-                                            return@collect
-                                        }
-                                        val primaryVerseIndex = primaryVerses.indexOfFirst { it.verseNumber == verseNumber }
-                                        if (primaryVerseIndex >= 0) {
-                                            val primaryItemIndex = primaryVerseIndex + 1
-                                            primaryState.animateScrollToItem(primaryItemIndex, offset)
-                                        }
-                                        syncing = false
-                                    }
-                                }
-                        }
-                    }
+                    val primaryState = rememberScrollState()
+                    val secondaryState = if (effectiveMultiVersion) rememberScrollState() else null
 
                     if (effectiveMultiVersion) {
+                        if (viewModel.scrollSync && secondaryState != null) {
+                            val ignorePrimaryChange = remember { mutableStateOf(false) }
+                            val ignoreSecondaryChange = remember { mutableStateOf(false) }
+
+                            LaunchedEffect(primaryState.value) {
+                                if (ignorePrimaryChange.value) {
+                                    ignorePrimaryChange.value = false
+                                    return@LaunchedEffect
+                                }
+                                val pMax = primaryState.maxValue.toFloat()
+                                val sMax = secondaryState.maxValue.toFloat()
+                                if (pMax > 0f && sMax > 0f) {
+                                    ignoreSecondaryChange.value = true
+                                    val target = (primaryState.value / pMax * sMax).toInt()
+                                    secondaryState.animateScrollTo(target)
+                                }
+                            }
+
+                            LaunchedEffect(secondaryState.value) {
+                                if (ignoreSecondaryChange.value) {
+                                    ignoreSecondaryChange.value = false
+                                    return@LaunchedEffect
+                                }
+                                val pMax = primaryState.maxValue.toFloat()
+                                val sMax = secondaryState.maxValue.toFloat()
+                                if (pMax > 0f && sMax > 0f) {
+                                    ignorePrimaryChange.value = true
+                                    val target = (secondaryState.value / sMax * pMax).toInt()
+                                    primaryState.animateScrollTo(target)
+                                }
+                            }
+                        }
+
                         if (viewModel.multiViewLayout == "horizontal") {
-                            Row(modifier = Modifier.fillMaxSize()) {
+                            Row(
+                                modifier = Modifier.fillMaxSize()
+                            ) {
                                 ChapterView(
                                     passage = thisPassage,
                                     verses = primaryVerses,
@@ -382,7 +375,9 @@ fun ReaderScreen(
                                 }
                             }
                         } else {
-                            Column(modifier = Modifier.fillMaxSize()) {
+                            Column(
+                                modifier = Modifier.fillMaxSize()
+                            ) {
                                 ChapterView(
                                     passage = thisPassage,
                                     verses = primaryVerses,
@@ -453,7 +448,7 @@ fun ChapterView(
     isCurrentPage: Boolean,
     targetVerse: Int?,
     versionAbbr: String,
-    state: LazyListState,
+    state: androidx.compose.foundation.ScrollState,
     modifier: Modifier = Modifier
 ) {
     val processor = remember(verses) { VerseTextProcessor() }
@@ -471,28 +466,30 @@ fun ChapterView(
         result
     }
     var highlightedVerse by remember { mutableStateOf<Int?>(null) }
+    val offsets = remember { mutableStateMapOf<Int, Float>() }
 
-    LazyColumn(
+    Column(
         modifier = modifier
-            .padding(16.dp),
-        state = state
+            .verticalScroll(state)
+            .padding(16.dp)
     ) {
-        item {
-            // Display chapter header
-            Text(
-                text = "${passage.bookName} ${passage.chapter} ($versionAbbr)",
-                style = MaterialTheme.typography.titleLarge.copy(fontSize = (viewModel.fontSize + 4f).sp),
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                textAlign = TextAlign.Center,
-                fontFamily = currentFontFamily
-            )
-        }
+        // Display chapter header
+        Text(
+            text = "${passage.bookName} ${passage.chapter} $versionAbbr",
+            style = MaterialTheme.typography.titleLarge.copy(fontSize = (viewModel.fontSize).sp),
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+                .background(themeColors.tagBg)
+                .padding(vertical = 14.dp),
+            textAlign = TextAlign.Center,
+            fontFamily = currentFontFamily
+        )
+
         // Display verses with processed text
-        items(verses) { verse ->
+        verses.forEach { verse ->
             val processedVerse = processedVerses[verse.verseNumber]
             val isHighlighted = verse.verseNumber == highlightedVerse
             if (processedVerse != null) {
@@ -502,6 +499,9 @@ fun ChapterView(
                         .fillMaxWidth()
                         .padding(vertical = 8.dp)
                         .then(if (isHighlighted) Modifier.background(themeColors.searchHighlightBg) else Modifier)
+                        .onGloballyPositioned { coords ->
+                            offsets[verse.verseNumber] = coords.positionInParent().y
+                        }
                 ) {
                     // Display header if exists
                     processedVerse.header?.let { header ->
@@ -547,7 +547,10 @@ fun ChapterView(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp)
-                        .then(if (isHighlighted) Modifier.background(themeColors.searchHighlightBg) else Modifier),
+                        .then(if (isHighlighted) Modifier.background(themeColors.searchHighlightBg) else Modifier)
+                        .onGloballyPositioned { coords ->
+                            offsets[verse.verseNumber] = coords.positionInParent().y
+                        },
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
@@ -571,11 +574,11 @@ fun ChapterView(
 
     if (isCurrentPage) {
         LaunchedEffect(targetVerse, verses) {
-            targetVerse?.let { it1 ->
-                if (verses.isNotEmpty() && it1 > 0) {
-                    val verseIndex = verses.indexOfFirst { it.verseNumber == targetVerse }.takeIf { it >= 0 } ?: 0
-                    val itemIndex = verseIndex + 1 // +1 for header
-                    state.animateScrollToItem(itemIndex)
+            targetVerse?.let { v ->
+                if (verses.isNotEmpty() && v > 0) {
+                    delay(200) // Wait for layout
+                    val offset = offsets[v] ?: return@let
+                    state.animateScrollTo(offset.toInt())
                     highlightedVerse = targetVerse
                     delay(2000)
                     highlightedVerse = null
