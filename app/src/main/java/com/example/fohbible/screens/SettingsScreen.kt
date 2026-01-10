@@ -142,7 +142,6 @@ fun SettingsScreen() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-
         item {
             SettingsSection(title = "Bible Version", subtitle = "Choose your preferred translation") {
                 BibleVersionSelector(
@@ -161,7 +160,6 @@ fun SettingsScreen() {
                         showVersionInfoDialog = true
                     }
                 )
-
                 SettingsItem(
                     title = "Multi-Version Display",
                     subtitle = "Show two Bible versions side by side"
@@ -175,7 +173,6 @@ fun SettingsScreen() {
                         )
                     )
                 }
-
                 if (viewModel.multiVersion) {
                     Spacer(modifier = Modifier.height(8.dp))
                     BibleVersionSelector(
@@ -201,7 +198,6 @@ fun SettingsScreen() {
                             showVersionInfoDialog = true
                         }
                     )
-
                     Spacer(modifier = Modifier.height(8.dp))
                     SettingsItem(
                         title = "Multi-View Layout",
@@ -224,7 +220,6 @@ fun SettingsScreen() {
                             )
                         }
                     }
-
                     SettingsItem(
                         title = "Scroll Sync",
                         subtitle = "Synchronize scrolling between versions"
@@ -241,7 +236,6 @@ fun SettingsScreen() {
                 }
             }
         }
-
         item {
             SettingsSection(title = "Reader Settings", subtitle = "Customize reading experience") {
                 SettingsItem(title = "Dark Mode", subtitle = "Toggle between light and dark themes") {
@@ -254,7 +248,6 @@ fun SettingsScreen() {
                         )
                     )
                 }
-
                 Column {
                     Text("Color Scheme", style = MaterialTheme.typography.labelLarge)
                     Spacer(Modifier.height(8.dp))
@@ -281,7 +274,6 @@ fun SettingsScreen() {
                         }
                     }
                 }
-
                 Column {
                     Text("Font Family", style = MaterialTheme.typography.labelLarge)
                     Spacer(Modifier.height(8.dp))
@@ -295,7 +287,6 @@ fun SettingsScreen() {
                         }
                     }
                 }
-
                 SettingsItem(
                     title = "Font Size",
                     subtitle = "Adjust text size for better readability",
@@ -320,7 +311,6 @@ fun SettingsScreen() {
                         }
                     }
                 }
-
                 SettingsItem(
                     title = "Custom Background",
                     subtitle = "Add your own photo as background"
@@ -332,7 +322,6 @@ fun SettingsScreen() {
                         Icon(Icons.Default.AddCircleOutline, contentDescription = "Add custom background")
                     }
                 }
-
                 SettingsItem(
                     title = "Background Texture",
                     subtitle = "Choose from built-in textures",
@@ -342,7 +331,6 @@ fun SettingsScreen() {
                 }
             }
         }
-
         item {
             SettingsSection(title = "More Options", subtitle = "Additional preferences") {
                 SettingsItem(
@@ -362,7 +350,6 @@ fun SettingsScreen() {
                 }
             }
         }
-
         item {
             SettingsSection(title = "Quick Actions", subtitle = "Common tasks") {
                 Row(
@@ -488,7 +475,6 @@ fun BibleVersionSelector(
             fontWeight = FontWeight.Medium,
             modifier = Modifier.padding(bottom = 4.dp)
         )
-
         ExposedDropdownMenuBox(
             expanded = expanded,
             onExpandedChange = { expanded = !expanded }
@@ -548,7 +534,6 @@ fun BibleVersionSelector(
                     )
                 }
             }
-
             ExposedDropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
@@ -636,7 +621,9 @@ fun VersionInfoDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
         }
     )
 }
@@ -800,7 +787,9 @@ fun BgModal(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel")
+                    }
                 }
             }
         }
@@ -847,10 +836,14 @@ fun FontModal(
             TextButton(
                 onClick = onConfirm,
                 enabled = tempSize.toIntOrNull()?.let { it in MIN_FONT_SIZE..MAX_FONT_SIZE } ?: false
-            ) { Text("Apply") }
+            ) {
+                Text("Apply")
+            }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
         }
     )
 }

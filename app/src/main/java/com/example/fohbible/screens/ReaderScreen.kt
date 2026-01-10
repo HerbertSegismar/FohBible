@@ -79,7 +79,7 @@ fun ReaderScreen(
         primary = MaterialTheme.colorScheme.primary,
         tagColor = MaterialTheme.colorScheme.secondary,
         tagBg = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f),
-        wordsOfJesus = Color(0xFFCB531D),
+        wordsOfJesus = Color(0xFFDA4227),
         searchHighlightBg = if (viewModel.darkTheme) Color(0xFF81D4FA).copy(alpha = 0.3f) else Color.Yellow.copy(alpha = 0.3f),
         highlightIcon = MaterialTheme.colorScheme.primary
     )
@@ -139,9 +139,7 @@ fun ReaderScreen(
     val secondaryLoadedVerses = remember { mutableStateMapOf<Pair<Int, Int>, List<Verse>>() }
 
     // Clear loaded verses when databaseHelper changes
-    LaunchedEffect(databaseHelper) {
-        primaryLoadedVerses.clear()
-    }
+    LaunchedEffect(databaseHelper) { primaryLoadedVerses.clear() }
 
     // Secondary database helper
     val context = LocalContext.current
@@ -154,9 +152,7 @@ fun ReaderScreen(
             null
         }
     }
-    LaunchedEffect(secondaryDatabaseHelper) {
-        secondaryLoadedVerses.clear()
-    }
+    LaunchedEffect(secondaryDatabaseHelper) { secondaryLoadedVerses.clear() }
 
     // Load verses for current, previous, and next passages for primary and secondary if multi-version
     LaunchedEffect(currentPassage, hasPrev, hasNext, databaseHelper, secondaryDatabaseHelper, viewModel.multiVersion) {
@@ -475,7 +471,7 @@ fun ChapterView(
         // Display chapter header
         Text(
             text = "${passage.bookName} ${passage.chapter} $versionAbbr",
-            style = MaterialTheme.typography.titleLarge.copy(fontSize = (viewModel.fontSize).sp),
+            style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier
@@ -491,7 +487,6 @@ fun ChapterView(
         verses.forEach { verse ->
             val processedVerse = processedVerses[verse.verseNumber]
             val isHighlighted = verse.verseNumber == highlightedVerse
-
             if (processedVerse != null) {
                 // Display the processed verse with header and body
                 Column(
@@ -516,7 +511,6 @@ fun ChapterView(
                             )
                         }
                     }
-
                     // Display verse number and body
                     Row(
                         modifier = Modifier.fillMaxWidth(),

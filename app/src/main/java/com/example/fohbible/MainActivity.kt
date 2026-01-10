@@ -1,4 +1,4 @@
-@file:Suppress("VariableNeverRead")
+@file:Suppress("VariableNeverRead", "AssignedValueIsNeverRead")
 
 package com.example.fohbible
 
@@ -34,8 +34,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesomeMosaic
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Brightness2
 import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ColorLens
@@ -64,6 +66,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -82,8 +85,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.PassageSelection
 import com.example.fohbible.screens.BookmarksScreen
@@ -174,12 +177,16 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     )
 
     var dbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
+
     LaunchedEffect(viewModel.currentDbName) {
         dbHelper?.close()
         dbHelper = DatabaseHelper(activity, viewModel.currentDbName)
     }
+
     DisposableEffect(Unit) {
-        onDispose { dbHelper?.close() }
+        onDispose {
+            dbHelper?.close()
+        }
     }
 
     CompositionLocalProvider(LocalAppTheme provides themeState) {
@@ -265,6 +272,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                     BackHandler(enabled = viewModel.navigationStack.size > 1) {
                         viewModel.goBack()
                     }
+
                     when (currentScreen) {
                         Screen.Home -> {
                             HomeScreen(
@@ -377,8 +385,10 @@ fun UpdatedColorThemeDialog(
                     Icon(Icons.Filled.Close, contentDescription = "Close")
                 }
             }
+
             Spacer(modifier = Modifier.height(8.dp))
             HorizontalDivider()
+
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -433,7 +443,13 @@ fun UpdatedColorThemeDialog(
                                     .background(
                                         Brush.sweepGradient(
                                             colors = listOf(
-                                                Color.Red, Color.Yellow, Color.Green, Color.Cyan, Color.Blue, Color.Magenta, Color.Red
+                                                Color.Red,
+                                                Color.Yellow,
+                                                Color.Green,
+                                                Color.Cyan,
+                                                Color.Blue,
+                                                Color.Magenta,
+                                                Color.Red
                                             )
                                         )
                                     )
@@ -456,7 +472,9 @@ fun UpdatedColorThemeDialog(
                     }
                 }
             }
+
             Spacer(modifier = Modifier.height(16.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
@@ -468,7 +486,9 @@ fun UpdatedColorThemeDialog(
                         containerColor = MaterialTheme.colorScheme.surface,
                         contentColor = MaterialTheme.colorScheme.onSurface
                     )
-                ) { Text("Cancel") }
+                ) {
+                    Text("Cancel")
+                }
             }
         }
     }
@@ -539,11 +559,37 @@ fun HomeAppBar(
     onBack: (() -> Unit)? = null
 ) {
     var showNavigationDropdown by remember { mutableStateOf(false) }
+    val viewModel: AppViewModel = viewModel()
     val rotation by animateFloatAsState(
         targetValue = if (showNavigationDropdown) 180f else 0f,
         animationSpec = tween(durationMillis = 300),
         label = "menuIconRotation"
     )
+    var bibleTargetRotation by remember { mutableFloatStateOf(0f) }
+    val bibleAnimatedRotation by animateFloatAsState(
+        targetValue = bibleTargetRotation,
+        animationSpec = tween(durationMillis = 300),
+        label = "bibleRotation"
+    )
+    var themeTargetRotation by remember { mutableFloatStateOf(0f) }
+    val themeAnimatedRotation by animateFloatAsState(
+        targetValue = themeTargetRotation,
+        animationSpec = tween(durationMillis = 300),
+        label = "themeRotation"
+    )
+    var colorTargetRotation by remember { mutableFloatStateOf(0f) }
+    val colorAnimatedRotation by animateFloatAsState(
+        targetValue = colorTargetRotation,
+        animationSpec = tween(durationMillis = 300),
+        label = "colorRotation"
+    )
+    var backTargetRotation by remember { mutableFloatStateOf(0f) }
+    val backAnimatedRotation by animateFloatAsState(
+        targetValue = backTargetRotation,
+        animationSpec = tween(durationMillis = 300),
+        label = "backRotation"
+    )
+
     val screenTitle = when (currentScreen) {
         is Screen.Home -> "Home"
         is Screen.Reader -> "Reader"
@@ -570,20 +616,31 @@ fun HomeAppBar(
         modifier = modifier,
         navigationIcon = {
             if (onBack != null) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                IconButton(onClick = {
+                    onBack()
+                }) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.rotate(backAnimatedRotation))
                 }
             }
         },
         actions = {
-            IconButton(onClick = onBibleIconClick) {
-                Icon(Icons.Filled.Book, contentDescription = "Bible Navigation", tint = Color.White)
+            IconButton(onClick = {
+                bibleTargetRotation += 360f
+                onBibleIconClick()
+            }) {
+                Icon(Icons.Filled.Book, contentDescription = "Bible Navigation", tint = Color.White, modifier = Modifier.rotate(bibleAnimatedRotation))
             }
-            IconButton(onClick = onThemeToggle) {
-                Icon(Icons.Filled.Brightness6, contentDescription = "Toggle Theme", tint = Color.White)
+            IconButton(onClick = {
+                themeTargetRotation += 180f
+                onThemeToggle()
+            }) {
+                Icon(if (viewModel.darkTheme) Icons.Filled.Brightness6 else Icons.Filled.Brightness2, contentDescription = "Toggle Theme", tint = Color.White, modifier = Modifier.rotate(themeAnimatedRotation))
             }
-            IconButton(onClick = onColorLensClick) {
-                Icon(Icons.Filled.ColorLens, contentDescription = "Color Scheme", tint = Color.White)
+            IconButton(onClick = {
+                colorTargetRotation += 180f
+                onColorLensClick()
+            }) {
+                Icon(Icons.Filled.ColorLens, contentDescription = "Color Scheme", tint = Color.White, modifier = Modifier.rotate(colorAnimatedRotation))
             }
             IconButton(
                 onClick = { showNavigationDropdown = !showNavigationDropdown },
@@ -677,12 +734,37 @@ fun ReaderAppBar(
     onScreenChange: (Screen) -> Unit,
     onBack: (() -> Unit)? = null
 ) {
+    val viewModel: AppViewModel = viewModel()
     var showNavigationDropdown by remember { mutableStateOf(false) }
     var showVersionDropdown by remember { mutableStateOf(false) }
+    var showMultiDropdown by remember { mutableStateOf(false) }
     val rotation by animateFloatAsState(
         targetValue = if (showNavigationDropdown) 180f else 0f,
         animationSpec = tween(durationMillis = 300),
         label = "menuIconRotation"
+    )
+    val multiRotation by animateFloatAsState(
+        targetValue = if (showMultiDropdown) 180f else 0f,
+        animationSpec = tween(durationMillis = 300),
+        label = "multiIconRotation"
+    )
+    var themeTargetRotation by remember { mutableFloatStateOf(0f) }
+    val themeAnimatedRotation by animateFloatAsState(
+        targetValue = themeTargetRotation,
+        animationSpec = tween(durationMillis = 300),
+        label = "themeRotation"
+    )
+    var colorTargetRotation by remember { mutableFloatStateOf(0f) }
+    val colorAnimatedRotation by animateFloatAsState(
+        targetValue = colorTargetRotation,
+        animationSpec = tween(durationMillis = 300),
+        label = "colorRotation"
+    )
+    var backTargetRotation by remember { mutableFloatStateOf(0f) }
+    val backAnimatedRotation by animateFloatAsState(
+        targetValue = backTargetRotation,
+        animationSpec = tween(durationMillis = 300),
+        label = "backRotation"
     )
 
     TopAppBar(
@@ -805,21 +887,104 @@ fun ReaderAppBar(
         modifier = modifier,
         navigationIcon = {
             if (onBack != null) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                IconButton(
+                    onClick = {
+                        onBack()
+                    },
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.rotate(backAnimatedRotation))
                 }
             }
         },
         actions = {
-            IconButton(onClick = onThemeToggle) {
-                Icon(Icons.Filled.Brightness6, contentDescription = "Toggle Theme", tint = Color.White)
+            IconButton(
+                onClick = {
+                    themeTargetRotation += 180f
+                    onThemeToggle()
+                },
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(if (viewModel.darkTheme) Icons.Filled.Brightness6 else Icons.Filled.Brightness2, contentDescription = "Toggle Theme", tint = Color.White, modifier = Modifier.rotate(themeAnimatedRotation))
             }
-            IconButton(onClick = onColorLensClick) {
-                Icon(Icons.Filled.ColorLens, contentDescription = "Color Scheme", tint = Color.White)
+            IconButton(
+                onClick = {
+                    colorTargetRotation += 180f
+                    onColorLensClick()
+                },
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(Icons.Filled.ColorLens, contentDescription = "Color Scheme", tint = Color.White, modifier = Modifier.rotate(colorAnimatedRotation))
+            }
+            IconButton(
+                onClick = { showMultiDropdown = !showMultiDropdown },
+                modifier = Modifier
+                    .size(40.dp)
+                    .rotate(multiRotation)
+            ) {
+                Crossfade(
+                    targetState = showMultiDropdown,
+                    animationSpec = tween(durationMillis = 300),
+                    label = "multiIconCrossfade"
+                ) { isOpen ->
+                    Icon(
+                        imageVector = if (isOpen) Icons.Filled.Close else Icons.Filled.AutoAwesomeMosaic,
+                        contentDescription = if (isOpen) "Close MultiView" else "MultiView",
+                        tint = Color.White
+                    )
+                }
+            }
+            DropdownMenu(
+                expanded = showMultiDropdown,
+                onDismissRequest = { showMultiDropdown = false },
+                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+            ) {
+                val current = if (!viewModel.multiVersion) "single" else viewModel.multiViewLayout
+
+                @Composable
+                fun createItem(title: String, onClick: () -> Unit) {
+                    val isActive = title.lowercase() == current
+                    val backgroundColor by animateColorAsState(
+                        if (isActive) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                        animationSpec = tween(durationMillis = 200)
+                    )
+                    val textColor by animateColorAsState(
+                        if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                        animationSpec = tween(durationMillis = 200)
+                    )
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                title,
+                                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+                                color = textColor
+                            )
+                        },
+                        onClick = {
+                            onClick()
+                            showMultiDropdown = false
+                        },
+                        modifier = Modifier.background(backgroundColor)
+                    )
+                }
+
+                createItem("Single") {
+                    viewModel.multiVersion = false
+                }
+                createItem("Horizontal") {
+                    viewModel.multiVersion = true
+                    viewModel.multiViewLayout = "horizontal"
+                }
+                createItem("Vertical") {
+                    viewModel.multiVersion = true
+                    viewModel.multiViewLayout = "vertical"
+                }
             }
             IconButton(
                 onClick = { showNavigationDropdown = !showNavigationDropdown },
-                modifier = Modifier.rotate(rotation)
+                modifier = Modifier
+                    .size(40.dp)
+                    .rotate(rotation)
             ) {
                 Crossfade(
                     targetState = showNavigationDropdown,

@@ -77,6 +77,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import androidx.core.graphics.toColorInt
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.fohbible.AppViewModel
 import com.example.fohbible.data.scopeColors
 
 fun getScopeForBookNumber(bookNumber: Int): String? {
@@ -589,14 +591,15 @@ fun SearchResultItem(
     val bookColor = Color(bookColorStr.toColorInt())
 
     val processor = VerseTextProcessor()
+    val viewModel = viewModel<AppViewModel>()
     val themeColors = ThemeColors(
         textColor = colors["text"] as Color,
         verseNumber = bookColor,
         primary = colors["primary"] as Color,
         tagColor = colors["muted"] as Color,
         tagBg = colors["card"] as Color,
-        wordsOfJesus = Color.Red,
-        searchHighlightBg = Color.Yellow,
+        wordsOfJesus = Color(0xFFDA4227),
+        searchHighlightBg = if (viewModel.darkTheme) Color(0xFF81D4FA).copy(alpha = 0.3f) else Color.Yellow.copy(alpha = 0.3f),
         highlightIcon = colors["primary"] as Color
     )
     val processed = processor.processVerse(
