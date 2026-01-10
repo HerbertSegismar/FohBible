@@ -107,6 +107,9 @@ import com.example.fohbible.utils.BibleVersionUtils
 import com.example.fohbible.utils.BibleVersionUtils.descriptionMap
 
 class AppViewModel : ViewModel() {
+    var showSecondaryNavigationModal by mutableStateOf(false)
+    var lastNavigationWasPrimary by mutableStateOf(true)
+    var currentNavigationPassage by mutableStateOf<PassageSelection?>(null)
     var fontSize by mutableIntStateOf(18)
     var darkTheme by mutableStateOf(false)
     var selectedColor by mutableStateOf<Color?>(null)
@@ -1076,7 +1079,7 @@ fun ReaderAppBar(
                     modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
-                        if (viewModel.scrollSync) Icons.Filled.Link else Icons.Filled.LinkOff,
+                        if (viewModel.scrollSync) Icons.Filled.LinkOff else Icons.Filled.Link,
                         contentDescription = "Toggle Scroll Sync",
                         tint = Color.White,
                         modifier = Modifier.rotate(syncAnimatedRotation)
