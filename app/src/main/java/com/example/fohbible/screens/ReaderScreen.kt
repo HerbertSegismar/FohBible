@@ -528,40 +528,43 @@ fun ChapterView(
             .padding(16.dp)
     ) {
         // Display chapter header as clickable buttons
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(themeColors.tagBg)
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "${passage.bookName} ${passage.chapter}",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
+        if (viewModel.multiVersion){
+            Row(
                 modifier = Modifier
-                    .clickable { viewModel.showNavigationModal = true }
-                    .padding(end = 8.dp),
-                fontFamily = currentFontFamily
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text = versionAbbr,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .clickable {
-                        if (isPrimary) {
-                            viewModel.showPrimaryVersionDropdown = true
-                        } else {
-                            viewModel.showSecondaryVersionDropdown = true
-                        }
-                    },
-                fontFamily = currentFontFamily
-            )
+                    .fillMaxWidth()
+                    .background(themeColors.tagBg)
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${passage.bookName} ${passage.chapter}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .clickable { viewModel.showNavigationModal = true }
+                        .padding(end = 8.dp),
+                    fontFamily = currentFontFamily
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    text = versionAbbr,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .clickable {
+                            if (isPrimary) {
+                                viewModel.showPrimaryVersionDropdown = true
+                            } else {
+                                viewModel.showSecondaryVersionDropdown = true
+                            }
+                        },
+                    fontFamily = currentFontFamily
+                )
+            }
         }
+
 
         Spacer(modifier = Modifier.height(16.dp))
 
