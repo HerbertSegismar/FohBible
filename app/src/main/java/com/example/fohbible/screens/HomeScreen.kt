@@ -55,6 +55,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.fohbible.Footer
 import com.example.fohbible.MainActivity
 import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.Verse
@@ -139,6 +140,10 @@ fun HomeScreen(
 
         item {
             MatrixNative()
+        }
+        item { Spacer(modifier = Modifier.height(40.dp)) }
+        item {
+            Footer()
         }
 
         item { Spacer(modifier = Modifier.height(80.dp)) }
