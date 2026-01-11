@@ -52,7 +52,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -99,8 +98,6 @@ fun SettingsScreen() {
     val context = LocalContext.current
     var showVersionInfoDialog by remember { mutableStateOf(false) }
     var selectedVersionInfo by remember { mutableStateOf<Pair<String, String>?>(null) }
-    var bgImageIndex by remember { mutableIntStateOf(0) }
-    var customTextureUri by remember { mutableStateOf<String?>(null) }
     var showBgModal by remember { mutableStateOf(false) }
     var showFontModal by remember { mutableStateOf(false) }
     var tempFontSize by remember { mutableStateOf(viewModel.fontSize.toString()) }
@@ -117,8 +114,8 @@ fun SettingsScreen() {
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            customTextureUri = it.toString()
-            bgImageIndex = 34 // TODO: Persist uri
+            viewModel.customTextureUri = it.toString()
+            viewModel.bgImageIndex = 34 // TODO: Persist uri
         }
     }
 
@@ -369,8 +366,8 @@ fun SettingsScreen() {
                             viewModel.secondaryVersionAbbr = BibleVersionUtils.versionMap["kj2.sqlite3"] ?: "KJ2"
                             viewModel.multiViewLayout = "horizontal"
                             viewModel.scrollSync = true
-                            customTextureUri = null
-                            bgImageIndex = 0
+                            viewModel.customTextureUri = null
+                            viewModel.bgImageIndex = 0
                         },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
@@ -414,15 +411,15 @@ fun SettingsScreen() {
 
     if (showBgModal) {
         BgModal(
-            currentIndex = bgImageIndex,
-            customUri = customTextureUri,
+            currentIndex = viewModel.bgImageIndex,
+            customUri = viewModel.customTextureUri,
             onSelect = { index ->
-                bgImageIndex = index
+                viewModel.bgImageIndex = index
                 showBgModal = false
             },
             onDismiss = { showBgModal = false },
             onPickCustom = { imagePickerLauncher.launch("image/*") },
-            onRemoveCustom = { customTextureUri = null }
+            onRemoveCustom = { viewModel.customTextureUri = null }
         )
     }
 
@@ -465,6 +462,7 @@ fun BibleVersionSelector(
     onInfoClick: (String, String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
+
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = title,
