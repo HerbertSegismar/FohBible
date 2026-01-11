@@ -69,7 +69,7 @@ object ThemeManager {
             onTertiary = Color.White,
             background = Color(0xFF1E1F21),
             onBackground = Color.White,
-            surface = Color(0xFF1D2B3F),
+            surface = Color(0xFF04040C),
             onSurface = Color.White,
             surfaceVariant = Color(0xFF2D2D2D),
             primaryContainer = Color(0xFF070017),

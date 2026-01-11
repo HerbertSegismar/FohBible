@@ -59,6 +59,7 @@ import com.example.fohbible.MainActivity
 import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.Verse
 import com.example.fohbible.utils.SimpleVerseProcessor
+import com.example.fohbible.MatrixNative
 
 // Data classes for HomeScreen
 data class QuickAction(
@@ -108,6 +109,7 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item { Spacer(modifier = Modifier.height(8.dp)) }
+
         item {
             DailyVerseCard(
                 verses = dailyVerses,
@@ -119,6 +121,7 @@ fun HomeScreen(
                 databaseHelper = databaseHelper ?: DatabaseHelper(context as MainActivity, "kj2.sqlite3")
             )
         }
+
         item {
             Text(
                 text = "Quick Access",
@@ -128,9 +131,16 @@ fun HomeScreen(
             )
             QuickActionsGrid(actions = quickActions, onBibleClick = onBibleClick)
         }
+
         item {
             RecentReadingsSection(readings = recentReadings)
         }
+        item { Spacer(modifier = Modifier.height(40.dp)) }
+
+        item {
+            MatrixNative()
+        }
+
         item { Spacer(modifier = Modifier.height(80.dp)) }
     }
 }
@@ -201,7 +211,9 @@ fun DailyVerseCard(
                     }
                 }
             }
+
             Spacer(modifier = Modifier.height(12.dp))
+
             if (verses != null && verses.isNotEmpty()) {
                 val reference = SimpleVerseProcessor.extractVerseReference(verses)
                 Text(
@@ -249,7 +261,9 @@ fun DailyVerseCard(
                     }
                 }
             }
+
             Spacer(modifier = Modifier.height(16.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -274,6 +288,7 @@ fun DailyVerseCard(
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
+
                 Text(
                     text = "Share",
                     color = MaterialTheme.colorScheme.primary,

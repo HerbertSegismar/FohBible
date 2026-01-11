@@ -107,6 +107,7 @@ import com.example.fohbible.utils.BibleVersionUtils
 import com.example.fohbible.utils.BibleVersionUtils.descriptionMap
 
 class AppViewModel : ViewModel() {
+
     var showSecondaryNavigationModal by mutableStateOf(false)
     var fontSize by mutableIntStateOf(18)
     var darkTheme by mutableStateOf(false)

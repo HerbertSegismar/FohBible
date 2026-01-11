@@ -165,7 +165,7 @@ fun ReaderScreen(
     val scope = rememberCoroutineScope()
     fun scheduleFade() {
         scope.launch {
-            delay(3000)
+            delay(5000)
             isButtonVisible = false
         }
     }
