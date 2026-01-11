@@ -43,7 +43,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -479,7 +479,7 @@ fun BibleVersionSelector(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .menuAnchor(enabled = true, type = MenuAnchorType.PrimaryEditable)
+                    .menuAnchor(enabled = true, type = ExposedDropdownMenuAnchorType.PrimaryEditable)
                     .clip(RoundedCornerShape(8.dp))
                     .border(
                         1.dp,
