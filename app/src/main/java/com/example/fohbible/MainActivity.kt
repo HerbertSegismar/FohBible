@@ -122,8 +122,8 @@ class AppViewModel : ViewModel() {
     var customColor by mutableStateOf<Color?>(null)
     // Multi-version fields
     var multiVersion by mutableStateOf(false)
-    var secondaryDbName by mutableStateOf("kj2.sqlite3")
-    var secondaryVersionAbbr by mutableStateOf(BibleVersionUtils.versionMap["kj2.sqlite3"]!!)
+    var secondaryDbName by mutableStateOf("esv.sqlite3")
+    var secondaryVersionAbbr by mutableStateOf(BibleVersionUtils.versionMap["esv.sqlite3"]!!)
     var multiViewLayout by mutableStateOf("horizontal")
     var scrollSync by mutableStateOf(true)
     var isReaderFullScreen by mutableStateOf(false)
