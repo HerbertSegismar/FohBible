@@ -108,8 +108,6 @@ import com.example.fohbible.utils.BibleVersionUtils.descriptionMap
 
 class AppViewModel : ViewModel() {
     var showSecondaryNavigationModal by mutableStateOf(false)
-    var lastNavigationWasPrimary by mutableStateOf(true)
-    var currentNavigationPassage by mutableStateOf<PassageSelection?>(null)
     var fontSize by mutableIntStateOf(18)
     var darkTheme by mutableStateOf(false)
     var selectedColor by mutableStateOf<Color?>(null)
@@ -132,6 +130,10 @@ class AppViewModel : ViewModel() {
     var showSecondaryVersionDropdown by mutableStateOf(false)
     var showColorThemeDialog by mutableStateOf(false)
     var showColorWheelDialog by mutableStateOf(false)
+
+    // Independent navigation fields
+    var primaryPassage by mutableStateOf(PassageSelection(10, "Genesis", 1, 1))
+    var secondaryPassage by mutableStateOf(PassageSelection(10, "Genesis", 1, 1))
 
     fun navigateTo(screen: Screen) {
         navigationStack.add(screen)
@@ -223,6 +225,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                                 verse = 1,
                                             )
                                         )
+
                                         else -> screen
                                     }
                                     viewModel.navigateTo(targetScreen)
@@ -247,6 +250,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                                 verse = 1,
                                             )
                                         )
+
                                         else -> screen
                                     }
                                     viewModel.navigateTo(targetScreen)
@@ -283,6 +287,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 databaseHelper = dbHelper
                             )
                         }
+
                         is Screen.Reader -> {
                             val passage = currentScreen.passage ?: PassageSelection(
                                 bookNumber = 10,
@@ -298,23 +303,37 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 }
                             )
                         }
+
                         Screen.Bookmarks -> BookmarksScreen()
                         Screen.Search -> SearchScreen(databaseHelper = dbHelper)
                         Screen.Settings -> SettingsScreen()
                     }
-
                     if (viewModel.showNavigationModal) {
                         NavigationModal(
                             showNavigationModal = true,
                             onDismissRequest = { viewModel.showNavigationModal = false },
                             onPassageSelected = { passage ->
-                                viewModel.navigateTo(Screen.Reader(passage))
+                                viewModel.primaryPassage = passage
+                                if (viewModel.scrollSync) {
+                                    viewModel.secondaryPassage = passage
+                                }
                                 viewModel.showNavigationModal = false
+                                viewModel.updateCurrentScreen(Screen.Reader(passage))
                             },
                             databaseHelper = dbHelper
                         )
                     }
-
+                    if (viewModel.showSecondaryNavigationModal) {
+                        NavigationModal(
+                            showNavigationModal = true,
+                            onDismissRequest = { viewModel.showSecondaryNavigationModal = false },
+                            onPassageSelected = { passage ->
+                                viewModel.secondaryPassage = passage
+                                viewModel.showSecondaryNavigationModal = false
+                            },
+                            databaseHelper = dbHelper
+                        )
+                    }
                     if (viewModel.showPrimaryVersionDropdown) {
                         Dialog(onDismissRequest = { viewModel.showPrimaryVersionDropdown = false }) {
                             VersionSelectionDialog(
@@ -329,7 +348,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             )
                         }
                     }
-
                     if (viewModel.showSecondaryVersionDropdown) {
                         Dialog(onDismissRequest = { viewModel.showSecondaryVersionDropdown = false }) {
                             VersionSelectionDialog(
@@ -344,7 +362,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             )
                         }
                     }
-
                     if (viewModel.showColorThemeDialog) {
                         Dialog(
                             onDismissRequest = { viewModel.showColorThemeDialog = false }
@@ -363,7 +380,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             )
                         }
                     }
-
                     if (viewModel.showColorWheelDialog) {
                         ColorWheelDialog(
                             onDismissRequest = { viewModel.showColorWheelDialog = false },
@@ -373,7 +389,8 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 viewModel.customColor = color
                                 viewModel.showColorWheelDialog = false
                             },
-                            initialColor = if (viewModel.isCustomColor && viewModel.customColor != null) viewModel.customColor!! else viewModel.selectedColor ?: ThemeManager.primaryColor
+                            initialColor = if (viewModel.isCustomColor && viewModel.customColor != null) viewModel.customColor!! else viewModel.selectedColor
+                                ?: ThemeManager.primaryColor
                         )
                     }
                 }
@@ -714,7 +731,6 @@ fun HomeAppBar(
         animationSpec = tween(durationMillis = 300),
         label = "backRotation"
     )
-
     val screenTitle = when (currentScreen) {
         is Screen.Home -> "Home"
         is Screen.Reader -> "Reader"
@@ -722,7 +738,6 @@ fun HomeAppBar(
         is Screen.Search -> "Search"
         is Screen.Settings -> "Settings"
     }
-
     TopAppBar(
         title = {
             Text(
@@ -742,7 +757,12 @@ fun HomeAppBar(
         navigationIcon = {
             if (onBack != null) {
                 IconButton(onClick = { onBack() }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.rotate(backAnimatedRotation))
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = Color.White,
+                        modifier = Modifier.rotate(backAnimatedRotation)
+                    )
                 }
             }
         },
@@ -751,19 +771,34 @@ fun HomeAppBar(
                 bibleTargetRotation += 360f
                 onBibleIconClick()
             }) {
-                Icon(Icons.Filled.Book, contentDescription = "Bible Navigation", tint = Color.White, modifier = Modifier.rotate(bibleAnimatedRotation))
+                Icon(
+                    Icons.Filled.Book,
+                    contentDescription = "Bible Navigation",
+                    tint = Color.White,
+                    modifier = Modifier.rotate(bibleAnimatedRotation)
+                )
             }
             IconButton(onClick = {
                 themeTargetRotation += 180f
                 onThemeToggle()
             }) {
-                Icon(if (viewModel.darkTheme) Icons.Filled.Brightness6 else Icons.Filled.Brightness2, contentDescription = "Toggle Theme", tint = Color.White, modifier = Modifier.rotate(themeAnimatedRotation))
+                Icon(
+                    if (viewModel.darkTheme) Icons.Filled.Brightness6 else Icons.Filled.Brightness2,
+                    contentDescription = "Toggle Theme",
+                    tint = Color.White,
+                    modifier = Modifier.rotate(themeAnimatedRotation)
+                )
             }
             IconButton(onClick = {
                 colorTargetRotation += 180f
                 onColorLensClick()
             }) {
-                Icon(Icons.Filled.ColorLens, contentDescription = "Color Scheme", tint = Color.White, modifier = Modifier.rotate(colorAnimatedRotation))
+                Icon(
+                    Icons.Filled.ColorLens,
+                    contentDescription = "Color Scheme",
+                    tint = Color.White,
+                    modifier = Modifier.rotate(colorAnimatedRotation)
+                )
             }
             IconButton(
                 onClick = { showNavigationDropdown = !showNavigationDropdown },
@@ -825,13 +860,11 @@ fun HomeAppBar(
                         }
                     )
                 }
-
                 val isHomeActive = currentScreen is Screen.Home
                 val isReaderActive = currentScreen is Screen.Reader
                 val isBookmarksActive = currentScreen == Screen.Bookmarks
                 val isSearchActive = currentScreen == Screen.Search
                 val isSettingsActive = currentScreen == Screen.Settings
-
                 createDropdownItem("Home", Icons.Filled.Home, Screen.Home, isHomeActive)
                 createDropdownItem("Reader", Icons.Filled.Book, Screen.Reader(), isReaderActive)
                 createDropdownItem("Bookmarks", Icons.Filled.Bookmark, Screen.Bookmarks, isBookmarksActive)
@@ -891,68 +924,15 @@ fun ReaderAppBar(
         animationSpec = tween(durationMillis = 300),
         label = "syncRotation"
     )
-
     TopAppBar(
         title = {
-            if (!viewModel.multiVersion){
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Button(
-                    onClick = onBibleIconClick,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White
-                    ),
-                    shape = RoundedCornerShape(4.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
-                    modifier = Modifier
-                        .height(36.dp)
-                        .width(120.dp)
-                        .padding(end = 8.dp)
+            if (!viewModel.multiVersion) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = currentScreen.passage?.bookName ?: "Reader",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
-                            overflow = TextOverflow.Ellipsis,
-                            maxLines = 1,
-                            modifier = Modifier.weight(1f),
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = currentScreen.passage?.chapter?.let { " $it" } ?: "",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-                Button(
-                    onClick = { viewModel.showPrimaryVersionDropdown = true },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White
-                    ),
-                    shape = RoundedCornerShape(4.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
-                    modifier = Modifier
-                        .height(36.dp)
-                        .padding(end = if (viewModel.multiVersion) 8.dp else 0.dp)
-                ) {
-                    Text(
-                        text = currentVersionAbbr,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-                if (viewModel.multiVersion) {
                     Button(
-                        onClick = { viewModel.showSecondaryVersionDropdown = true },
+                        onClick = onBibleIconClick,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color.White
                         ),
@@ -960,18 +940,70 @@ fun ReaderAppBar(
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
                         modifier = Modifier
                             .height(36.dp)
-                            .padding(end = 0.dp)
+                            .width(120.dp)
+                            .padding(end = 8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = currentScreen.passage?.bookName ?: "Reader",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                overflow = TextOverflow.Ellipsis,
+                                maxLines = 1,
+                                modifier = Modifier.weight(1f),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = currentScreen.passage?.chapter?.let { " $it" } ?: "",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    Button(
+                        onClick = { viewModel.showPrimaryVersionDropdown = true },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(4.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                        modifier = Modifier
+                            .height(36.dp)
+                            .padding(end = if (viewModel.multiVersion) 8.dp else 0.dp)
                     ) {
                         Text(
-                            text = viewModel.secondaryVersionAbbr,
+                            text = currentVersionAbbr,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
+                    if (viewModel.multiVersion) {
+                        Button(
+                            onClick = { viewModel.showSecondaryVersionDropdown = true },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(4.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                            modifier = Modifier
+                                .height(36.dp)
+                                .padding(end = 0.dp)
+                        ) {
+                            Text(
+                                text = viewModel.secondaryVersionAbbr,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                 }
             }
-        }
         },
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = LocalAppTheme.current.primaryColor
@@ -983,7 +1015,12 @@ fun ReaderAppBar(
                     onClick = { onBack() },
                     modifier = Modifier.size(40.dp)
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White, modifier = Modifier.rotate(backAnimatedRotation))
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = Color.White,
+                        modifier = Modifier.rotate(backAnimatedRotation)
+                    )
                 }
             }
         },
@@ -995,7 +1032,12 @@ fun ReaderAppBar(
                 },
                 modifier = Modifier.size(40.dp)
             ) {
-                Icon(if (viewModel.darkTheme) Icons.Filled.Brightness6 else Icons.Filled.Brightness2, contentDescription = "Toggle Theme", tint = Color.White, modifier = Modifier.rotate(themeAnimatedRotation))
+                Icon(
+                    if (viewModel.darkTheme) Icons.Filled.Brightness6 else Icons.Filled.Brightness2,
+                    contentDescription = "Toggle Theme",
+                    tint = Color.White,
+                    modifier = Modifier.rotate(themeAnimatedRotation)
+                )
             }
             IconButton(
                 onClick = {
@@ -1004,7 +1046,12 @@ fun ReaderAppBar(
                 },
                 modifier = Modifier.size(40.dp)
             ) {
-                Icon(Icons.Filled.ColorLens, contentDescription = "Color Scheme", tint = Color.White, modifier = Modifier.rotate(colorAnimatedRotation))
+                Icon(
+                    Icons.Filled.ColorLens,
+                    contentDescription = "Color Scheme",
+                    tint = Color.White,
+                    modifier = Modifier.rotate(colorAnimatedRotation)
+                )
             }
             IconButton(
                 onClick = { showMultiDropdown = !showMultiDropdown },
@@ -1030,7 +1077,6 @@ fun ReaderAppBar(
                 modifier = Modifier.background(MaterialTheme.colorScheme.surface)
             ) {
                 val current = if (!viewModel.multiVersion) "single" else viewModel.multiViewLayout
-
                 @Composable
                 fun createItem(title: String, onClick: () -> Unit) {
                     val isActive = title.lowercase() == current
@@ -1057,7 +1103,6 @@ fun ReaderAppBar(
                         modifier = Modifier.background(backgroundColor)
                     )
                 }
-
                 createItem("Single") {
                     viewModel.multiVersion = false
                 }
@@ -1079,7 +1124,7 @@ fun ReaderAppBar(
                     modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
-                        if (viewModel.scrollSync) Icons.Filled.LinkOff else Icons.Filled.Link,
+                        if (viewModel.scrollSync) Icons.Filled.Link else Icons.Filled.LinkOff,
                         contentDescription = "Toggle Scroll Sync",
                         tint = Color.White,
                         modifier = Modifier.rotate(syncAnimatedRotation)
@@ -1148,13 +1193,11 @@ fun ReaderAppBar(
                         }
                     )
                 }
-
                 val isHomeActive = false
                 val isReaderActive = true
                 val isBookmarksActive = false
                 val isSearchActive = false
                 val isSettingsActive = false
-
                 createDropdownItem("Home", Icons.Filled.Home, Screen.Home, isHomeActive)
                 createDropdownItem("Reader", Icons.Filled.Book, Screen.Reader(), isReaderActive)
                 createDropdownItem("Bookmarks", Icons.Filled.Bookmark, Screen.Bookmarks, isBookmarksActive)
