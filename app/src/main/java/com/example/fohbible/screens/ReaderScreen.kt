@@ -309,7 +309,8 @@ fun ReaderScreen(
                             versionAbbr = viewModel.currentVersionAbbr,
                             isPrimary = true,
                             state = primaryState,
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier.fillMaxSize(),
+                            isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false
                         )
                     }
                 }
@@ -490,7 +491,8 @@ fun ReaderScreen(
                                         versionAbbr = viewModel.currentVersionAbbr,
                                         isPrimary = true,
                                         state = primaryState,
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier.weight(1f),
+                                        isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false
                                     )
                                     ChapterView(
                                         passage = thisPassage,
@@ -503,7 +505,8 @@ fun ReaderScreen(
                                         versionAbbr = viewModel.secondaryVersionAbbr,
                                         isPrimary = false,
                                         state = secondaryState,
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier.weight(1f),
+                                        isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false
                                     )
                                 }
                             } else {
@@ -519,7 +522,8 @@ fun ReaderScreen(
                                         versionAbbr = viewModel.currentVersionAbbr,
                                         isPrimary = true,
                                         state = primaryState,
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier.weight(1f),
+                                        isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false
                                     )
                                     ChapterView(
                                         passage = thisPassage,
@@ -532,7 +536,8 @@ fun ReaderScreen(
                                         versionAbbr = viewModel.secondaryVersionAbbr,
                                         isPrimary = false,
                                         state = secondaryState,
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier.weight(1f),
+                                        isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false
                                     )
                                 }
                             }
@@ -805,7 +810,8 @@ fun ReaderScreen(
                                         versionAbbr = viewModel.secondaryVersionAbbr,
                                         isPrimary = false,
                                         state = state,
-                                        modifier = Modifier.fillMaxSize()
+                                        modifier = Modifier.fillMaxSize(),
+                                        isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false
                                     )
                                 }
                             }
@@ -848,7 +854,8 @@ fun ReaderScreen(
                                         versionAbbr = viewModel.currentVersionAbbr,
                                         isPrimary = true,
                                         state = state,
-                                        modifier = Modifier.fillMaxSize()
+                                        modifier = Modifier.fillMaxSize(),
+                                        isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false
                                     )
                                 }
                             }
@@ -888,7 +895,8 @@ fun ReaderScreen(
                                         versionAbbr = viewModel.secondaryVersionAbbr,
                                         isPrimary = false,
                                         state = state,
-                                        modifier = Modifier.fillMaxSize()
+                                        modifier = Modifier.fillMaxSize(),
+                                        isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false
                                     )
                                 }
                             }
@@ -931,17 +939,19 @@ fun ChapterView(
     versionAbbr: String,
     isPrimary: Boolean,
     state: androidx.compose.foundation.ScrollState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isKjvPlus: Boolean = false
 ) {
     val processor = remember(verses) { VerseTextProcessor() }
-    val processedVerses = remember(verses, themeColors) {
+    val processedVerses = remember(verses, themeColors, isKjvPlus) {
         val result = mutableMapOf<Int, ProcessedVerse>()
         for (verse in verses) {
             val processed = processor.processVerse(
                 verseText = verse.text,
                 baseFontSize = viewModel.fontSize.sp,
                 themeColors = themeColors,
-                textColor = themeColors.textColor
+                textColor = themeColors.textColor,
+                isKjvPlus = isKjvPlus
             )
             result[verse.verseNumber] = processed
         }

@@ -8,7 +8,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.util.Random
 
-class DatabaseHelper(private val context: Context, private val databaseName: String) {
+class DatabaseHelper(private val context: Context, val databaseName: String) {
     var database: SQLiteDatabase? = null
     private val tag = "DatabaseHelper"
     private val random = Random()

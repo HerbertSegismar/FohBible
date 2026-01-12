@@ -3,9 +3,9 @@ package com.example.fohbible.utils
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.unit.sp
 
 // Data classes for parsing
 sealed class ParsedNode {
@@ -26,7 +26,9 @@ data class TraversalContext(
     val isTextContainer: Boolean,
     val isHeader: Boolean,
     val currentTag: String?,
-    val baseFontSize: TextUnit
+    val baseFontSize: TextUnit,
+    val fontSizeMultiplier: Float = 1f,
+    val baselineShift: BaselineShift? = null
 )
 
 data class ProcessedVerse(
@@ -46,7 +48,6 @@ data class ThemeColors(
 )
 
 class VerseTextProcessor {
-
     fun processVerse(
         verseText: String?,
         baseFontSize: TextUnit,
@@ -55,7 +56,8 @@ class VerseTextProcessor {
         onTagPress: ((String) -> Unit)? = null,
         textColor: Color? = null,
         onWordPress: ((String) -> Unit)? = null,
-        isHighlighted: Boolean = false
+        isHighlighted: Boolean = false,
+        isKjvPlus: Boolean = false
     ): ProcessedVerse {
         val nodes = parseXmlTags(verseText ?: "")
         val tree = buildTree(nodes)
@@ -66,17 +68,15 @@ class VerseTextProcessor {
             currentTag = null,
             baseFontSize = baseFontSize
         )
-        val (header, body) = traverseTree(tree, initialContext, highlight, themeColors, onTagPress, onWordPress, isHighlighted)
+        val (header, body) = traverseTree(tree, initialContext, highlight, themeColors, onTagPress, onWordPress, isHighlighted, isKjvPlus)
         return ProcessedVerse(header, body)
     }
 
     private fun parseXmlTags(text: String): List<ParsedNode> {
         if (text.isEmpty()) return emptyList()
-
         val nodes = mutableListOf<ParsedNode>()
         var currentText = ""
         var i = 0
-
         while (i < text.length) {
             if (text[i] == '<') {
                 // Save any accumulated text
@@ -84,13 +84,11 @@ class VerseTextProcessor {
                     nodes.add(ParsedNode.Text(currentText))
                     currentText = ""
                 }
-
                 val tagEnd = text.indexOf('>', i)
                 if (tagEnd == -1) {
                     currentText += text.substring(i)
                     break
                 }
-
                 val fullTag = text.substring(i, tagEnd + 1)
                 if (fullTag.startsWith("</")) {
                     val tagName = fullTag.substring(2, fullTag.length - 1).trim().split(" ")[0]
@@ -102,18 +100,15 @@ class VerseTextProcessor {
                     val tagName = fullTag.substring(1, fullTag.length - 1).trim().split(" ")[0]
                     nodes.add(ParsedNode.OpeningTag(tagName, fullTag))
                 }
-
                 i = tagEnd + 1
             } else {
                 currentText += text[i]
                 i++
             }
         }
-
         if (currentText.isNotEmpty()) {
             nodes.add(ParsedNode.Text(currentText))
         }
-
         return nodes
     }
 
@@ -121,7 +116,6 @@ class VerseTextProcessor {
         val root = mutableListOf<TreeNode>()
         val stack = mutableListOf<MutableList<TreeNode>>()
         var current = root
-
         for (node in nodes) {
             when (node) {
                 is ParsedNode.Text -> {
@@ -143,7 +137,6 @@ class VerseTextProcessor {
                 }
             }
         }
-
         return root
     }
 
@@ -154,11 +147,11 @@ class VerseTextProcessor {
         themeColors: ThemeColors,
         onTagPress: ((String) -> Unit)?,
         onWordPress: ((String) -> Unit)?,
-        isHighlighted: Boolean
+        isHighlighted: Boolean,
+        isKjvPlus: Boolean
     ): Pair<AnnotatedString?, AnnotatedString> {
         val headerBuilder = AnnotatedString.Builder()
         val bodyBuilder = AnnotatedString.Builder()
-
         for (node in tree) {
             traverseNode(
                 node,
@@ -169,13 +162,12 @@ class VerseTextProcessor {
                 themeColors,
                 onTagPress,
                 onWordPress,
-                isHighlighted
+                isHighlighted,
+                isKjvPlus
             )
         }
-
         val header = if (headerBuilder.length > 0) headerBuilder.toAnnotatedString() else null
         val body = bodyBuilder.toAnnotatedString()
-
         return Pair(header, body)
     }
 
@@ -188,7 +180,8 @@ class VerseTextProcessor {
         themeColors: ThemeColors,
         onTagPress: ((String) -> Unit)?,
         onWordPress: ((String) -> Unit)?,
-        isHighlighted: Boolean
+        isHighlighted: Boolean,
+        isKjvPlus: Boolean
     ) {
         when (node) {
             is TreeNode.Text -> {
@@ -214,17 +207,37 @@ class VerseTextProcessor {
                 )
             }
             is TreeNode.Element -> {
-                // Update context based on tag
                 val newContext = when (node.tag) {
-                    "n" -> context.copy(isHeader = true)
+                    "n" -> context.copy(
+                        isHeader = !isKjvPlus,
+                        textColor = themeColors.primary,
+                        currentTag = node.tag
+                    )
                     "J" -> context.copy(
                         isTextContainer = true,
-                        textColor = if (!isHighlighted) themeColors.wordsOfJesus else context.textColor
+                        textColor = if (!isHighlighted) themeColors.wordsOfJesus else context.textColor,
+                        currentTag = node.tag
                     )
-                    "t" -> context.copy(isTextContainer = true)
+                    "t" -> context.copy(
+                        isTextContainer = true,
+                        currentTag = node.tag
+                    )
+                    "S" -> context.copy(
+                        isTextContainer = true,
+                        textColor = themeColors.tagColor,
+                        fontSizeMultiplier = 0.7f,
+                        baselineShift = BaselineShift(0.2f),
+                        currentTag = node.tag
+                    )
+                    "f" -> context.copy(
+                        isTextContainer = true,
+                        textColor = themeColors.tagColor,
+                        fontSizeMultiplier = 0.8f,
+                        baselineShift = BaselineShift(0.2f),
+                        currentTag = node.tag
+                    )
                     else -> context.copy(currentTag = node.tag)
                 }
-
                 // Traverse children
                 for (child in node.children) {
                     traverseNode(
@@ -236,7 +249,8 @@ class VerseTextProcessor {
                         themeColors,
                         onTagPress,
                         onWordPress,
-                        isHighlighted
+                        isHighlighted,
+                        isKjvPlus
                     )
                 }
             }
@@ -252,30 +266,21 @@ class VerseTextProcessor {
         onWordPress: ((String) -> Unit)?,
         isHighlighted: Boolean
     ) {
-        val text = node.content
-
-        // Check for encircled letters (like ⓐ, ⓑ, etc.)
-        if (hasEncircledLetters(text)) {
-            val parts = splitByEncircledLetters(text)
-            for (part in parts) {
-                if (isEncircledLetter(part)) {
-                    // Style encircled letters differently
-                    builder.withStyle(
-                        SpanStyle(
-                            fontSize = context.baseFontSize * 1.2f,
-                            color = context.textColor,
-                            letterSpacing = 0.5.sp
-                        )
-                    ) {
-                        builder.append(" $part ")
-                    }
-                } else {
-                    processNormalText(part, builder, context, highlight, themeColors, onWordPress, isHighlighted)
-                }
-            }
+        val effectiveMultiplier = if (context.currentTag == "f" && isEncircled(node.content)) {
+            1.1f
         } else {
-            processNormalText(text, builder, context, highlight, themeColors, onWordPress, isHighlighted)
+            context.fontSizeMultiplier
         }
+        val textContext = context.copy(fontSizeMultiplier = effectiveMultiplier)
+        val text = node.content
+        processNormalText(text, builder, textContext, highlight, themeColors, onWordPress, isHighlighted)
+    }
+
+    private fun isEncircled(text: String): Boolean {
+        val trimmed = text.trim()
+        if (trimmed.length != 1) return false
+        val code = trimmed[0].code
+        return code in 0x2460..0x24FF
     }
 
     private fun processNormalText(
@@ -296,8 +301,9 @@ class VerseTextProcessor {
                     builder.withStyle(
                         SpanStyle(
                             color = context.textColor,
-                            background = if (highlight != null && word.contains(highlight, ignoreCase = true))
-                                themeColors.searchHighlightBg else Color.Transparent
+                            background = if (highlight != null && word.contains(highlight, ignoreCase = true)) themeColors.searchHighlightBg else Color.Transparent,
+                            fontSize = context.baseFontSize * context.fontSizeMultiplier,
+                            baselineShift = context.baselineShift ?: BaselineShift.None
                         )
                     ) {
                         builder.append(word)
@@ -305,7 +311,11 @@ class VerseTextProcessor {
                 } else {
                     // Non-words (punctuation, numbers, whitespace)
                     builder.withStyle(
-                        SpanStyle(color = context.textColor)
+                        SpanStyle(
+                            color = context.textColor,
+                            fontSize = context.baseFontSize * context.fontSizeMultiplier,
+                            baselineShift = context.baselineShift ?: BaselineShift.None
+                        )
                     ) {
                         builder.append(word)
                     }
@@ -316,36 +326,52 @@ class VerseTextProcessor {
             if (highlight != null && text.contains(highlight, ignoreCase = true)) {
                 val regex = Regex(escapeRegex(highlight), RegexOption.IGNORE_CASE)
                 var lastIndex = 0
-
                 for (match in regex.findAll(text)) {
                     // Add text before match
                     if (match.range.first > lastIndex) {
-                        builder.withStyle(SpanStyle(color = context.textColor)) {
+                        builder.withStyle(
+                            SpanStyle(
+                                color = context.textColor,
+                                fontSize = context.baseFontSize * context.fontSizeMultiplier,
+                                baselineShift = context.baselineShift ?: BaselineShift.None
+                            )
+                        ) {
                             builder.append(text.substring(lastIndex, match.range.first))
                         }
                     }
-
                     // Add highlighted match
                     builder.withStyle(
                         SpanStyle(
                             color = context.textColor,
-                            background = themeColors.searchHighlightBg
+                            background = themeColors.searchHighlightBg,
+                            fontSize = context.baseFontSize * context.fontSizeMultiplier,
+                            baselineShift = context.baselineShift ?: BaselineShift.None
                         )
                     ) {
                         builder.append(match.value)
                     }
-
                     lastIndex = match.range.last + 1
                 }
-
                 // Add remaining text
                 if (lastIndex < text.length) {
-                    builder.withStyle(SpanStyle(color = context.textColor)) {
+                    builder.withStyle(
+                        SpanStyle(
+                            color = context.textColor,
+                            fontSize = context.baseFontSize * context.fontSizeMultiplier,
+                            baselineShift = context.baselineShift ?: BaselineShift.None
+                        )
+                    ) {
                         builder.append(text.substring(lastIndex))
                     }
                 }
             } else {
-                builder.withStyle(SpanStyle(color = context.textColor)) {
+                builder.withStyle(
+                    SpanStyle(
+                        color = context.textColor,
+                        fontSize = context.baseFontSize * context.fontSizeMultiplier,
+                        baselineShift = context.baselineShift ?: BaselineShift.None
+                    )
+                ) {
                     builder.append(text)
                 }
             }
@@ -360,74 +386,16 @@ class VerseTextProcessor {
         onTagPress: ((String) -> Unit)?
     ) {
         val content = extractContentFromTag(node.fullTag)
-        val tagContent = content.trim()
-
-        if (hasEncircledLetters(tagContent)) {
-            val parts = splitByEncircledLetters(tagContent)
-            for (part in parts) {
-                if (isEncircledLetter(part)) {
-                    builder.withStyle(
-                        SpanStyle(
-                            fontSize = context.baseFontSize * 1.2f,
-                            color = themeColors.tagColor,
-                            background = themeColors.tagBg
-                        )
-                    ) {
-                        builder.append(part)
-                    }
-                } else {
-                    builder.withStyle(
-                        SpanStyle(
-                            fontSize = context.baseFontSize * 0.8f,
-                            color = themeColors.tagColor,
-                            background = themeColors.tagBg
-                        )
-                    ) {
-                        builder.append(part)
-                    }
-                }
-            }
-        } else {
-            builder.withStyle(
-                SpanStyle(
-                    fontSize = context.baseFontSize * 0.8f,
-                    color = themeColors.tagColor,
-                    background = themeColors.tagBg
-                )
-            ) {
-                builder.append(content)
-            }
+        val trimmedContent = content.trim()
+        builder.withStyle(
+            SpanStyle(
+                fontSize = context.baseFontSize * 0.8f,
+                color = themeColors.tagColor,
+                background = themeColors.tagBg
+            )
+        ) {
+            builder.append(trimmedContent)
         }
-    }
-
-    // Helper functions
-    private fun hasEncircledLetters(text: String): Boolean {
-        return Regex("[ⓐ-ⓩⓐ-ⓩ]").containsMatchIn(text)
-    }
-
-    private fun isEncircledLetter(text: String): Boolean {
-        return text.matches(Regex("[ⓐ-ⓩⓐ-ⓩ]"))
-    }
-
-    private fun splitByEncircledLetters(text: String): List<String> {
-        val result = mutableListOf<String>()
-        val regex = Regex("([ⓐ-ⓩⓐ-ⓩ])")
-        val matches = regex.findAll(text)
-        var lastIndex = 0
-
-        for (match in matches) {
-            if (match.range.first > lastIndex) {
-                result.add(text.substring(lastIndex, match.range.first))
-            }
-            result.add(match.value)
-            lastIndex = match.range.last + 1
-        }
-
-        if (lastIndex < text.length) {
-            result.add(text.substring(lastIndex))
-        }
-
-        return result
     }
 
     private fun extractContentFromTag(tag: String): String {
@@ -440,10 +408,8 @@ class VerseTextProcessor {
     private fun splitIntoWords(text: String): List<String> {
         val result = mutableListOf<String>()
         var i = 0
-
         while (i < text.length) {
             val char = text[i]
-
             when {
                 char.isLetter() -> {
                     var word = char.toString()
@@ -466,8 +432,7 @@ class VerseTextProcessor {
                 !char.isWhitespace() -> {
                     var punct = char.toString()
                     i++
-                    while (i < text.length && !text[i].isWhitespace() &&
-                        !text[i].isLetter() && !text[i].isDigit()) {
+                    while (i < text.length && !text[i].isWhitespace() && !text[i].isLetter() && !text[i].isDigit()) {
                         punct += text[i]
                         i++
                     }
@@ -484,7 +449,6 @@ class VerseTextProcessor {
                 }
             }
         }
-
         return result
     }
 
@@ -495,7 +459,6 @@ class VerseTextProcessor {
     private fun escapeRegex(string: String): String {
         return string.replace(Regex("[.*+?^${'$'}{}()|\\[\\]\\\\]"), "\\$&")
     }
-
 }
 
 // Simple processor for HomeScreen use
