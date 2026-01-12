@@ -60,6 +60,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -89,6 +90,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.fohbible.data.DatabaseHelper
@@ -155,6 +157,7 @@ class AppViewModel : ViewModel() {
     var scrollSync by mutableStateOf(true)
     var isReaderFullScreen by mutableStateOf(false)
     var showNavigationModal by mutableStateOf(false)
+    var showSearchModal by mutableStateOf(false)
     var showPrimaryVersionDropdown by mutableStateOf(false)
     var showSecondaryVersionDropdown by mutableStateOf(false)
     var showColorThemeDialog by mutableStateOf(false)
@@ -195,6 +198,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
 @Suppress("AssignedValueIsNeverRead")
 @Composable
@@ -224,47 +228,89 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     }
 
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.fontSize }.collectLatest { dataStore.edit { prefs -> prefs[FONT_SIZE_KEY] = it } }
+        snapshotFlow { viewModel.fontSize }.collectLatest {
+            dataStore.edit { prefs -> prefs[FONT_SIZE_KEY] = it }
+        }
     }
+
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.darkTheme }.collectLatest { dataStore.edit { prefs -> prefs[DARK_THEME_KEY] = it } }
+        snapshotFlow { viewModel.darkTheme }.collectLatest {
+            dataStore.edit { prefs -> prefs[DARK_THEME_KEY] = it }
+        }
     }
+
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.selectedColor }.collectLatest { dataStore.edit { prefs -> prefs[SELECTED_COLOR_KEY] = it?.toArgb() ?: DefaultPrimaryColor.toArgb() } }
+        snapshotFlow { viewModel.selectedColor }.collectLatest {
+            dataStore.edit { prefs -> prefs[SELECTED_COLOR_KEY] = it?.toArgb() ?: DefaultPrimaryColor.toArgb() }
+        }
     }
+
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.isCustomColor }.collectLatest { dataStore.edit { prefs -> prefs[IS_CUSTOM_COLOR_KEY] = it } }
+        snapshotFlow { viewModel.isCustomColor }.collectLatest {
+            dataStore.edit { prefs -> prefs[IS_CUSTOM_COLOR_KEY] = it }
+        }
     }
+
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.customColor }.collectLatest { dataStore.edit { prefs -> prefs[CUSTOM_COLOR_KEY] = it?.toArgb() ?: DefaultPrimaryColor.toArgb() } }
+        snapshotFlow { viewModel.customColor }.collectLatest {
+            dataStore.edit { prefs -> prefs[CUSTOM_COLOR_KEY] = it?.toArgb() ?: DefaultPrimaryColor.toArgb() }
+        }
     }
+
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.selectedFontFamily }.collectLatest { dataStore.edit { prefs -> prefs[FONT_FAMILY_KEY] = it } }
+        snapshotFlow { viewModel.selectedFontFamily }.collectLatest {
+            dataStore.edit { prefs -> prefs[FONT_FAMILY_KEY] = it }
+        }
     }
+
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.currentDbName }.collectLatest { dataStore.edit { prefs -> prefs[PRIMARY_DB_KEY] = it } }
+        snapshotFlow { viewModel.currentDbName }.collectLatest {
+            dataStore.edit { prefs -> prefs[PRIMARY_DB_KEY] = it }
+        }
     }
+
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.currentVersionAbbr }.collectLatest { dataStore.edit { prefs -> prefs[PRIMARY_ABBR_KEY] = it } }
+        snapshotFlow { viewModel.currentVersionAbbr }.collectLatest {
+            dataStore.edit { prefs -> prefs[PRIMARY_ABBR_KEY] = it }
+        }
     }
+
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.multiVersion }.collectLatest { dataStore.edit { prefs -> prefs[MULTI_VERSION_KEY] = it } }
+        snapshotFlow { viewModel.multiVersion }.collectLatest {
+            dataStore.edit { prefs -> prefs[MULTI_VERSION_KEY] = it }
+        }
     }
+
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.secondaryDbName }.collectLatest { dataStore.edit { prefs -> prefs[SECONDARY_DB_KEY] = it } }
+        snapshotFlow { viewModel.secondaryDbName }.collectLatest {
+            dataStore.edit { prefs -> prefs[SECONDARY_DB_KEY] = it }
+        }
     }
+
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.secondaryVersionAbbr }.collectLatest { dataStore.edit { prefs -> prefs[SECONDARY_ABBR_KEY] = it } }
+        snapshotFlow { viewModel.secondaryVersionAbbr }.collectLatest {
+            dataStore.edit { prefs -> prefs[SECONDARY_ABBR_KEY] = it }
+        }
     }
+
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.multiViewLayout }.collectLatest { dataStore.edit { prefs -> prefs[MULTI_LAYOUT_KEY] = it } }
+        snapshotFlow { viewModel.multiViewLayout }.collectLatest {
+            dataStore.edit { prefs -> prefs[MULTI_LAYOUT_KEY] = it }
+        }
     }
+
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.scrollSync }.collectLatest { dataStore.edit { prefs -> prefs[SCROLL_SYNC_KEY] = it } }
+        snapshotFlow { viewModel.scrollSync }.collectLatest {
+            dataStore.edit { prefs -> prefs[SCROLL_SYNC_KEY] = it }
+        }
     }
+
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.bgImageIndex }.collectLatest { dataStore.edit { prefs -> prefs[BG_INDEX_KEY] = it } }
+        snapshotFlow { viewModel.bgImageIndex }.collectLatest {
+            dataStore.edit { prefs -> prefs[BG_INDEX_KEY] = it }
+        }
     }
+
     LaunchedEffect(Unit) {
         snapshotFlow { viewModel.customTextureUri }.collectLatest { uri ->
             dataStore.edit { prefs ->
@@ -405,10 +451,8 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             )
                         }
                         Screen.Bookmarks -> BookmarksScreen()
-                        Screen.Search -> SearchScreen(databaseHelper = dbHelper)
                         Screen.Settings -> SettingsScreen()
                     }
-
                     if (viewModel.showNavigationModal) {
                         NavigationModal(
                             showNavigationModal = true,
@@ -424,7 +468,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             databaseHelper = dbHelper
                         )
                     }
-
                     if (viewModel.showSecondaryNavigationModal) {
                         NavigationModal(
                             showNavigationModal = true,
@@ -436,7 +479,74 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             databaseHelper = dbHelper
                         )
                     }
-
+                    if (viewModel.showSearchModal) {
+                        Dialog(
+                            onDismissRequest = { viewModel.showSearchModal = false },
+                            properties = DialogProperties(
+                                usePlatformDefaultWidth = false,
+                                decorFitsSystemWindows = viewModel.showSearchModal
+                            )
+                        ) {
+                            Surface(
+                                modifier = Modifier.fillMaxSize(),
+                                shape = RoundedCornerShape(4.dp),
+                                color = MaterialTheme.colorScheme.surface
+                            ) {
+                                Scaffold(
+                                    modifier = Modifier.fillMaxSize(),
+                                    topBar = {
+                                        TopAppBar(
+                                            title = {
+                                                Text(
+                                                    text = "Select Passage",
+                                                    fontWeight = FontWeight.Medium,
+                                                    fontSize = 20.sp,
+                                                )
+                                            },
+                                            navigationIcon = {
+                                                IconButton(
+                                                    onClick = { viewModel.showSearchModal = false }
+                                                ) {
+                                                    Icon(
+                                                        Icons.AutoMirrored.Filled.ArrowBack,
+                                                        contentDescription = "Back",
+                                                    )
+                                                }
+                                            },
+                                            colors = TopAppBarDefaults.topAppBarColors(
+                                                containerColor = MaterialTheme.colorScheme.primary,
+                                                titleContentColor = Color.White,
+                                                navigationIconContentColor = Color.White,
+                                            ),
+                                        )
+                                    }
+                                ) { padding ->
+                                    Box(
+                                        modifier = Modifier
+                                            .padding(padding)
+                                            .fillMaxSize()
+                                    ) {
+                                        SearchScreen(
+                                            databaseHelper = dbHelper,
+                                            onDismissRequest = { viewModel.showSearchModal = false },
+                                            onPassageSelected = { passage ->
+                                                viewModel.primaryPassage = passage
+                                                if (viewModel.scrollSync) {
+                                                    viewModel.secondaryPassage = passage
+                                                }
+                                                viewModel.showSearchModal = false
+                                                if (currentScreen !is Screen.Reader) {
+                                                    viewModel.navigateTo(Screen.Reader(passage))
+                                                } else {
+                                                    viewModel.updateCurrentScreen(Screen.Reader(passage))
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                     if (viewModel.showPrimaryVersionDropdown) {
                         Dialog(onDismissRequest = { viewModel.showPrimaryVersionDropdown = false }) {
                             VersionSelectionDialog(
@@ -451,7 +561,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             )
                         }
                     }
-
                     if (viewModel.showSecondaryVersionDropdown) {
                         Dialog(onDismissRequest = { viewModel.showSecondaryVersionDropdown = false }) {
                             VersionSelectionDialog(
@@ -466,7 +575,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             )
                         }
                     }
-
                     if (viewModel.showColorThemeDialog) {
                         Dialog(
                             onDismissRequest = { viewModel.showColorThemeDialog = false }
@@ -485,7 +593,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             )
                         }
                     }
-
                     if (viewModel.showColorWheelDialog) {
                         ColorWheelDialog(
                             onDismissRequest = { viewModel.showColorWheelDialog = false },
@@ -495,7 +602,8 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 viewModel.customColor = color
                                 viewModel.showColorWheelDialog = false
                             },
-                            initialColor = if (viewModel.isCustomColor && viewModel.customColor != null) viewModel.customColor!! else viewModel.selectedColor ?: ThemeManager.primaryColor
+                            initialColor = if (viewModel.isCustomColor && viewModel.customColor != null) viewModel.customColor!! else viewModel.selectedColor
+                                ?: ThemeManager.primaryColor
                         )
                     }
                 }
@@ -809,34 +917,38 @@ fun HomeAppBar(
     val viewModel: AppViewModel = viewModel()
     val rotation by animateFloatAsState(
         targetValue = if (showNavigationDropdown) 180f else 0f,
-        animationSpec = tween(durationMillis = 300), label = "menuIconRotation"
+        animationSpec = tween(durationMillis = 300),
+        label = "menuIconRotation"
     )
     var bibleTargetRotation by remember { mutableFloatStateOf(0f) }
     val bibleAnimatedRotation by animateFloatAsState(
         targetValue = bibleTargetRotation,
-        animationSpec = tween(durationMillis = 300), label = "bibleRotation"
+        animationSpec = tween(durationMillis = 300),
+        label = "bibleRotation"
     )
     var themeTargetRotation by remember { mutableFloatStateOf(0f) }
     val themeAnimatedRotation by animateFloatAsState(
         targetValue = themeTargetRotation,
-        animationSpec = tween(durationMillis = 300), label = "themeRotation"
+        animationSpec = tween(durationMillis = 300),
+        label = "themeRotation"
     )
     var colorTargetRotation by remember { mutableFloatStateOf(0f) }
     val colorAnimatedRotation by animateFloatAsState(
         targetValue = colorTargetRotation,
-        animationSpec = tween(durationMillis = 300), label = "colorRotation"
+        animationSpec = tween(durationMillis = 300),
+        label = "colorRotation"
     )
     var backTargetRotation by remember { mutableFloatStateOf(0f) }
     val backAnimatedRotation by animateFloatAsState(
         targetValue = backTargetRotation,
-        animationSpec = tween(durationMillis = 300), label = "backRotation"
+        animationSpec = tween(durationMillis = 300),
+        label = "backRotation"
     )
 
     val screenTitle = when (currentScreen) {
         is Screen.Home -> "Home"
         is Screen.Reader -> "Reader"
         is Screen.Bookmarks -> "Bookmarks"
-        is Screen.Search -> "Search"
         is Screen.Settings -> "Settings"
     }
 
@@ -908,7 +1020,8 @@ fun HomeAppBar(
             ) {
                 Crossfade(
                     targetState = showNavigationDropdown,
-                    animationSpec = tween(durationMillis = 300), label = "iconCrossfade"
+                    animationSpec = tween(durationMillis = 300),
+                    label = "iconCrossfade"
                 ) { isOpen ->
                     Icon(
                         imageVector = if (isOpen) Icons.Filled.Close else Icons.Filled.Menu,
@@ -926,16 +1039,18 @@ fun HomeAppBar(
                 fun createDropdownItem(
                     title: String,
                     icon: ImageVector,
-                    screen: Screen,
-                    isActive: Boolean
+                    isActive: Boolean,
+                    onClick: () -> Unit
                 ) {
                     val backgroundColor by animateColorAsState(
                         targetValue = if (isActive) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                        animationSpec = tween(durationMillis = 200), label = "dropdownBackground"
+                        animationSpec = tween(durationMillis = 200),
+                        label = "dropdownBackground"
                     )
                     val textColor by animateColorAsState(
                         targetValue = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                        animationSpec = tween(durationMillis = 200), label = "dropdownTextColor"
+                        animationSpec = tween(durationMillis = 200),
+                        label = "dropdownTextColor"
                     )
                     DropdownMenuItem(
                         text = {
@@ -945,10 +1060,7 @@ fun HomeAppBar(
                                 color = textColor
                             )
                         },
-                        onClick = {
-                            onScreenChange(screen)
-                            showNavigationDropdown = false
-                        },
+                        onClick = onClick,
                         modifier = Modifier.background(backgroundColor),
                         leadingIcon = {
                             Icon(
@@ -963,14 +1075,29 @@ fun HomeAppBar(
                 val isHomeActive = currentScreen is Screen.Home
                 val isReaderActive = currentScreen is Screen.Reader
                 val isBookmarksActive = currentScreen == Screen.Bookmarks
-                val isSearchActive = currentScreen == Screen.Search
+                val isSearchActive = false
                 val isSettingsActive = currentScreen == Screen.Settings
 
-                createDropdownItem("Home", Icons.Filled.Home, Screen.Home, isHomeActive)
-                createDropdownItem("Reader", Icons.Filled.Book, Screen.Reader(), isReaderActive)
-                createDropdownItem("Bookmarks", Icons.Filled.Bookmark, Screen.Bookmarks, isBookmarksActive)
-                createDropdownItem("Search", Icons.Filled.Search, Screen.Search, isSearchActive)
-                createDropdownItem("Settings", Icons.Filled.Settings, Screen.Settings, isSettingsActive)
+                createDropdownItem("Home", Icons.Filled.Home, isHomeActive) {
+                    onScreenChange(Screen.Home)
+                    showNavigationDropdown = false
+                }
+                createDropdownItem("Reader", Icons.Filled.Book, isReaderActive) {
+                    onScreenChange(Screen.Reader())
+                    showNavigationDropdown = false
+                }
+                createDropdownItem("Bookmarks", Icons.Filled.Bookmark, isBookmarksActive) {
+                    onScreenChange(Screen.Bookmarks)
+                    showNavigationDropdown = false
+                }
+                createDropdownItem("Search", Icons.Filled.Search, isSearchActive) {
+                    viewModel.showSearchModal = true
+                    showNavigationDropdown = false
+                }
+                createDropdownItem("Settings", Icons.Filled.Settings, isSettingsActive) {
+                    onScreenChange(Screen.Settings)
+                    showNavigationDropdown = false
+                }
             }
         }
     )
@@ -993,31 +1120,37 @@ fun ReaderAppBar(
     var showMultiDropdown by remember { mutableStateOf(false) }
     val rotation by animateFloatAsState(
         targetValue = if (showNavigationDropdown) 180f else 0f,
-        animationSpec = tween(durationMillis = 300), label = "menuIconRotation"
+        animationSpec = tween(durationMillis = 300),
+        label = "menuIconRotation"
     )
     val multiRotation by animateFloatAsState(
         targetValue = if (showMultiDropdown) 180f else 0f,
-        animationSpec = tween(durationMillis = 300), label = "multiIconRotation"
+        animationSpec = tween(durationMillis = 300),
+        label = "multiIconRotation"
     )
     var themeTargetRotation by remember { mutableFloatStateOf(0f) }
     val themeAnimatedRotation by animateFloatAsState(
         targetValue = themeTargetRotation,
-        animationSpec = tween(durationMillis = 300), label = "themeRotation"
+        animationSpec = tween(durationMillis = 300),
+        label = "themeRotation"
     )
     var colorTargetRotation by remember { mutableFloatStateOf(0f) }
     val colorAnimatedRotation by animateFloatAsState(
         targetValue = colorTargetRotation,
-        animationSpec = tween(durationMillis = 300), label = "colorRotation"
+        animationSpec = tween(durationMillis = 300),
+        label = "colorRotation"
     )
     var backTargetRotation by remember { mutableFloatStateOf(0f) }
     val backAnimatedRotation by animateFloatAsState(
         targetValue = backTargetRotation,
-        animationSpec = tween(durationMillis = 300), label = "backRotation"
+        animationSpec = tween(durationMillis = 300),
+        label = "backRotation"
     )
     var syncTargetRotation by remember { mutableFloatStateOf(0f) }
     val syncAnimatedRotation by animateFloatAsState(
         targetValue = syncTargetRotation,
-        animationSpec = tween(durationMillis = 300), label = "syncRotation"
+        animationSpec = tween(durationMillis = 300),
+        label = "syncRotation"
     )
 
     TopAppBar(
@@ -1157,7 +1290,8 @@ fun ReaderAppBar(
             ) {
                 Crossfade(
                     targetState = showMultiDropdown,
-                    animationSpec = tween(durationMillis = 300), label = "multiIconCrossfade"
+                    animationSpec = tween(durationMillis = 300),
+                    label = "multiIconCrossfade"
                 ) { isOpen ->
                     Icon(
                         imageVector = if (isOpen) Icons.Filled.Close else Icons.Filled.AutoAwesomeMosaic,
@@ -1172,7 +1306,6 @@ fun ReaderAppBar(
                 modifier = Modifier.background(MaterialTheme.colorScheme.surface)
             ) {
                 val current = if (!viewModel.multiVersion) "single" else viewModel.multiViewLayout
-
                 @Composable
                 fun createItem(title: String, onClick: () -> Unit) {
                     val isActive = title.lowercase() == current
@@ -1185,13 +1318,7 @@ fun ReaderAppBar(
                         animationSpec = tween(durationMillis = 200)
                     )
                     DropdownMenuItem(
-                        text = {
-                            Text(
-                                title,
-                                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-                                color = textColor
-                            )
-                        },
+                        text = { Text(title, fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal, color = textColor) },
                         onClick = {
                             onClick()
                             showMultiDropdown = false
@@ -1199,10 +1326,7 @@ fun ReaderAppBar(
                         modifier = Modifier.background(backgroundColor)
                     )
                 }
-
-                createItem("Single") {
-                    viewModel.multiVersion = false
-                }
+                createItem("Single") { viewModel.multiVersion = false }
                 createItem("Horizontal") {
                     viewModel.multiVersion = true
                     viewModel.multiViewLayout = "horizontal"
@@ -1236,7 +1360,8 @@ fun ReaderAppBar(
             ) {
                 Crossfade(
                     targetState = showNavigationDropdown,
-                    animationSpec = tween(durationMillis = 300), label = "iconCrossfade"
+                    animationSpec = tween(durationMillis = 300),
+                    label = "iconCrossfade"
                 ) { isOpen ->
                     Icon(
                         imageVector = if (isOpen) Icons.Filled.Close else Icons.Filled.Menu,
@@ -1254,16 +1379,18 @@ fun ReaderAppBar(
                 fun createDropdownItem(
                     title: String,
                     icon: ImageVector,
-                    screen: Screen,
-                    isActive: Boolean
+                    isActive: Boolean,
+                    onClick: () -> Unit
                 ) {
                     val backgroundColor by animateColorAsState(
                         targetValue = if (isActive) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                        animationSpec = tween(durationMillis = 200), label = "dropdownBackground"
+                        animationSpec = tween(durationMillis = 200),
+                        label = "dropdownBackground"
                     )
                     val textColor by animateColorAsState(
                         targetValue = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                        animationSpec = tween(durationMillis = 200), label = "dropdownTextColor"
+                        animationSpec = tween(durationMillis = 200),
+                        label = "dropdownTextColor"
                     )
                     DropdownMenuItem(
                         text = {
@@ -1273,10 +1400,7 @@ fun ReaderAppBar(
                                 color = textColor
                             )
                         },
-                        onClick = {
-                            onScreenChange(screen)
-                            showNavigationDropdown = false
-                        },
+                        onClick = onClick,
                         modifier = Modifier.background(backgroundColor),
                         leadingIcon = {
                             Icon(
@@ -1294,11 +1418,26 @@ fun ReaderAppBar(
                 val isSearchActive = false
                 val isSettingsActive = false
 
-                createDropdownItem("Home", Icons.Filled.Home, Screen.Home, isHomeActive)
-                createDropdownItem("Reader", Icons.Filled.Book, Screen.Reader(), isReaderActive)
-                createDropdownItem("Bookmarks", Icons.Filled.Bookmark, Screen.Bookmarks, isBookmarksActive)
-                createDropdownItem("Search", Icons.Filled.Search, Screen.Search, isSearchActive)
-                createDropdownItem("Settings", Icons.Filled.Settings, Screen.Settings, isSettingsActive)
+                createDropdownItem("Home", Icons.Filled.Home, isHomeActive) {
+                    onScreenChange(Screen.Home)
+                    showNavigationDropdown = false
+                }
+                createDropdownItem("Reader", Icons.Filled.Book, isReaderActive) {
+                    onScreenChange(Screen.Reader())
+                    showNavigationDropdown = false
+                }
+                createDropdownItem("Bookmarks", Icons.Filled.Bookmark, isBookmarksActive) {
+                    onScreenChange(Screen.Bookmarks)
+                    showNavigationDropdown = false
+                }
+                createDropdownItem("Search", Icons.Filled.Search, isSearchActive) {
+                    viewModel.showSearchModal = true
+                    showNavigationDropdown = false
+                }
+                createDropdownItem("Settings", Icons.Filled.Settings, isSettingsActive) {
+                    onScreenChange(Screen.Settings)
+                    showNavigationDropdown = false
+                }
             }
         }
     )
@@ -1308,6 +1447,5 @@ sealed class Screen {
     object Home : Screen()
     data class Reader(val passage: PassageSelection? = null) : Screen()
     object Bookmarks : Screen()
-    object Search : Screen()
     object Settings : Screen()
 }

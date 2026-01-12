@@ -69,6 +69,7 @@ import com.example.fohbible.data.getBookNumberFromScope
 import com.example.fohbible.data.SCOPE_CATEGORIES
 import com.example.fohbible.data.SCOPE_RANGES
 import com.example.fohbible.data.SearchScope
+import com.example.fohbible.data.PassageSelection
 import com.example.fohbible.ui.theme.LocalAppTheme
 import com.example.fohbible.utils.ThemeColors
 import com.example.fohbible.utils.VerseTextProcessor
@@ -135,7 +136,6 @@ fun DatabaseHelper.searchVerses(query: String, options: SearchOptions? = null): 
     return verses
 }
 
-
 data class Verse(
     val verse: Int,
     val text: String?,
@@ -153,8 +153,7 @@ fun generateColorFromString(str: String): String {
         hash = char.code + ((hash shl 5) - hash)
     }
     val colors = listOf(
-        "#3B82F6", "#EF4444", "#10B981", "#F59E0B", "#8B5CF6",
-        "#EC4899", "#06B6D4", "#84CC16", "#F97316", "#6366F1"
+        "#3B82F6", "#EF4444", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4", "#84CC16", "#F97316", "#6366F1"
     )
     return colors[abs(hash) % colors.size]
 }
@@ -174,10 +173,8 @@ suspend fun enhanceSearchResultsWithColors(
     dbHelper: DatabaseHelper?
 ): List<Verse> {
     if (results.isEmpty() || dbHelper == null) return results
-
     val uniqueBookNumbers = results.map { it.bookNumber }.toSet()
     val colorMap = mutableMapOf<Int, String>()
-
     withContext(Dispatchers.IO) {
         uniqueBookNumbers.forEach { bookNumber ->
             try {
@@ -191,18 +188,20 @@ suspend fun enhanceSearchResultsWithColors(
             }
         }
     }
-
     return results.map { result ->
         result.copy(bookColor = colorMap[result.bookNumber])
     }
 }
 
 @Composable
-fun SearchScreen(databaseHelper: DatabaseHelper?) {
+fun SearchScreen(
+    databaseHelper: DatabaseHelper?,
+    onDismissRequest: () -> Unit,
+    onPassageSelected: (PassageSelection) -> Unit
+) {
     val theme = LocalAppTheme.current
     val isDark = theme.darkTheme
     val primaryColor = theme.primaryColor
-
     val colors = mapOf(
         "primary" to primaryColor,
         "background" to if (isDark) Color(0xFF0f172a) else Color(0xFFF8FAFC),
@@ -211,7 +210,6 @@ fun SearchScreen(databaseHelper: DatabaseHelper?) {
         "card" to if (isDark) Color(0xFF1E293B) else Color.White,
         "border" to if (isDark) Color(0xFF374151) else Color(0xFFE5E7EB),
     )
-
     var hasSearched by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     val results = remember { mutableStateListOf<Verse>() }
@@ -220,13 +218,9 @@ fun SearchScreen(databaseHelper: DatabaseHelper?) {
     var scope by remember { mutableStateOf("whole") }
     var showScopeDropdown by remember { mutableStateOf(false) }
     var showResultsStats by remember { mutableStateOf(false) }
-
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
-
-    val showBackToTop by remember {
-        derivedStateOf { listState.firstVisibleItemScrollOffset > 300 || listState.firstVisibleItemIndex > 0 }
-    }
+    val showBackToTop by remember { derivedStateOf { listState.firstVisibleItemScrollOffset > 300 || listState.firstVisibleItemIndex > 0 } }
 
     val handleQueryChange: (String) -> Unit = { text ->
         query = text
@@ -235,19 +229,15 @@ fun SearchScreen(databaseHelper: DatabaseHelper?) {
 
     val handleSearch: suspend (String?) -> Unit = Unit@{ searchQuery ->
         val actualQuery = searchQuery ?: query
-
         hasSearched = true
         showResultsStats = false
-
         if (actualQuery.trim().isEmpty()) {
             results.clear()
             return@Unit
         }
-
         try {
             loading = true
             error = null
-
             val searchOptions = SearchOptions(
                 bookRange = if (isBookScope(scope)) {
                     getBookNumberFromScope(scope)?.let { Pair(it, it) }
@@ -255,17 +245,13 @@ fun SearchScreen(databaseHelper: DatabaseHelper?) {
                     SCOPE_RANGES[scope]?.let { Pair(it.start, it.end) }
                 }
             )
-
             val searchResults = withContext(Dispatchers.IO) {
                 databaseHelper?.searchVerses(actualQuery, searchOptions) ?: emptyList()
             }
-
             val enhancedResults = enhanceSearchResultsWithColors(searchResults, databaseHelper)
-
             results.clear()
             results.addAll(enhancedResults)
             showResultsStats = true
-
             coroutineScope.launch {
                 listState.animateScrollToItem(0)
             }
@@ -293,8 +279,16 @@ fun SearchScreen(databaseHelper: DatabaseHelper?) {
     }
 
     val handleVersePress: (Verse) -> Unit = { verse ->
-        val bookInfo = getBookInfo(verse.bookNumber)
-        bookInfo?.name ?: verse.bookName ?: "Unknown Book"
+        val bookName = getBookInfo(verse.bookNumber)?.name ?: verse.bookName ?: "Unknown Book"
+        onPassageSelected(
+            PassageSelection(
+                bookNumber = verse.bookNumber,
+                bookName = bookName,
+                chapter = verse.chapter,
+                verse = verse.verse
+            )
+        )
+        onDismissRequest()
     }
 
     val clearSearch: () -> Unit = {
@@ -403,7 +397,6 @@ fun SearchScreen(databaseHelper: DatabaseHelper?) {
                 }
             }
         }
-
         AnimatedVisibility(
             visible = showBackToTop && results.size > 10,
             enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
@@ -430,7 +423,6 @@ fun ScopeDropdown(
     colors: Map<String, Color>
 ) {
     val currentConfig = getScopeConfig(scope)
-
     Card(
         modifier = Modifier.fillMaxWidth().padding(8.dp).clickable(onClick = onToggle),
         colors = CardDefaults.cardColors(containerColor = colors["primary"] as Color),
@@ -448,7 +440,6 @@ fun ScopeDropdown(
             Text(if (isOpen) "↑" else "↓", color = Color.White, fontSize = 20.sp)
         }
     }
-
     if (isOpen) {
         Dialog(onDismissRequest = onToggle) {
             Card(
@@ -514,7 +505,6 @@ fun PopularSearchTerms(
     colors: Map<String, Color>
 ) {
     val terms = listOf("faith", "love", "hope", "grace", "peace", "joy", "forgiveness", "salvation")
-
     Row(modifier = Modifier.horizontalScroll(rememberScrollState()).fillMaxWidth().wrapContentHeight()) {
         terms.forEach { term ->
             Card(
@@ -543,7 +533,6 @@ fun EmptyStates(
     colors: Map<String, Color>
 ) {
     if (loading) return
-
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
@@ -589,7 +578,6 @@ fun SearchResultItem(
     val longName = getBookInfo(verse.bookNumber)?.name ?: verse.bookName ?: "Unknown Book"
     val bookColorStr = verse.bookColor ?: getBookColor(longName, verse)
     val bookColor = Color(bookColorStr.toColorInt())
-
     val processor = VerseTextProcessor()
     val viewModel = viewModel<AppViewModel>()
     val themeColors = ThemeColors(
@@ -608,7 +596,6 @@ fun SearchResultItem(
         themeColors = themeColors,
         highlight = query
     )
-
     Card(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable { onVersePress(verse) },
         colors = CardDefaults.cardColors(containerColor = colors["card"] as Color),

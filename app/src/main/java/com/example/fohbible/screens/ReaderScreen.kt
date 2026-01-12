@@ -145,8 +145,7 @@ fun ReaderScreen(
         secondaryLoadedVerses.clear()
     }
     val multi = viewModel.multiVersion
-    val synced = viewModel.scrollSync
-    multi && secondaryDatabaseHelper != null
+    val synced = viewModel.scrollSync && multi && secondaryDatabaseHelper != null
     // Fonts
     val contextFont = LocalContext.current
     val systemFont = FontFamily.Default
@@ -179,30 +178,12 @@ fun ReaderScreen(
     ) {
         if (!multi) {
             // Single version mode
-            val currentBook by remember(primaryCurrent.bookNumber) {
-                derivedStateOf { BibleData.getBookByCustomNumber(primaryCurrent.bookNumber) }
-            }
-            val prevPassage by remember(primaryCurrent, currentBook) {
-                derivedStateOf {
-                    if (currentBook == null) primaryCurrent else getPreviousPassage(primaryCurrent, currentBook)
-                }
-            }
-            val nextPassage by remember(primaryCurrent, currentBook) {
-                derivedStateOf {
-                    if (currentBook == null) primaryCurrent else getNextPassage(primaryCurrent, currentBook)
-                }
-            }
+            val currentBook by remember(primaryCurrent.bookNumber) { derivedStateOf { BibleData.getBookByCustomNumber(primaryCurrent.bookNumber) } }
+            val prevPassage by remember(primaryCurrent, currentBook) { derivedStateOf { if (currentBook == null) primaryCurrent else getPreviousPassage(primaryCurrent, currentBook) } }
+            val nextPassage by remember(primaryCurrent, currentBook) { derivedStateOf { if (currentBook == null) primaryCurrent else getNextPassage(primaryCurrent, currentBook) } }
             val hasPrev by remember(prevPassage) { derivedStateOf { prevPassage != primaryCurrent } }
             val hasNext by remember(nextPassage) { derivedStateOf { nextPassage != primaryCurrent } }
-            val passages by remember(primaryCurrent, prevPassage, nextPassage, hasPrev, hasNext) {
-                derivedStateOf {
-                    buildList {
-                        if (hasPrev) add(prevPassage)
-                        add(primaryCurrent)
-                        if (hasNext) add(nextPassage)
-                    }
-                }
-            }
+            val passages by remember(primaryCurrent, prevPassage, nextPassage, hasPrev, hasNext) { derivedStateOf { buildList { if (hasPrev) add(prevPassage); add(primaryCurrent); if (hasNext) add(nextPassage) } } }
             val pageCount by remember(passages) { derivedStateOf { passages.size } }
             val currentOffset by remember(hasPrev) { derivedStateOf { if (hasPrev) 1 else 0 } }
             var pendingPassageChange by remember { mutableStateOf<PassageSelection?>(null) }
@@ -318,30 +299,12 @@ fun ReaderScreen(
         } else {
             if (synced) {
                 // Synced multi-version: shared pager
-                val currentBook by remember(primaryCurrent.bookNumber) {
-                    derivedStateOf { BibleData.getBookByCustomNumber(primaryCurrent.bookNumber) }
-                }
-                val prevPassage by remember(primaryCurrent, currentBook) {
-                    derivedStateOf {
-                        if (currentBook == null) primaryCurrent else getPreviousPassage(primaryCurrent, currentBook)
-                    }
-                }
-                val nextPassage by remember(primaryCurrent, currentBook) {
-                    derivedStateOf {
-                        if (currentBook == null) primaryCurrent else getNextPassage(primaryCurrent, currentBook)
-                    }
-                }
+                val currentBook by remember(primaryCurrent.bookNumber) { derivedStateOf { BibleData.getBookByCustomNumber(primaryCurrent.bookNumber) } }
+                val prevPassage by remember(primaryCurrent, currentBook) { derivedStateOf { if (currentBook == null) primaryCurrent else getPreviousPassage(primaryCurrent, currentBook) } }
+                val nextPassage by remember(primaryCurrent, currentBook) { derivedStateOf { if (currentBook == null) primaryCurrent else getNextPassage(primaryCurrent, currentBook) } }
                 val hasPrev by remember(prevPassage) { derivedStateOf { prevPassage != primaryCurrent } }
                 val hasNext by remember(nextPassage) { derivedStateOf { nextPassage != primaryCurrent } }
-                val passages by remember(primaryCurrent, prevPassage, nextPassage, hasPrev, hasNext) {
-                    derivedStateOf {
-                        buildList {
-                            if (hasPrev) add(prevPassage)
-                            add(primaryCurrent)
-                            if (hasNext) add(nextPassage)
-                        }
-                    }
-                }
+                val passages by remember(primaryCurrent, prevPassage, nextPassage, hasPrev, hasNext) { derivedStateOf { buildList { if (hasPrev) add(prevPassage); add(primaryCurrent); if (hasNext) add(nextPassage) } } }
                 val pageCount by remember(passages) { derivedStateOf { passages.size } }
                 val currentOffset by remember(hasPrev) { derivedStateOf { if (hasPrev) 1 else 0 } }
                 var pendingPassageChange by remember { mutableStateOf<PassageSelection?>(null) }
@@ -417,6 +380,15 @@ fun ReaderScreen(
                         }
                     }
                 }
+                // Fix: Suppress sync during initial scroll to target verse
+                var suppressSync by remember { mutableStateOf(false) }
+                var completedScrolls by remember { mutableStateOf(0) }
+                LaunchedEffect(targetVerse) {
+                    if (targetVerse != null) {
+                        suppressSync = true
+                        completedScrolls = 0
+                    }
+                }
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier
@@ -450,7 +422,8 @@ fun ReaderScreen(
                         } else {
                             val primaryState = rememberScrollState()
                             val secondaryState = rememberScrollState()
-                            if (viewModel.scrollSync) {
+                            // Fix: Conditional sync only after initial scrolls complete
+                            if (viewModel.scrollSync && !suppressSync) {
                                 LaunchedEffect(primaryState) {
                                     snapshotFlow { primaryState.value }.collect { _ ->
                                         val pMax = primaryState.maxValue.coerceAtLeast(1)
@@ -492,7 +465,14 @@ fun ReaderScreen(
                                         isPrimary = true,
                                         state = primaryState,
                                         modifier = Modifier.weight(1f),
-                                        isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false
+                                        isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
+                                        onInitialScrollComplete = {
+                                            completedScrolls++
+                                            if (completedScrolls == 2) {
+                                                suppressSync = false
+                                                completedScrolls = 0
+                                            }
+                                        }
                                     )
                                     ChapterView(
                                         passage = thisPassage,
@@ -506,7 +486,14 @@ fun ReaderScreen(
                                         isPrimary = false,
                                         state = secondaryState,
                                         modifier = Modifier.weight(1f),
-                                        isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false
+                                        isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
+                                        onInitialScrollComplete = {
+                                            completedScrolls++
+                                            if (completedScrolls == 2) {
+                                                suppressSync = false
+                                                completedScrolls = 0
+                                            }
+                                        }
                                     )
                                 }
                             } else {
@@ -523,7 +510,14 @@ fun ReaderScreen(
                                         isPrimary = true,
                                         state = primaryState,
                                         modifier = Modifier.weight(1f),
-                                        isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false
+                                        isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
+                                        onInitialScrollComplete = {
+                                            completedScrolls++
+                                            if (completedScrolls == 2) {
+                                                suppressSync = false
+                                                completedScrolls = 0
+                                            }
+                                        }
                                     )
                                     ChapterView(
                                         passage = thisPassage,
@@ -537,7 +531,14 @@ fun ReaderScreen(
                                         isPrimary = false,
                                         state = secondaryState,
                                         modifier = Modifier.weight(1f),
-                                        isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false
+                                        isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
+                                        onInitialScrollComplete = {
+                                            completedScrolls++
+                                            if (completedScrolls == 2) {
+                                                suppressSync = false
+                                                completedScrolls = 0
+                                            }
+                                        }
                                     )
                                 }
                             }
@@ -547,58 +548,22 @@ fun ReaderScreen(
             } else {
                 // Independent multi-version: separate pagers
                 // Primary pager setup
-                val primaryBook by remember(primaryCurrent.bookNumber) {
-                    derivedStateOf { BibleData.getBookByCustomNumber(primaryCurrent.bookNumber) }
-                }
-                val primaryPrev by remember(primaryCurrent, primaryBook) {
-                    derivedStateOf {
-                        if (primaryBook == null) primaryCurrent else getPreviousPassage(primaryCurrent, primaryBook)
-                    }
-                }
-                val primaryNext by remember(primaryCurrent, primaryBook) {
-                    derivedStateOf {
-                        if (primaryBook == null) primaryCurrent else getNextPassage(primaryCurrent, primaryBook)
-                    }
-                }
+                val primaryBook by remember(primaryCurrent.bookNumber) { derivedStateOf { BibleData.getBookByCustomNumber(primaryCurrent.bookNumber) } }
+                val primaryPrev by remember(primaryCurrent, primaryBook) { derivedStateOf { if (primaryBook == null) primaryCurrent else getPreviousPassage(primaryCurrent, primaryBook) } }
+                val primaryNext by remember(primaryCurrent, primaryBook) { derivedStateOf { if (primaryBook == null) primaryCurrent else getNextPassage(primaryCurrent, primaryBook) } }
                 val primaryHasPrev by remember(primaryPrev) { derivedStateOf { primaryPrev != primaryCurrent } }
                 val primaryHasNext by remember(primaryNext) { derivedStateOf { primaryNext != primaryCurrent } }
-                val primaryPassages by remember(primaryCurrent, primaryPrev, primaryNext, primaryHasPrev, primaryHasNext) {
-                    derivedStateOf {
-                        buildList {
-                            if (primaryHasPrev) add(primaryPrev)
-                            add(primaryCurrent)
-                            if (primaryHasNext) add(primaryNext)
-                        }
-                    }
-                }
+                val primaryPassages by remember(primaryCurrent, primaryPrev, primaryNext, primaryHasPrev, primaryHasNext) { derivedStateOf { buildList { if (primaryHasPrev) add(primaryPrev); add(primaryCurrent); if (primaryHasNext) add(primaryNext) } } }
                 val primaryPageCount by remember(primaryPassages) { derivedStateOf { primaryPassages.size } }
                 val primaryOffset by remember(primaryHasPrev) { derivedStateOf { if (primaryHasPrev) 1 else 0 } }
                 var primaryPendingChange by remember { mutableStateOf<PassageSelection?>(null) }
                 // Secondary pager setup
-                val secondaryBook by remember(secondaryCurrent.bookNumber) {
-                    derivedStateOf { BibleData.getBookByCustomNumber(secondaryCurrent.bookNumber) }
-                }
-                val secondaryPrev by remember(secondaryCurrent, secondaryBook) {
-                    derivedStateOf {
-                        if (secondaryBook == null) secondaryCurrent else getPreviousPassage(secondaryCurrent, secondaryBook)
-                    }
-                }
-                val secondaryNext by remember(secondaryCurrent, secondaryBook) {
-                    derivedStateOf {
-                        if (secondaryBook == null) secondaryCurrent else getNextPassage(secondaryCurrent, secondaryBook)
-                    }
-                }
+                val secondaryBook by remember(secondaryCurrent.bookNumber) { derivedStateOf { BibleData.getBookByCustomNumber(secondaryCurrent.bookNumber) } }
+                val secondaryPrev by remember(secondaryCurrent, secondaryBook) { derivedStateOf { if (secondaryBook == null) secondaryCurrent else getPreviousPassage(secondaryCurrent, secondaryBook) } }
+                val secondaryNext by remember(secondaryCurrent, secondaryBook) { derivedStateOf { if (secondaryBook == null) secondaryCurrent else getNextPassage(secondaryCurrent, secondaryBook) } }
                 val secondaryHasPrev by remember(secondaryPrev) { derivedStateOf { secondaryPrev != secondaryCurrent } }
                 val secondaryHasNext by remember(secondaryNext) { derivedStateOf { secondaryNext != secondaryCurrent } }
-                val secondaryPassages by remember(secondaryCurrent, secondaryPrev, secondaryNext, secondaryHasPrev, secondaryHasNext) {
-                    derivedStateOf {
-                        buildList {
-                            if (secondaryHasPrev) add(secondaryPrev)
-                            add(secondaryCurrent)
-                            if (secondaryHasNext) add(secondaryNext)
-                        }
-                    }
-                }
+                val secondaryPassages by remember(secondaryCurrent, secondaryPrev, secondaryNext, secondaryHasPrev, secondaryHasNext) { derivedStateOf { buildList { if (secondaryHasPrev) add(secondaryPrev); add(secondaryCurrent); if (secondaryHasNext) add(secondaryNext) } } }
                 val secondaryPageCount by remember(secondaryPassages) { derivedStateOf { secondaryPassages.size } }
                 val secondaryOffset by remember(secondaryHasPrev) { derivedStateOf { if (secondaryHasPrev) 1 else 0 } }
                 var secondaryPendingChange by remember { mutableStateOf<PassageSelection?>(null) }
@@ -770,7 +735,8 @@ fun ReaderScreen(
                                         versionAbbr = viewModel.currentVersionAbbr,
                                         isPrimary = true,
                                         state = state,
-                                        modifier = Modifier.fillMaxSize()
+                                        modifier = Modifier.fillMaxSize(),
+                                        isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false
                                     )
                                 }
                             }
@@ -940,7 +906,8 @@ fun ChapterView(
     isPrimary: Boolean,
     state: androidx.compose.foundation.ScrollState,
     modifier: Modifier = Modifier,
-    isKjvPlus: Boolean = false
+    isKjvPlus: Boolean = false,
+    onInitialScrollComplete: () -> Unit = {} // Fix: Callback for completion
 ) {
     val processor = remember(verses) { VerseTextProcessor() }
     val processedVerses = remember(verses, themeColors, isKjvPlus) {
@@ -1129,6 +1096,7 @@ fun ChapterView(
                         highlightedVerse = targetVerse
                         delay(2000)
                         highlightedVerse = null
+                        onInitialScrollComplete() // Fix: Signal completion
                     }
                 }
             }
