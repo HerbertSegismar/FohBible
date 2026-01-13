@@ -147,7 +147,7 @@ val SCOPE_CONFIG: Map<String, ScopeConfig> = mapOf(
     ),
     SCOPE_LETTERS to ScopeConfig(
         label = "The Letters",
-        description = "Romans to Jude",  // Kept as is; alternatively, update to "Hebrews to Jude" if desired
+        description = "Romans to Jude",
         category = "New Testament"
     ),
     SCOPE_VISION to ScopeConfig(
