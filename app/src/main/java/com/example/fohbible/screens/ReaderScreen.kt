@@ -387,10 +387,8 @@ fun ReaderScreen(
                 var suppressSync by remember { mutableStateOf(false) }
                 var completedScrolls by remember { mutableIntStateOf(0) }
                 LaunchedEffect(targetVerse) {
-                    if (targetVerse != null) {
-                        suppressSync = true
-                        completedScrolls = 0
-                    }
+                    suppressSync = true
+                    completedScrolls = 0
                 }
                 HorizontalPager(
                     state = pagerState,
@@ -1111,9 +1109,9 @@ fun getPreviousPassage(current: PassageSelection, currentBook: BibleBook?): Pass
     if (currentBook == null) return current
     if (currentBook.chapters <= 2 && current.chapter == 1) return current
     return if (current.chapter == 1) {
-        current.copy(chapter = currentBook.chapters, verse = null)
+        current.copy(chapter = currentBook.chapters, verse = 1)
     } else {
-        current.copy(chapter = current.chapter - 1, verse = null)
+        current.copy(chapter = current.chapter - 1, verse = 1)
     }
 }
 
@@ -1121,9 +1119,9 @@ fun getNextPassage(current: PassageSelection, currentBook: BibleBook?): PassageS
     if (currentBook == null) return current
     if (currentBook.chapters <= 2 && current.chapter == currentBook.chapters) return current
     return if (current.chapter == currentBook.chapters) {
-        current.copy(chapter = 1, verse = null)
+        current.copy(chapter = 1, verse = 1)
     } else {
-        current.copy(chapter = current.chapter + 1, verse = null)
+        current.copy(chapter = current.chapter + 1, verse = 1)
     }
 }
 
