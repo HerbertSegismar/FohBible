@@ -1,4 +1,4 @@
-@file:Suppress("UnusedImport", "VariableNaming", "FunctionName", "LocalVariableName", "UnusedParameter", "UnnecessaryVariable")
+@file:Suppress("UnusedImport", "VariableNaming", "FunctionName", "LocalVariableName", "UnusedParameter")
 
 package com.example.fohbible.screens
 
@@ -188,15 +188,12 @@ suspend fun enhanceSearchResultsWithColors(
             }
         }
     }
-    return results.map { result ->
-        result.copy(bookColor = colorMap[result.bookNumber])
-    }
+    return results.map { result -> result.copy(bookColor = colorMap[result.bookNumber]) }
 }
 
 @Composable
 fun SearchScreen(
     databaseHelper: DatabaseHelper?,
-    onDismissRequest: () -> Unit,
     onPassageSelected: (PassageSelection) -> Unit
 ) {
     val theme = LocalAppTheme.current
@@ -265,9 +262,7 @@ fun SearchScreen(
 
     val handlePopularSearch: (String) -> Unit = { term ->
         query = term
-        coroutineScope.launch {
-            handleSearch(term)
-        }
+        coroutineScope.launch { handleSearch(term) }
     }
 
     val handleScopeChange: (SearchScope) -> Unit = { newScope ->
@@ -288,7 +283,6 @@ fun SearchScreen(
                 verse = verse.verse
             )
         )
-        onDismissRequest()
     }
 
     val clearSearch: () -> Unit = {
@@ -478,9 +472,7 @@ fun ScopeDropdown(
                                 val config = getScopeConfig(scopeKey)
                                 val isSelected = scope == scopeKey
                                 Column(
-                                    modifier = Modifier.fillMaxWidth().background(if (isSelected) (colors["primary"] as Color).copy(alpha = 0.1f) else colors["card"] as Color).clickable {
-                                        onScopeChange(scopeKey)
-                                    }.padding(16.dp)
+                                    modifier = Modifier.fillMaxWidth().background(if (isSelected) (colors["primary"] as Color).copy(alpha = 0.1f) else colors["card"] as Color).clickable { onScopeChange(scopeKey) }.padding(16.dp)
                                 ) {
                                     Text(
                                         config.label,

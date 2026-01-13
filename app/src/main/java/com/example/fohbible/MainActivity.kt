@@ -60,7 +60,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -90,7 +89,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.fohbible.data.DatabaseHelper
@@ -110,13 +115,6 @@ import com.example.fohbible.ui.theme.ThemeManager
 import com.example.fohbible.utils.BibleVersionUtils
 import com.example.fohbible.utils.BibleVersionUtils.descriptionMap
 import kotlinx.coroutines.flow.collectLatest
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.first
 
 private val FONT_SIZE_KEY = intPreferencesKey("font_size")
@@ -157,7 +155,6 @@ class AppViewModel : ViewModel() {
     var scrollSync by mutableStateOf(true)
     var isReaderFullScreen by mutableStateOf(false)
     var showNavigationModal by mutableStateOf(false)
-    var showSearchModal by mutableStateOf(false)
     var showPrimaryVersionDropdown by mutableStateOf(false)
     var showSecondaryVersionDropdown by mutableStateOf(false)
     var showColorThemeDialog by mutableStateOf(false)
@@ -207,7 +204,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     var isUsingCustomColor by remember { mutableStateOf(viewModel.isCustomColor) }
     var customColor by remember { mutableStateOf(viewModel.customColor) }
     val dataStore = remember { activity.appDataStore }
-
     LaunchedEffect(Unit) {
         val prefs = dataStore.data.first()
         viewModel.fontSize = prefs[FONT_SIZE_KEY] ?: 18
@@ -226,91 +222,48 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
         //viewModel.bgImageIndex = prefs[BG_INDEX_KEY] ?: 0
         //viewModel.customTextureUri = prefs[CUSTOM_TEXTURE_KEY]
     }
-
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.fontSize }.collectLatest {
-            dataStore.edit { prefs -> prefs[FONT_SIZE_KEY] = it }
-        }
+        snapshotFlow { viewModel.fontSize }.collectLatest { dataStore.edit { prefs -> prefs[FONT_SIZE_KEY] = it } }
     }
-
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.darkTheme }.collectLatest {
-            dataStore.edit { prefs -> prefs[DARK_THEME_KEY] = it }
-        }
+        snapshotFlow { viewModel.darkTheme }.collectLatest { dataStore.edit { prefs -> prefs[DARK_THEME_KEY] = it } }
     }
-
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.selectedColor }.collectLatest {
-            dataStore.edit { prefs -> prefs[SELECTED_COLOR_KEY] = it?.toArgb() ?: DefaultPrimaryColor.toArgb() }
-        }
+        snapshotFlow { viewModel.selectedColor }.collectLatest { dataStore.edit { prefs -> prefs[SELECTED_COLOR_KEY] = it?.toArgb() ?: DefaultPrimaryColor.toArgb() } }
     }
-
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.isCustomColor }.collectLatest {
-            dataStore.edit { prefs -> prefs[IS_CUSTOM_COLOR_KEY] = it }
-        }
+        snapshotFlow { viewModel.isCustomColor }.collectLatest { dataStore.edit { prefs -> prefs[IS_CUSTOM_COLOR_KEY] = it } }
     }
-
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.customColor }.collectLatest {
-            dataStore.edit { prefs -> prefs[CUSTOM_COLOR_KEY] = it?.toArgb() ?: DefaultPrimaryColor.toArgb() }
-        }
+        snapshotFlow { viewModel.customColor }.collectLatest { dataStore.edit { prefs -> prefs[CUSTOM_COLOR_KEY] = it?.toArgb() ?: DefaultPrimaryColor.toArgb() } }
     }
-
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.selectedFontFamily }.collectLatest {
-            dataStore.edit { prefs -> prefs[FONT_FAMILY_KEY] = it }
-        }
+        snapshotFlow { viewModel.selectedFontFamily }.collectLatest { dataStore.edit { prefs -> prefs[FONT_FAMILY_KEY] = it } }
     }
-
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.currentDbName }.collectLatest {
-            dataStore.edit { prefs -> prefs[PRIMARY_DB_KEY] = it }
-        }
+        snapshotFlow { viewModel.currentDbName }.collectLatest { dataStore.edit { prefs -> prefs[PRIMARY_DB_KEY] = it } }
     }
-
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.currentVersionAbbr }.collectLatest {
-            dataStore.edit { prefs -> prefs[PRIMARY_ABBR_KEY] = it }
-        }
+        snapshotFlow { viewModel.currentVersionAbbr }.collectLatest { dataStore.edit { prefs -> prefs[PRIMARY_ABBR_KEY] = it } }
     }
-
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.multiVersion }.collectLatest {
-            dataStore.edit { prefs -> prefs[MULTI_VERSION_KEY] = it }
-        }
+        snapshotFlow { viewModel.multiVersion }.collectLatest { dataStore.edit { prefs -> prefs[MULTI_VERSION_KEY] = it } }
     }
-
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.secondaryDbName }.collectLatest {
-            dataStore.edit { prefs -> prefs[SECONDARY_DB_KEY] = it }
-        }
+        snapshotFlow { viewModel.secondaryDbName }.collectLatest { dataStore.edit { prefs -> prefs[SECONDARY_DB_KEY] = it } }
     }
-
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.secondaryVersionAbbr }.collectLatest {
-            dataStore.edit { prefs -> prefs[SECONDARY_ABBR_KEY] = it }
-        }
+        snapshotFlow { viewModel.secondaryVersionAbbr }.collectLatest { dataStore.edit { prefs -> prefs[SECONDARY_ABBR_KEY] = it } }
     }
-
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.multiViewLayout }.collectLatest {
-            dataStore.edit { prefs -> prefs[MULTI_LAYOUT_KEY] = it }
-        }
+        snapshotFlow { viewModel.multiViewLayout }.collectLatest { dataStore.edit { prefs -> prefs[MULTI_LAYOUT_KEY] = it } }
     }
-
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.scrollSync }.collectLatest {
-            dataStore.edit { prefs -> prefs[SCROLL_SYNC_KEY] = it }
-        }
+        snapshotFlow { viewModel.scrollSync }.collectLatest { dataStore.edit { prefs -> prefs[SCROLL_SYNC_KEY] = it } }
     }
-
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.bgImageIndex }.collectLatest {
-            dataStore.edit { prefs -> prefs[BG_INDEX_KEY] = it }
-        }
+        snapshotFlow { viewModel.bgImageIndex }.collectLatest { dataStore.edit { prefs -> prefs[BG_INDEX_KEY] = it } }
     }
-
     LaunchedEffect(Unit) {
         snapshotFlow { viewModel.customTextureUri }.collectLatest { uri ->
             dataStore.edit { prefs ->
@@ -322,7 +275,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
             }
         }
     }
-
     LaunchedEffect(viewModel.selectedColor, viewModel.darkTheme, viewModel.isCustomColor, viewModel.customColor) {
         viewModel.selectedColor?.let {
             ThemeManager.primaryColor = it
@@ -332,26 +284,19 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
         isUsingCustomColor = viewModel.isCustomColor
         customColor = viewModel.customColor
     }
-
     val themeState = AppThemeState(
         darkTheme = viewModel.darkTheme,
         primaryColor = viewModel.selectedColor ?: DefaultPrimaryColor,
         isCustomColor = viewModel.isCustomColor
     )
-
     var dbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
-
     LaunchedEffect(viewModel.currentDbName) {
         dbHelper?.close()
         dbHelper = DatabaseHelper(activity, viewModel.currentDbName)
     }
-
     DisposableEffect(Unit) {
-        onDispose {
-            dbHelper?.close()
-        }
+        onDispose { dbHelper?.close() }
     }
-
     CompositionLocalProvider(LocalAppTheme provides themeState) {
         FohBibleTheme(darkTheme = viewModel.darkTheme) {
             Scaffold(
@@ -452,6 +397,25 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                         }
                         Screen.Bookmarks -> BookmarksScreen()
                         Screen.Settings -> SettingsScreen()
+                        Screen.Search -> {
+                            SearchScreen(
+                                databaseHelper = dbHelper,
+                                onPassageSelected = { passage ->
+                                    viewModel.primaryPassage = passage
+                                    if (viewModel.scrollSync) {
+                                        viewModel.secondaryPassage = passage
+                                    }
+                                    // Close search and navigate/update to Reader
+                                    if (viewModel.navigationStack.size > 1 && viewModel.navigationStack[viewModel.navigationStack.size - 2] is Screen.Reader) {
+                                        viewModel.navigationStack[viewModel.navigationStack.size - 2] = Screen.Reader(passage)
+                                        viewModel.goBack()
+                                    } else {
+                                        viewModel.goBack()
+                                        viewModel.navigateTo(Screen.Reader(passage))
+                                    }
+                                }
+                            )
+                        }
                     }
                     if (viewModel.showNavigationModal) {
                         NavigationModal(
@@ -478,74 +442,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             },
                             databaseHelper = dbHelper
                         )
-                    }
-                    if (viewModel.showSearchModal) {
-                        Dialog(
-                            onDismissRequest = { viewModel.showSearchModal = false },
-                            properties = DialogProperties(
-                                usePlatformDefaultWidth = false,
-                                decorFitsSystemWindows = viewModel.showSearchModal
-                            )
-                        ) {
-                            Surface(
-                                modifier = Modifier.fillMaxSize(),
-                                shape = RoundedCornerShape(4.dp),
-                                color = MaterialTheme.colorScheme.surface
-                            ) {
-                                Scaffold(
-                                    modifier = Modifier.fillMaxSize(),
-                                    topBar = {
-                                        TopAppBar(
-                                            title = {
-                                                Text(
-                                                    text = "Select Passage",
-                                                    fontWeight = FontWeight.Medium,
-                                                    fontSize = 20.sp,
-                                                )
-                                            },
-                                            navigationIcon = {
-                                                IconButton(
-                                                    onClick = { viewModel.showSearchModal = false }
-                                                ) {
-                                                    Icon(
-                                                        Icons.AutoMirrored.Filled.ArrowBack,
-                                                        contentDescription = "Back",
-                                                    )
-                                                }
-                                            },
-                                            colors = TopAppBarDefaults.topAppBarColors(
-                                                containerColor = MaterialTheme.colorScheme.primary,
-                                                titleContentColor = Color.White,
-                                                navigationIconContentColor = Color.White,
-                                            ),
-                                        )
-                                    }
-                                ) { padding ->
-                                    Box(
-                                        modifier = Modifier
-                                            .padding(padding)
-                                            .fillMaxSize()
-                                    ) {
-                                        SearchScreen(
-                                            databaseHelper = dbHelper,
-                                            onDismissRequest = { viewModel.showSearchModal = false },
-                                            onPassageSelected = { passage ->
-                                                viewModel.primaryPassage = passage
-                                                if (viewModel.scrollSync) {
-                                                    viewModel.secondaryPassage = passage
-                                                }
-                                                viewModel.showSearchModal = false
-                                                if (currentScreen !is Screen.Reader) {
-                                                    viewModel.navigateTo(Screen.Reader(passage))
-                                                } else {
-                                                    viewModel.updateCurrentScreen(Screen.Reader(passage))
-                                                }
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
                     }
                     if (viewModel.showPrimaryVersionDropdown) {
                         Dialog(onDismissRequest = { viewModel.showPrimaryVersionDropdown = false }) {
@@ -602,8 +498,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 viewModel.customColor = color
                                 viewModel.showColorWheelDialog = false
                             },
-                            initialColor = if (viewModel.isCustomColor && viewModel.customColor != null) viewModel.customColor!! else viewModel.selectedColor
-                                ?: ThemeManager.primaryColor
+                            initialColor = if (viewModel.isCustomColor && viewModel.customColor != null) viewModel.customColor!! else viewModel.selectedColor ?: ThemeManager.primaryColor
                         )
                     }
                 }
@@ -944,14 +839,13 @@ fun HomeAppBar(
         animationSpec = tween(durationMillis = 300),
         label = "backRotation"
     )
-
     val screenTitle = when (currentScreen) {
         is Screen.Home -> "Home"
         is Screen.Reader -> "Reader"
         is Screen.Bookmarks -> "Bookmarks"
         is Screen.Settings -> "Settings"
+        is Screen.Search -> "Search"
     }
-
     TopAppBar(
         title = {
             Text(
@@ -1071,33 +965,21 @@ fun HomeAppBar(
                         }
                     )
                 }
-
                 val isHomeActive = currentScreen is Screen.Home
                 val isReaderActive = currentScreen is Screen.Reader
                 val isBookmarksActive = currentScreen == Screen.Bookmarks
-                val isSearchActive = false
+                val isSearchActive = currentScreen == Screen.Search
                 val isSettingsActive = currentScreen == Screen.Settings
-
-                createDropdownItem("Home", Icons.Filled.Home, isHomeActive) {
-                    onScreenChange(Screen.Home)
-                    showNavigationDropdown = false
-                }
-                createDropdownItem("Reader", Icons.Filled.Book, isReaderActive) {
-                    onScreenChange(Screen.Reader())
-                    showNavigationDropdown = false
-                }
-                createDropdownItem("Bookmarks", Icons.Filled.Bookmark, isBookmarksActive) {
-                    onScreenChange(Screen.Bookmarks)
-                    showNavigationDropdown = false
-                }
-                createDropdownItem("Search", Icons.Filled.Search, isSearchActive) {
-                    viewModel.showSearchModal = true
-                    showNavigationDropdown = false
-                }
-                createDropdownItem("Settings", Icons.Filled.Settings, isSettingsActive) {
-                    onScreenChange(Screen.Settings)
-                    showNavigationDropdown = false
-                }
+                createDropdownItem("Home", Icons.Filled.Home, isHomeActive) { onScreenChange(Screen.Home)
+                    showNavigationDropdown = false }
+                createDropdownItem("Reader", Icons.Filled.Book, isReaderActive) { onScreenChange(Screen.Reader())
+                    showNavigationDropdown = false }
+                createDropdownItem("Bookmarks", Icons.Filled.Bookmark, isBookmarksActive) { onScreenChange(Screen.Bookmarks)
+                    showNavigationDropdown = false }
+                createDropdownItem("Search", Icons.Filled.Search, isSearchActive) { onScreenChange(Screen.Search)
+                    showNavigationDropdown = false }
+                createDropdownItem("Settings", Icons.Filled.Settings, isSettingsActive) { onScreenChange(Screen.Settings)
+                    showNavigationDropdown = false }
             }
         }
     )
@@ -1152,7 +1034,6 @@ fun ReaderAppBar(
         animationSpec = tween(durationMillis = 300),
         label = "syncRotation"
     )
-
     TopAppBar(
         title = {
             if (!viewModel.multiVersion) {
@@ -1319,10 +1200,8 @@ fun ReaderAppBar(
                     )
                     DropdownMenuItem(
                         text = { Text(title, fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal, color = textColor) },
-                        onClick = {
-                            onClick()
-                            showMultiDropdown = false
-                        },
+                        onClick = { onClick()
+                            showMultiDropdown = false },
                         modifier = Modifier.background(backgroundColor)
                     )
                 }
@@ -1411,33 +1290,21 @@ fun ReaderAppBar(
                         }
                     )
                 }
-
                 val isHomeActive = false
                 val isReaderActive = true
                 val isBookmarksActive = false
                 val isSearchActive = false
                 val isSettingsActive = false
-
-                createDropdownItem("Home", Icons.Filled.Home, isHomeActive) {
-                    onScreenChange(Screen.Home)
-                    showNavigationDropdown = false
-                }
-                createDropdownItem("Reader", Icons.Filled.Book, isReaderActive) {
-                    onScreenChange(Screen.Reader())
-                    showNavigationDropdown = false
-                }
-                createDropdownItem("Bookmarks", Icons.Filled.Bookmark, isBookmarksActive) {
-                    onScreenChange(Screen.Bookmarks)
-                    showNavigationDropdown = false
-                }
-                createDropdownItem("Search", Icons.Filled.Search, isSearchActive) {
-                    viewModel.showSearchModal = true
-                    showNavigationDropdown = false
-                }
-                createDropdownItem("Settings", Icons.Filled.Settings, isSettingsActive) {
-                    onScreenChange(Screen.Settings)
-                    showNavigationDropdown = false
-                }
+                createDropdownItem("Home", Icons.Filled.Home, isHomeActive) { onScreenChange(Screen.Home)
+                    showNavigationDropdown = false }
+                createDropdownItem("Reader", Icons.Filled.Book, isReaderActive) { onScreenChange(Screen.Reader())
+                    showNavigationDropdown = false }
+                createDropdownItem("Bookmarks", Icons.Filled.Bookmark, isBookmarksActive) { onScreenChange(Screen.Bookmarks)
+                    showNavigationDropdown = false }
+                createDropdownItem("Search", Icons.Filled.Search, isSearchActive) { onScreenChange(Screen.Search)
+                    showNavigationDropdown = false }
+                createDropdownItem("Settings", Icons.Filled.Settings, isSettingsActive) { onScreenChange(Screen.Settings)
+                    showNavigationDropdown = false }
             }
         }
     )
@@ -1448,4 +1315,5 @@ sealed class Screen {
     data class Reader(val passage: PassageSelection? = null) : Screen()
     object Bookmarks : Screen()
     object Settings : Screen()
+    object Search : Screen()
 }

@@ -2,6 +2,7 @@
 
 package com.example.fohbible.screens
 
+import android.annotation.SuppressLint
 import android.graphics.Typeface
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -39,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -80,6 +82,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
+@SuppressLint("AutoboxingStateCreation")
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ReaderScreen(
@@ -382,7 +385,7 @@ fun ReaderScreen(
                 }
                 // Fix: Suppress sync during initial scroll to target verse
                 var suppressSync by remember { mutableStateOf(false) }
-                var completedScrolls by remember { mutableStateOf(0) }
+                var completedScrolls by remember { mutableIntStateOf(0) }
                 LaunchedEffect(targetVerse) {
                     if (targetVerse != null) {
                         suppressSync = true

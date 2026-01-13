@@ -269,6 +269,7 @@ fun SettingsScreen() {
                         }
                     }
                 }
+                Spacer(Modifier.height(8.dp))
                 Column {
                     Text("Font Family", style = MaterialTheme.typography.labelLarge)
                     Spacer(Modifier.height(8.dp))
