@@ -7,6 +7,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import java.io.File
 import java.io.FileOutputStream
+import java.util.Locale.getDefault
 import java.util.Random
 
 class DatabaseHelper(private val context: Context, val databaseName: String) {
@@ -247,8 +248,8 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
         var definition: String? = null
         try {
             val cursor: Cursor? = database?.rawQuery(
-                "SELECT definition FROM dictionary WHERE topic = ?",
-                arrayOf(word)
+                "SELECT definition FROM dictionary WHERE LOWER(topic) = ?",
+                arrayOf(word.lowercase(getDefault()))
             )
             cursor?.use {
                 if (it.moveToFirst()) {

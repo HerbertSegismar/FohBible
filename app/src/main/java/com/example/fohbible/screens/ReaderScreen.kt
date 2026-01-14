@@ -1057,7 +1057,15 @@ fun ReaderScreen(
             AlertDialog(
                 onDismissRequest = { showWordModal = false },
                 title = { Text(currentWord) },
-                text = { Text(wordDefinition) },
+                text = {
+                    Column(
+                        modifier = Modifier
+                            .verticalScroll(rememberScrollState())
+                            .padding(bottom = 8.dp)
+                    ) {
+                        Text(wordDefinition)
+                    }
+                },
                 confirmButton = {
                     TextButton(onClick = { showWordModal = false }) {
                         Text("Close")
