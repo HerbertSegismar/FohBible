@@ -2,6 +2,7 @@ package com.example.fohbible.data
 
 import android.content.ContentValues
 import android.content.Context
+import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import java.io.File
@@ -46,7 +47,8 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
     }
 
     private fun createBookmarksTable() {
-        database?.execSQL("""
+        database?.execSQL(
+            """
             CREATE TABLE IF NOT EXISTS $BOOKMARKS_TABLE (
                 $COLUMN_BOOK_NAME TEXT,
                 $COLUMN_CHAPTER INTEGER,
@@ -54,13 +56,15 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                 $COLUMN_TEXT TEXT,
                 PRIMARY KEY ($COLUMN_BOOK_NAME, $COLUMN_CHAPTER, $COLUMN_VERSE_NUMBER)
             )
-        """.trimIndent())
+            """.trimIndent()
+        )
     }
 
     private fun copyDatabaseFromAssets(dbFile: File) {
         try {
             dbFile.parentFile?.mkdirs()
-            context.assets.open("databases/$databaseName").use { inputStream ->
+            val assetPath = if (databaseName.endsWith(".dictionary.sqlite3")) "dictionaries/$databaseName" else "databases/$databaseName"
+            context.assets.open(assetPath).use { inputStream ->
                 FileOutputStream(dbFile).use { outputStream ->
                     inputStream.copyTo(outputStream)
                 }
@@ -74,8 +78,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
         var count = 0
         try {
             val query = """
-                SELECT COUNT(*) FROM $VERSES_TABLE 
-                WHERE $COLUMN_BOOK_NUMBER = ? AND $COLUMN_CHAPTER = ?
+                SELECT COUNT(*) FROM $VERSES_TABLE WHERE $COLUMN_BOOK_NUMBER = ? AND $COLUMN_CHAPTER = ?
             """.trimIndent()
             val cursor = database?.rawQuery(query, arrayOf(bookNumber.toString(), chapter.toString()))
             cursor?.use {
@@ -142,10 +145,8 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             val numberOfVerses = minOf(random.nextInt(5) + 1, verseCount)
             val startVerse = random.nextInt(verseCount - numberOfVerses + 1) + 1
             val query = """
-                SELECT $COLUMN_VERSE, $COLUMN_TEXT 
-                FROM $VERSES_TABLE 
-                WHERE $COLUMN_BOOK_NUMBER = ? AND $COLUMN_CHAPTER = ? 
-                AND $COLUMN_VERSE >= ? AND $COLUMN_VERSE < ? + ? 
+                SELECT $COLUMN_VERSE, $COLUMN_TEXT FROM $VERSES_TABLE 
+                WHERE $COLUMN_BOOK_NUMBER = ? AND $COLUMN_CHAPTER = ? AND $COLUMN_VERSE >= ? AND $COLUMN_VERSE < ? + ? 
                 ORDER BY $COLUMN_VERSE ASC
             """.trimIndent()
             val cursor = database?.rawQuery(
@@ -210,7 +211,9 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                 arrayOf(COLUMN_VERSE_NUMBER),
                 "$COLUMN_BOOK_NAME = ? AND $COLUMN_CHAPTER = ? AND $COLUMN_VERSE_NUMBER = ?",
                 arrayOf(verse.bookName, verse.chapter.toString(), verse.verseNumber.toString()),
-                null, null, null
+                null,
+                null,
+                null
             )
             cursor?.use {
                 exists = it.count > 0
@@ -238,6 +241,24 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             Log.e(tag, "Error getting bookmarks: ${e.message}")
         }
         return verses
+    }
+
+    fun getWordDefinition(word: String): String? {
+        var definition: String? = null
+        try {
+            val cursor: Cursor? = database?.rawQuery(
+                "SELECT definition FROM dictionary WHERE topic = ?",
+                arrayOf(word)
+            )
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    definition = it.getString(it.getColumnIndexOrThrow("definition"))
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(tag, "Error fetching word definition: ${e.message}")
+        }
+        return definition
     }
 
     fun close() {

@@ -156,7 +156,7 @@ fun HomeScreen(
                 Text(
                     text = "Your Daily Source of Inspiration",
                     fontSize = 20.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), // Similar to textMuted
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()

@@ -292,12 +292,13 @@ class VerseTextProcessor {
         onWordPress: ((String) -> Unit)?,
         isHighlighted: Boolean
     ) {
-        if (onWordPress != null && context.isTextContainer) {
+        if (onWordPress != null) {
             // Split into words for clickable words
             val words = splitIntoWords(text)
             for (word in words) {
                 if (isWord(word) && word.length > 1) {
-                    // Make word clickable
+                    // Make word clickable by adding annotation
+                    builder.pushStringAnnotation("word", word)
                     builder.withStyle(
                         SpanStyle(
                             color = context.textColor,
@@ -308,6 +309,7 @@ class VerseTextProcessor {
                     ) {
                         builder.append(word)
                     }
+                    builder.pop()
                 } else {
                     // Non-words (punctuation, numbers, whitespace)
                     builder.withStyle(
