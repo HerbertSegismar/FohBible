@@ -12,6 +12,5 @@ data class Verse(
     val text: String,
     val bookName: String? = null,
     val chapter: Int? = null,
-    val bookNumber: Int? = null,
-
+    val bookNumber: Int? = null
 )

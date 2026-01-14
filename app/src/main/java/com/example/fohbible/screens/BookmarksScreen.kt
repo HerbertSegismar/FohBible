@@ -38,9 +38,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.fohbible.MainActivity
 import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.Verse
+import com.example.fohbible.AppViewModel
 import com.example.fohbible.utils.SimpleVerseProcessor
 
 @Composable
@@ -48,10 +50,11 @@ fun BookmarksScreen(
     databaseHelper: DatabaseHelper? = null
 ) {
     val context = LocalContext.current
+    val appViewModel: AppViewModel = viewModel()
     var bookmarkedVerses by remember { mutableStateOf<List<Verse>>(emptyList()) }
 
-    LaunchedEffect(Unit) {
-        loadBookmarks(context, databaseHelper) { verses ->
+    LaunchedEffect(appViewModel.currentDbName) {
+        loadBookmarks(context, databaseHelper, appViewModel.currentDbName) { verses ->
             bookmarkedVerses = verses
         }
     }
@@ -72,7 +75,10 @@ fun BookmarksScreen(
             items(bookmarkedVerses.size) { index ->
                 BookmarkItem(
                     verse = bookmarkedVerses[index],
-                    databaseHelper = databaseHelper ?: DatabaseHelper(context as MainActivity, "kj2.sqlite3"),
+                    databaseHelper = databaseHelper ?: DatabaseHelper(
+                        context as MainActivity,
+                        appViewModel.currentDbName
+                    ),
                     onRemove = {
                         bookmarkedVerses = bookmarkedVerses.filterIndexed { i, _ -> i != index }
                     }
@@ -151,6 +157,7 @@ fun BookmarkItem(
 private fun loadBookmarks(
     context: Context,
     databaseHelper: DatabaseHelper?,
+    currentDbName: String,
     onComplete: (List<Verse>) -> Unit
 ) {
     if (databaseHelper != null) {
@@ -164,7 +171,7 @@ private fun loadBookmarks(
         Thread {
             val dbHelper = DatabaseHelper(
                 context as MainActivity,
-                databaseName = "kj2.sqlite3"
+                databaseName = currentDbName  // Using currentDbName from AppViewModel
             )
             val verses = dbHelper.getBookmarks()
             dbHelper.close()

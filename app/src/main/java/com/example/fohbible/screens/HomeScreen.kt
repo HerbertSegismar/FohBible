@@ -1,8 +1,10 @@
 package com.example.fohbible.screens
 
 import android.content.Context
+import android.graphics.fonts.FontFamily
 import android.os.Handler
 import android.os.Looper
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -37,6 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -46,7 +49,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -61,6 +66,8 @@ import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.Verse
 import com.example.fohbible.utils.SimpleVerseProcessor
 import com.example.fohbible.MatrixNative
+import com.example.fohbible.R
+import kotlinx.coroutines.NonCancellable.key
 
 // Data classes for HomeScreen
 data class QuickAction(
@@ -110,6 +117,56 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item { Spacer(modifier = Modifier.height(8.dp)) }
+        item {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Fount of Hope",
+                    fontSize = 25.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    fontFamily = getFontFamily("rubik-glitch")
+                )
+
+                Image(
+                    painter = painterResource(id = R.drawable.foh),
+                    contentDescription = "Fount of Hope Logo",
+                    modifier = Modifier
+                        .size(160.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Fit
+                )
+
+                Text(
+                    text = "Bible App",
+                    fontSize = 30.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    fontFamily = getFontFamily("rubik-glitch")
+                )
+
+                Text(
+                    text = "Your Daily Source of Inspiration",
+                    fontSize = 20.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), // Similar to textMuted
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    fontFamily = getFontFamily("oswald")
+                )
+            }
+            Spacer(modifier = Modifier.height(30.dp))
+        }
+
 
         item {
             DailyVerseCard(
@@ -138,8 +195,19 @@ fun HomeScreen(
         }
         item { Spacer(modifier = Modifier.height(40.dp)) }
 
+
         item {
-            MatrixNative()
+            // Use remember to prevent unnecessary recompositions
+            val isMatrixVisible by remember { mutableStateOf(true) }
+
+            if (isMatrixVisible) {
+                key("matrix_component") {
+                    MatrixNative()
+                }
+            } else {
+                // Fallback content when matrix is hidden
+                Spacer(modifier = Modifier.height(16.dp))
+            }
         }
         item { Spacer(modifier = Modifier.height(40.dp)) }
         item {

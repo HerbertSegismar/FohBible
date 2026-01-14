@@ -47,43 +47,39 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 import kotlin.random.Random
 
 val JesusAttributes = listOf(
-    "Jesus Christ", "Messiah", "Savior", "Redeemer", "Son of God", "Lamb of God", "King of Kings",
-    "Lord of Lords", "Prince of Peace", "Alpha and Omega", "The Way", "The Truth", "The Life",
-    "Good Shepherd", "Light of the World", "Bread of Life", "The Resurrection", "Emmanuel",
-    "Wonderful Counselor", "Mighty God", "Everlasting Father", "The Word", "Son of Man", "The Door",
-    "The Vinedresser", "True Vine", "The Amen", "Author and Finisher of Our Faith", "Chief Cornerstone",
-    "Bright Morning Star", "Lion of the Tribe of Judah", "Root of David", "Holy One of Israel",
-    "Bridegroom", "Head of the Church", "Mediator", "Great High Priest", "The Prophet", "The Rock",
-    "Stone of Stumbling", "Captain of Our Salvation", "Chosen One", "Image of the Invisible God",
-    "Firstborn Over All Creation", "Firstborn from the Dead", "The Righteous One", "I AM",
-    "The Great I Am", "Lord of All", "Judge of the Living and the Dead", "Shiloh", "Sun of Righteousness",
-    "The Branch", "Man of Sorrows", "Faithful and True Witness", "The Amen", "Lord of Glory",
-    "The Power of God", "The Wisdom of God", "Our Passover Lamb", "Shepherd of Souls",
-    "The Resurrection and the Life", "The Holy One", "The Just One", "The Advocate", "The Deliverer",
-    "The Hope of Nations", "The Consolation of Israel", "The Desire of All Nations",
-    "The Fountain of Living Waters", "The Rod from the Stem of Jesse", "The Governor Among the Nations",
-    "The Word of Life", "The Spirit of Life", "The Beloved Son", "The Light of Men", "The True Light",
-    "The Horn of Salvation", "The Dayspring from on High", "The Upholder of All Things",
-    "The Apostle of Our Confession", "The Bishop of Souls", "The Christ of God", "The Holy Servant",
-    "The Pioneer of Salvation", "The Author of Eternal Salvation", "The Forerunner", "The Lawgiver",
-    "The Lord of the Harvest", "The Lord of the Sabbath", "The Truth of God", "The Vine",
-    "The Living Stone", "The Chosen Stone", "The Precious Cornerstone", "The Foundation", "The Temple",
-    "The Light of Heaven", "The King of the Jews", "The King of Israel", "The King of Righteousness",
-    "The King of Peace", "The King of Glory", "The Lord Strong and Mighty", "The Lord Mighty in Battle",
-    "The Lord of Hosts", "The Lord Our Righteousness", "The Lord Who Heals", "The Lord Who Provides",
-    "The Lord Who Sanctifies", "The Lord Who Sees", "The Angel of God", "The Angel of the Lord",
-    "Yahweh", "Jehovah", "Elohim", "El Shaddai", "Adonai", "Jehovah Jireh", "Jehovah Rapha",
-    "Jehovah Nissi", "Jehovah Shalom", "Jehovah Raah", "Jehovah Tsidkenu", "Jehovah Shammah",
-    "El Elyon", "El Roi", "El Olam", "Yahweh Yireh", "Yahweh Rapha", "Yahweh Nissi", "Yahweh Shalom",
-    "Yahweh Raah", "Yahweh Tsidkenu", "Yahweh Shammah", "Yahweh Sabaoth",
+    "Jesus Christ", "Messiah", "Savior", "Redeemer", "Son of God", "Lamb of God", "King of Kings", "Lord of Lords",
+    "Prince of Peace", "Alpha and Omega", "The Way", "The Truth", "The Life", "Good Shepherd", "Light of the World",
+    "Bread of Life", "The Resurrection", "Emmanuel", "Wonderful Counselor", "Mighty God", "Everlasting Father",
+    "The Word", "Son of Man", "The Door", "The Vinedresser", "True Vine", "The Amen", "Author and Finisher of Our Faith",
+    "Chief Cornerstone", "Bright Morning Star", "Lion of the Tribe of Judah", "Root of David", "Holy One of Israel",
+    "Bridegroom", "Head of the Church", "Mediator", "Great High Priest", "The Prophet", "The Rock", "Stone of Stumbling",
+    "Captain of Our Salvation", "Chosen One", "Image of the Invisible God", "Firstborn Over All Creation",
+    "Firstborn from the Dead", "The Righteous One", "I AM", "The Great I Am", "Lord of All", "Judge of the Living and the Dead",
+    "Shiloh", "Sun of Righteousness", "The Branch", "Man of Sorrows", "Faithful and True Witness", "The Amen",
+    "Lord of Glory", "The Power of God", "The Wisdom of God", "Our Passover Lamb", "Shepherd of Souls",
+    "The Resurrection and the Life", "The Holy One", "The Just One", "The Advocate", "The Deliverer", "The Hope of Nations",
+    "The Consolation of Israel", "The Desire of All Nations", "The Fountain of Living Waters", "The Rod from the Stem of Jesse",
+    "The Governor Among the Nations", "The Word of Life", "The Spirit of Life", "The Beloved Son", "The Light of Men",
+    "The True Light", "The Horn of Salvation", "The Dayspring from on High", "The Upholder of All Things",
+    "The Apostle of Our Confession", "The Bishop of Souls", "The Christ of God", "The Holy Servant", "The Pioneer of Salvation",
+    "The Author of Eternal Salvation", "The Forerunner", "The Lawgiver", "The Lord of the Harvest", "The Lord of the Sabbath",
+    "The Truth of God", "The Vine", "The Living Stone", "The Chosen Stone", "The Precious Cornerstone", "The Foundation",
+    "The Temple", "The Light of Heaven", "The King of the Jews", "The King of Israel", "The King of Righteousness",
+    "The King of Peace", "The King of Glory", "The Lord Strong and Mighty", "The Lord Mighty in Battle", "The Lord of Hosts",
+    "The Lord Our Righteousness", "The Lord Who Heals", "The Lord Who Provides", "The Lord Who Sanctifies", "The Lord Who Sees",
+    "The Angel of God", "The Angel of the Lord", "Yahweh", "Jehovah", "Elohim", "El Shaddai", "Adonai", "Jehovah Jireh",
+    "Jehovah Rapha", "Jehovah Nissi", "Jehovah Shalom", "Jehovah Raah", "Jehovah Tsidkenu", "Jehovah Shammah", "El Elyon",
+    "El Roi", "El Olam", "Yahweh Yireh", "Yahweh Rapha", "Yahweh Nissi", "Yahweh Shalom", "Yahweh Raah", "Yahweh Tsidkenu",
+    "Yahweh Shammah", "Yahweh Sabaoth",
 )
 
 const val MATRIX_HEIGHT = 612f
-val FONT_SIZE = 14.sp
-const val TRAIL_LENGTH = 15
+val FONT_SIZE = 12.sp
+const val TRAIL_LENGTH = 12
 
 data class Drop(
     val id: String,
@@ -125,22 +121,23 @@ fun MatrixNative() {
     var overlay by remember { mutableStateOf<Overlay?>(null) }
     val drops = remember { mutableStateListOf<Drop>() }
     val coroutineScope = rememberCoroutineScope()
-    val matrixChars = "アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッン0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ~!@#$%^&*()_-+=ᜀᜁᜂᜃᜄᜅᜆᜇᜈᜉᜊᜋᜌᜎᜏᜐᜑ"
+    val matrixChars =
+        "アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッン0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ~!@#$%^&*()_-+=ᜀᜁᜂᜃᜄᜅᜆᜇᜈᜉᜊᜋᜌᜎᜏᜐᜑ"
     val density = LocalDensity.current
     val fontSizePx = with(density) { FONT_SIZE.toPx() }
     val paint = remember(safeMatrixColor, typeface) {
         Paint().apply {
             textSize = fontSizePx
             color = safeMatrixColor.toArgb()
-            setShadowLayer(2f, 0f, 0f, safeMatrixColor.copy(alpha = 0.5f).toArgb())
-            isAntiAlias = true
+            //setShadowLayer(2f, 0f, 0f, safeMatrixColor.copy(alpha = 0.5f).toArgb())
+            isAntiAlias = false
             this.typeface = typeface
         }
     }
     // Remember overlayPaint with overlayColor as a key to update when theme changes
     val overlayPaint = remember(overlayColor, overlayTypeface) {
         Paint().apply {
-            isAntiAlias = true
+            isAntiAlias = false
             this.typeface = overlayTypeface
             // We'll set textSize and alpha dynamically in the Canvas
         }
@@ -159,9 +156,9 @@ fun MatrixNative() {
                 .padding(16.dp)
         ) {
             Text(
-                text = "Names & Attributes of the Lord Jesus Christ",
+                text = "Here is the Fount of Hope",
                 style = TextStyle(
-                    fontSize = FONT_SIZE,
+                    fontSize = FONT_SIZE * 1.5f,
                     textAlign = TextAlign.Center,
                     color = safeMatrixColor,
                     fontFamily = getFontFamily("rubik-glitch")
@@ -180,9 +177,17 @@ fun MatrixNative() {
                 LaunchedEffect(containerWidth) {
                     if (containerWidth == 0f) return@LaunchedEffect
                     val numColumns = (containerWidth / fontSizePx).toInt()
+
+                    // CHANGED: Only create drops for 70% of the columns
+                    val numDrops = (numColumns * 0.5).roundToInt()
+
                     drops.forEach { it.headAnim.stop() }
                     drops.clear()
-                    for (i in 0 until numColumns) {
+
+                    // CHANGED: Create a list of column indices and take 70% of them
+                    val columns = (0 until numColumns).shuffled().take(numDrops)
+
+                    for (i in columns) {
                         val headAnim = Animatable(0f)
                         val trailChars = List(TRAIL_LENGTH) { matrixChars.random().toString() }
                         val x = i * fontSizePx
@@ -192,13 +197,16 @@ fun MatrixNative() {
                         }
                     }
                 }
+
                 LaunchedEffect(containerWidth) {
                     if (containerWidth == 0f) return@LaunchedEffect
                     showRandomAttribute(
                         containerWidth,
                         containerHeight,
                         coroutineScope,
-                        onNewOverlay = { newOverlay -> overlay = newOverlay }
+                        onNewOverlay = { newOverlay ->
+                            overlay = newOverlay
+                        }
                     )
                 }
                 Canvas(
@@ -256,7 +264,8 @@ private suspend fun startDropAnimation(
             targetValue = totalHeight,
             animationSpec = tween(duration, easing = LinearEasing)
         )
-        val gapDelay = 500 + Random.nextInt(2000)
+        // Increased gap delay for sparser rain
+        val gapDelay = 1000 + Random.nextInt(3000)  // Changed from 500-2500 to 1000-4000
         delay(gapDelay.toLong())
     }
 }
