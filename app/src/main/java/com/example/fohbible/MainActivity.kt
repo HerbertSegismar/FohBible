@@ -100,6 +100,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.PassageSelection
+import com.example.fohbible.modals.NavigationModal
 import com.example.fohbible.screens.BookmarksScreen
 import com.example.fohbible.screens.HomeScreen
 import com.example.fohbible.screens.ReaderScreen
@@ -164,6 +165,7 @@ class AppViewModel : ViewModel() {
     var secondaryPassage by mutableStateOf(PassageSelection(10, "Genesis", 1, 1))
     var bgImageIndex by mutableIntStateOf(0)
     var customTextureUri by mutableStateOf<String?>(null)
+    var selectedDictionary by mutableStateOf("noah")
 
     fun navigateTo(screen: Screen) {
         navigationStack.add(screen)

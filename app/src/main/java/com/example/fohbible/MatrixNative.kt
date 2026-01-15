@@ -79,7 +79,7 @@ val JesusAttributes = listOf(
 
 const val MATRIX_HEIGHT = 612f
 val FONT_SIZE = 12.sp
-const val TRAIL_LENGTH = 12
+const val TRAIL_LENGTH = 15
 
 data class Drop(
     val id: String,
@@ -129,7 +129,7 @@ fun MatrixNative() {
         Paint().apply {
             textSize = fontSizePx
             color = safeMatrixColor.toArgb()
-            //setShadowLayer(2f, 0f, 0f, safeMatrixColor.copy(alpha = 0.5f).toArgb())
+            setShadowLayer(2f, 0f, 0f, safeMatrixColor.copy(alpha = 0.5f).toArgb())
             isAntiAlias = false
             this.typeface = typeface
         }
@@ -179,7 +179,7 @@ fun MatrixNative() {
                     val numColumns = (containerWidth / fontSizePx).toInt()
 
                     // CHANGED: Only create drops for 70% of the columns
-                    val numDrops = (numColumns * 0.5).roundToInt()
+                    val numDrops = (numColumns * 0.7).roundToInt()
 
                     drops.forEach { it.headAnim.stop() }
                     drops.clear()
