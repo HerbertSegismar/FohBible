@@ -26,13 +26,13 @@ fun StrongsModal(
     if (show) {
         val textColor = MaterialTheme.colorScheme.onBackground
         val linkColor = MaterialTheme.colorScheme.primary
-
         AlertDialog(
             onDismissRequest = onDismiss,
             title = {
                 Text(
                     text = "Strong's Definition for $strongNumber",
-                    style = MaterialTheme.typography.titleMedium
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
                 )
             },
             text = {

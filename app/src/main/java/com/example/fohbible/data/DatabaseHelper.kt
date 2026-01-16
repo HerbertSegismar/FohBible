@@ -64,7 +64,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
     private fun copyDatabaseFromAssets(dbFile: File) {
         try {
             dbFile.parentFile?.mkdirs()
-            val assetPath = if (databaseName.endsWith(".dictionary.sqlite3")) "dictionaries/$databaseName" else "databases/$databaseName"
+            val assetPath = if (databaseName.endsWith("dictionary.sqlite3")) "dictionaries/$databaseName" else "databases/$databaseName"
             context.assets.open(assetPath).use { inputStream ->
                 FileOutputStream(dbFile).use { outputStream ->
                     inputStream.copyTo(outputStream)
@@ -79,7 +79,8 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
         var count = 0
         try {
             val query = """
-                SELECT COUNT(*) FROM $VERSES_TABLE WHERE $COLUMN_BOOK_NUMBER = ? AND $COLUMN_CHAPTER = ?
+                SELECT COUNT(*) FROM $VERSES_TABLE
+                WHERE $COLUMN_BOOK_NUMBER = ? AND $COLUMN_CHAPTER = ?
             """.trimIndent()
             val cursor = database?.rawQuery(query, arrayOf(bookNumber.toString(), chapter.toString()))
             cursor?.use {
@@ -146,8 +147,10 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             val numberOfVerses = minOf(random.nextInt(5) + 1, verseCount)
             val startVerse = random.nextInt(verseCount - numberOfVerses + 1) + 1
             val query = """
-                SELECT $COLUMN_VERSE, $COLUMN_TEXT FROM $VERSES_TABLE 
-                WHERE $COLUMN_BOOK_NUMBER = ? AND $COLUMN_CHAPTER = ? AND $COLUMN_VERSE >= ? AND $COLUMN_VERSE < ? + ? 
+                SELECT $COLUMN_VERSE, $COLUMN_TEXT
+                FROM $VERSES_TABLE
+                WHERE $COLUMN_BOOK_NUMBER = ? AND $COLUMN_CHAPTER = ?
+                AND $COLUMN_VERSE >= ? AND $COLUMN_VERSE < ? + ?
                 ORDER BY $COLUMN_VERSE ASC
             """.trimIndent()
             val cursor = database?.rawQuery(
@@ -260,6 +263,37 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             Log.e(tag, "Error fetching word definition: ${e.message}")
         }
         return definition
+    }
+
+    fun getStrongDefinition(word: String): String? {
+        var result: String? = null
+        try {
+            val cursor: Cursor? = database?.rawQuery(
+                "SELECT definition, lexeme, transliteration, pronunciation FROM dictionary WHERE topic = ?",
+                arrayOf(word)
+            )
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    var definition = it.getString(it.getColumnIndexOrThrow("definition"))
+                    val lexeme = it.getString(it.getColumnIndexOrThrow("lexeme"))
+                    val transliteration = it.getString(it.getColumnIndexOrThrow("transliteration"))
+                    val pronunciation = it.getString(it.getColumnIndexOrThrow("pronunciation"))
+                    // Process XML tags: replace <see ref="XXX"/> with (see XXX) and remove other tags
+                    definition = definition.replace(Regex("<see ref=\"([^\"]*)\"/>"), "(see $1)")
+                    definition = definition.replace(Regex("<.*?>"), "").trim()
+                    // Format all columns as text
+                    result = buildString {
+                        append("Lexeme: $lexeme\n")
+                        append("Transliteration: $transliteration\n")
+                        append("Pronunciation: $pronunciation\n\n")
+                        append("Definition: $definition")
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(tag, "Error fetching strong definition: ${e.message}")
+        }
+        return result
     }
 
     fun close() {

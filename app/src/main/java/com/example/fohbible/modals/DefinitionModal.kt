@@ -36,7 +36,8 @@ fun DefinitionModal(
             title = {
                 Text(
                     text = "Definition of " + word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() } + " - $dbDisplayName",
-                    style = MaterialTheme.typography.titleMedium
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
                 )
             },
             text = {
