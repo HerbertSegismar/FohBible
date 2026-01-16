@@ -28,7 +28,8 @@ data class TraversalContext(
     val currentTag: String?,
     val baseFontSize: TextUnit,
     val fontSizeMultiplier: Float = 1f,
-    val baselineShift: BaselineShift? = null
+    val baselineShift: BaselineShift? = null,
+    val isOldTestament: Boolean
 )
 
 data class ProcessedVerse(
@@ -48,6 +49,7 @@ data class ThemeColors(
 )
 
 class VerseTextProcessor {
+
     fun processVerse(
         verseText: String?,
         baseFontSize: TextUnit,
@@ -56,8 +58,10 @@ class VerseTextProcessor {
         onTagPress: ((String) -> Unit)? = null,
         textColor: Color? = null,
         onWordPress: ((String) -> Unit)? = null,
+        onStrongsPress: ((String) -> Unit)? = null,
         isHighlighted: Boolean = false,
-        isKjvPlus: Boolean = false
+        isKjvPlus: Boolean = false,
+        isOldTestament: Boolean
     ): ProcessedVerse {
         val nodes = parseXmlTags(verseText ?: "")
         val tree = buildTree(nodes)
@@ -66,9 +70,10 @@ class VerseTextProcessor {
             isTextContainer = false,
             isHeader = false,
             currentTag = null,
-            baseFontSize = baseFontSize
+            baseFontSize = baseFontSize,
+            isOldTestament = isOldTestament
         )
-        val (header, body) = traverseTree(tree, initialContext, highlight, themeColors, onTagPress, onWordPress, isHighlighted, isKjvPlus)
+        val (header, body) = traverseTree(tree, initialContext, highlight, themeColors, onTagPress, onWordPress, onStrongsPress, isHighlighted, isKjvPlus)
         return ProcessedVerse(header, body)
     }
 
@@ -147,6 +152,7 @@ class VerseTextProcessor {
         themeColors: ThemeColors,
         onTagPress: ((String) -> Unit)?,
         onWordPress: ((String) -> Unit)?,
+        onStrongsPress: ((String) -> Unit)?,
         isHighlighted: Boolean,
         isKjvPlus: Boolean
     ): Pair<AnnotatedString?, AnnotatedString> {
@@ -162,6 +168,7 @@ class VerseTextProcessor {
                 themeColors,
                 onTagPress,
                 onWordPress,
+                onStrongsPress,
                 isHighlighted,
                 isKjvPlus
             )
@@ -180,6 +187,7 @@ class VerseTextProcessor {
         themeColors: ThemeColors,
         onTagPress: ((String) -> Unit)?,
         onWordPress: ((String) -> Unit)?,
+        onStrongsPress: ((String) -> Unit)?,
         isHighlighted: Boolean,
         isKjvPlus: Boolean
     ) {
@@ -193,6 +201,7 @@ class VerseTextProcessor {
                     highlight,
                     themeColors,
                     onWordPress,
+                    onStrongsPress,
                     isHighlighted
                 )
             }
@@ -249,6 +258,7 @@ class VerseTextProcessor {
                         themeColors,
                         onTagPress,
                         onWordPress,
+                        onStrongsPress,
                         isHighlighted,
                         isKjvPlus
                     )
@@ -264,16 +274,35 @@ class VerseTextProcessor {
         highlight: String?,
         themeColors: ThemeColors,
         onWordPress: ((String) -> Unit)?,
+        onStrongsPress: ((String) -> Unit)?,
         isHighlighted: Boolean
     ) {
-        val effectiveMultiplier = if (context.currentTag == "f" && isEncircled(node.content)) {
-            1.1f
-        } else {
-            context.fontSizeMultiplier
-        }
+        val effectiveMultiplier = if (context.currentTag == "f" && isEncircled(node.content)) { 1.1f } else { context.fontSizeMultiplier }
         val textContext = context.copy(fontSizeMultiplier = effectiveMultiplier)
         val text = node.content
-        processNormalText(text, builder, textContext, highlight, themeColors, onWordPress, isHighlighted)
+        if (context.currentTag == "S" && onStrongsPress != null) {
+            val trimmed = text.trim()
+            if (trimmed.isNotEmpty()) {
+                val prefixed = if (trimmed.firstOrNull()?.isLetter() ?: false) {
+                    trimmed
+                } else {
+                    (if (context.isOldTestament) "H" else "G") + trimmed
+                }
+                builder.pushStringAnnotation("strong", prefixed)
+                builder.withStyle(
+                    SpanStyle(
+                        color = textContext.textColor,
+                        fontSize = textContext.baseFontSize * textContext.fontSizeMultiplier,
+                        baselineShift = textContext.baselineShift ?: BaselineShift.None
+                    )
+                ) {
+                    builder.append(text)
+                }
+                builder.pop()
+            }
+        } else {
+            processNormalText(text, builder, textContext, highlight, themeColors, onWordPress, isHighlighted)
+        }
     }
 
     private fun isEncircled(text: String): Boolean {

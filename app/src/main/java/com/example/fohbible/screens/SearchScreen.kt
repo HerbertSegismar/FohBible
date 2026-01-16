@@ -80,7 +80,9 @@ import kotlin.math.abs
 import androidx.core.graphics.toColorInt
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.fohbible.AppViewModel
+import com.example.fohbible.data.BibleData
 import com.example.fohbible.data.scopeColors
+import kotlin.Boolean
 
 fun getScopeForBookNumber(bookNumber: Int): String? {
     for ((scope, range) in SCOPE_RANGES) {
@@ -586,7 +588,8 @@ fun SearchResultItem(
         verseText = verse.text,
         baseFontSize = 16.sp,
         themeColors = themeColors,
-        highlight = query
+        highlight = query,
+        isOldTestament = viewModel.isOldTestament
     )
     Card(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable { onVersePress(verse) },

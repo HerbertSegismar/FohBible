@@ -98,8 +98,10 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.fohbible.data.BibleData
 import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.PassageSelection
+import com.example.fohbible.data.Testament
 import com.example.fohbible.modals.NavigationModal
 import com.example.fohbible.screens.BookmarksScreen
 import com.example.fohbible.screens.HomeScreen
@@ -166,6 +168,12 @@ class AppViewModel : ViewModel() {
     var bgImageIndex by mutableIntStateOf(0)
     var customTextureUri by mutableStateOf<String?>(null)
     var selectedDictionary by mutableStateOf("noah")
+
+    val isOldTestament: Boolean
+        get() = BibleData.getBookByCustomNumber(primaryPassage.bookNumber)?.testament == Testament.OLD
+
+    val isSecondaryOldTestament: Boolean
+        get() = BibleData.getBookByCustomNumber(secondaryPassage.bookNumber)?.testament == Testament.OLD
 
     fun navigateTo(screen: Screen) {
         navigationStack.add(screen)

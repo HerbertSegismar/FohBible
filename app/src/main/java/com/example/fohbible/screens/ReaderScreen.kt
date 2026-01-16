@@ -6,6 +6,7 @@ import android.annotation.SuppressLint
 import android.graphics.Typeface
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.scrollBy
@@ -74,8 +75,10 @@ import com.example.fohbible.data.BibleBook
 import com.example.fohbible.data.BibleData
 import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.PassageSelection
+import com.example.fohbible.data.Testament
 import com.example.fohbible.data.Verse
 import com.example.fohbible.modals.DefinitionModal
+import com.example.fohbible.modals.StrongsModal
 import com.example.fohbible.ui.theme.FohBibleTheme
 import com.example.fohbible.utils.ProcessedVerse
 import com.example.fohbible.utils.ThemeColors
@@ -180,731 +183,118 @@ fun ReaderScreen(
     }
     // Dictionary database
     var dictionaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
+    var strongDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     // Word modal states
     var showWordModal by remember { mutableStateOf(false) }
     var currentWord by remember { mutableStateOf("") }
     var wordDefinition by remember { mutableStateOf("") }
-
+    // Strong's modal states
+    var showStrongsModal by remember { mutableStateOf(false) }
+    var currentStrongNumber by remember { mutableStateOf("") }
+    var strongDefinition by remember { mutableStateOf("") }
     LaunchedEffect(viewModel.selectedDictionary) {
         dictionaryDbHelper?.close()
         dictionaryDbHelper = DatabaseHelper(context, "${viewModel.selectedDictionary}.dictionary.sqlite3")
+        strongDbHelper?.close()
+        strongDbHelper = DatabaseHelper(context, "secedictionary.sqlite3")
         if (showWordModal && currentWord.isNotEmpty()) {
             wordDefinition = dictionaryDbHelper?.getWordDefinition(currentWord) ?: "Definition not found."
         }
     }
-
-    // On word press handler
+    // On word press handler for regular words
     val onWordPress: (String) -> Unit = { word ->
-        val definition = dictionaryDbHelper?.getWordDefinition(word) ?: "Definition not found."
-        currentWord = word
+        val trimmed = word.trim()
+        val definition = dictionaryDbHelper?.getWordDefinition(trimmed) ?: "Definition not found."
+        currentWord = trimmed
         wordDefinition = definition
         showWordModal = true
+    }
+    // On Strong's press handler for Strong's numbers
+    val onStrongsPress: (String, Int) -> Unit = { strongNumber, bookNumber ->
+        val trimmed = strongNumber.trim()
+        val isOldTestament = bookNumber <= 39
+        val prefixed = if (trimmed.firstOrNull()?.isLetter() ?: false) {
+            trimmed
+        } else {
+            (if (isOldTestament) "H" else "G") + trimmed
+        }
+        val definition = strongDbHelper?.getStrongDefinition(prefixed) ?: "Strong's definition not found."
+        currentStrongNumber = prefixed
+        strongDefinition = definition
+        showStrongsModal = true
     }
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
         if (!multi) {
-            // Single version mode
-            val currentBook by remember(primaryCurrent.bookNumber) { derivedStateOf { BibleData.getBookByCustomNumber(primaryCurrent.bookNumber) } }
-            val prevPassage by remember(primaryCurrent, currentBook) { derivedStateOf { if (currentBook == null) primaryCurrent else getPreviousPassage(primaryCurrent, currentBook) } }
-            val nextPassage by remember(primaryCurrent, currentBook) { derivedStateOf { if (currentBook == null) primaryCurrent else getNextPassage(primaryCurrent, currentBook) } }
-            val hasPrev by remember(prevPassage) { derivedStateOf { prevPassage != primaryCurrent } }
-            val hasNext by remember(nextPassage) { derivedStateOf { nextPassage != primaryCurrent } }
-            val passages by remember(primaryCurrent, prevPassage, nextPassage, hasPrev, hasNext) { derivedStateOf { buildList { if (hasPrev) add(prevPassage); add(primaryCurrent); if (hasNext) add(nextPassage) } } }
-            val pageCount by remember(passages) { derivedStateOf { passages.size } }
-            val currentOffset by remember(hasPrev) { derivedStateOf { if (hasPrev) 1 else 0 } }
-            var pendingPassageChange by remember { mutableStateOf<PassageSelection?>(null) }
-            LaunchedEffect(primaryCurrent, hasPrev, hasNext, databaseHelper) {
-                val currentKey = primaryCurrent.bookNumber to primaryCurrent.chapter
-                if (currentKey !in primaryLoadedVerses) {
-                    primaryLoadedVerses[currentKey] = databaseHelper?.getVerses(primaryCurrent.bookNumber, primaryCurrent.chapter) ?: emptyList()
-                }
-                if (hasPrev) {
-                    val prevKey = prevPassage.bookNumber to prevPassage.chapter
-                    if (prevKey !in primaryLoadedVerses) {
-                        primaryLoadedVerses[prevKey] = databaseHelper?.getVerses(prevPassage.bookNumber, prevPassage.chapter) ?: emptyList()
-                    }
-                }
-                if (hasNext) {
-                    val nextKey = nextPassage.bookNumber to nextPassage.chapter
-                    if (nextKey !in primaryLoadedVerses) {
-                        primaryLoadedVerses[nextKey] = databaseHelper?.getVerses(nextPassage.bookNumber, nextPassage.chapter) ?: emptyList()
-                    }
-                }
-            }
-            val pagerState = rememberPagerState(
-                initialPage = currentOffset,
-                pageCount = { pageCount }
+            SingleVersionReader(
+                primaryCurrent = primaryCurrent,
+                targetVerse = targetVerse,
+                databaseHelper = databaseHelper,
+                primaryLoadedVerses = primaryLoadedVerses,
+                themeColors = themeColors,
+                currentFontFamily = currentFontFamily,
+                viewModel = viewModel,
+                onPassageChange = { newPassage ->
+                    primaryCurrent = newPassage
+                    targetVerse = newPassage.verse
+                    onPassageChange(newPassage)
+                },
+                isButtonVisible = isButtonVisible,
+                scheduleFade = ::scheduleFade,
+                onWordPress = onWordPress,
+                onStrongsPress = onStrongsPress
             )
-            var isUserSwiping by remember { mutableStateOf(false) }
-            var swipeCompleted by remember { mutableStateOf(false) }
-            LaunchedEffect(pagerState.currentPage, pagerState.isScrollInProgress) {
-                if (pagerState.isScrollInProgress) {
-                    isUserSwiping = true
-                    swipeCompleted = false
-                    val offset = if (hasPrev) 1 else 0
-                    if (pagerState.currentPage < offset) {
-                        if (hasPrev) pendingPassageChange = prevPassage
-                    } else if (pagerState.currentPage > offset) {
-                        if (hasNext) pendingPassageChange = nextPassage
-                    }
-                } else if (isUserSwiping) {
-                    isUserSwiping = false
-                    val targetPassage = pendingPassageChange
-                    if (targetPassage != null && !swipeCompleted) {
-                        swipeCompleted = true
-                        primaryCurrent = targetPassage
-                        targetVerse = targetPassage.verse
-                        onPassageChange(targetPassage)
-                        pendingPassageChange = null
-                    } else {
-                        coroutineScope.launch {
-                            val offset = if (hasPrev) 1 else 0
-                            pagerState.scrollToPage(offset)
-                        }
-                    }
-                }
-            }
-            LaunchedEffect(primaryCurrent) {
-                if (!isUserSwiping) {
-                    coroutineScope.launch {
-                        delay(50)
-                        val offset = if (hasPrev) 1 else 0
-                        pagerState.scrollToPage(offset)
-                        pendingPassageChange = null
-                    }
-                }
-            }
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(Unit) {
-                        detectTapGestures {
-                            isButtonVisible = true
-                            scheduleFade()
-                        }
-                    },
-                key = { pageIndex ->
-                    val passageKey = passages[pageIndex]
-                    "${passageKey.bookNumber}-${passageKey.chapter}"
-                }
-            ) { pageIndex ->
-                val thisPassage = passages[pageIndex]
-                val primaryVerses = primaryLoadedVerses[thisPassage.bookNumber to thisPassage.chapter] ?: emptyList()
-                val isCurrentPage = thisPassage.bookNumber == primaryCurrent.bookNumber && thisPassage.chapter == primaryCurrent.chapter
-                Box(modifier = Modifier.fillMaxSize()) {
-                    if (primaryVerses.isEmpty()) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            CircularProgressIndicator()
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text("Loading verses...")
-                        }
-                    } else {
-                        val primaryState = rememberScrollState()
-                        ChapterView(
-                            passage = thisPassage,
-                            verses = primaryVerses,
-                            themeColors = themeColors,
-                            currentFontFamily = currentFontFamily,
-                            viewModel = viewModel,
-                            isCurrentPage = isCurrentPage,
-                            targetVerse = targetVerse,
-                            versionAbbr = viewModel.currentVersionAbbr,
-                            isPrimary = true,
-                            state = primaryState,
-                            modifier = Modifier.fillMaxSize(),
-                            isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
-                            onWordPress = onWordPress
-                        )
-                    }
-                }
-            }
+        } else if (synced) {
+            SyncedMultiVersionReader(
+                primaryCurrent = primaryCurrent,
+                targetVerse = targetVerse,
+                databaseHelper = databaseHelper,
+                secondaryDatabaseHelper = secondaryDatabaseHelper,
+                primaryLoadedVerses = primaryLoadedVerses,
+                secondaryLoadedVerses = secondaryLoadedVerses,
+                themeColors = themeColors,
+                currentFontFamily = currentFontFamily,
+                viewModel = viewModel,
+                onPassageChange = { newPassage ->
+                    primaryCurrent = newPassage
+                    secondaryCurrent = newPassage
+                    targetVerse = newPassage.verse
+                    onPassageChange(newPassage)
+                    viewModel.secondaryPassage = newPassage
+                },
+                isButtonVisible = isButtonVisible,
+                scheduleFade = ::scheduleFade,
+                onWordPress = onWordPress,
+                onStrongsPress = onStrongsPress
+            )
         } else {
-            if (synced) {
-                // Synced multi-version: shared pager
-                val currentBook by remember(primaryCurrent.bookNumber) { derivedStateOf { BibleData.getBookByCustomNumber(primaryCurrent.bookNumber) } }
-                val prevPassage by remember(primaryCurrent, currentBook) { derivedStateOf { if (currentBook == null) primaryCurrent else getPreviousPassage(primaryCurrent, currentBook) } }
-                val nextPassage by remember(primaryCurrent, currentBook) { derivedStateOf { if (currentBook == null) primaryCurrent else getNextPassage(primaryCurrent, currentBook) } }
-                val hasPrev by remember(prevPassage) { derivedStateOf { prevPassage != primaryCurrent } }
-                val hasNext by remember(nextPassage) { derivedStateOf { nextPassage != primaryCurrent } }
-                val passages by remember(primaryCurrent, prevPassage, nextPassage, hasPrev, hasNext) { derivedStateOf { buildList { if (hasPrev) add(prevPassage); add(primaryCurrent); if (hasNext) add(nextPassage) } } }
-                val pageCount by remember(passages) { derivedStateOf { passages.size } }
-                val currentOffset by remember(hasPrev) { derivedStateOf { if (hasPrev) 1 else 0 } }
-                var pendingPassageChange by remember { mutableStateOf<PassageSelection?>(null) }
-                LaunchedEffect(primaryCurrent, hasPrev, hasNext, databaseHelper, secondaryDatabaseHelper) {
-                    val currentKey = primaryCurrent.bookNumber to primaryCurrent.chapter
-                    if (currentKey !in primaryLoadedVerses) {
-                        primaryLoadedVerses[currentKey] = databaseHelper?.getVerses(primaryCurrent.bookNumber, primaryCurrent.chapter) ?: emptyList()
-                    }
-                    if (currentKey !in secondaryLoadedVerses) {
-                        secondaryLoadedVerses[currentKey] = secondaryDatabaseHelper?.getVerses(primaryCurrent.bookNumber, primaryCurrent.chapter) ?: emptyList()
-                    }
-                    if (hasPrev) {
-                        val prevKey = prevPassage.bookNumber to prevPassage.chapter
-                        if (prevKey !in primaryLoadedVerses) {
-                            primaryLoadedVerses[prevKey] = databaseHelper?.getVerses(prevPassage.bookNumber, prevPassage.chapter) ?: emptyList()
-                        }
-                        if (prevKey !in secondaryLoadedVerses) {
-                            secondaryLoadedVerses[prevKey] = secondaryDatabaseHelper?.getVerses(prevPassage.bookNumber, prevPassage.chapter) ?: emptyList()
-                        }
-                    }
-                    if (hasNext) {
-                        val nextKey = nextPassage.bookNumber to nextPassage.chapter
-                        if (nextKey !in primaryLoadedVerses) {
-                            primaryLoadedVerses[nextKey] = databaseHelper?.getVerses(nextPassage.bookNumber, nextPassage.chapter) ?: emptyList()
-                        }
-                        if (nextKey !in secondaryLoadedVerses) {
-                            secondaryLoadedVerses[nextKey] = secondaryDatabaseHelper?.getVerses(nextPassage.bookNumber, nextPassage.chapter) ?: emptyList()
-                        }
-                    }
-                }
-                val pagerState = rememberPagerState(
-                    initialPage = currentOffset,
-                    pageCount = { pageCount }
-                )
-                var isUserSwiping by remember { mutableStateOf(false) }
-                var swipeCompleted by remember { mutableStateOf(false) }
-                LaunchedEffect(pagerState.currentPage, pagerState.isScrollInProgress) {
-                    if (pagerState.isScrollInProgress) {
-                        isUserSwiping = true
-                        swipeCompleted = false
-                        val offset = if (hasPrev) 1 else 0
-                        if (pagerState.currentPage < offset) {
-                            if (hasPrev) pendingPassageChange = prevPassage
-                        } else if (pagerState.currentPage > offset) {
-                            if (hasNext) pendingPassageChange = nextPassage
-                        }
-                    } else if (isUserSwiping) {
-                        isUserSwiping = false
-                        val targetPassage = pendingPassageChange
-                        if (targetPassage != null && !swipeCompleted) {
-                            swipeCompleted = true
-                            primaryCurrent = targetPassage
-                            secondaryCurrent = targetPassage
-                            targetVerse = targetPassage.verse
-                            onPassageChange(targetPassage)
-                            viewModel.secondaryPassage = targetPassage
-                            pendingPassageChange = null
-                        } else {
-                            coroutineScope.launch {
-                                val offset = if (hasPrev) 1 else 0
-                                pagerState.scrollToPage(offset)
-                            }
-                        }
-                    }
-                }
-                LaunchedEffect(primaryCurrent) {
-                    if (!isUserSwiping) {
-                        coroutineScope.launch {
-                            delay(50)
-                            val offset = if (hasPrev) 1 else 0
-                            pagerState.scrollToPage(offset)
-                            pendingPassageChange = null
-                        }
-                    }
-                }
-                // Fix: Suppress sync during initial scroll to target verse
-                var suppressSync by remember { mutableStateOf(false) }
-                var completedScrolls by remember { mutableIntStateOf(0) }
-                LaunchedEffect(targetVerse) {
-                    suppressSync = true
-                    completedScrolls = 0
-                }
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .pointerInput(Unit) {
-                            detectTapGestures {
-                                isButtonVisible = true
-                                scheduleFade()
-                            }
-                        },
-                    key = { pageIndex ->
-                        val passageKey = passages[pageIndex]
-                        "${passageKey.bookNumber}-${passageKey.chapter}"
-                    }
-                ) { pageIndex ->
-                    val thisPassage = passages[pageIndex]
-                    val primaryVerses = primaryLoadedVerses[thisPassage.bookNumber to thisPassage.chapter] ?: emptyList()
-                    val secondaryVerses = secondaryLoadedVerses[thisPassage.bookNumber to thisPassage.chapter] ?: emptyList()
-                    val isCurrentPage = thisPassage.bookNumber == primaryCurrent.bookNumber && thisPassage.chapter == primaryCurrent.chapter
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        if (primaryVerses.isEmpty() || secondaryVerses.isEmpty()) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center,
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                CircularProgressIndicator()
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text("Loading verses...")
-                            }
-                        } else {
-                            val primaryState = rememberScrollState()
-                            val secondaryState = rememberScrollState()
-                            // Fix: Conditional sync only after initial scrolls complete
-                            if (viewModel.scrollSync && !suppressSync) {
-                                LaunchedEffect(primaryState) {
-                                    snapshotFlow { primaryState.value }.collect { _ ->
-                                        val pMax = primaryState.maxValue.coerceAtLeast(1)
-                                        val sMax = secondaryState.maxValue.coerceAtLeast(1)
-                                        val fraction = primaryState.value.toFloat() / pMax
-                                        val targetS = (fraction * sMax).roundToInt()
-                                        val currentS = secondaryState.value
-                                        val deltaS = targetS - currentS
-                                        if (abs(deltaS) > 5) {
-                                            secondaryState.scrollBy(deltaS.toFloat())
-                                        }
-                                    }
-                                }
-                                LaunchedEffect(secondaryState) {
-                                    snapshotFlow { secondaryState.value }.collect { _ ->
-                                        val pMax = primaryState.maxValue.coerceAtLeast(1)
-                                        val sMax = secondaryState.maxValue.coerceAtLeast(1)
-                                        val fraction = secondaryState.value.toFloat() / sMax
-                                        val targetP = (fraction * pMax).roundToInt()
-                                        val currentP = primaryState.value
-                                        val deltaP = targetP - currentP
-                                        if (abs(deltaP) > 5) {
-                                            primaryState.scrollBy(deltaP.toFloat())
-                                        }
-                                    }
-                                }
-                            }
-                            if (viewModel.multiViewLayout == "horizontal") {
-                                Row(modifier = Modifier.fillMaxSize()) {
-                                    ChapterView(
-                                        passage = thisPassage,
-                                        verses = primaryVerses,
-                                        themeColors = themeColors,
-                                        currentFontFamily = currentFontFamily,
-                                        viewModel = viewModel,
-                                        isCurrentPage = isCurrentPage,
-                                        targetVerse = targetVerse,
-                                        versionAbbr = viewModel.currentVersionAbbr,
-                                        isPrimary = true,
-                                        state = primaryState,
-                                        modifier = Modifier.weight(1f),
-                                        isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
-                                        onInitialScrollComplete = {
-                                            completedScrolls++
-                                            if (completedScrolls == 2) {
-                                                suppressSync = false
-                                                completedScrolls = 0
-                                            }
-                                        },
-                                        onWordPress = onWordPress
-                                    )
-                                    ChapterView(
-                                        passage = thisPassage,
-                                        verses = secondaryVerses,
-                                        themeColors = themeColors,
-                                        currentFontFamily = currentFontFamily,
-                                        viewModel = viewModel,
-                                        isCurrentPage = isCurrentPage,
-                                        targetVerse = targetVerse,
-                                        versionAbbr = viewModel.secondaryVersionAbbr,
-                                        isPrimary = false,
-                                        state = secondaryState,
-                                        modifier = Modifier.weight(1f),
-                                        isKjvPlus = secondaryDatabaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
-                                        onInitialScrollComplete = {
-                                            completedScrolls++
-                                            if (completedScrolls == 2) {
-                                                suppressSync = false
-                                                completedScrolls = 0
-                                            }
-                                        },
-                                        onWordPress = onWordPress
-                                    )
-                                }
-                            } else {
-                                Column(modifier = Modifier.fillMaxSize()) {
-                                    ChapterView(
-                                        passage = thisPassage,
-                                        verses = primaryVerses,
-                                        themeColors = themeColors,
-                                        currentFontFamily = currentFontFamily,
-                                        viewModel = viewModel,
-                                        isCurrentPage = isCurrentPage,
-                                        targetVerse = targetVerse,
-                                        versionAbbr = viewModel.currentVersionAbbr,
-                                        isPrimary = true,
-                                        state = primaryState,
-                                        modifier = Modifier.weight(1f),
-                                        isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
-                                        onInitialScrollComplete = {
-                                            completedScrolls++
-                                            if (completedScrolls == 2) {
-                                                suppressSync = false
-                                                completedScrolls = 0
-                                            }
-                                        },
-                                        onWordPress = onWordPress
-                                    )
-                                    ChapterView(
-                                        passage = thisPassage,
-                                        verses = secondaryVerses,
-                                        themeColors = themeColors,
-                                        currentFontFamily = currentFontFamily,
-                                        viewModel = viewModel,
-                                        isCurrentPage = isCurrentPage,
-                                        targetVerse = targetVerse,
-                                        versionAbbr = viewModel.secondaryVersionAbbr,
-                                        isPrimary = false,
-                                        state = secondaryState,
-                                        modifier = Modifier.weight(1f),
-                                        isKjvPlus = secondaryDatabaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
-                                        onInitialScrollComplete = {
-                                            completedScrolls++
-                                            if (completedScrolls == 2) {
-                                                suppressSync = false
-                                                completedScrolls = 0
-                                            }
-                                        },
-                                        onWordPress = onWordPress
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            } else {
-                // Independent multi-version: separate pagers
-                // Primary pager setup
-                val primaryBook by remember(primaryCurrent.bookNumber) { derivedStateOf { BibleData.getBookByCustomNumber(primaryCurrent.bookNumber) } }
-                val primaryPrev by remember(primaryCurrent, primaryBook) { derivedStateOf { if (primaryBook == null) primaryCurrent else getPreviousPassage(primaryCurrent, primaryBook) } }
-                val primaryNext by remember(primaryCurrent, primaryBook) { derivedStateOf { if (primaryBook == null) primaryCurrent else getNextPassage(primaryCurrent, primaryBook) } }
-                val primaryHasPrev by remember(primaryPrev) { derivedStateOf { primaryPrev != primaryCurrent } }
-                val primaryHasNext by remember(primaryNext) { derivedStateOf { primaryNext != primaryCurrent } }
-                val primaryPassages by remember(primaryCurrent, primaryPrev, primaryNext, primaryHasPrev, primaryHasNext) { derivedStateOf { buildList { if (primaryHasPrev) add(primaryPrev); add(primaryCurrent); if (primaryHasNext) add(primaryNext) } } }
-                val primaryPageCount by remember(primaryPassages) { derivedStateOf { primaryPassages.size } }
-                val primaryOffset by remember(primaryHasPrev) { derivedStateOf { if (primaryHasPrev) 1 else 0 } }
-                var primaryPendingChange by remember { mutableStateOf<PassageSelection?>(null) }
-                // Secondary pager setup
-                val secondaryBook by remember(secondaryCurrent.bookNumber) { derivedStateOf { BibleData.getBookByCustomNumber(secondaryCurrent.bookNumber) } }
-                val secondaryPrev by remember(secondaryCurrent, secondaryBook) { derivedStateOf { if (secondaryBook == null) secondaryCurrent else getPreviousPassage(secondaryCurrent, secondaryBook) } }
-                val secondaryNext by remember(secondaryCurrent, secondaryBook) { derivedStateOf { if (secondaryBook == null) secondaryCurrent else getNextPassage(secondaryCurrent, secondaryBook) } }
-                val secondaryHasPrev by remember(secondaryPrev) { derivedStateOf { secondaryPrev != secondaryCurrent } }
-                val secondaryHasNext by remember(secondaryNext) { derivedStateOf { secondaryNext != secondaryCurrent } }
-                val secondaryPassages by remember(secondaryCurrent, secondaryPrev, secondaryNext, secondaryHasPrev, secondaryHasNext) { derivedStateOf { buildList { if (secondaryHasPrev) add(secondaryPrev); add(secondaryCurrent); if (secondaryHasNext) add(secondaryNext) } } }
-                val secondaryPageCount by remember(secondaryPassages) { derivedStateOf { secondaryPassages.size } }
-                val secondaryOffset by remember(secondaryHasPrev) { derivedStateOf { if (secondaryHasPrev) 1 else 0 } }
-                var secondaryPendingChange by remember { mutableStateOf<PassageSelection?>(null) }
-                // Load verses
-                LaunchedEffect(primaryCurrent, primaryHasPrev, primaryHasNext, databaseHelper) {
-                    val currentKey = primaryCurrent.bookNumber to primaryCurrent.chapter
-                    if (currentKey !in primaryLoadedVerses) {
-                        primaryLoadedVerses[currentKey] = databaseHelper?.getVerses(primaryCurrent.bookNumber, primaryCurrent.chapter) ?: emptyList()
-                    }
-                    if (primaryHasPrev) {
-                        val prevKey = primaryPrev.bookNumber to primaryPrev.chapter
-                        if (prevKey !in primaryLoadedVerses) {
-                            primaryLoadedVerses[prevKey] = databaseHelper?.getVerses(primaryPrev.bookNumber, primaryPrev.chapter) ?: emptyList()
-                        }
-                    }
-                    if (primaryHasNext) {
-                        val nextKey = primaryNext.bookNumber to primaryNext.chapter
-                        if (nextKey !in primaryLoadedVerses) {
-                            primaryLoadedVerses[nextKey] = databaseHelper?.getVerses(primaryNext.bookNumber, primaryNext.chapter) ?: emptyList()
-                        }
-                    }
-                }
-                LaunchedEffect(secondaryCurrent, secondaryHasPrev, secondaryHasNext, secondaryDatabaseHelper) {
-                    val currentKey = secondaryCurrent.bookNumber to secondaryCurrent.chapter
-                    if (currentKey !in secondaryLoadedVerses) {
-                        secondaryLoadedVerses[currentKey] = secondaryDatabaseHelper?.getVerses(secondaryCurrent.bookNumber, secondaryCurrent.chapter) ?: emptyList()
-                    }
-                    if (secondaryHasPrev) {
-                        val prevKey = secondaryPrev.bookNumber to secondaryPrev.chapter
-                        if (prevKey !in secondaryLoadedVerses) {
-                            secondaryLoadedVerses[prevKey] = secondaryDatabaseHelper?.getVerses(secondaryPrev.bookNumber, secondaryPrev.chapter) ?: emptyList()
-                        }
-                    }
-                    if (secondaryHasNext) {
-                        val nextKey = secondaryNext.bookNumber to secondaryNext.chapter
-                        if (nextKey !in secondaryLoadedVerses) {
-                            secondaryLoadedVerses[nextKey] = secondaryDatabaseHelper?.getVerses(secondaryNext.bookNumber, secondaryNext.chapter) ?: emptyList()
-                        }
-                    }
-                }
-                val primaryPagerState = rememberPagerState(
-                    initialPage = primaryOffset,
-                    pageCount = { primaryPageCount }
-                )
-                val secondaryPagerState = rememberPagerState(
-                    initialPage = secondaryOffset,
-                    pageCount = { secondaryPageCount }
-                )
-                // Primary swipe handling
-                var primarySwiping by remember { mutableStateOf(false) }
-                var primarySwipeCompleted by remember { mutableStateOf(false) }
-                LaunchedEffect(primaryPagerState.currentPage, primaryPagerState.isScrollInProgress) {
-                    if (primaryPagerState.isScrollInProgress) {
-                        primarySwiping = true
-                        primarySwipeCompleted = false
-                        val offset = if (primaryHasPrev) 1 else 0
-                        if (primaryPagerState.currentPage < offset) {
-                            if (primaryHasPrev) primaryPendingChange = primaryPrev
-                        } else if (primaryPagerState.currentPage > offset) {
-                            if (primaryHasNext) primaryPendingChange = primaryNext
-                        }
-                    } else if (primarySwiping) {
-                        primarySwiping = false
-                        val target = primaryPendingChange
-                        if (target != null && !primarySwipeCompleted) {
-                            primarySwipeCompleted = true
-                            primaryCurrent = target
-                            targetVerse = target.verse
-                            onPassageChange(target)
-                            primaryPendingChange = null
-                        } else {
-                            coroutineScope.launch {
-                                val offset = if (primaryHasPrev) 1 else 0
-                                primaryPagerState.scrollToPage(offset)
-                            }
-                        }
-                    }
-                }
-                LaunchedEffect(primaryCurrent) {
-                    if (!primarySwiping) {
-                        coroutineScope.launch {
-                            delay(50)
-                            val offset = if (primaryHasPrev) 1 else 0
-                            primaryPagerState.scrollToPage(offset)
-                            primaryPendingChange = null
-                        }
-                    }
-                }
-                // Secondary swipe handling
-                var secondarySwiping by remember { mutableStateOf(false) }
-                var secondarySwipeCompleted by remember { mutableStateOf(false) }
-                LaunchedEffect(secondaryPagerState.currentPage, secondaryPagerState.isScrollInProgress) {
-                    if (secondaryPagerState.isScrollInProgress) {
-                        secondarySwiping = true
-                        secondarySwipeCompleted = false
-                        val offset = if (secondaryHasPrev) 1 else 0
-                        if (secondaryPagerState.currentPage < offset) {
-                            if (secondaryHasPrev) secondaryPendingChange = secondaryPrev
-                        } else if (secondaryPagerState.currentPage > offset) {
-                            if (secondaryHasNext) secondaryPendingChange = secondaryNext
-                        }
-                    } else if (secondarySwiping) {
-                        secondarySwiping = false
-                        val target = secondaryPendingChange
-                        if (target != null && !secondarySwipeCompleted) {
-                            secondarySwipeCompleted = true
-                            secondaryCurrent = target
-                            viewModel.secondaryPassage = target
-                            secondaryPendingChange = null
-                        } else {
-                            coroutineScope.launch {
-                                val offset = if (secondaryHasPrev) 1 else 0
-                                secondaryPagerState.scrollToPage(offset)
-                            }
-                        }
-                    }
-                }
-                LaunchedEffect(secondaryCurrent) {
-                    if (!secondarySwiping) {
-                        coroutineScope.launch {
-                            delay(50)
-                            val offset = if (secondaryHasPrev) 1 else 0
-                            secondaryPagerState.scrollToPage(offset)
-                            secondaryPendingChange = null
-                        }
-                    }
-                }
-                val layoutHorizontal = viewModel.multiViewLayout == "horizontal"
-                val containerModifier = Modifier.fillMaxSize().pointerInput(Unit) {
-                    detectTapGestures {
-                        isButtonVisible = true
-                        scheduleFade()
-                    }
-                }
-                if (layoutHorizontal) {
-                    Row(modifier = containerModifier) {
-                        HorizontalPager(
-                            state = primaryPagerState,
-                            modifier = Modifier.weight(1f),
-                            key = { pageIndex ->
-                                val pk = primaryPassages[pageIndex]
-                                "${pk.bookNumber}-${pk.chapter}-primary"
-                            }
-                        ) { pageIndex ->
-                            val thisPassage = primaryPassages[pageIndex]
-                            val verses = primaryLoadedVerses[thisPassage.bookNumber to thisPassage.chapter] ?: emptyList()
-                            val isCurrentPage = thisPassage.bookNumber == primaryCurrent.bookNumber && thisPassage.chapter == primaryCurrent.chapter
-                            Box(modifier = Modifier.fillMaxSize()) {
-                                if (verses.isEmpty()) {
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.Center,
-                                        modifier = Modifier.fillMaxSize()
-                                    ) {
-                                        CircularProgressIndicator()
-                                        Spacer(modifier = Modifier.height(16.dp))
-                                        Text("Loading verses...")
-                                    }
-                                } else {
-                                    val state = rememberScrollState()
-                                    ChapterView(
-                                        passage = thisPassage,
-                                        verses = verses,
-                                        themeColors = themeColors,
-                                        currentFontFamily = currentFontFamily,
-                                        viewModel = viewModel,
-                                        isCurrentPage = isCurrentPage,
-                                        targetVerse = targetVerse,
-                                        versionAbbr = viewModel.currentVersionAbbr,
-                                        isPrimary = true,
-                                        state = state,
-                                        modifier = Modifier.fillMaxSize(),
-                                        isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
-                                        onWordPress = onWordPress
-                                    )
-                                }
-                            }
-                        }
-                        HorizontalPager(
-                            state = secondaryPagerState,
-                            modifier = Modifier.weight(1f),
-                            key = { pageIndex ->
-                                val pk = secondaryPassages[pageIndex]
-                                "${pk.bookNumber}-${pk.chapter}-secondary"
-                            }
-                        ) { pageIndex ->
-                            val thisPassage = secondaryPassages[pageIndex]
-                            val verses = secondaryLoadedVerses[thisPassage.bookNumber to thisPassage.chapter] ?: emptyList()
-                            val isCurrentPage = thisPassage.bookNumber == secondaryCurrent.bookNumber && thisPassage.chapter == secondaryCurrent.chapter
-                            Box(modifier = Modifier.fillMaxSize()) {
-                                if (verses.isEmpty()) {
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.Center,
-                                        modifier = Modifier.fillMaxSize()
-                                    ) {
-                                        CircularProgressIndicator()
-                                        Spacer(modifier = Modifier.height(16.dp))
-                                        Text("Loading verses...")
-                                    }
-                                } else {
-                                    val state = rememberScrollState()
-                                    ChapterView(
-                                        passage = thisPassage,
-                                        verses = verses,
-                                        themeColors = themeColors,
-                                        currentFontFamily = currentFontFamily,
-                                        viewModel = viewModel,
-                                        isCurrentPage = isCurrentPage,
-                                        targetVerse = targetVerse,
-                                        versionAbbr = viewModel.secondaryVersionAbbr,
-                                        isPrimary = false,
-                                        state = state,
-                                        modifier = Modifier.fillMaxSize(),
-                                        isKjvPlus = secondaryDatabaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
-                                        onWordPress = onWordPress
-                                    )
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    Column(modifier = containerModifier) {
-                        HorizontalPager(
-                            state = primaryPagerState,
-                            modifier = Modifier.weight(1f),
-                            key = { pageIndex ->
-                                val pk = primaryPassages[pageIndex]
-                                "${pk.bookNumber}-${pk.chapter}-primary"
-                            }
-                        ) { pageIndex ->
-                            val thisPassage = primaryPassages[pageIndex]
-                            val verses = primaryLoadedVerses[thisPassage.bookNumber to thisPassage.chapter] ?: emptyList()
-                            val isCurrentPage = thisPassage.bookNumber == primaryCurrent.bookNumber && thisPassage.chapter == primaryCurrent.chapter
-                            Box(modifier = Modifier.fillMaxSize()) {
-                                if (verses.isEmpty()) {
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.Center,
-                                        modifier = Modifier.fillMaxSize()
-                                    ) {
-                                        CircularProgressIndicator()
-                                        Spacer(modifier = Modifier.height(16.dp))
-                                        Text("Loading verses...")
-                                    }
-                                } else {
-                                    val state = rememberScrollState()
-                                    ChapterView(
-                                        passage = thisPassage,
-                                        verses = verses,
-                                        themeColors = themeColors,
-                                        currentFontFamily = currentFontFamily,
-                                        viewModel = viewModel,
-                                        isCurrentPage = isCurrentPage,
-                                        targetVerse = targetVerse,
-                                        versionAbbr = viewModel.currentVersionAbbr,
-                                        isPrimary = true,
-                                        state = state,
-                                        modifier = Modifier.fillMaxSize(),
-                                        isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
-                                        onWordPress = onWordPress
-                                    )
-                                }
-                            }
-                        }
-                        HorizontalPager(
-                            state = secondaryPagerState,
-                            modifier = Modifier.weight(1f),
-                            key = { pageIndex ->
-                                val pk = secondaryPassages[pageIndex]
-                                "${pk.bookNumber}-${pk.chapter}-secondary"
-                            }
-                        ) { pageIndex ->
-                            val thisPassage = secondaryPassages[pageIndex]
-                            val verses = secondaryLoadedVerses[thisPassage.bookNumber to thisPassage.chapter] ?: emptyList()
-                            val isCurrentPage = thisPassage.bookNumber == secondaryCurrent.bookNumber && thisPassage.chapter == secondaryCurrent.chapter
-                            Box(modifier = Modifier.fillMaxSize()) {
-                                if (verses.isEmpty()) {
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.Center,
-                                        modifier = Modifier.fillMaxSize()
-                                    ) {
-                                        CircularProgressIndicator()
-                                        Spacer(modifier = Modifier.height(16.dp))
-                                        Text("Loading verses...")
-                                    }
-                                } else {
-                                    val state = rememberScrollState()
-                                    ChapterView(
-                                        passage = thisPassage,
-                                        verses = verses,
-                                        themeColors = themeColors,
-                                        currentFontFamily = currentFontFamily,
-                                        viewModel = viewModel,
-                                        isCurrentPage = isCurrentPage,
-                                        targetVerse = targetVerse,
-                                        versionAbbr = viewModel.secondaryVersionAbbr,
-                                        isPrimary = false,
-                                        state = state,
-                                        modifier = Modifier.fillMaxSize(),
-                                        isKjvPlus = secondaryDatabaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
-                                        onWordPress = onWordPress
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            IndependentMultiVersionReader(
+                primaryCurrent = primaryCurrent,
+                secondaryCurrent = secondaryCurrent,
+                targetVerse = targetVerse,
+                databaseHelper = databaseHelper,
+                secondaryDatabaseHelper = secondaryDatabaseHelper,
+                primaryLoadedVerses = primaryLoadedVerses,
+                secondaryLoadedVerses = secondaryLoadedVerses,
+                themeColors = themeColors,
+                currentFontFamily = currentFontFamily,
+                viewModel = viewModel,
+                onPrimaryPassageChange = { newPassage ->
+                    primaryCurrent = newPassage
+                    targetVerse = newPassage.verse
+                    onPassageChange(newPassage)
+                },
+                onSecondaryPassageChange = { newPassage ->
+                    secondaryCurrent = newPassage
+                    viewModel.secondaryPassage = newPassage
+                },
+                isButtonVisible = isButtonVisible,
+                scheduleFade = ::scheduleFade,
+                onWordPress = onWordPress,
+                onStrongsPress = onStrongsPress
+            )
         }
         FloatingActionButton(
             onClick = {
@@ -933,8 +323,731 @@ fun ReaderScreen(
             selectedDictionary = viewModel.selectedDictionary,
             onSwitch = {
                 viewModel.selectedDictionary = if (viewModel.selectedDictionary == "noah") "atsbd" else "noah"
+                wordDefinition = dictionaryDbHelper?.getWordDefinition(currentWord) ?: "Definition not found."
             }
         )
+        StrongsModal(
+            show = showStrongsModal,
+            onDismiss = { showStrongsModal = false },
+            strongNumber = currentStrongNumber,
+            definition = strongDefinition
+        )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun SingleVersionReader(
+    primaryCurrent: PassageSelection,
+    targetVerse: Int,
+    databaseHelper: DatabaseHelper?,
+    primaryLoadedVerses: MutableMap<Pair<Int, Int>, List<Verse>>,
+    themeColors: ThemeColors,
+    currentFontFamily: FontFamily,
+    viewModel: AppViewModel,
+    onPassageChange: (PassageSelection) -> Unit,
+    isButtonVisible: Boolean,
+    scheduleFade: () -> Unit,
+    onWordPress: (String) -> Unit,
+    onStrongsPress: (String, Int) -> Unit
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val currentBook by remember(primaryCurrent.bookNumber) { derivedStateOf { BibleData.getBookByCustomNumber(primaryCurrent.bookNumber) } }
+    val prevPassage by remember(primaryCurrent, currentBook) { derivedStateOf { if (currentBook == null) primaryCurrent else getPreviousPassage(primaryCurrent, currentBook) } }
+    val nextPassage by remember(primaryCurrent, currentBook) { derivedStateOf { if (currentBook == null) primaryCurrent else getNextPassage(primaryCurrent, currentBook) } }
+    val hasPrev by remember(prevPassage) { derivedStateOf { prevPassage != primaryCurrent } }
+    val hasNext by remember(nextPassage) { derivedStateOf { nextPassage != primaryCurrent } }
+    val passages by remember(primaryCurrent, prevPassage, nextPassage, hasPrev, hasNext) { derivedStateOf { buildList { if (hasPrev) add(prevPassage); add(primaryCurrent); if (hasNext) add(nextPassage) } } }
+    val pageCount by remember(passages) { derivedStateOf { passages.size } }
+    val currentOffset by remember(hasPrev) { derivedStateOf { if (hasPrev) 1 else 0 } }
+    var pendingPassageChange by remember { mutableStateOf<PassageSelection?>(null) }
+    LaunchedEffect(primaryCurrent, hasPrev, hasNext, databaseHelper) {
+        val currentKey = primaryCurrent.bookNumber to primaryCurrent.chapter
+        if (currentKey !in primaryLoadedVerses) {
+            primaryLoadedVerses[currentKey] = databaseHelper?.getVerses(primaryCurrent.bookNumber, primaryCurrent.chapter) ?: emptyList()
+        }
+        if (hasPrev) {
+            val prevKey = prevPassage.bookNumber to prevPassage.chapter
+            if (prevKey !in primaryLoadedVerses) {
+                primaryLoadedVerses[prevKey] = databaseHelper?.getVerses(prevPassage.bookNumber, prevPassage.chapter) ?: emptyList()
+            }
+        }
+        if (hasNext) {
+            val nextKey = nextPassage.bookNumber to nextPassage.chapter
+            if (nextKey !in primaryLoadedVerses) {
+                primaryLoadedVerses[nextKey] = databaseHelper?.getVerses(nextPassage.bookNumber, nextPassage.chapter) ?: emptyList()
+            }
+        }
+    }
+    val pagerState = rememberPagerState(
+        initialPage = currentOffset,
+        pageCount = { pageCount }
+    )
+    var isUserSwiping by remember { mutableStateOf(false) }
+    var swipeCompleted by remember { mutableStateOf(false) }
+    LaunchedEffect(pagerState.currentPage, pagerState.isScrollInProgress) {
+        if (pagerState.isScrollInProgress) {
+            isUserSwiping = true
+            swipeCompleted = false
+            val offset = if (hasPrev) 1 else 0
+            if (pagerState.currentPage < offset) {
+                if (hasPrev) pendingPassageChange = prevPassage
+            } else if (pagerState.currentPage > offset) {
+                if (hasNext) pendingPassageChange = nextPassage
+            }
+        } else if (isUserSwiping) {
+            isUserSwiping = false
+            val targetPassage = pendingPassageChange
+            if (targetPassage != null && !swipeCompleted) {
+                swipeCompleted = true
+                onPassageChange(targetPassage)
+                pendingPassageChange = null
+            } else {
+                coroutineScope.launch {
+                    val offset = if (hasPrev) 1 else 0
+                    pagerState.scrollToPage(offset)
+                }
+            }
+        }
+    }
+    LaunchedEffect(primaryCurrent) {
+        if (!isUserSwiping) {
+            coroutineScope.launch {
+                delay(50)
+                val offset = if (hasPrev) 1 else 0
+                pagerState.scrollToPage(offset)
+                pendingPassageChange = null
+            }
+        }
+    }
+    HorizontalPager(
+        state = pagerState,
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectTapGestures {
+                    scheduleFade()
+                }
+            },
+        key = { pageIndex ->
+            val passageKey = passages[pageIndex]
+            "${passageKey.bookNumber}-${passageKey.chapter}"
+        }
+    ) { pageIndex ->
+        val thisPassage = passages[pageIndex]
+        val primaryVerses = primaryLoadedVerses[thisPassage.bookNumber to thisPassage.chapter] ?: emptyList()
+        val isCurrentPage = thisPassage.bookNumber == primaryCurrent.bookNumber && thisPassage.chapter == primaryCurrent.chapter
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (primaryVerses.isEmpty()) {
+                LoadingIndicator()
+            } else {
+                val primaryState = rememberScrollState()
+                ChapterView(
+                    passage = thisPassage,
+                    verses = primaryVerses,
+                    themeColors = themeColors,
+                    currentFontFamily = currentFontFamily,
+                    viewModel = viewModel,
+                    isCurrentPage = isCurrentPage,
+                    targetVerse = targetVerse,
+                    versionAbbr = viewModel.currentVersionAbbr,
+                    isPrimary = true,
+                    state = primaryState,
+                    modifier = Modifier.fillMaxSize(),
+                    isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
+                    onWordPress = onWordPress,
+                    onStrongsPress = onStrongsPress
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun SyncedMultiVersionReader(
+    primaryCurrent: PassageSelection,
+    targetVerse: Int,
+    databaseHelper: DatabaseHelper?,
+    secondaryDatabaseHelper: DatabaseHelper?,
+    primaryLoadedVerses: MutableMap<Pair<Int, Int>, List<Verse>>,
+    secondaryLoadedVerses: MutableMap<Pair<Int, Int>, List<Verse>>,
+    themeColors: ThemeColors,
+    currentFontFamily: FontFamily,
+    viewModel: AppViewModel,
+    onPassageChange: (PassageSelection) -> Unit,
+    isButtonVisible: Boolean,
+    scheduleFade: () -> Unit,
+    onWordPress: (String) -> Unit,
+    onStrongsPress: (String, Int) -> Unit
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val currentBook by remember(primaryCurrent.bookNumber) { derivedStateOf { BibleData.getBookByCustomNumber(primaryCurrent.bookNumber) } }
+    val prevPassage by remember(primaryCurrent, currentBook) { derivedStateOf { if (currentBook == null) primaryCurrent else getPreviousPassage(primaryCurrent, currentBook) } }
+    val nextPassage by remember(primaryCurrent, currentBook) { derivedStateOf { if (currentBook == null) primaryCurrent else getNextPassage(primaryCurrent, currentBook) } }
+    val hasPrev by remember(prevPassage) { derivedStateOf { prevPassage != primaryCurrent } }
+    val hasNext by remember(nextPassage) { derivedStateOf { nextPassage != primaryCurrent } }
+    val passages by remember(primaryCurrent, prevPassage, nextPassage, hasPrev, hasNext) { derivedStateOf { buildList { if (hasPrev) add(prevPassage); add(primaryCurrent); if (hasNext) add(nextPassage) } } }
+    val pageCount by remember(passages) { derivedStateOf { passages.size } }
+    val currentOffset by remember(hasPrev) { derivedStateOf { if (hasPrev) 1 else 0 } }
+    var pendingPassageChange by remember { mutableStateOf<PassageSelection?>(null) }
+    LaunchedEffect(primaryCurrent, hasPrev, hasNext, databaseHelper, secondaryDatabaseHelper) {
+        val currentKey = primaryCurrent.bookNumber to primaryCurrent.chapter
+        if (currentKey !in primaryLoadedVerses) {
+            primaryLoadedVerses[currentKey] = databaseHelper?.getVerses(primaryCurrent.bookNumber, primaryCurrent.chapter) ?: emptyList()
+        }
+        if (currentKey !in secondaryLoadedVerses) {
+            secondaryLoadedVerses[currentKey] = secondaryDatabaseHelper?.getVerses(primaryCurrent.bookNumber, primaryCurrent.chapter) ?: emptyList()
+        }
+        if (hasPrev) {
+            val prevKey = prevPassage.bookNumber to prevPassage.chapter
+            if (prevKey !in primaryLoadedVerses) {
+                primaryLoadedVerses[prevKey] = databaseHelper?.getVerses(prevPassage.bookNumber, prevPassage.chapter) ?: emptyList()
+            }
+            if (prevKey !in secondaryLoadedVerses) {
+                secondaryLoadedVerses[prevKey] = secondaryDatabaseHelper?.getVerses(prevPassage.bookNumber, prevPassage.chapter) ?: emptyList()
+            }
+        }
+        if (hasNext) {
+            val nextKey = nextPassage.bookNumber to nextPassage.chapter
+            if (nextKey !in primaryLoadedVerses) {
+                primaryLoadedVerses[nextKey] = databaseHelper?.getVerses(nextPassage.bookNumber, nextPassage.chapter) ?: emptyList()
+            }
+            if (nextKey !in secondaryLoadedVerses) {
+                secondaryLoadedVerses[nextKey] = secondaryDatabaseHelper?.getVerses(nextPassage.bookNumber, nextPassage.chapter) ?: emptyList()
+            }
+        }
+    }
+    val pagerState = rememberPagerState(
+        initialPage = currentOffset,
+        pageCount = { pageCount }
+    )
+    var isUserSwiping by remember { mutableStateOf(false) }
+    var swipeCompleted by remember { mutableStateOf(false) }
+    LaunchedEffect(pagerState.currentPage, pagerState.isScrollInProgress) {
+        if (pagerState.isScrollInProgress) {
+            isUserSwiping = true
+            swipeCompleted = false
+            val offset = if (hasPrev) 1 else 0
+            if (pagerState.currentPage < offset) {
+                if (hasPrev) pendingPassageChange = prevPassage
+            } else if (pagerState.currentPage > offset) {
+                if (hasNext) pendingPassageChange = nextPassage
+            }
+        } else if (isUserSwiping) {
+            isUserSwiping = false
+            val targetPassage = pendingPassageChange
+            if (targetPassage != null && !swipeCompleted) {
+                swipeCompleted = true
+                onPassageChange(targetPassage)
+                pendingPassageChange = null
+            } else {
+                coroutineScope.launch {
+                    val offset = if (hasPrev) 1 else 0
+                    pagerState.scrollToPage(offset)
+                }
+            }
+        }
+    }
+    LaunchedEffect(primaryCurrent) {
+        if (!isUserSwiping) {
+            coroutineScope.launch {
+                delay(50)
+                val offset = if (hasPrev) 1 else 0
+                pagerState.scrollToPage(offset)
+                pendingPassageChange = null
+            }
+        }
+    }
+    // Fix: Suppress sync during initial scroll to target verse
+    var suppressSync by remember { mutableStateOf(false) }
+    var completedScrolls by remember { mutableIntStateOf(0) }
+    LaunchedEffect(targetVerse) {
+        suppressSync = true
+        completedScrolls = 0
+    }
+    HorizontalPager(
+        state = pagerState,
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectTapGestures {
+                    scheduleFade()
+                }
+            },
+        key = { pageIndex ->
+            val passageKey = passages[pageIndex]
+            "${passageKey.bookNumber}-${passageKey.chapter}"
+        }
+    ) { pageIndex ->
+        val thisPassage = passages[pageIndex]
+        val primaryVerses = primaryLoadedVerses[thisPassage.bookNumber to thisPassage.chapter] ?: emptyList()
+        val secondaryVerses = secondaryLoadedVerses[thisPassage.bookNumber to thisPassage.chapter] ?: emptyList()
+        val isCurrentPage = thisPassage.bookNumber == primaryCurrent.bookNumber && thisPassage.chapter == primaryCurrent.chapter
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (primaryVerses.isEmpty() || secondaryVerses.isEmpty()) {
+                LoadingIndicator()
+            } else {
+                val primaryState = rememberScrollState()
+                val secondaryState = rememberScrollState()
+                // Fix: Conditional sync only after initial scrolls complete
+                if (viewModel.scrollSync && !suppressSync) {
+                    LaunchedEffect(primaryState) {
+                        snapshotFlow { primaryState.value }.collect { _ ->
+                            val pMax = primaryState.maxValue.coerceAtLeast(1)
+                            val sMax = secondaryState.maxValue.coerceAtLeast(1)
+                            val fraction = primaryState.value.toFloat() / pMax
+                            val targetS = (fraction * sMax).roundToInt()
+                            val currentS = secondaryState.value
+                            val deltaS = targetS - currentS
+                            if (abs(deltaS) > 5) {
+                                secondaryState.scrollBy(deltaS.toFloat())
+                            }
+                        }
+                    }
+                    LaunchedEffect(secondaryState) {
+                        snapshotFlow { secondaryState.value }.collect { _ ->
+                            val pMax = primaryState.maxValue.coerceAtLeast(1)
+                            val sMax = secondaryState.maxValue.coerceAtLeast(1)
+                            val fraction = secondaryState.value.toFloat() / sMax
+                            val targetP = (fraction * pMax).roundToInt()
+                            val currentP = primaryState.value
+                            val deltaP = targetP - currentP
+                            if (abs(deltaP) > 5) {
+                                primaryState.scrollBy(deltaP.toFloat())
+                            }
+                        }
+                    }
+                }
+                if (viewModel.multiViewLayout == "horizontal") {
+                    Row(modifier = Modifier.fillMaxSize()) {
+                        ChapterView(
+                            passage = thisPassage,
+                            verses = primaryVerses,
+                            themeColors = themeColors,
+                            currentFontFamily = currentFontFamily,
+                            viewModel = viewModel,
+                            isCurrentPage = isCurrentPage,
+                            targetVerse = targetVerse,
+                            versionAbbr = viewModel.currentVersionAbbr,
+                            isPrimary = true,
+                            state = primaryState,
+                            modifier = Modifier.weight(1f),
+                            isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
+                            onInitialScrollComplete = {
+                                completedScrolls++
+                                if (completedScrolls == 2) {
+                                    suppressSync = false
+                                    completedScrolls = 0
+                                }
+                            },
+                            onWordPress = onWordPress,
+                            onStrongsPress = onStrongsPress
+                        )
+                        ChapterView(
+                            passage = thisPassage,
+                            verses = secondaryVerses,
+                            themeColors = themeColors,
+                            currentFontFamily = currentFontFamily,
+                            viewModel = viewModel,
+                            isCurrentPage = isCurrentPage,
+                            targetVerse = targetVerse,
+                            versionAbbr = viewModel.secondaryVersionAbbr,
+                            isPrimary = false,
+                            state = secondaryState,
+                            modifier = Modifier.weight(1f),
+                            isKjvPlus = secondaryDatabaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
+                            onInitialScrollComplete = {
+                                completedScrolls++
+                                if (completedScrolls == 2) {
+                                    suppressSync = false
+                                    completedScrolls = 0
+                                }
+                            },
+                            onWordPress = onWordPress,
+                            onStrongsPress = onStrongsPress
+                        )
+                    }
+                } else {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        ChapterView(
+                            passage = thisPassage,
+                            verses = primaryVerses,
+                            themeColors = themeColors,
+                            currentFontFamily = currentFontFamily,
+                            viewModel = viewModel,
+                            isCurrentPage = isCurrentPage,
+                            targetVerse = targetVerse,
+                            versionAbbr = viewModel.currentVersionAbbr,
+                            isPrimary = true,
+                            state = primaryState,
+                            modifier = Modifier.weight(1f),
+                            isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
+                            onInitialScrollComplete = {
+                                completedScrolls++
+                                if (completedScrolls == 2) {
+                                    suppressSync = false
+                                    completedScrolls = 0
+                                }
+                            },
+                            onWordPress = onWordPress,
+                            onStrongsPress = onStrongsPress
+                        )
+                        ChapterView(
+                            passage = thisPassage,
+                            verses = secondaryVerses,
+                            themeColors = themeColors,
+                            currentFontFamily = currentFontFamily,
+                            viewModel = viewModel,
+                            isCurrentPage = isCurrentPage,
+                            targetVerse = targetVerse,
+                            versionAbbr = viewModel.secondaryVersionAbbr,
+                            isPrimary = false,
+                            state = secondaryState,
+                            modifier = Modifier.weight(1f),
+                            isKjvPlus = secondaryDatabaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
+                            onInitialScrollComplete = {
+                                completedScrolls++
+                                if (completedScrolls == 2) {
+                                    suppressSync = false
+                                    completedScrolls = 0
+                                }
+                            },
+                            onWordPress = onWordPress,
+                            onStrongsPress = onStrongsPress
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun IndependentMultiVersionReader(
+    primaryCurrent: PassageSelection,
+    secondaryCurrent: PassageSelection,
+    targetVerse: Int,
+    databaseHelper: DatabaseHelper?,
+    secondaryDatabaseHelper: DatabaseHelper?,
+    primaryLoadedVerses: MutableMap<Pair<Int, Int>, List<Verse>>,
+    secondaryLoadedVerses: MutableMap<Pair<Int, Int>, List<Verse>>,
+    themeColors: ThemeColors,
+    currentFontFamily: FontFamily,
+    viewModel: AppViewModel,
+    onPrimaryPassageChange: (PassageSelection) -> Unit,
+    onSecondaryPassageChange: (PassageSelection) -> Unit,
+    isButtonVisible: Boolean,
+    scheduleFade: () -> Unit,
+    onWordPress: (String) -> Unit,
+    onStrongsPress: (String, Int) -> Unit
+) {
+    val coroutineScope = rememberCoroutineScope()
+    // Primary pager setup
+    val primaryBook by remember(primaryCurrent.bookNumber) { derivedStateOf { BibleData.getBookByCustomNumber(primaryCurrent.bookNumber) } }
+    val primaryPrev by remember(primaryCurrent, primaryBook) { derivedStateOf { if (primaryBook == null) primaryCurrent else getPreviousPassage(primaryCurrent, primaryBook) } }
+    val primaryNext by remember(primaryCurrent, primaryBook) { derivedStateOf { if (primaryBook == null) primaryCurrent else getNextPassage(primaryCurrent, primaryBook) } }
+    val primaryHasPrev by remember(primaryPrev) { derivedStateOf { primaryPrev != primaryCurrent } }
+    val primaryHasNext by remember(primaryNext) { derivedStateOf { primaryNext != primaryCurrent } }
+    val primaryPassages by remember(primaryCurrent, primaryPrev, primaryNext, primaryHasPrev, primaryHasNext) { derivedStateOf { buildList { if (primaryHasPrev) add(primaryPrev); add(primaryCurrent); if (primaryHasNext) add(primaryNext) } } }
+    val primaryPageCount by remember(primaryPassages) { derivedStateOf { primaryPassages.size } }
+    val primaryOffset by remember(primaryHasPrev) { derivedStateOf { if (primaryHasPrev) 1 else 0 } }
+    var primaryPendingChange by remember { mutableStateOf<PassageSelection?>(null) }
+    // Secondary pager setup
+    val secondaryBook by remember(secondaryCurrent.bookNumber) { derivedStateOf { BibleData.getBookByCustomNumber(secondaryCurrent.bookNumber) } }
+    val secondaryPrev by remember(secondaryCurrent, secondaryBook) { derivedStateOf { if (secondaryBook == null) secondaryCurrent else getPreviousPassage(secondaryCurrent, secondaryBook) } }
+    val secondaryNext by remember(secondaryCurrent, secondaryBook) { derivedStateOf { if (secondaryBook == null) secondaryCurrent else getNextPassage(secondaryCurrent, secondaryBook) } }
+    val secondaryHasPrev by remember(secondaryPrev) { derivedStateOf { secondaryPrev != secondaryCurrent } }
+    val secondaryHasNext by remember(secondaryNext) { derivedStateOf { secondaryNext != secondaryCurrent } }
+    val secondaryPassages by remember(secondaryCurrent, secondaryPrev, secondaryNext, secondaryHasPrev, secondaryHasNext) { derivedStateOf { buildList { if (secondaryHasPrev) add(secondaryPrev); add(secondaryCurrent); if (secondaryHasNext) add(secondaryNext) } } }
+    val secondaryPageCount by remember(secondaryPassages) { derivedStateOf { secondaryPassages.size } }
+    val secondaryOffset by remember(secondaryHasPrev) { derivedStateOf { if (secondaryHasPrev) 1 else 0 } }
+    var secondaryPendingChange by remember { mutableStateOf<PassageSelection?>(null) }
+    // Load verses
+    LaunchedEffect(primaryCurrent, primaryHasPrev, primaryHasNext, databaseHelper) {
+        val currentKey = primaryCurrent.bookNumber to primaryCurrent.chapter
+        if (currentKey !in primaryLoadedVerses) {
+            primaryLoadedVerses[currentKey] = databaseHelper?.getVerses(primaryCurrent.bookNumber, primaryCurrent.chapter) ?: emptyList()
+        }
+        if (primaryHasPrev) {
+            val prevKey = primaryPrev.bookNumber to primaryPrev.chapter
+            if (prevKey !in primaryLoadedVerses) {
+                primaryLoadedVerses[prevKey] = databaseHelper?.getVerses(primaryPrev.bookNumber, primaryPrev.chapter) ?: emptyList()
+            }
+        }
+        if (primaryHasNext) {
+            val nextKey = primaryNext.bookNumber to primaryNext.chapter
+            if (nextKey !in primaryLoadedVerses) {
+                primaryLoadedVerses[nextKey] = databaseHelper?.getVerses(primaryNext.bookNumber, primaryNext.chapter) ?: emptyList()
+            }
+        }
+    }
+    LaunchedEffect(secondaryCurrent, secondaryHasPrev, secondaryHasNext, secondaryDatabaseHelper) {
+        val currentKey = secondaryCurrent.bookNumber to secondaryCurrent.chapter
+        if (currentKey !in secondaryLoadedVerses) {
+            secondaryLoadedVerses[currentKey] = secondaryDatabaseHelper?.getVerses(secondaryCurrent.bookNumber, secondaryCurrent.chapter) ?: emptyList()
+        }
+        if (secondaryHasPrev) {
+            val prevKey = secondaryPrev.bookNumber to secondaryPrev.chapter
+            if (prevKey !in secondaryLoadedVerses) {
+                secondaryLoadedVerses[prevKey] = secondaryDatabaseHelper?.getVerses(secondaryPrev.bookNumber, secondaryPrev.chapter) ?: emptyList()
+            }
+        }
+        if (secondaryHasNext) {
+            val nextKey = secondaryNext.bookNumber to secondaryNext.chapter
+            if (nextKey !in secondaryLoadedVerses) {
+                secondaryLoadedVerses[nextKey] = secondaryDatabaseHelper?.getVerses(secondaryNext.bookNumber, secondaryNext.chapter) ?: emptyList()
+            }
+        }
+    }
+    val primaryPagerState = rememberPagerState(
+        initialPage = primaryOffset,
+        pageCount = { primaryPageCount }
+    )
+    val secondaryPagerState = rememberPagerState(
+        initialPage = secondaryOffset,
+        pageCount = { secondaryPageCount }
+    )
+    // Primary swipe handling
+    var primarySwiping by remember { mutableStateOf(false) }
+    var primarySwipeCompleted by remember { mutableStateOf(false) }
+    LaunchedEffect(primaryPagerState.currentPage, primaryPagerState.isScrollInProgress) {
+        if (primaryPagerState.isScrollInProgress) {
+            primarySwiping = true
+            primarySwipeCompleted = false
+            val offset = if (primaryHasPrev) 1 else 0
+            if (primaryPagerState.currentPage < offset) {
+                if (primaryHasPrev) primaryPendingChange = primaryPrev
+            } else if (primaryPagerState.currentPage > offset) {
+                if (primaryHasNext) primaryPendingChange = primaryNext
+            }
+        } else if (primarySwiping) {
+            primarySwiping = false
+            val target = primaryPendingChange
+            if (target != null && !primarySwipeCompleted) {
+                primarySwipeCompleted = true
+                onPrimaryPassageChange(target)
+                primaryPendingChange = null
+            } else {
+                coroutineScope.launch {
+                    val offset = if (primaryHasPrev) 1 else 0
+                    primaryPagerState.scrollToPage(offset)
+                }
+            }
+        }
+    }
+    LaunchedEffect(primaryCurrent) {
+        if (!primarySwiping) {
+            coroutineScope.launch {
+                delay(50)
+                val offset = if (primaryHasPrev) 1 else 0
+                primaryPagerState.scrollToPage(offset)
+                primaryPendingChange = null
+            }
+        }
+    }
+    // Secondary swipe handling
+    var secondarySwiping by remember { mutableStateOf(false) }
+    var secondarySwipeCompleted by remember { mutableStateOf(false) }
+    LaunchedEffect(secondaryPagerState.currentPage, secondaryPagerState.isScrollInProgress) {
+        if (secondaryPagerState.isScrollInProgress) {
+            secondarySwiping = true
+            secondarySwipeCompleted = false
+            val offset = if (secondaryHasPrev) 1 else 0
+            if (secondaryPagerState.currentPage < offset) {
+                if (secondaryHasPrev) secondaryPendingChange = secondaryPrev
+            } else if (secondaryPagerState.currentPage > offset) {
+                if (secondaryHasNext) secondaryPendingChange = secondaryNext
+            }
+        } else if (secondarySwiping) {
+            secondarySwiping = false
+            val target = secondaryPendingChange
+            if (target != null && !secondarySwipeCompleted) {
+                secondarySwipeCompleted = true
+                onSecondaryPassageChange(target)
+                secondaryPendingChange = null
+            } else {
+                coroutineScope.launch {
+                    val offset = if (secondaryHasPrev) 1 else 0
+                    secondaryPagerState.scrollToPage(offset)
+                }
+            }
+        }
+    }
+    LaunchedEffect(secondaryCurrent) {
+        if (!secondarySwiping) {
+            coroutineScope.launch {
+                delay(50)
+                val offset = if (secondaryHasPrev) 1 else 0
+                secondaryPagerState.scrollToPage(offset)
+                secondaryPendingChange = null
+            }
+        }
+    }
+    val layoutHorizontal = viewModel.multiViewLayout == "horizontal"
+    val containerModifier = Modifier.fillMaxSize().pointerInput(Unit) {
+        detectTapGestures { scheduleFade() }
+    }
+    if (layoutHorizontal) {
+        Row(modifier = containerModifier) {
+            HorizontalPager(
+                state = primaryPagerState,
+                modifier = Modifier.weight(1f),
+                key = { pageIndex ->
+                    val pk = primaryPassages[pageIndex]
+                    "${pk.bookNumber}-${pk.chapter}-primary"
+                }
+            ) { pageIndex ->
+                val thisPassage = primaryPassages[pageIndex]
+                val verses = primaryLoadedVerses[thisPassage.bookNumber to thisPassage.chapter] ?: emptyList()
+                val isCurrentPage = thisPassage.bookNumber == primaryCurrent.bookNumber && thisPassage.chapter == primaryCurrent.chapter
+                Box(modifier = Modifier.fillMaxSize()) {
+                    if (verses.isEmpty()) {
+                        LoadingIndicator()
+                    } else {
+                        val state = rememberScrollState()
+                        ChapterView(
+                            passage = thisPassage,
+                            verses = verses,
+                            themeColors = themeColors,
+                            currentFontFamily = currentFontFamily,
+                            viewModel = viewModel,
+                            isCurrentPage = isCurrentPage,
+                            targetVerse = targetVerse,
+                            versionAbbr = viewModel.currentVersionAbbr,
+                            isPrimary = true,
+                            state = state,
+                            modifier = Modifier.fillMaxSize(),
+                            isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
+                            onWordPress = onWordPress,
+                            onStrongsPress = onStrongsPress
+                        )
+                    }
+                }
+            }
+            HorizontalPager(
+                state = secondaryPagerState,
+                modifier = Modifier.weight(1f),
+                key = { pageIndex ->
+                    val pk = secondaryPassages[pageIndex]
+                    "${pk.bookNumber}-${pk.chapter}-secondary"
+                }
+            ) { pageIndex ->
+                val thisPassage = secondaryPassages[pageIndex]
+                val verses = secondaryLoadedVerses[thisPassage.bookNumber to thisPassage.chapter] ?: emptyList()
+                val isCurrentPage = thisPassage.bookNumber == secondaryCurrent.bookNumber && thisPassage.chapter == secondaryCurrent.chapter
+                Box(modifier = Modifier.fillMaxSize()) {
+                    if (verses.isEmpty()) {
+                        LoadingIndicator()
+                    } else {
+                        val state = rememberScrollState()
+                        ChapterView(
+                            passage = thisPassage,
+                            verses = verses,
+                            themeColors = themeColors,
+                            currentFontFamily = currentFontFamily,
+                            viewModel = viewModel,
+                            isCurrentPage = isCurrentPage,
+                            targetVerse = targetVerse,
+                            versionAbbr = viewModel.secondaryVersionAbbr,
+                            isPrimary = false,
+                            state = state,
+                            modifier = Modifier.fillMaxSize(),
+                            isKjvPlus = secondaryDatabaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
+                            onWordPress = onWordPress,
+                            onStrongsPress = onStrongsPress
+                        )
+                    }
+                }
+            }
+        }
+    } else {
+        Column(modifier = containerModifier) {
+            HorizontalPager(
+                state = primaryPagerState,
+                modifier = Modifier.weight(1f),
+                key = { pageIndex ->
+                    val pk = primaryPassages[pageIndex]
+                    "${pk.bookNumber}-${pk.chapter}-primary"
+                }
+            ) { pageIndex ->
+                val thisPassage = primaryPassages[pageIndex]
+                val verses = primaryLoadedVerses[thisPassage.bookNumber to thisPassage.chapter] ?: emptyList()
+                val isCurrentPage = thisPassage.bookNumber == primaryCurrent.bookNumber && thisPassage.chapter == primaryCurrent.chapter
+                Box(modifier = Modifier.fillMaxSize()) {
+                    if (verses.isEmpty()) {
+                        LoadingIndicator()
+                    } else {
+                        val state = rememberScrollState()
+                        ChapterView(
+                            passage = thisPassage,
+                            verses = verses,
+                            themeColors = themeColors,
+                            currentFontFamily = currentFontFamily,
+                            viewModel = viewModel,
+                            isCurrentPage = isCurrentPage,
+                            targetVerse = targetVerse,
+                            versionAbbr = viewModel.currentVersionAbbr,
+                            isPrimary = true,
+                            state = state,
+                            modifier = Modifier.fillMaxSize(),
+                            isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
+                            onWordPress = onWordPress,
+                            onStrongsPress = onStrongsPress
+                        )
+                    }
+                }
+            }
+            HorizontalPager(
+                state = secondaryPagerState,
+                modifier = Modifier.weight(1f),
+                key = { pageIndex ->
+                    val pk = secondaryPassages[pageIndex]
+                    "${pk.bookNumber}-${pk.chapter}-secondary"
+                }
+            ) { pageIndex ->
+                val thisPassage = secondaryPassages[pageIndex]
+                val verses = secondaryLoadedVerses[thisPassage.bookNumber to thisPassage.chapter] ?: emptyList()
+                val isCurrentPage = thisPassage.bookNumber == secondaryCurrent.bookNumber && thisPassage.chapter == secondaryCurrent.chapter
+                Box(modifier = Modifier.fillMaxSize()) {
+                    if (verses.isEmpty()) {
+                        LoadingIndicator()
+                    } else {
+                        val state = rememberScrollState()
+                        ChapterView(
+                            passage = thisPassage,
+                            verses = verses,
+                            themeColors = themeColors,
+                            currentFontFamily = currentFontFamily,
+                            viewModel = viewModel,
+                            isCurrentPage = isCurrentPage,
+                            targetVerse = targetVerse,
+                            versionAbbr = viewModel.secondaryVersionAbbr,
+                            isPrimary = false,
+                            state = state,
+                            modifier = Modifier.fillMaxSize(),
+                            isKjvPlus = secondaryDatabaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
+                            onWordPress = onWordPress,
+                            onStrongsPress = onStrongsPress
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LoadingIndicator() {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxSize()
+    ) {
+        CircularProgressIndicator()
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("Loading verses...")
     }
 }
 
@@ -949,14 +1062,18 @@ fun ChapterView(
     targetVerse: Int?,
     versionAbbr: String,
     isPrimary: Boolean,
-    state: androidx.compose.foundation.ScrollState,
+    state: ScrollState,
     modifier: Modifier = Modifier,
     isKjvPlus: Boolean = false,
     onInitialScrollComplete: () -> Unit = {},
-    onWordPress: ((String) -> Unit)? = null
+    onWordPress: ((String) -> Unit)? = null,
+    onStrongsPress: ((String, Int) -> Unit)? = null
 ) {
     val processor = remember(verses) { VerseTextProcessor() }
-    val processedVerses = remember(verses, themeColors, isKjvPlus, onWordPress) {
+    val onStrongsPressLocal: (String) -> Unit = { strongNumber ->
+        onStrongsPress?.invoke(strongNumber, passage.bookNumber)
+    }
+    val processedVerses = remember(verses, themeColors, isKjvPlus, onWordPress, onStrongsPressLocal) {
         val result = mutableMapOf<Int, ProcessedVerse>()
         for (verse in verses) {
             val processed = processor.processVerse(
@@ -965,7 +1082,9 @@ fun ChapterView(
                 themeColors = themeColors,
                 textColor = themeColors.textColor,
                 isKjvPlus = isKjvPlus,
-                onWordPress = onWordPress
+                onWordPress = onWordPress,
+                onStrongsPress = onStrongsPressLocal,
+                isOldTestament = if (isPrimary) viewModel.isOldTestament else viewModel.isOldTestament
             )
             result[verse.verseNumber] = processed
         }
@@ -1105,9 +1224,12 @@ fun ChapterView(
                                         detectTapGestures { offset: Offset ->
                                             textLayoutResult?.let { layout ->
                                                 val position = layout.getOffsetForPosition(offset)
-                                                val annotations = annotatedString.getStringAnnotations("word", position, position)
-                                                if (annotations.isNotEmpty()) {
-                                                    onWordPress?.invoke(annotations.first().item)
+                                                val annotations = annotatedString.getStringAnnotations(start = position, end = position)
+                                                annotations.forEach { annotation ->
+                                                    when (annotation.tag) {
+                                                        "word" -> onWordPress?.invoke(annotation.item)
+                                                        "strong" -> onStrongsPressLocal(annotation.item)
+                                                    }
                                                 }
                                             }
                                         }
