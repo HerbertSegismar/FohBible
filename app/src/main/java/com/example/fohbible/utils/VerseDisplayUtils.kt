@@ -49,7 +49,6 @@ data class ThemeColors(
 )
 
 class VerseTextProcessor {
-
     fun processVerse(
         verseText: String?,
         baseFontSize: TextUnit,
@@ -84,7 +83,6 @@ class VerseTextProcessor {
         var i = 0
         while (i < text.length) {
             if (text[i] == '<') {
-                // Save any accumulated text
                 if (currentText.isNotEmpty()) {
                     nodes.add(ParsedNode.Text(currentText))
                     currentText = ""
@@ -202,6 +200,7 @@ class VerseTextProcessor {
                     themeColors,
                     onWordPress,
                     onStrongsPress,
+                    onTagPress,
                     isHighlighted
                 )
             }
@@ -247,7 +246,6 @@ class VerseTextProcessor {
                     )
                     else -> context.copy(currentTag = node.tag)
                 }
-                // Traverse children
                 for (child in node.children) {
                     traverseNode(
                         child,
@@ -275,9 +273,14 @@ class VerseTextProcessor {
         themeColors: ThemeColors,
         onWordPress: ((String) -> Unit)?,
         onStrongsPress: ((String) -> Unit)?,
+        onTagPress: ((String) -> Unit)?,
         isHighlighted: Boolean
     ) {
-        val effectiveMultiplier = if (context.currentTag == "f" && isEncircled(node.content)) { 1.1f } else { context.fontSizeMultiplier }
+        val effectiveMultiplier = if (context.currentTag == "f" && isEncircled(node.content)) {
+            1.1f
+        } else {
+            context.fontSizeMultiplier
+        }
         val textContext = context.copy(fontSizeMultiplier = effectiveMultiplier)
         val text = node.content
         if (context.currentTag == "S" && onStrongsPress != null) {
@@ -298,6 +301,23 @@ class VerseTextProcessor {
                 ) {
                     builder.append(text)
                 }
+                builder.pop()
+            }
+        } else if (listOf("n", "t", "f").contains(context.currentTag) && onTagPress != null) {
+            val trimmed = text.trim()
+            if (trimmed.isNotEmpty()) {
+                builder.pushStringAnnotation("tag", trimmed)
+            }
+            builder.withStyle(
+                SpanStyle(
+                    color = textContext.textColor,
+                    fontSize = textContext.baseFontSize * textContext.fontSizeMultiplier,
+                    baselineShift = textContext.baselineShift ?: BaselineShift.None
+                )
+            ) {
+                builder.append(text)
+            }
+            if (trimmed.isNotEmpty()) {
                 builder.pop()
             }
         } else {
@@ -322,11 +342,9 @@ class VerseTextProcessor {
         isHighlighted: Boolean
     ) {
         if (onWordPress != null) {
-            // Split into words for clickable words
             val words = splitIntoWords(text)
             for (word in words) {
                 if (isWord(word) && word.length > 1) {
-                    // Make word clickable by adding annotation
                     builder.pushStringAnnotation("word", word)
                     builder.withStyle(
                         SpanStyle(
@@ -340,7 +358,6 @@ class VerseTextProcessor {
                     }
                     builder.pop()
                 } else {
-                    // Non-words (punctuation, numbers, whitespace)
                     builder.withStyle(
                         SpanStyle(
                             color = context.textColor,
@@ -353,12 +370,10 @@ class VerseTextProcessor {
                 }
             }
         } else {
-            // Simple text with highlight support
             if (highlight != null && text.contains(highlight, ignoreCase = true)) {
                 val regex = Regex(escapeRegex(highlight), RegexOption.IGNORE_CASE)
                 var lastIndex = 0
                 for (match in regex.findAll(text)) {
-                    // Add text before match
                     if (match.range.first > lastIndex) {
                         builder.withStyle(
                             SpanStyle(
@@ -370,7 +385,6 @@ class VerseTextProcessor {
                             builder.append(text.substring(lastIndex, match.range.first))
                         }
                     }
-                    // Add highlighted match
                     builder.withStyle(
                         SpanStyle(
                             color = context.textColor,
@@ -383,7 +397,6 @@ class VerseTextProcessor {
                     }
                     lastIndex = match.range.last + 1
                 }
-                // Add remaining text
                 if (lastIndex < text.length) {
                     builder.withStyle(
                         SpanStyle(
@@ -430,7 +443,6 @@ class VerseTextProcessor {
     }
 
     private fun extractContentFromTag(tag: String): String {
-        // Extract content from self-closing tags like <wt="word"/>
         val regex = """<[^>]+="([^"]*)"/>""".toRegex()
         val match = regex.find(tag)
         return match?.groupValues?.get(1) ?: ""
