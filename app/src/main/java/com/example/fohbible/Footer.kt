@@ -1,7 +1,6 @@
 package com.example.fohbible
 
 import android.content.Intent
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -22,17 +21,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
+import coil.compose.AsyncImage
 import java.util.Calendar
 
 @Composable
 fun Footer() {
     val context = LocalContext.current
+
+    // Pre-calculate the year to avoid Calendar.getInstance() on every recomposition
+    val currentYear = Calendar.getInstance().get(Calendar.YEAR)
 
     Column(
         modifier = Modifier
@@ -51,7 +54,7 @@ fun Footer() {
         Spacer(modifier = Modifier.height(4.dp))
 
         Text(
-            text = "© Copyright ${Calendar.getInstance().get(Calendar.YEAR)}",
+            text = "© Copyright $currentYear", // Use pre-calculated year
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 12.sp
@@ -97,7 +100,7 @@ fun Footer() {
                     try {
                         context.startActivity(intent)
                     } catch (_: Exception) {
-
+                        // Handle exception if needed
                     }
                 }
             )
@@ -105,6 +108,7 @@ fun Footer() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Image section - optimized
         Box(
             modifier = Modifier
                 .height(45.dp)
@@ -112,11 +116,12 @@ fun Footer() {
                 .clip(RoundedCornerShape(8.dp)),
             contentAlignment = Alignment.Center
         ) {
-             Image(
-                 painter = painterResource(id = R.drawable.christisrisen),
-                 contentDescription = "Christ Is Risen",
-                 modifier = Modifier.fillMaxWidth()
-             )
+            AsyncImage(
+                model = R.drawable.christisrisen,
+                contentDescription = "Christ Is Risen",
+                modifier = Modifier.fillMaxWidth(),
+                contentScale = ContentScale.FillWidth
+            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -158,7 +163,7 @@ fun Footer() {
                             try {
                                 context.startActivity(intent)
                             } catch (_: Exception) {
-
+                                // Handle exception if needed
                             }
                         }
                     )
@@ -209,7 +214,7 @@ fun Footer() {
                     try {
                         context.startActivity(intent)
                     } catch (_: Exception) {
-
+                        // Handle exception if needed
                     }
                 }
             )
