@@ -2,7 +2,6 @@ package com.example.fohbible.data
 
 import android.content.Context
 import com.example.fohbible.MainActivity
-import com.example.fohbible.data.BibleData.BIBLE_BOOKS_MAP
 
 // Data classes and enums from BibleData.kt
 data class BibleBook(
@@ -27,7 +26,7 @@ enum class Testament { OLD, NEW }
 
 // Utility functions from testamentUtils
 fun getBookInfo(bookNumber: Int): BibleBook? {
-    return BIBLE_BOOKS_MAP[bookNumber]
+    return BibleData.BIBLE_BOOKS_MAP[bookNumber]
 }
 
 // Search Scope types
@@ -192,7 +191,7 @@ fun getScopeConfig(scope: SearchScope): ScopeConfig {
 }
 
 // Individual book scopes
-val INDIVIDUAL_BOOK_SCOPES: List<SearchScope> = BIBLE_BOOKS_MAP.keys.map { bookNumber ->
+val INDIVIDUAL_BOOK_SCOPES: List<SearchScope> = BibleData.BIBLE_BOOKS_MAP.keys.map { bookNumber ->
     createBookScope(bookNumber)
 }
 
@@ -298,4 +297,6 @@ object BibleData {
     val newTestamentBooks: List<BibleBook> = allBooks.filter { it.testament == Testament.NEW }
 
     fun getBookByCustomNumber(customNumber: Int): BibleBook? = BIBLE_BOOKS_MAP[customNumber]
+
+    fun getBookByName(name: String): BibleBook? = allBooks.find { it.name.equals(name, ignoreCase = true) }
 }

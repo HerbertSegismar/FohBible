@@ -269,23 +269,12 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
         var result: String? = null
         try {
             val cursor: Cursor? = database?.rawQuery(
-                "SELECT definition, lexeme, transliteration, pronunciation FROM dictionary WHERE topic = ?",
+                "SELECT definition FROM dictionary WHERE topic = ?",
                 arrayOf(word)
             )
             cursor?.use {
                 if (it.moveToFirst()) {
-                    var definition = it.getString(it.getColumnIndexOrThrow("definition"))
-                    val lexeme = it.getString(it.getColumnIndexOrThrow("lexeme"))
-                    val transliteration = it.getString(it.getColumnIndexOrThrow("transliteration"))
-                    val pronunciation = it.getString(it.getColumnIndexOrThrow("pronunciation"))
-                    definition = definition.replace(Regex("<see ref=\"([^\"]*)\"/>"), "(see $1)")
-                    definition = definition.replace(Regex("<.*?>"), "").trim()
-                    result = buildString {
-                        append("Lexeme: $lexeme\n")
-                        append("Transliteration: $transliteration\n")
-                        append("Pronunciation: $pronunciation\n\n")
-                        append("Definition: $definition")
-                    }
+                    result = it.getString(it.getColumnIndexOrThrow("definition"))
                 }
             }
         } catch (e: Exception) {
@@ -304,6 +293,8 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             cursor?.use {
                 if (it.moveToFirst()) {
                     commentary = it.getString(it.getColumnIndexOrThrow("text"))
+                    // Process commentary to remove JavaScript code
+                    commentary = commentary?.replace(Regex("<script[\\s\\S]*?</script>"), "")
                 }
             }
         } catch (e: Exception) {

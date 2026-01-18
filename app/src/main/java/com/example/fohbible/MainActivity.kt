@@ -148,8 +148,10 @@ class AppViewModel : ViewModel() {
     val navigationStack = mutableStateListOf<Screen>(Screen.Home)
     var currentDbName by mutableStateOf("kj2.sqlite3")
     var currentVersionAbbr by mutableStateOf(BibleVersionUtils.versionMap["kj2.sqlite3"]!!)
+
     // New: Track custom color separately
     var customColor by mutableStateOf<Color?>(null)
+
     // Multi-version fields
     var multiVersion by mutableStateOf(false)
     var secondaryDbName by mutableStateOf("esv.sqlite3")
@@ -162,6 +164,7 @@ class AppViewModel : ViewModel() {
     var showSecondaryVersionDropdown by mutableStateOf(false)
     var showColorThemeDialog by mutableStateOf(false)
     var showColorWheelDialog by mutableStateOf(false)
+
     // Independent navigation fields
     var primaryPassage by mutableStateOf(PassageSelection(10, "Genesis", 1, 1))
     var secondaryPassage by mutableStateOf(PassageSelection(10, "Genesis", 1, 1))
@@ -214,6 +217,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     var isUsingCustomColor by remember { mutableStateOf(viewModel.isCustomColor) }
     var customColor by remember { mutableStateOf(viewModel.customColor) }
     val dataStore = remember { activity.appDataStore }
+
     LaunchedEffect(Unit) {
         val prefs = dataStore.data.first()
         viewModel.fontSize = prefs[FONT_SIZE_KEY] ?: 18
@@ -232,48 +236,119 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
         //viewModel.bgImageIndex = prefs[BG_INDEX_KEY] ?: 0
         //viewModel.customTextureUri = prefs[CUSTOM_TEXTURE_KEY]
     }
+
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.fontSize }.collectLatest { dataStore.edit { prefs -> prefs[FONT_SIZE_KEY] = it } }
+        snapshotFlow { viewModel.fontSize }.collectLatest {
+            dataStore.edit { prefs ->
+                prefs[FONT_SIZE_KEY] = it
+            }
+        }
     }
+
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.darkTheme }.collectLatest { dataStore.edit { prefs -> prefs[DARK_THEME_KEY] = it } }
+        snapshotFlow { viewModel.darkTheme }.collectLatest {
+            dataStore.edit { prefs ->
+                prefs[DARK_THEME_KEY] = it
+            }
+        }
     }
+
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.selectedColor }.collectLatest { dataStore.edit { prefs -> prefs[SELECTED_COLOR_KEY] = it?.toArgb() ?: DefaultPrimaryColor.toArgb() } }
+        snapshotFlow { viewModel.selectedColor }.collectLatest {
+            dataStore.edit { prefs ->
+                prefs[SELECTED_COLOR_KEY] = it?.toArgb() ?: DefaultPrimaryColor.toArgb()
+            }
+        }
     }
+
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.isCustomColor }.collectLatest { dataStore.edit { prefs -> prefs[IS_CUSTOM_COLOR_KEY] = it } }
+        snapshotFlow { viewModel.isCustomColor }.collectLatest {
+            dataStore.edit { prefs ->
+                prefs[IS_CUSTOM_COLOR_KEY] = it
+            }
+        }
     }
+
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.customColor }.collectLatest { dataStore.edit { prefs -> prefs[CUSTOM_COLOR_KEY] = it?.toArgb() ?: DefaultPrimaryColor.toArgb() } }
+        snapshotFlow { viewModel.customColor }.collectLatest {
+            dataStore.edit { prefs ->
+                prefs[CUSTOM_COLOR_KEY] = it?.toArgb() ?: DefaultPrimaryColor.toArgb()
+            }
+        }
     }
+
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.selectedFontFamily }.collectLatest { dataStore.edit { prefs -> prefs[FONT_FAMILY_KEY] = it } }
+        snapshotFlow { viewModel.selectedFontFamily }.collectLatest {
+            dataStore.edit { prefs ->
+                prefs[FONT_FAMILY_KEY] = it
+            }
+        }
     }
+
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.currentDbName }.collectLatest { dataStore.edit { prefs -> prefs[PRIMARY_DB_KEY] = it } }
+        snapshotFlow { viewModel.currentDbName }.collectLatest {
+            dataStore.edit { prefs ->
+                prefs[PRIMARY_DB_KEY] = it
+            }
+        }
     }
+
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.currentVersionAbbr }.collectLatest { dataStore.edit { prefs -> prefs[PRIMARY_ABBR_KEY] = it } }
+        snapshotFlow { viewModel.currentVersionAbbr }.collectLatest {
+            dataStore.edit { prefs ->
+                prefs[PRIMARY_ABBR_KEY] = it
+            }
+        }
     }
+
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.multiVersion }.collectLatest { dataStore.edit { prefs -> prefs[MULTI_VERSION_KEY] = it } }
+        snapshotFlow { viewModel.multiVersion }.collectLatest {
+            dataStore.edit { prefs ->
+                prefs[MULTI_VERSION_KEY] = it
+            }
+        }
     }
+
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.secondaryDbName }.collectLatest { dataStore.edit { prefs -> prefs[SECONDARY_DB_KEY] = it } }
+        snapshotFlow { viewModel.secondaryDbName }.collectLatest {
+            dataStore.edit { prefs ->
+                prefs[SECONDARY_DB_KEY] = it
+            }
+        }
     }
+
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.secondaryVersionAbbr }.collectLatest { dataStore.edit { prefs -> prefs[SECONDARY_ABBR_KEY] = it } }
+        snapshotFlow { viewModel.secondaryVersionAbbr }.collectLatest {
+            dataStore.edit { prefs ->
+                prefs[SECONDARY_ABBR_KEY] = it
+            }
+        }
     }
+
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.multiViewLayout }.collectLatest { dataStore.edit { prefs -> prefs[MULTI_LAYOUT_KEY] = it } }
+        snapshotFlow { viewModel.multiViewLayout }.collectLatest {
+            dataStore.edit { prefs ->
+                prefs[MULTI_LAYOUT_KEY] = it
+            }
+        }
     }
+
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.scrollSync }.collectLatest { dataStore.edit { prefs -> prefs[SCROLL_SYNC_KEY] = it } }
+        snapshotFlow { viewModel.scrollSync }.collectLatest {
+            dataStore.edit { prefs ->
+                prefs[SCROLL_SYNC_KEY] = it
+            }
+        }
     }
+
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.bgImageIndex }.collectLatest { dataStore.edit { prefs -> prefs[BG_INDEX_KEY] = it } }
+        snapshotFlow { viewModel.bgImageIndex }.collectLatest {
+            dataStore.edit { prefs ->
+                prefs[BG_INDEX_KEY] = it
+            }
+        }
     }
+
     LaunchedEffect(Unit) {
         snapshotFlow { viewModel.customTextureUri }.collectLatest { uri ->
             dataStore.edit { prefs ->
@@ -285,6 +360,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
             }
         }
     }
+
     LaunchedEffect(viewModel.selectedColor, viewModel.darkTheme, viewModel.isCustomColor, viewModel.customColor) {
         viewModel.selectedColor?.let {
             ThemeManager.primaryColor = it
@@ -294,19 +370,26 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
         isUsingCustomColor = viewModel.isCustomColor
         customColor = viewModel.customColor
     }
+
     val themeState = AppThemeState(
         darkTheme = viewModel.darkTheme,
         primaryColor = viewModel.selectedColor ?: DefaultPrimaryColor,
         isCustomColor = viewModel.isCustomColor
     )
+
     var dbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
+
     LaunchedEffect(viewModel.currentDbName) {
         dbHelper?.close()
         dbHelper = DatabaseHelper(activity, viewModel.currentDbName)
     }
+
     DisposableEffect(Unit) {
-        onDispose { dbHelper?.close() }
+        onDispose {
+            dbHelper?.close()
+        }
     }
+
     CompositionLocalProvider(LocalAppTheme provides themeState) {
         FohBibleTheme(darkTheme = viewModel.darkTheme) {
             Scaffold(
@@ -387,6 +470,9 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             HomeScreen(
                                 modifier = Modifier.fillMaxSize(),
                                 onBibleClick = { viewModel.showNavigationModal = true },
+                                onNavigateToReader = { passage ->
+                                    viewModel.navigateTo(Screen.Reader(passage))
+                                },
                                 databaseHelper = dbHelper
                             )
                         }
@@ -508,7 +594,8 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 viewModel.customColor = color
                                 viewModel.showColorWheelDialog = false
                             },
-                            initialColor = if (viewModel.isCustomColor && viewModel.customColor != null) viewModel.customColor!! else viewModel.selectedColor ?: ThemeManager.primaryColor
+                            initialColor = if (viewModel.isCustomColor && viewModel.customColor != null) viewModel.customColor!! else viewModel.selectedColor
+                                ?: ThemeManager.primaryColor
                         )
                     }
                 }
@@ -544,6 +631,7 @@ fun VersionSelectionDialog(
                 Text(
                     text = "Choose Bible Version",
                     style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp
                 )
@@ -551,11 +639,14 @@ fun VersionSelectionDialog(
                     onClick = onDismiss,
                     modifier = Modifier.size(40.dp)
                 ) {
-                    Icon(Icons.Filled.Close, contentDescription = "Close")
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = "Close",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
-            HorizontalDivider()
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -576,7 +667,10 @@ fun VersionSelectionDialog(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onVersionSelected(file, abbr) },
+                            .clickable {
+                                onVersionSelected(file, abbr)
+                                onDismiss()
+                            },
                         colors = CardDefaults.cardColors(containerColor = backgroundColor)
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
@@ -603,8 +697,8 @@ fun VersionSelectionDialog(
                     onClick = onDismiss,
                     modifier = Modifier.padding(end = 8.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        contentColor = MaterialTheme.colorScheme.onSurface
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = Color.White
                     )
                 ) {
                     Text("Close")
@@ -849,6 +943,7 @@ fun HomeAppBar(
         animationSpec = tween(durationMillis = 300),
         label = "backRotation"
     )
+
     val screenTitle = when (currentScreen) {
         is Screen.Home -> "Home"
         is Screen.Reader -> "Reader"
@@ -856,6 +951,7 @@ fun HomeAppBar(
         is Screen.Settings -> "Settings"
         is Screen.Search -> "Search"
     }
+
     TopAppBar(
         title = {
             Text(
@@ -975,21 +1071,33 @@ fun HomeAppBar(
                         }
                     )
                 }
+
                 val isHomeActive = currentScreen is Screen.Home
                 val isReaderActive = currentScreen is Screen.Reader
                 val isBookmarksActive = currentScreen == Screen.Bookmarks
                 val isSearchActive = currentScreen == Screen.Search
                 val isSettingsActive = currentScreen == Screen.Settings
-                createDropdownItem("Home", Icons.Filled.Home, isHomeActive) { onScreenChange(Screen.Home)
-                    showNavigationDropdown = false }
-                createDropdownItem("Reader", Icons.Filled.Book, isReaderActive) { onScreenChange(Screen.Reader())
-                    showNavigationDropdown = false }
-                createDropdownItem("Bookmarks", Icons.Filled.Bookmark, isBookmarksActive) { onScreenChange(Screen.Bookmarks)
-                    showNavigationDropdown = false }
-                createDropdownItem("Search", Icons.Filled.Search, isSearchActive) { onScreenChange(Screen.Search)
-                    showNavigationDropdown = false }
-                createDropdownItem("Settings", Icons.Filled.Settings, isSettingsActive) { onScreenChange(Screen.Settings)
-                    showNavigationDropdown = false }
+
+                createDropdownItem("Home", Icons.Filled.Home, isHomeActive) {
+                    onScreenChange(Screen.Home)
+                    showNavigationDropdown = false
+                }
+                createDropdownItem("Reader", Icons.Filled.Book, isReaderActive) {
+                    onScreenChange(Screen.Reader())
+                    showNavigationDropdown = false
+                }
+                createDropdownItem("Bookmarks", Icons.Filled.Bookmark, isBookmarksActive) {
+                    onScreenChange(Screen.Bookmarks)
+                    showNavigationDropdown = false
+                }
+                createDropdownItem("Search", Icons.Filled.Search, isSearchActive) {
+                    onScreenChange(Screen.Search)
+                    showNavigationDropdown = false
+                }
+                createDropdownItem("Settings", Icons.Filled.Settings, isSettingsActive) {
+                    onScreenChange(Screen.Settings)
+                    showNavigationDropdown = false
+                }
             }
         }
     )
@@ -1044,6 +1152,7 @@ fun ReaderAppBar(
         animationSpec = tween(durationMillis = 300),
         label = "syncRotation"
     )
+
     TopAppBar(
         title = {
             if (!viewModel.multiVersion) {
@@ -1197,6 +1306,7 @@ fun ReaderAppBar(
                 modifier = Modifier.background(MaterialTheme.colorScheme.surface)
             ) {
                 val current = if (!viewModel.multiVersion) "single" else viewModel.multiViewLayout
+
                 @Composable
                 fun createItem(title: String, onClick: () -> Unit) {
                     val isActive = title.lowercase() == current
@@ -1210,12 +1320,17 @@ fun ReaderAppBar(
                     )
                     DropdownMenuItem(
                         text = { Text(title, fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal, color = textColor) },
-                        onClick = { onClick()
-                            showMultiDropdown = false },
+                        onClick = {
+                            onClick()
+                            showMultiDropdown = false
+                        },
                         modifier = Modifier.background(backgroundColor)
                     )
                 }
-                createItem("Single") { viewModel.multiVersion = false }
+
+                createItem("Single") {
+                    viewModel.multiVersion = false
+                }
                 createItem("Horizontal") {
                     viewModel.multiVersion = true
                     viewModel.multiViewLayout = "horizontal"
@@ -1300,21 +1415,33 @@ fun ReaderAppBar(
                         }
                     )
                 }
+
                 val isHomeActive = false
                 val isReaderActive = true
                 val isBookmarksActive = false
                 val isSearchActive = false
                 val isSettingsActive = false
-                createDropdownItem("Home", Icons.Filled.Home, isHomeActive) { onScreenChange(Screen.Home)
-                    showNavigationDropdown = false }
-                createDropdownItem("Reader", Icons.Filled.Book, isReaderActive) { onScreenChange(Screen.Reader())
-                    showNavigationDropdown = false }
-                createDropdownItem("Bookmarks", Icons.Filled.Bookmark, isBookmarksActive) { onScreenChange(Screen.Bookmarks)
-                    showNavigationDropdown = false }
-                createDropdownItem("Search", Icons.Filled.Search, isSearchActive) { onScreenChange(Screen.Search)
-                    showNavigationDropdown = false }
-                createDropdownItem("Settings", Icons.Filled.Settings, isSettingsActive) { onScreenChange(Screen.Settings)
-                    showNavigationDropdown = false }
+
+                createDropdownItem("Home", Icons.Filled.Home, isHomeActive) {
+                    onScreenChange(Screen.Home)
+                    showNavigationDropdown = false
+                }
+                createDropdownItem("Reader", Icons.Filled.Book, isReaderActive) {
+                    onScreenChange(Screen.Reader())
+                    showNavigationDropdown = false
+                }
+                createDropdownItem("Bookmarks", Icons.Filled.Bookmark, isBookmarksActive) {
+                    onScreenChange(Screen.Bookmarks)
+                    showNavigationDropdown = false
+                }
+                createDropdownItem("Search", Icons.Filled.Search, isSearchActive) {
+                    onScreenChange(Screen.Search)
+                    showNavigationDropdown = false
+                }
+                createDropdownItem("Settings", Icons.Filled.Settings, isSettingsActive) {
+                    onScreenChange(Screen.Settings)
+                    showNavigationDropdown = false
+                }
             }
         }
     )

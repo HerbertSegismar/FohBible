@@ -210,8 +210,7 @@ class VerseTextProcessor {
                     node,
                     builder,
                     context,
-                    themeColors,
-                    onTagPress
+                    themeColors
                 )
             }
             is TreeNode.Element -> {
@@ -240,7 +239,7 @@ class VerseTextProcessor {
                     "f" -> context.copy(
                         isTextContainer = true,
                         textColor = themeColors.tagColor,
-                        fontSizeMultiplier = 0.8f,
+                        fontSizeMultiplier = 1.0f,
                         baselineShift = BaselineShift(0.2f),
                         currentTag = node.tag
                     )
@@ -308,14 +307,15 @@ class VerseTextProcessor {
             if (trimmed.isNotEmpty()) {
                 builder.pushStringAnnotation("tag", trimmed)
             }
+            val appendText = if (context.currentTag == "f") "\u00A0${text.trim()}\u00A0" else text
             builder.withStyle(
                 SpanStyle(
                     color = textContext.textColor,
                     fontSize = textContext.baseFontSize * textContext.fontSizeMultiplier,
-                    baselineShift = textContext.baselineShift ?: BaselineShift.None
+                    baselineShift = textContext.baselineShift ?: BaselineShift.None,
                 )
             ) {
-                builder.append(text)
+                builder.append(appendText)
             }
             if (trimmed.isNotEmpty()) {
                 builder.pop()
@@ -426,8 +426,7 @@ class VerseTextProcessor {
         node: TreeNode.SelfClosingTag,
         builder: AnnotatedString.Builder,
         context: TraversalContext,
-        themeColors: ThemeColors,
-        onTagPress: ((String) -> Unit)?
+        themeColors: ThemeColors
     ) {
         val content = extractContentFromTag(node.fullTag)
         val trimmedContent = content.trim()
@@ -504,13 +503,18 @@ class VerseTextProcessor {
     }
 }
 
-// Simple processor for HomeScreen use
 object SimpleVerseProcessor {
     fun stripXmlTags(text: String): String {
-        return text
-            .replace(Regex("""<[^>]+>"""), "")
-            .replace(Regex("""\s+"""), " ")
-            .trim()
+        var processedText = text
+        // Remove entire <f>...</f> elements including contents
+        processedText = processedText.replace(Regex("""<f[^>]*>.*?</f>""", RegexOption.DOT_MATCHES_ALL), "")
+        // Remove entire <S>...</S> elements including contents
+        processedText = processedText.replace(Regex("""<S[^>]*>.*?</S>""", RegexOption.DOT_MATCHES_ALL), "")
+        // Remove remaining XML tags
+        processedText = processedText.replace(Regex("""<[^>]+>"""), "")
+        // Normalize whitespace
+        processedText = processedText.replace(Regex("""\s+"""), " ")
+        return processedText.trim()
     }
 
     fun extractVerseReference(verses: List<com.example.fohbible.data.Verse>): String {

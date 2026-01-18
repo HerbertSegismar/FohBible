@@ -1,7 +1,6 @@
 package com.example.fohbible.screens
 
 import android.content.Context
-import android.graphics.fonts.FontFamily
 import android.os.Handler
 import android.os.Looper
 import androidx.compose.foundation.Image
@@ -62,12 +61,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.fohbible.Footer
 import com.example.fohbible.MainActivity
+import com.example.fohbible.data.BibleData
 import com.example.fohbible.data.DatabaseHelper
+import com.example.fohbible.data.PassageSelection
 import com.example.fohbible.data.Verse
 import com.example.fohbible.utils.SimpleVerseProcessor
 import com.example.fohbible.MatrixNative
 import com.example.fohbible.R
-import kotlinx.coroutines.NonCancellable.key
 
 // Data classes for HomeScreen
 data class QuickAction(
@@ -85,6 +85,7 @@ data class RecentReading(
 fun HomeScreen(
     modifier: Modifier = Modifier,
     onBibleClick: () -> Unit,
+    onNavigateToReader: (PassageSelection) -> Unit,
     databaseHelper: DatabaseHelper? = null
 ) {
     val context = LocalContext.current
@@ -132,7 +133,6 @@ fun HomeScreen(
                         .padding(8.dp),
                     fontFamily = getFontFamily("rubik-glitch")
                 )
-
                 Image(
                     painter = painterResource(id = R.drawable.foh),
                     contentDescription = "Fount of Hope Logo",
@@ -141,7 +141,6 @@ fun HomeScreen(
                         .clip(RoundedCornerShape(8.dp)),
                     contentScale = ContentScale.Fit
                 )
-
                 Text(
                     text = "Bible App",
                     fontSize = 30.sp,
@@ -152,7 +151,6 @@ fun HomeScreen(
                         .padding(8.dp),
                     fontFamily = getFontFamily("rubik-glitch")
                 )
-
                 Text(
                     text = "Your Daily Source of Inspiration",
                     fontSize = 20.sp,
@@ -166,8 +164,6 @@ fun HomeScreen(
             }
             Spacer(modifier = Modifier.height(30.dp))
         }
-
-
         item {
             DailyVerseCard(
                 verses = dailyVerses,
@@ -176,10 +172,22 @@ fun HomeScreen(
                         dailyVerses = verses
                     }
                 },
+                onClick = { verses ->
+                    if (verses.isNotEmpty()) {
+                        val first = verses.first()
+                        val bookNumber = BibleData.getBookByName(first.bookName ?: "")?.customNumber ?: 1
+                        val passage = PassageSelection(
+                            bookNumber = bookNumber,
+                            bookName = first.bookName ?: "Genesis",
+                            chapter = first.chapter ?: 1,
+                            verse = first.verseNumber
+                        )
+                        onNavigateToReader(passage)
+                    }
+                },
                 databaseHelper = databaseHelper ?: DatabaseHelper(context as MainActivity, "kj2.sqlite3")
             )
         }
-
         item {
             Text(
                 text = "Quick Access",
@@ -189,17 +197,13 @@ fun HomeScreen(
             )
             QuickActionsGrid(actions = quickActions, onBibleClick = onBibleClick)
         }
-
         item {
             RecentReadingsSection(readings = recentReadings)
         }
         item { Spacer(modifier = Modifier.height(40.dp)) }
-
-
         item {
             // Use remember to prevent unnecessary recompositions
             val isMatrixVisible by remember { mutableStateOf(true) }
-
             if (isMatrixVisible) {
                 key("matrix_component") {
                     MatrixNative()
@@ -210,10 +214,7 @@ fun HomeScreen(
             }
         }
         item { Spacer(modifier = Modifier.height(40.dp)) }
-        item {
-            Footer()
-        }
-
+        item { Footer() }
         item { Spacer(modifier = Modifier.height(80.dp)) }
     }
 }
@@ -222,6 +223,7 @@ fun HomeScreen(
 fun DailyVerseCard(
     verses: List<Verse>? = null,
     onRefresh: () -> Unit = {},
+    onClick: (List<Verse>) -> Unit = {},
     databaseHelper: DatabaseHelper
 ) {
     val isLoading = remember { mutableStateOf(false) }
@@ -284,39 +286,45 @@ fun DailyVerseCard(
                     }
                 }
             }
-
             Spacer(modifier = Modifier.height(12.dp))
-
             if (verses != null && verses.isNotEmpty()) {
-                val reference = SimpleVerseProcessor.extractVerseReference(verses)
-                Text(
-                    text = reference,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                verses.forEach { verse ->
-                    val annotatedText = buildAnnotatedString {
-                        withStyle(
-                            style = SpanStyle(
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onClick(verses) }
+                ) {
+                    Column {
+                        val reference = SimpleVerseProcessor.extractVerseReference(verses)
+                        Text(
+                            text = reference,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        verses.forEach { verse ->
+                            val annotatedText = buildAnnotatedString {
+                                withStyle(
+                                    style = SpanStyle(
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp
+                                    )
+                                ) {
+                                    append("${verse.verseNumber} ")
+                                }
+                                // Add the verse text
+                                append(SimpleVerseProcessor.stripXmlTags(verse.text))
+                            }
+                            Text(
+                                text = annotatedText,
+                                style = MaterialTheme.typography.bodyLarge,
+                                lineHeight = 24.sp,
+                                textAlign = TextAlign.Justify,
+                                modifier = Modifier.padding(bottom = 8.dp)
                             )
-                        ) {
-                            append("${verse.verseNumber} ")
                         }
-                        // Add the verse text
-                        append(SimpleVerseProcessor.stripXmlTags(verse.text))
                     }
-                    Text(
-                        text = annotatedText,
-                        style = MaterialTheme.typography.bodyLarge,
-                        lineHeight = 24.sp,
-                        textAlign = TextAlign.Justify,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
                 }
             } else {
                 // Loading state
@@ -334,9 +342,7 @@ fun DailyVerseCard(
                     }
                 }
             }
-
             Spacer(modifier = Modifier.height(16.dp))
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -361,7 +367,6 @@ fun DailyVerseCard(
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
-
                 Text(
                     text = "Share",
                     color = MaterialTheme.colorScheme.primary,

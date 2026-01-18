@@ -36,6 +36,7 @@ fun CommentaryModal(
                 )
             },
             text = {
+                @Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
                 AndroidView(
                     factory = { context ->
                         TextView(context).apply {
