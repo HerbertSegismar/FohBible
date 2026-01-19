@@ -7,7 +7,6 @@ import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
 
-// Data classes for parsing
 sealed class ParsedNode {
     data class Text(val content: String) : ParsedNode()
     data class OpeningTag(val tag: String, val fullTag: String) : ParsedNode()

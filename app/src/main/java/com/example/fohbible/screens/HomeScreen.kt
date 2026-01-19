@@ -375,7 +375,6 @@ fun DailyVerseCard(
                         .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                         .clickable {
-                            // Share verse
                             verses?.let {
                                 val shareText = buildString {
                                     it.forEach { verse ->
