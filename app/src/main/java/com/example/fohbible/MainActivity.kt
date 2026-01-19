@@ -491,7 +491,11 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 }
                             )
                         }
-                        Screen.Bookmarks -> BookmarksScreen()
+                        Screen.Bookmarks -> BookmarksScreen(
+                            onNavigateToReader = { passage ->
+                                viewModel.navigateTo(Screen.Reader(passage))
+                            },
+                        )
                         Screen.Settings -> SettingsScreen()
                         Screen.Search -> {
                             SearchScreen(

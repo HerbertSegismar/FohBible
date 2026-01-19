@@ -33,7 +33,6 @@ import java.util.Calendar
 @Composable
 fun Footer() {
     val context = LocalContext.current
-
     // Pre-calculate the year to avoid Calendar.getInstance() on every recomposition
     val currentYear = Calendar.getInstance().get(Calendar.YEAR)
 
@@ -50,25 +49,20 @@ fun Footer() {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 12.sp
         )
-
         Spacer(modifier = Modifier.height(4.dp))
-
         Text(
             text = "© Copyright $currentYear", // Use pre-calculated year
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 12.sp
         )
-
         Spacer(modifier = Modifier.height(4.dp))
-
         Text(
             text = "App Created By: Herbert Segismar",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 12.sp
         )
-
         Spacer(modifier = Modifier.height(16.dp))
 
         // Contact email
@@ -105,7 +99,6 @@ fun Footer() {
                 }
             )
         }
-
         Spacer(modifier = Modifier.height(16.dp))
 
         // Image section - optimized
@@ -117,13 +110,12 @@ fun Footer() {
             contentAlignment = Alignment.Center
         ) {
             AsyncImage(
-                model = R.drawable.christisrisen,
+                model = R.drawable.christisrisen2,
                 contentDescription = "Christ Is Risen",
                 modifier = Modifier.fillMaxWidth(),
-                contentScale = ContentScale.FillWidth
+                contentScale = ContentScale.Fit
             )
         }
-
         Spacer(modifier = Modifier.height(16.dp))
 
         Card(
@@ -174,9 +166,7 @@ fun Footer() {
                         fontSize = 12.sp
                     )
                 }
-
                 Spacer(modifier = Modifier.height(4.dp))
-
                 Text(
                     text = "for making their modules available.",
                     style = MaterialTheme.typography.bodySmall,
@@ -185,7 +175,6 @@ fun Footer() {
                 )
             }
         }
-
         Spacer(modifier = Modifier.height(16.dp))
 
         Row(

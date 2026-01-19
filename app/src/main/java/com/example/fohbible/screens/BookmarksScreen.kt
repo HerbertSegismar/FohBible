@@ -3,6 +3,7 @@ package com.example.fohbible.screens
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,14 +41,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.fohbible.MainActivity
+import com.example.fohbible.data.BibleData
 import com.example.fohbible.data.DatabaseHelper
+import com.example.fohbible.data.PassageSelection
 import com.example.fohbible.data.Verse
 import com.example.fohbible.AppViewModel
 import com.example.fohbible.utils.SimpleVerseProcessor
 
 @Composable
 fun BookmarksScreen(
-    databaseHelper: DatabaseHelper? = null
+    databaseHelper: DatabaseHelper? = null,
+    onNavigateToReader: (PassageSelection) -> Unit
 ) {
     val context = LocalContext.current
     val appViewModel: AppViewModel = viewModel()
@@ -73,14 +77,25 @@ fun BookmarksScreen(
             contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
         ) {
             items(bookmarkedVerses.size) { index ->
+                val verse = bookmarkedVerses[index]
                 BookmarkItem(
-                    verse = bookmarkedVerses[index],
+                    verse = verse,
                     databaseHelper = databaseHelper ?: DatabaseHelper(
                         context as MainActivity,
                         appViewModel.currentDbName
                     ),
                     onRemove = {
                         bookmarkedVerses = bookmarkedVerses.filterIndexed { i, _ -> i != index }
+                    },
+                    onNavigate = {
+                        val bookNumber = BibleData.getBookByName(verse.bookName ?: "")?.customNumber ?: 1
+                        val passage = PassageSelection(
+                            bookNumber = bookNumber,
+                            bookName = verse.bookName ?: "Genesis",
+                            chapter = verse.chapter ?: 1,
+                            verse = verse.verseNumber
+                        )
+                        onNavigateToReader(passage)
                     }
                 )
             }
@@ -92,10 +107,13 @@ fun BookmarksScreen(
 fun BookmarkItem(
     verse: Verse,
     databaseHelper: DatabaseHelper,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    onNavigate: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onNavigate() },
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer
@@ -171,7 +189,7 @@ private fun loadBookmarks(
         Thread {
             val dbHelper = DatabaseHelper(
                 context as MainActivity,
-                databaseName = currentDbName  // Using currentDbName from AppViewModel
+                databaseName = currentDbName // Using currentDbName from AppViewModel
             )
             val verses = dbHelper.getBookmarks()
             dbHelper.close()
