@@ -107,9 +107,12 @@ fun ReaderScreen(
         searchHighlightBg = if (viewModel.darkTheme) Color(0xFF81D4FA).copy(alpha = 0.3f) else Color.Yellow.copy(alpha = 0.3f),
         highlightIcon = MaterialTheme.colorScheme.primary
     )
+
     var primaryCurrent by remember { mutableStateOf(passage.copy(verse = 1)) }
     var secondaryCurrent by remember { mutableStateOf(viewModel.secondaryPassage.copy(verse = 1)) }
     var targetVerse by remember { mutableStateOf(passage.verse) }
+    var secondaryTargetVerse by remember { mutableStateOf(viewModel.secondaryPassage.verse) }
+
     LaunchedEffect(passage.bookNumber, passage.chapter, passage.verse) {
         if (passage.bookNumber != primaryCurrent.bookNumber || passage.chapter != primaryCurrent.chapter) {
             primaryCurrent = passage.copy(verse = 1)
@@ -117,24 +120,34 @@ fun ReaderScreen(
         } else {
             targetVerse = passage.verse
         }
-        viewModel.primaryPassage = primaryCurrent
     }
-    LaunchedEffect(viewModel.secondaryPassage) {
-        secondaryCurrent = viewModel.secondaryPassage.copy(verse = 1)
+
+    LaunchedEffect(viewModel.secondaryPassage.bookNumber, viewModel.secondaryPassage.chapter, viewModel.secondaryPassage.verse) {
+        if (viewModel.secondaryPassage.bookNumber != secondaryCurrent.bookNumber || viewModel.secondaryPassage.chapter != secondaryCurrent.chapter) {
+            secondaryCurrent = viewModel.secondaryPassage.copy(verse = 1)
+            secondaryTargetVerse = viewModel.secondaryPassage.verse
+        } else {
+            secondaryTargetVerse = viewModel.secondaryPassage.verse
+        }
     }
+
     LaunchedEffect(viewModel.scrollSync, viewModel.multiVersion) {
         if (viewModel.multiVersion && viewModel.scrollSync) {
             viewModel.secondaryPassage = viewModel.primaryPassage
             secondaryCurrent = primaryCurrent
         }
     }
+
     val primaryLoadedVerses = remember { mutableStateMapOf<Pair<Int, Int>, List<Verse>>() }
     val secondaryLoadedVerses = remember { mutableStateMapOf<Pair<Int, Int>, List<Verse>>() }
+
     LaunchedEffect(databaseHelper) {
         primaryLoadedVerses.clear()
     }
+
     val context = LocalContext.current
     var secondaryDatabaseHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
+
     LaunchedEffect(viewModel.multiVersion, viewModel.secondaryDbName) {
         secondaryDatabaseHelper?.close()
         secondaryDatabaseHelper = if (viewModel.multiVersion && viewModel.secondaryDbName.isNotEmpty()) {
@@ -143,11 +156,14 @@ fun ReaderScreen(
             null
         }
     }
+
     LaunchedEffect(secondaryDatabaseHelper) {
         secondaryLoadedVerses.clear()
     }
+
     val multi = viewModel.multiVersion
     val synced = viewModel.scrollSync && multi && secondaryDatabaseHelper != null
+
     val contextFont = LocalContext.current
     val systemFont = FontFamily.Default
     val oswaldFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/Oswald.ttf")) }
@@ -160,32 +176,40 @@ fun ReaderScreen(
         "poppins" -> poppinsFont
         else -> systemFont
     }
+
     var isButtonVisible by remember { mutableStateOf(true) }
     val buttonAlpha by animateFloatAsState(if (isButtonVisible) 1f else 0.2f, label = "buttonAlpha")
     val scope = rememberCoroutineScope()
+
     fun scheduleFade() {
         scope.launch {
             delay(5000)
             isButtonVisible = false
         }
     }
+
     LaunchedEffect(primaryCurrent) {
         isButtonVisible = true
         scheduleFade()
     }
+
     var dictionaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var strongDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var commentaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var secondaryCommentaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
+
     var showWordModal by remember { mutableStateOf(false) }
     var currentWord by remember { mutableStateOf("") }
     var wordDefinition by remember { mutableStateOf("") }
+
     var showStrongsModal by remember { mutableStateOf(false) }
     var currentStrongNumber by remember { mutableStateOf("") }
     var strongDefinition by remember { mutableStateOf("") }
+
     var showCommentaryModal by remember { mutableStateOf(false) }
     var commentaryTitle by remember { mutableStateOf("") }
     var commentaryContent by remember { mutableStateOf("") }
+
     LaunchedEffect(viewModel.selectedDictionary, databaseHelper?.databaseName) {
         dictionaryDbHelper?.close()
         dictionaryDbHelper = DatabaseHelper(context, "${viewModel.selectedDictionary}.dictionary.sqlite3")
@@ -199,12 +223,14 @@ fun ReaderScreen(
             wordDefinition = dictionaryDbHelper?.getWordDefinition(currentWord) ?: "Definition not found."
         }
     }
+
     LaunchedEffect(viewModel.multiVersion, viewModel.secondaryDbName, secondaryDatabaseHelper?.databaseName) {
         secondaryCommentaryDbHelper?.close()
         val name = secondaryDatabaseHelper?.databaseName ?: return@LaunchedEffect
         val comName = name.replace(".sqlite3", "com.sqlite3")
         secondaryCommentaryDbHelper = if (viewModel.multiVersion && comName.isNotEmpty()) DatabaseHelper(context, comName) else null
     }
+
     val onWordPress: (String) -> Unit = { word ->
         val trimmed = word.trim()
         val definition = dictionaryDbHelper?.getWordDefinition(trimmed) ?: "Definition not found."
@@ -212,6 +238,7 @@ fun ReaderScreen(
         wordDefinition = definition
         showWordModal = true
     }
+
     val onStrongsPress: (String, Int) -> Unit = { strongNumber, bookNumber ->
         val trimmed = strongNumber.trim()
         val isOldTestament = bookNumber <= 39
@@ -225,6 +252,7 @@ fun ReaderScreen(
         strongDefinition = definition
         showStrongsModal = true
     }
+
     val onTagPress: (String, Int, Int, Int, Boolean) -> Unit = { marker, bookNumber, chapter, verseNumber, isPrimary ->
         val dbHelper = if (isPrimary) commentaryDbHelper else secondaryCommentaryDbHelper
         var text = "No commentary found."
@@ -237,6 +265,7 @@ fun ReaderScreen(
         commentaryContent = text
         showCommentaryModal = true
     }
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
@@ -288,6 +317,7 @@ fun ReaderScreen(
                 primaryCurrent = primaryCurrent,
                 secondaryCurrent = secondaryCurrent,
                 targetVerse = targetVerse,
+                secondaryTargetVerse = secondaryTargetVerse,
                 databaseHelper = databaseHelper,
                 secondaryDatabaseHelper = secondaryDatabaseHelper,
                 primaryLoadedVerses = primaryLoadedVerses,
@@ -302,6 +332,7 @@ fun ReaderScreen(
                 },
                 onSecondaryPassageChange = { newPassage ->
                     secondaryCurrent = newPassage
+                    secondaryTargetVerse = newPassage.verse
                     viewModel.secondaryPassage = newPassage
                 },
                 scheduleFade = ::scheduleFade,
@@ -310,6 +341,7 @@ fun ReaderScreen(
                 onTagPress = onTagPress
             )
         }
+
         FloatingActionButton(
             onClick = {
                 viewModel.isReaderFullScreen = !viewModel.isReaderFullScreen
@@ -329,6 +361,7 @@ fun ReaderScreen(
                 contentDescription = if (viewModel.isReaderFullScreen) "Exit Fullscreen" else "Enter Fullscreen"
             )
         }
+
         DefinitionModal(
             show = showWordModal,
             onDismiss = { showWordModal = false },
@@ -340,12 +373,14 @@ fun ReaderScreen(
                 wordDefinition = dictionaryDbHelper?.getWordDefinition(currentWord) ?: "Definition not found."
             }
         )
+
         StrongsModal(
             show = showStrongsModal,
             onDismiss = { showStrongsModal = false },
             strongNumber = currentStrongNumber,
             definition = strongDefinition
         )
+
         CommentaryModal(
             show = showCommentaryModal,
             onDismiss = { showCommentaryModal = false },
@@ -377,10 +412,17 @@ private fun SingleVersionReader(
     val nextPassage by remember(primaryCurrent, currentBook) { derivedStateOf { if (currentBook == null) primaryCurrent else getNextPassage(primaryCurrent, currentBook) } }
     val hasPrev by remember(prevPassage) { derivedStateOf { prevPassage != primaryCurrent } }
     val hasNext by remember(nextPassage) { derivedStateOf { nextPassage != primaryCurrent } }
-    val passages by remember(primaryCurrent, prevPassage, nextPassage, hasPrev, hasNext) { derivedStateOf { buildList { if (hasPrev) add(prevPassage); add(primaryCurrent); if (hasNext) add(nextPassage) } } }
+    val passages by remember(primaryCurrent, prevPassage, nextPassage, hasPrev, hasNext) {
+        derivedStateOf {
+            buildList {
+                if (hasPrev) add(prevPassage); add(primaryCurrent); if (hasNext) add(nextPassage)
+            }
+        }
+    }
     val pageCount by remember(passages) { derivedStateOf { passages.size } }
     val currentOffset by remember(hasPrev) { derivedStateOf { if (hasPrev) 1 else 0 } }
     var pendingPassageChange by remember { mutableStateOf<PassageSelection?>(null) }
+
     LaunchedEffect(primaryCurrent, hasPrev, hasNext, databaseHelper) {
         val currentKey = primaryCurrent.bookNumber to primaryCurrent.chapter
         if (currentKey !in primaryLoadedVerses) {
@@ -399,12 +441,15 @@ private fun SingleVersionReader(
             }
         }
     }
+
     val pagerState = rememberPagerState(
         initialPage = currentOffset,
         pageCount = { pageCount }
     )
+
     var isUserSwiping by remember { mutableStateOf(false) }
     var swipeCompleted by remember { mutableStateOf(false) }
+
     LaunchedEffect(pagerState.currentPage, pagerState.isScrollInProgress) {
         if (pagerState.isScrollInProgress) {
             isUserSwiping = true
@@ -430,6 +475,7 @@ private fun SingleVersionReader(
             }
         }
     }
+
     LaunchedEffect(primaryCurrent) {
         if (!isUserSwiping) {
             coroutineScope.launch {
@@ -440,6 +486,7 @@ private fun SingleVersionReader(
             }
         }
     }
+
     HorizontalPager(
         state = pagerState,
         modifier = Modifier
@@ -457,6 +504,7 @@ private fun SingleVersionReader(
         val thisPassage = passages[pageIndex]
         val primaryVerses = primaryLoadedVerses[thisPassage.bookNumber to thisPassage.chapter] ?: emptyList()
         val isCurrentPage = thisPassage.bookNumber == primaryCurrent.bookNumber && thisPassage.chapter == primaryCurrent.chapter
+
         Box(modifier = Modifier.fillMaxSize()) {
             if (primaryVerses.isEmpty()) {
                 LoadingIndicator()
@@ -508,10 +556,17 @@ private fun SyncedMultiVersionReader(
     val nextPassage by remember(primaryCurrent, currentBook) { derivedStateOf { if (currentBook == null) primaryCurrent else getNextPassage(primaryCurrent, currentBook) } }
     val hasPrev by remember(prevPassage) { derivedStateOf { prevPassage != primaryCurrent } }
     val hasNext by remember(nextPassage) { derivedStateOf { nextPassage != primaryCurrent } }
-    val passages by remember(primaryCurrent, prevPassage, nextPassage, hasPrev, hasNext) { derivedStateOf { buildList { if (hasPrev) add(prevPassage); add(primaryCurrent); if (hasNext) add(nextPassage) } } }
+    val passages by remember(primaryCurrent, prevPassage, nextPassage, hasPrev, hasNext) {
+        derivedStateOf {
+            buildList {
+                if (hasPrev) add(prevPassage); add(primaryCurrent); if (hasNext) add(nextPassage)
+            }
+        }
+    }
     val pageCount by remember(passages) { derivedStateOf { passages.size } }
     val currentOffset by remember(hasPrev) { derivedStateOf { if (hasPrev) 1 else 0 } }
     var pendingPassageChange by remember { mutableStateOf<PassageSelection?>(null) }
+
     LaunchedEffect(primaryCurrent, hasPrev, hasNext, databaseHelper, secondaryDatabaseHelper) {
         val currentKey = primaryCurrent.bookNumber to primaryCurrent.chapter
         if (currentKey !in primaryLoadedVerses) {
@@ -539,12 +594,15 @@ private fun SyncedMultiVersionReader(
             }
         }
     }
+
     val pagerState = rememberPagerState(
         initialPage = currentOffset,
         pageCount = { pageCount }
     )
+
     var isUserSwiping by remember { mutableStateOf(false) }
     var swipeCompleted by remember { mutableStateOf(false) }
+
     LaunchedEffect(pagerState.currentPage, pagerState.isScrollInProgress) {
         if (pagerState.isScrollInProgress) {
             isUserSwiping = true
@@ -570,6 +628,7 @@ private fun SyncedMultiVersionReader(
             }
         }
     }
+
     LaunchedEffect(primaryCurrent) {
         if (!isUserSwiping) {
             coroutineScope.launch {
@@ -580,12 +639,15 @@ private fun SyncedMultiVersionReader(
             }
         }
     }
+
     var suppressSync by remember { mutableStateOf(false) }
     var completedScrolls by remember { mutableIntStateOf(0) }
+
     LaunchedEffect(targetVerse) {
         suppressSync = true
         completedScrolls = 0
     }
+
     HorizontalPager(
         state = pagerState,
         modifier = Modifier
@@ -604,12 +666,14 @@ private fun SyncedMultiVersionReader(
         val primaryVerses = primaryLoadedVerses[thisPassage.bookNumber to thisPassage.chapter] ?: emptyList()
         val secondaryVerses = secondaryLoadedVerses[thisPassage.bookNumber to thisPassage.chapter] ?: emptyList()
         val isCurrentPage = thisPassage.bookNumber == primaryCurrent.bookNumber && thisPassage.chapter == primaryCurrent.chapter
+
         Box(modifier = Modifier.fillMaxSize()) {
             if (primaryVerses.isEmpty() || secondaryVerses.isEmpty()) {
                 LoadingIndicator()
             } else {
                 val primaryState = rememberScrollState()
                 val secondaryState = rememberScrollState()
+
                 if (viewModel.scrollSync && !suppressSync) {
                     LaunchedEffect(primaryState) {
                         snapshotFlow { primaryState.value }.collect { _ ->
@@ -638,6 +702,7 @@ private fun SyncedMultiVersionReader(
                         }
                     }
                 }
+
                 if (viewModel.multiViewLayout == "horizontal") {
                     Row(modifier = Modifier.fillMaxSize()) {
                         ChapterView(
@@ -752,6 +817,7 @@ private fun IndependentMultiVersionReader(
     primaryCurrent: PassageSelection,
     secondaryCurrent: PassageSelection,
     targetVerse: Int,
+    secondaryTargetVerse: Int,
     databaseHelper: DatabaseHelper?,
     secondaryDatabaseHelper: DatabaseHelper?,
     primaryLoadedVerses: MutableMap<Pair<Int, Int>, List<Verse>>,
@@ -767,24 +833,39 @@ private fun IndependentMultiVersionReader(
     onTagPress: (String, Int, Int, Int, Boolean) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
+
     val primaryBook by remember(primaryCurrent.bookNumber) { derivedStateOf { BibleData.getBookByCustomNumber(primaryCurrent.bookNumber) } }
     val primaryPrev by remember(primaryCurrent, primaryBook) { derivedStateOf { if (primaryBook == null) primaryCurrent else getPreviousPassage(primaryCurrent, primaryBook) } }
     val primaryNext by remember(primaryCurrent, primaryBook) { derivedStateOf { if (primaryBook == null) primaryCurrent else getNextPassage(primaryCurrent, primaryBook) } }
     val primaryHasPrev by remember(primaryPrev) { derivedStateOf { primaryPrev != primaryCurrent } }
     val primaryHasNext by remember(primaryNext) { derivedStateOf { primaryNext != primaryCurrent } }
-    val primaryPassages by remember(primaryCurrent, primaryPrev, primaryNext, primaryHasPrev, primaryHasNext) { derivedStateOf { buildList { if (primaryHasPrev) add(primaryPrev); add(primaryCurrent); if (primaryHasNext) add(primaryNext) } } }
+    val primaryPassages by remember(primaryCurrent, primaryPrev, primaryNext, primaryHasPrev, primaryHasNext) {
+        derivedStateOf {
+            buildList {
+                if (primaryHasPrev) add(primaryPrev); add(primaryCurrent); if (primaryHasNext) add(primaryNext)
+            }
+        }
+    }
     val primaryPageCount by remember(primaryPassages) { derivedStateOf { primaryPassages.size } }
     val primaryOffset by remember(primaryHasPrev) { derivedStateOf { if (primaryHasPrev) 1 else 0 } }
     var primaryPendingChange by remember { mutableStateOf<PassageSelection?>(null) }
+
     val secondaryBook by remember(secondaryCurrent.bookNumber) { derivedStateOf { BibleData.getBookByCustomNumber(secondaryCurrent.bookNumber) } }
     val secondaryPrev by remember(secondaryCurrent, secondaryBook) { derivedStateOf { if (secondaryBook == null) secondaryCurrent else getPreviousPassage(secondaryCurrent, secondaryBook) } }
     val secondaryNext by remember(secondaryCurrent, secondaryBook) { derivedStateOf { if (secondaryBook == null) secondaryCurrent else getNextPassage(secondaryCurrent, secondaryBook) } }
     val secondaryHasPrev by remember(secondaryPrev) { derivedStateOf { secondaryPrev != secondaryCurrent } }
     val secondaryHasNext by remember(secondaryNext) { derivedStateOf { secondaryNext != secondaryCurrent } }
-    val secondaryPassages by remember(secondaryCurrent, secondaryPrev, secondaryNext, secondaryHasPrev, secondaryHasNext) { derivedStateOf { buildList { if (secondaryHasPrev) add(secondaryPrev); add(secondaryCurrent); if (secondaryHasNext) add(secondaryNext) } } }
+    val secondaryPassages by remember(secondaryCurrent, secondaryPrev, secondaryNext, secondaryHasPrev, secondaryHasNext) {
+        derivedStateOf {
+            buildList {
+                if (secondaryHasPrev) add(secondaryPrev); add(secondaryCurrent); if (secondaryHasNext) add(secondaryNext)
+            }
+        }
+    }
     val secondaryPageCount by remember(secondaryPassages) { derivedStateOf { secondaryPassages.size } }
     val secondaryOffset by remember(secondaryHasPrev) { derivedStateOf { if (secondaryHasPrev) 1 else 0 } }
     var secondaryPendingChange by remember { mutableStateOf<PassageSelection?>(null) }
+
     LaunchedEffect(primaryCurrent, primaryHasPrev, primaryHasNext, databaseHelper) {
         val currentKey = primaryCurrent.bookNumber to primaryCurrent.chapter
         if (currentKey !in primaryLoadedVerses) {
@@ -803,6 +884,7 @@ private fun IndependentMultiVersionReader(
             }
         }
     }
+
     LaunchedEffect(secondaryCurrent, secondaryHasPrev, secondaryHasNext, secondaryDatabaseHelper) {
         val currentKey = secondaryCurrent.bookNumber to secondaryCurrent.chapter
         if (currentKey !in secondaryLoadedVerses) {
@@ -821,6 +903,7 @@ private fun IndependentMultiVersionReader(
             }
         }
     }
+
     val primaryPagerState = rememberPagerState(
         initialPage = primaryOffset,
         pageCount = { primaryPageCount }
@@ -829,8 +912,10 @@ private fun IndependentMultiVersionReader(
         initialPage = secondaryOffset,
         pageCount = { secondaryPageCount }
     )
+
     var primarySwiping by remember { mutableStateOf(false) }
     var primarySwipeCompleted by remember { mutableStateOf(false) }
+
     LaunchedEffect(primaryPagerState.currentPage, primaryPagerState.isScrollInProgress) {
         if (primaryPagerState.isScrollInProgress) {
             primarySwiping = true
@@ -856,6 +941,7 @@ private fun IndependentMultiVersionReader(
             }
         }
     }
+
     LaunchedEffect(primaryCurrent) {
         if (!primarySwiping) {
             coroutineScope.launch {
@@ -866,8 +952,10 @@ private fun IndependentMultiVersionReader(
             }
         }
     }
+
     var secondarySwiping by remember { mutableStateOf(false) }
     var secondarySwipeCompleted by remember { mutableStateOf(false) }
+
     LaunchedEffect(secondaryPagerState.currentPage, secondaryPagerState.isScrollInProgress) {
         if (secondaryPagerState.isScrollInProgress) {
             secondarySwiping = true
@@ -893,6 +981,7 @@ private fun IndependentMultiVersionReader(
             }
         }
     }
+
     LaunchedEffect(secondaryCurrent) {
         if (!secondarySwiping) {
             coroutineScope.launch {
@@ -903,12 +992,14 @@ private fun IndependentMultiVersionReader(
             }
         }
     }
+
     val layoutHorizontal = viewModel.multiViewLayout == "horizontal"
     val containerModifier = Modifier.fillMaxSize().pointerInput(Unit) {
         detectTapGestures {
             scheduleFade()
         }
     }
+
     if (layoutHorizontal) {
         Row(modifier = containerModifier) {
             HorizontalPager(
@@ -922,6 +1013,7 @@ private fun IndependentMultiVersionReader(
                 val thisPassage = primaryPassages[pageIndex]
                 val verses = primaryLoadedVerses[thisPassage.bookNumber to thisPassage.chapter] ?: emptyList()
                 val isCurrentPage = thisPassage.bookNumber == primaryCurrent.bookNumber && thisPassage.chapter == primaryCurrent.chapter
+
                 Box(modifier = Modifier.fillMaxSize()) {
                     if (verses.isEmpty()) {
                         LoadingIndicator()
@@ -958,6 +1050,7 @@ private fun IndependentMultiVersionReader(
                 val thisPassage = secondaryPassages[pageIndex]
                 val verses = secondaryLoadedVerses[thisPassage.bookNumber to thisPassage.chapter] ?: emptyList()
                 val isCurrentPage = thisPassage.bookNumber == secondaryCurrent.bookNumber && thisPassage.chapter == secondaryCurrent.chapter
+
                 Box(modifier = Modifier.fillMaxSize()) {
                     if (verses.isEmpty()) {
                         LoadingIndicator()
@@ -970,7 +1063,7 @@ private fun IndependentMultiVersionReader(
                             currentFontFamily = currentFontFamily,
                             viewModel = viewModel,
                             isCurrentPage = isCurrentPage,
-                            targetVerse = targetVerse,
+                            targetVerse = secondaryTargetVerse,
                             versionAbbr = viewModel.secondaryVersionAbbr,
                             isPrimary = false,
                             state = state,
@@ -997,6 +1090,7 @@ private fun IndependentMultiVersionReader(
                 val thisPassage = primaryPassages[pageIndex]
                 val verses = primaryLoadedVerses[thisPassage.bookNumber to thisPassage.chapter] ?: emptyList()
                 val isCurrentPage = thisPassage.bookNumber == primaryCurrent.bookNumber && thisPassage.chapter == primaryCurrent.chapter
+
                 Box(modifier = Modifier.fillMaxSize()) {
                     if (verses.isEmpty()) {
                         LoadingIndicator()
@@ -1033,6 +1127,7 @@ private fun IndependentMultiVersionReader(
                 val thisPassage = secondaryPassages[pageIndex]
                 val verses = secondaryLoadedVerses[thisPassage.bookNumber to thisPassage.chapter] ?: emptyList()
                 val isCurrentPage = thisPassage.bookNumber == secondaryCurrent.bookNumber && thisPassage.chapter == secondaryCurrent.chapter
+
                 Box(modifier = Modifier.fillMaxSize()) {
                     if (verses.isEmpty()) {
                         LoadingIndicator()
@@ -1045,7 +1140,7 @@ private fun IndependentMultiVersionReader(
                             currentFontFamily = currentFontFamily,
                             viewModel = viewModel,
                             isCurrentPage = isCurrentPage,
-                            targetVerse = targetVerse,
+                            targetVerse = secondaryTargetVerse,
                             versionAbbr = viewModel.secondaryVersionAbbr,
                             isPrimary = false,
                             state = state,
@@ -1099,14 +1194,10 @@ fun ChapterView(
         val result = mutableMapOf<Int, ProcessedVerse>()
         for (verse in verses) {
             val onStrongsLocal = if (onStrongsPress != null) {
-                { strongNumber: String ->
-                    onStrongsPress.invoke(strongNumber, passage.bookNumber)
-                }
+                { strongNumber: String -> onStrongsPress.invoke(strongNumber, passage.bookNumber) }
             } else null
             val onTagLocal = if (onTagPress != null) {
-                { marker: String ->
-                    onTagPress.invoke(marker, passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary)
-                }
+                { marker: String -> onTagPress.invoke(marker, passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary) }
             } else null
             val processed = processor.processVerse(
                 verseText = verse.text,
@@ -1124,8 +1215,10 @@ fun ChapterView(
         }
         result
     }
+
     var highlightedVerse by remember { mutableStateOf<Int?>(null) }
     val offsets = remember { mutableStateMapOf<Int, Float>() }
+
     Column(modifier = modifier) {
         if (viewModel.multiVersion) {
             Row(
@@ -1199,6 +1292,7 @@ fun ChapterView(
                 }
             }
         }
+
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -1209,6 +1303,7 @@ fun ChapterView(
             verses.forEach { verse ->
                 val processedVerse = processedVerses[verse.verseNumber]
                 val isHighlighted = verse.verseNumber == highlightedVerse
+
                 if (processedVerse != null) {
                     Column(
                         modifier = Modifier
@@ -1247,7 +1342,9 @@ fun ChapterView(
                                 }
                                 append(processedVerse.body)
                             }
+
                             var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+
                             Text(
                                 text = annotatedString,
                                 modifier = Modifier
@@ -1302,6 +1399,7 @@ fun ChapterView(
                     }
                 }
             }
+
             if (isCurrentPage) {
                 LaunchedEffect(targetVerse, verses) {
                     targetVerse?.let { v ->

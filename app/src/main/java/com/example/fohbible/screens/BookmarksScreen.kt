@@ -46,6 +46,7 @@ import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.PassageSelection
 import com.example.fohbible.data.Verse
 import com.example.fohbible.AppViewModel
+import com.example.fohbible.utils.BibleVersionUtils
 import com.example.fohbible.utils.SimpleVerseProcessor
 
 @Composable
@@ -56,50 +57,93 @@ fun BookmarksScreen(
     val context = LocalContext.current
     val appViewModel: AppViewModel = viewModel()
     var bookmarkedVerses by remember { mutableStateOf<List<Verse>>(emptyList()) }
+    var selectedDbName by remember { mutableStateOf(appViewModel.currentDbName) }
+    var selectedVersionAbbr by remember { mutableStateOf(appViewModel.currentVersionAbbr) }
+    var showVersionInfoDialog by remember { mutableStateOf(false) }
+    var selectedVersionInfo by remember { mutableStateOf<Pair<String, String>?>(null) }
 
-    LaunchedEffect(appViewModel.currentDbName) {
-        loadBookmarks(context, databaseHelper, appViewModel.currentDbName) { verses ->
+    val dbHelper = remember(selectedDbName) {
+        DatabaseHelper(context as MainActivity, selectedDbName)
+    }
+
+    LaunchedEffect(selectedDbName) {
+        loadBookmarks(context, databaseHelper, selectedDbName) { verses ->
             bookmarkedVerses = verses
         }
     }
 
-    if (bookmarkedVerses.isEmpty()) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("No bookmarks yet")
-        }
-    } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
-        ) {
-            items(bookmarkedVerses.size) { index ->
-                val verse = bookmarkedVerses[index]
-                BookmarkItem(
-                    verse = verse,
-                    databaseHelper = databaseHelper ?: DatabaseHelper(
-                        context as MainActivity,
-                        appViewModel.currentDbName
-                    ),
-                    onRemove = {
-                        bookmarkedVerses = bookmarkedVerses.filterIndexed { i, _ -> i != index }
-                    },
-                    onNavigate = {
-                        val bookNumber = BibleData.getBookByName(verse.bookName ?: "")?.customNumber ?: 1
-                        val passage = PassageSelection(
-                            bookNumber = bookNumber,
-                            bookName = verse.bookName ?: "Genesis",
-                            chapter = verse.chapter ?: 1,
-                            verse = verse.verseNumber
-                        )
-                        onNavigateToReader(passage)
-                    }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        BibleVersionSelector(
+            title = "Bible Version",
+            currentAbbr = selectedVersionAbbr,
+            description = BibleVersionUtils.descriptionMap[selectedDbName] ?: "Bible translation",
+            onVersionSelected = { file, abbr ->
+                selectedDbName = file
+                selectedVersionAbbr = abbr
+            },
+            onInfoClick = { file, abbr ->
+                selectedVersionInfo = Pair(
+                    abbr,
+                    BibleVersionUtils.descriptionMap[file] ?: "No description available"
                 )
+                showVersionInfoDialog = true
+            }
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (bookmarkedVerses.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("No bookmarks yet")
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
+            ) {
+                items(bookmarkedVerses.size) { index ->
+                    val verse = bookmarkedVerses[index]
+                    BookmarkItem(
+                        verse = verse,
+                        databaseHelper = dbHelper,
+                        onRemove = {
+                            bookmarkedVerses = bookmarkedVerses.filterIndexed { i, _ -> i != index }
+                        },
+                        onNavigate = {
+                            appViewModel.currentDbName = selectedDbName
+                            appViewModel.currentVersionAbbr = selectedVersionAbbr
+                            val bookNumber = BibleData.getBookByName(verse.bookName ?: "")?.customNumber ?: 1
+                            val passage = PassageSelection(
+                                bookNumber = bookNumber,
+                                bookName = verse.bookName ?: "Genesis",
+                                chapter = verse.chapter ?: 1,
+                                verse = verse.verseNumber
+                            )
+                            onNavigateToReader(passage)
+                        }
+                    )
+                }
             }
         }
+    }
+
+    if (showVersionInfoDialog && selectedVersionInfo != null) {
+        VersionInfoDialog(
+            versionName = selectedVersionInfo!!.first,
+            versionDescription = selectedVersionInfo!!.second,
+            onDismiss = {
+                showVersionInfoDialog = false
+                selectedVersionInfo = null
+            }
+        )
     }
 }
 
