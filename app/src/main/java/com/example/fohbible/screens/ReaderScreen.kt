@@ -1,10 +1,12 @@
-// Modified ReaderScreen.kt
 @file:Suppress("AssignedValueIsNeverRead")
 
 package com.example.fohbible.screens
 
 import android.annotation.SuppressLint
 import android.graphics.Typeface
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
@@ -33,9 +35,12 @@ import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -270,6 +275,18 @@ fun ReaderScreen(
         showCommentaryModal = true
     }
 
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            viewModel.customTextureUri = it.toString()
+            viewModel.bgImageIndex = 34
+        }
+    }
+
+    var showMenu by remember { mutableStateOf(false) }
+    var showBgModal by remember { mutableStateOf(false) }
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
@@ -363,6 +380,42 @@ fun ReaderScreen(
             Icon(
                 imageVector = if (viewModel.isReaderFullScreen) Icons.Filled.FullscreenExit else Icons.Filled.Fullscreen,
                 contentDescription = if (viewModel.isReaderFullScreen) "Exit Fullscreen" else "Enter Fullscreen"
+            )
+        }
+
+        DropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false },
+            modifier = Modifier.align(Alignment.TopEnd)
+        ) {
+            DropdownMenuItem(
+                text = { Text("Background Texture") },
+                onClick = {
+                    showBgModal = true
+                    showMenu = false
+                }
+            )
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Overlay Opacity")
+                Slider(
+                    value = viewModel.overlayOpacity,
+                    onValueChange = { viewModel.overlayOpacity = it },
+                    valueRange = 0f..1f
+                )
+            }
+        }
+
+        if (showBgModal) {
+            BgModal(
+                currentIndex = viewModel.bgImageIndex,
+                customUri = viewModel.customTextureUri,
+                onSelect = { index ->
+                    viewModel.bgImageIndex = index
+                    showBgModal = false
+                },
+                onDismiss = { showBgModal = false },
+                onPickCustom = { imagePickerLauncher.launch("image/*") },
+                onRemoveCustom = { viewModel.customTextureUri = null }
             )
         }
 
@@ -1207,7 +1260,7 @@ fun ChapterView(
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
-            val overlayColor = if (viewModel.darkTheme) Color(0xFF301934).copy(alpha = viewModel.overlayOpacity) else Color(0xFFF5F5DC).copy(alpha = viewModel.overlayOpacity)
+            val overlayColor = if (viewModel.darkTheme) Color(0xFF100F21).copy(alpha = viewModel.overlayOpacity) else Color(0xFFF5F5DC).copy(alpha = viewModel.overlayOpacity)
             Box(
                 modifier = Modifier
                     .fillMaxSize()

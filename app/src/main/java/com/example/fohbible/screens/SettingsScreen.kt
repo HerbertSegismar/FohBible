@@ -1,4 +1,3 @@
-// Modified SettingsScreen.kt
 package com.example.fohbible.screens
 
 import android.content.Intent
@@ -22,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -94,6 +94,7 @@ fun getFontFamily(family: String): FontFamily {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Suppress("AssignedValueIsNeverRead")
 @Composable
 fun SettingsScreen() {
@@ -347,7 +348,17 @@ fun SettingsScreen() {
                         value = viewModel.overlayOpacity,
                         onValueChange = { viewModel.overlayOpacity = it },
                         valueRange = 0f..1f,
-                        modifier = Modifier.fillMaxWidth(0.8f)
+                        modifier = Modifier.fillMaxWidth(0.8f),
+                        thumb = {
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.primary,
+                                        shape = CircleShape
+                                    )
+                            )
+                        },
                     )
                 }
             }

@@ -60,6 +60,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -93,6 +94,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -108,6 +110,7 @@ import com.example.fohbible.screens.HomeScreen
 import com.example.fohbible.screens.ReaderScreen
 import com.example.fohbible.screens.SearchScreen
 import com.example.fohbible.screens.SettingsScreen
+import com.example.fohbible.screens.BgModal
 import com.example.fohbible.ui.theme.AppThemeState
 import com.example.fohbible.ui.theme.ColorTheme
 import com.example.fohbible.ui.theme.DefaultPrimaryColor
@@ -119,6 +122,13 @@ import com.example.fohbible.utils.BibleVersionUtils
 import com.example.fohbible.utils.BibleVersionUtils.descriptionMap
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.outlined.Texture
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.ui.draw.shadow
+import com.example.fohbible.screens.getFontFamily
 
 private val FONT_SIZE_KEY = intPreferencesKey("font_size")
 private val DARK_THEME_KEY = booleanPreferencesKey("dark_theme")
@@ -135,6 +145,7 @@ private val MULTI_LAYOUT_KEY = stringPreferencesKey("multi_layout")
 private val SCROLL_SYNC_KEY = booleanPreferencesKey("scroll_sync")
 private val BG_INDEX_KEY = intPreferencesKey("bg_index")
 private val CUSTOM_TEXTURE_KEY = stringPreferencesKey("custom_texture")
+private val OVERLAY_OPACITY_KEY = floatPreferencesKey("overlay_opacity")
 
 val ComponentActivity.appDataStore: DataStore<Preferences> by preferencesDataStore(name = "app_preferences")
 
@@ -164,6 +175,7 @@ class AppViewModel : ViewModel() {
     var showSecondaryVersionDropdown by mutableStateOf(false)
     var showColorThemeDialog by mutableStateOf(false)
     var showColorWheelDialog by mutableStateOf(false)
+    var showBgModal by mutableStateOf(false)
 
     // Independent navigation fields
     var primaryPassage by mutableStateOf(PassageSelection(10, "Genesis", 1, 1))
@@ -236,7 +248,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
         viewModel.scrollSync = prefs[SCROLL_SYNC_KEY] ?: true
         viewModel.bgImageIndex = prefs[BG_INDEX_KEY] ?: 0
         viewModel.customTextureUri = prefs[CUSTOM_TEXTURE_KEY]
-        viewModel.overlayOpacity = 0.15f
+        viewModel.overlayOpacity = prefs[OVERLAY_OPACITY_KEY] ?: 0.15f
     }
 
     LaunchedEffect(Unit) {
@@ -363,6 +375,14 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
         }
     }
 
+    LaunchedEffect(Unit) {
+        snapshotFlow { viewModel.overlayOpacity }.collectLatest {
+            dataStore.edit { prefs ->
+                prefs[OVERLAY_OPACITY_KEY] = it
+            }
+        }
+    }
+
     LaunchedEffect(viewModel.selectedColor, viewModel.darkTheme, viewModel.isCustomColor, viewModel.customColor) {
         viewModel.selectedColor?.let {
             ThemeManager.primaryColor = it
@@ -389,6 +409,15 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     DisposableEffect(Unit) {
         onDispose {
             dbHelper?.close()
+        }
+    }
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            viewModel.customTextureUri = it.toString()
+            viewModel.bgImageIndex = 34
         }
     }
 
@@ -602,6 +631,19 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             },
                             initialColor = if (viewModel.isCustomColor && viewModel.customColor != null) viewModel.customColor!! else viewModel.selectedColor
                                 ?: ThemeManager.primaryColor
+                        )
+                    }
+                    if (viewModel.showBgModal) {
+                        BgModal(
+                            currentIndex = viewModel.bgImageIndex,
+                            customUri = viewModel.customTextureUri,
+                            onSelect = { index ->
+                                viewModel.bgImageIndex = index
+                                viewModel.showBgModal = false
+                            },
+                            onDismiss = { viewModel.showBgModal = false },
+                            onPickCustom = { imagePickerLauncher.launch("image/*") },
+                            onRemoveCustom = { viewModel.customTextureUri = null }
                         )
                     }
                 }
@@ -1447,6 +1489,93 @@ fun ReaderAppBar(
                 createDropdownItem("Settings", Icons.Filled.Settings, isSettingsActive) {
                     onScreenChange(Screen.Settings)
                     showNavigationDropdown = false
+                }
+                HorizontalDivider()
+
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = "Background Texture",
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Outlined.Texture,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    },
+                    onClick = {
+                        viewModel.showBgModal = true
+                        showNavigationDropdown = false
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                HorizontalDivider()
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Overlay Opacity",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "${(viewModel.overlayOpacity * 100).toInt()}%",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Slider(
+                        value = viewModel.overlayOpacity,
+                        onValueChange = { viewModel.overlayOpacity = it },
+                        valueRange = 0f..1f,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = SliderDefaults.colors(
+                            thumbColor = MaterialTheme.colorScheme.primary,
+                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                            inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            activeTickColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                            inactiveTickColor = MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        thumb = {
+                            Box(
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .shadow(2.dp, shape = CircleShape)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.primary,
+                                        shape = CircleShape
+                                    )
+                                    .border(
+                                        width = 2.dp,
+                                        color = MaterialTheme.colorScheme.surface,
+                                        shape = CircleShape
+                                    )
+                            )
+                        },
+                        onValueChangeFinished = {
+                        }
+                    )
+                    Text(
+                        text = "Adjust Transparency of Overlay",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp),
+                        fontFamily = getFontFamily("oswald"),
+                        fontSize = 14.sp
+                    )
                 }
             }
         }
