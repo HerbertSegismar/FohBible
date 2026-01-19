@@ -170,6 +170,7 @@ class AppViewModel : ViewModel() {
     var secondaryPassage by mutableStateOf(PassageSelection(10, "Genesis", 1, 1))
     var bgImageIndex by mutableIntStateOf(0)
     var customTextureUri by mutableStateOf<String?>(null)
+    var overlayOpacity by mutableFloatStateOf(0.15f)
     var selectedDictionary by mutableStateOf("noah")
 
     val isOldTestament: Boolean
@@ -233,8 +234,9 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
         viewModel.secondaryVersionAbbr = prefs[SECONDARY_ABBR_KEY] ?: BibleVersionUtils.versionMap["esv.sqlite3"]!!
         viewModel.multiViewLayout = prefs[MULTI_LAYOUT_KEY] ?: "horizontal"
         viewModel.scrollSync = prefs[SCROLL_SYNC_KEY] ?: true
-        //viewModel.bgImageIndex = prefs[BG_INDEX_KEY] ?: 0
-        //viewModel.customTextureUri = prefs[CUSTOM_TEXTURE_KEY]
+        viewModel.bgImageIndex = prefs[BG_INDEX_KEY] ?: 0
+        viewModel.customTextureUri = prefs[CUSTOM_TEXTURE_KEY]
+        viewModel.overlayOpacity = 0.15f
     }
 
     LaunchedEffect(Unit) {

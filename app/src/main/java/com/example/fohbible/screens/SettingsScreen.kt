@@ -1,3 +1,4 @@
+// Modified SettingsScreen.kt
 package com.example.fohbible.screens
 
 import android.content.Intent
@@ -45,6 +46,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -67,6 +69,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.example.fohbible.AppViewModel
 import com.example.fohbible.ColorWheelDialog
 import com.example.fohbible.ui.theme.DefaultPrimaryColor
@@ -77,7 +80,7 @@ import java.util.Locale
 private const val MAX_FONT_SIZE = 50
 private const val MIN_FONT_SIZE = 8
 
-val availableFontFamilies = listOf("system", "oswald", "rubik-glitch", "poppins") // TODO: Define bgTextures similar to RN
+val availableFontFamilies = listOf("system", "oswald", "rubik-glitch", "poppins")
 
 @Composable
 fun getFontFamily(family: String): FontFamily {
@@ -115,7 +118,7 @@ fun SettingsScreen() {
     ) { uri: Uri? ->
         uri?.let {
             viewModel.customTextureUri = it.toString()
-            viewModel.bgImageIndex = 34 // TODO: Persist uri
+            viewModel.bgImageIndex = 34
         }
     }
 
@@ -137,6 +140,7 @@ fun SettingsScreen() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+
         item {
             SettingsSection(title = "Bible Version", subtitle = "Choose your preferred translation") {
                 BibleVersionSelector(
@@ -155,6 +159,7 @@ fun SettingsScreen() {
                         showVersionInfoDialog = true
                     }
                 )
+
                 SettingsItem(
                     title = "Multi-Version Display",
                     subtitle = "Show two Bible versions side by side"
@@ -168,6 +173,7 @@ fun SettingsScreen() {
                         )
                     )
                 }
+
                 if (viewModel.multiVersion) {
                     Spacer(modifier = Modifier.height(8.dp))
                     BibleVersionSelector(
@@ -231,6 +237,7 @@ fun SettingsScreen() {
                 }
             }
         }
+
         item {
             SettingsSection(title = "Reader Settings", subtitle = "Customize reading experience") {
                 SettingsItem(title = "Dark Mode", subtitle = "Toggle between light and dark themes") {
@@ -243,6 +250,7 @@ fun SettingsScreen() {
                         )
                     )
                 }
+
                 Column {
                     Text("Color Scheme", style = MaterialTheme.typography.labelLarge)
                     Spacer(Modifier.height(8.dp))
@@ -269,7 +277,9 @@ fun SettingsScreen() {
                         }
                     }
                 }
+
                 Spacer(Modifier.height(8.dp))
+
                 Column {
                     Text("Font Family", style = MaterialTheme.typography.labelLarge)
                     Spacer(Modifier.height(8.dp))
@@ -283,6 +293,7 @@ fun SettingsScreen() {
                         }
                     }
                 }
+
                 SettingsItem(
                     title = "Font Size",
                     subtitle = "Adjust text size for better readability",
@@ -307,6 +318,7 @@ fun SettingsScreen() {
                         }
                     }
                 }
+
                 SettingsItem(
                     title = "Custom Background",
                     subtitle = "Add your own photo as background"
@@ -318,6 +330,7 @@ fun SettingsScreen() {
                         Icon(Icons.Default.AddCircleOutline, contentDescription = "Add custom background")
                     }
                 }
+
                 SettingsItem(
                     title = "Background Texture",
                     subtitle = "Choose from built-in textures",
@@ -325,8 +338,21 @@ fun SettingsScreen() {
                 ) {
                     Icon(Icons.Default.ChevronRight, contentDescription = null)
                 }
+
+                SettingsItem(
+                    title = "Overlay Opacity",
+                    subtitle = "Adjust the overlay transparency"
+                ) {
+                    Slider(
+                        value = viewModel.overlayOpacity,
+                        onValueChange = { viewModel.overlayOpacity = it },
+                        valueRange = 0f..1f,
+                        modifier = Modifier.fillMaxWidth(0.8f)
+                    )
+                }
             }
         }
+
         item {
             SettingsSection(title = "More Options", subtitle = "Additional preferences") {
                 SettingsItem(
@@ -346,6 +372,7 @@ fun SettingsScreen() {
                 }
             }
         }
+
         item {
             SettingsSection(title = "Quick Actions", subtitle = "Common tasks") {
                 Row(
@@ -369,6 +396,7 @@ fun SettingsScreen() {
                             viewModel.scrollSync = true
                             viewModel.customTextureUri = null
                             viewModel.bgImageIndex = 0
+                            viewModel.overlayOpacity = 0.5f
                         },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
@@ -617,9 +645,7 @@ fun VersionInfoDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Close")
-            }
+            TextButton(onClick = onDismiss) { Text("Close") }
         }
     )
 }
@@ -758,8 +784,62 @@ fun BgModal(
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                // TODO: Add LazyRow for texture previews
-                Text("Texture previews will appear here")
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .size(80.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (currentIndex == 0) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.Transparent)
+                                .clickable { onSelect(0) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("None")
+                        }
+                    }
+                    items(33) { i ->
+                        val index = i + 1
+                        Box(
+                            modifier = Modifier
+                                .size(80.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (currentIndex == index) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.Transparent)
+                                .clickable { onSelect(index) }
+                        ) {
+                            AsyncImage(
+                                model = "file:///android_asset/textures/$index.jpg",
+                                contentDescription = "Texture $index",
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
+                    item {
+                        if (customUri != null) {
+                            Box(
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (currentIndex == 34) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.Transparent)
+                                    .clickable { onSelect(34) }
+                            ) {
+                                AsyncImage(
+                                    model = customUri,
+                                    contentDescription = "Custom texture",
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        } else {
+                            IconButton(
+                                onClick = onPickCustom,
+                                modifier = Modifier.size(80.dp)
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = "Add custom")
+                            }
+                        }
+                    }
+                }
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = onPickCustom,
@@ -783,9 +863,7 @@ fun BgModal(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Cancel")
-                    }
+                    TextButton(onClick = onDismiss) { Text("Cancel") }
                 }
             }
         }
@@ -832,14 +910,10 @@ fun FontModal(
             TextButton(
                 onClick = onConfirm,
                 enabled = tempSize.toIntOrNull()?.let { it in MIN_FONT_SIZE..MAX_FONT_SIZE } ?: false
-            ) {
-                Text("Apply")
-            }
+            ) { Text("Apply") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
+            TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
 }
