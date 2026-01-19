@@ -1,5 +1,4 @@
 @file:Suppress("AssignedValueIsNeverRead")
-
 package com.example.fohbible.screens
 
 import android.annotation.SuppressLint
@@ -199,9 +198,7 @@ fun ReaderScreen(
     var showCommentaryModal by remember { mutableStateOf(false) }
     var commentaryTitle by remember { mutableStateOf("") }
     var commentaryContent by remember { mutableStateOf("") }
-    var originalPrimary by remember { mutableStateOf<PassageSelection?>(null) }
-    var originalSecondary by remember { mutableStateOf<PassageSelection?>(null) }
-    var hasNavigatedFromCommentary by remember { mutableStateOf(false) }
+    var commentaryBibleDb by remember { mutableStateOf<DatabaseHelper?>(null) }
     LaunchedEffect(viewModel.selectedDictionary, databaseHelper?.databaseName) {
         dictionaryDbHelper?.close()
         dictionaryDbHelper = DatabaseHelper(context, "${viewModel.selectedDictionary}.dictionary.sqlite3")
@@ -249,11 +246,9 @@ fun ReaderScreen(
         } catch (e: Exception) {
             "Error loading commentary: ${e.message}"
         }
-        commentaryTitle = "Commentary for ${passage.bookName} $chapter:$verseNumber $marker"
+        commentaryTitle = "Commentary for ${BibleData.getBookByCustomNumber(bookNumber)?.name ?: ""} $chapter:$verseNumber $marker"
         commentaryContent = text
-        originalPrimary = viewModel.primaryPassage
-        originalSecondary = viewModel.secondaryPassage
-        hasNavigatedFromCommentary = false
+        commentaryBibleDb = if (isPrimary) databaseHelper else secondaryDatabaseHelper
         showCommentaryModal = true
     }
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -414,28 +409,9 @@ fun ReaderScreen(
         CommentaryModal(
             show = showCommentaryModal,
             onDismiss = { showCommentaryModal = false },
-            title = commentaryTitle,
-            content = commentaryContent,
-            onVerseLinkClick = { passage ->
-                // Navigate to the clicked verse
-                onPassageChange(passage)
-                // Close the commentary modal
-                showCommentaryModal = false
-                hasNavigatedFromCommentary = true
-            },
-            onBack = if (hasNavigatedFromCommentary) {
-                {
-                    if (originalPrimary != null) {
-                        viewModel.primaryPassage = originalPrimary!!
-                        if (viewModel.scrollSync) {
-                            viewModel.secondaryPassage = originalSecondary ?: originalPrimary!!
-                        }
-                        onPassageChange(originalPrimary!!)
-                        showCommentaryModal = false
-                        hasNavigatedFromCommentary = false
-                    }
-                }
-            } else null
+            initialTitle = commentaryTitle,
+            initialContent = commentaryContent,
+            databaseHelper = commentaryBibleDb
         )
     }
 }
@@ -1185,10 +1161,14 @@ fun ChapterView(
         val result = mutableMapOf<Int, ProcessedVerse>()
         for (verse in verses) {
             val onStrongsLocal = if (onStrongsPress != null) {
-                { strongNumber: String -> onStrongsPress.invoke(strongNumber, passage.bookNumber) }
+                { strongNumber: String ->
+                    onStrongsPress.invoke(strongNumber, passage.bookNumber)
+                }
             } else null
             val onTagLocal = if (onTagPress != null) {
-                { marker: String -> onTagPress.invoke(marker, passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary) }
+                { marker: String ->
+                    onTagPress.invoke(marker, passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary)
+                }
             } else null
             val processed = processor.processVerse(
                 verseText = verse.text,

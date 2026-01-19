@@ -1526,7 +1526,8 @@ fun ReaderAppBar(
                         Text(
                             text = "Overlay Opacity",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = 14.sp
                         )
                         Text(
                             text = "${(viewModel.overlayOpacity * 100).toInt()}%",
@@ -1569,12 +1570,12 @@ fun ReaderAppBar(
                         }
                     )
                     Text(
-                        text = "Adjust Transparency of Overlay",
+                        text = "Adjust Overlay Opacity with Slider",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp),
                         fontFamily = getFontFamily("oswald"),
-                        fontSize = 14.sp
+                        fontSize = 12.sp
                     )
                 }
             }
