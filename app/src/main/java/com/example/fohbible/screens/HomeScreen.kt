@@ -69,7 +69,6 @@ import com.example.fohbible.utils.SimpleVerseProcessor
 import com.example.fohbible.MatrixNative
 import com.example.fohbible.R
 
-// Data classes for HomeScreen
 data class QuickAction(
     val title: String,
     val icon: ImageVector,
