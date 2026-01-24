@@ -4,6 +4,7 @@ package com.example.fohbible.screens
 import android.annotation.SuppressLint
 import android.graphics.Typeface
 import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
@@ -406,13 +407,15 @@ fun ReaderScreen(
             strongNumber = currentStrongNumber,
             definition = strongDefinition
         )
-        CommentaryModal(
-            show = showCommentaryModal,
-            onDismiss = { showCommentaryModal = false },
-            initialTitle = commentaryTitle,
-            initialContent = commentaryContent,
-            databaseHelper = commentaryBibleDb
-        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            CommentaryModal(
+                show = showCommentaryModal,
+                onDismiss = { showCommentaryModal = false },
+                initialTitle = commentaryTitle,
+                initialContent = commentaryContent,
+                databaseHelper = commentaryBibleDb
+            )
+        }
     }
 }
 
