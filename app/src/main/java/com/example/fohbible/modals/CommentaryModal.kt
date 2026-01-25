@@ -55,11 +55,46 @@ import com.example.fohbible.utils.VerseTextProcessor
 
 data class ModalPage(
     val title: String,
-    val type: String, // "commentary" or "verses"
+    val type: String,
     val content: String? = null,
     val verses: List<Verse>? = null,
     val passage: PassageSelection? = null
 )
+
+// Helper function to sanitize HTML content
+fun sanitizeCommentaryContent(content: String?): String {
+    if (content.isNullOrEmpty()) return ""
+
+    var sanitized = content
+
+    // 1. Remove everything after </pp> tag if it exists
+    val ppEndIndex = sanitized.indexOf("</pp>")
+    if (ppEndIndex != -1) {
+        sanitized = sanitized.take(ppEndIndex + "</pp>".length)
+    }
+
+    // 2. Remove all JavaScript code (script tags and inline event handlers)
+    sanitized = sanitized.replace(Regex("<script[^>]*>.*?</script>", RegexOption.DOT_MATCHES_ALL), "")
+
+    // 3. Remove all on* event handlers
+    sanitized = sanitized.replace(Regex("\\s+on\\w+\\s*=\\s*\"[^\"]*\""), "")
+    sanitized = sanitized.replace(Regex("\\s+on\\w+\\s*=\\s*'[^']*'"), "")
+    sanitized = sanitized.replace(Regex("\\s+on\\w+\\s*=\\s*[^\\s>]+"), "")
+
+    // 4. Remove javascript: links
+    sanitized = sanitized.replace(Regex("javascript:[^\"'>]+"), "#")
+
+    // 5. Remove any remaining HTML comments that might contain JS
+    sanitized = sanitized.replace(Regex("<!--.*?-->", RegexOption.DOT_MATCHES_ALL), "")
+
+    // 6. Remove any style tags that might contain JS
+    sanitized = sanitized.replace(Regex("<style[^>]*>.*?</style>", RegexOption.DOT_MATCHES_ALL), "")
+
+    // 7. Remove any meta refresh tags
+    sanitized = sanitized.replace(Regex("<meta[^>]*http-equiv\\s*=\\s*['\"]?refresh['\"]?[^>]*>", RegexOption.IGNORE_CASE), "")
+
+    return sanitized.trim()
+}
 
 @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
 @Composable
@@ -93,7 +128,6 @@ fun CommentaryModal(
         "poppins" -> poppinsFont
         else -> systemFont
     }
-
     var dictionaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var strongDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var commentaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
@@ -119,11 +153,12 @@ fun CommentaryModal(
 
     if (show) {
         val stack = remember { mutableStateListOf<ModalPage>() }
-
         LaunchedEffect(true) {
             if (show) {
                 stack.clear()
-                stack.add(ModalPage(initialTitle, "commentary", initialContent, null, null))
+                // Sanitize the initial content when adding to stack
+                val sanitizedContent = sanitizeCommentaryContent(initialContent)
+                stack.add(ModalPage(initialTitle, "commentary", sanitizedContent, null, null))
             }
         }
 
@@ -149,14 +184,29 @@ fun CommentaryModal(
             showStrongsModal = true
         }
 
-        val onTagPress: (String, Int, Int, Int) -> Unit = { marker, bookNumber, chapter, verseNumber ->
-            val text = commentaryDbHelper?.getCommentary(bookNumber, chapter, verseNumber, marker) ?: "No commentary found."
-            val newTitle = "Commentary for ${BibleData.getBookByCustomNumber(bookNumber)?.name ?: ""} $chapter:$verseNumber $marker"
-            stack.add(ModalPage(newTitle, "commentary", text, null, null))
+        val onTagPress: (String, PassageSelection) -> Unit = { marker, passage ->
+            val bookNumber = passage.bookNumber
+            val chapter = passage.chapter
+            val bookName = passage.bookName
+            val start = passage.verse
+            val end = passage.verseEnd ?: start
+            val commentaries = (start..end).mapNotNull { verseNum ->
+                val text = commentaryDbHelper?.getCommentary(bookNumber, chapter, verseNum, marker)
+                if (text?.isNotBlank() == true) "Verse $verseNum:\n$text" else null
+            }
+            val combined = if (commentaries.isNotEmpty()) {
+                commentaries.joinToString("\n\n────────────────────────\n\n")
+            } else {
+                "No commentary found for marker \"$marker\" in this passage."
+            }
+            val rangeStr = if (end != start) "$start-$end" else "$start"
+            val newTitle = "Commentary for $bookName $chapter:$rangeStr – $marker"
+            // Sanitize the commentary content before adding to stack
+            val sanitizedCombined = sanitizeCommentaryContent(combined)
+            stack.add(ModalPage(newTitle, "commentary", sanitizedCombined, null, null))
         }
 
         if (stack.isEmpty()) return
-
         val currentPage = stack.last()
         val textColor = MaterialTheme.colorScheme.onBackground
         val linkColor = MaterialTheme.colorScheme.primary
@@ -177,20 +227,21 @@ fun CommentaryModal(
                         factory = { ctx ->
                             TextView(ctx).apply {
                                 movementMethod = LinkMovementMethod.getInstance()
-                                textSize = viewModel.fontSize.toFloat()
+                                textSize = viewModel.fontSize.toFloat() * 0.85f
                                 setLineSpacing(0f, 1.333f)
-                                val typeface = when (viewModel.selectedFontFamily) {
+                                typeface = when (viewModel.selectedFontFamily) {
                                     "system" -> Typeface.DEFAULT
-//                                    "oswald" -> Typeface.createFromAsset(assets, "fonts/Oswald.ttf")
-//                                    "poppins" -> Typeface.createFromAsset(assets, "fonts/Poppins.ttf")
-//                                    "rubik-glitch" -> Typeface.createFromAsset(assets, "fonts/RubikGlitch.ttf")
+                                    "oswald" -> Typeface.createFromAsset(ctx.assets, "fonts/Oswald.ttf")
+                                    "rubik-glitch" -> Typeface.createFromAsset(ctx.assets, "fonts/RubikGlitch.ttf")
+                                    "poppins" -> Typeface.createFromAsset(ctx.assets, "fonts/Poppins.ttf")
                                     else -> Typeface.DEFAULT
                                 }
-                                setTypeface(typeface)
                             }
                         },
                         update = { textView ->
-                            val spanned = HtmlCompat.fromHtml(currentPage.content ?: "", HtmlCompat.FROM_HTML_MODE_COMPACT)
+                            // Sanitize content before processing
+                            val sanitizedContent = sanitizeCommentaryContent(currentPage.content)
+                            val spanned = HtmlCompat.fromHtml(sanitizedContent, HtmlCompat.FROM_HTML_MODE_COMPACT)
                             val spannable = SpannableString(spanned)
                             val urlSpans = spannable.getSpans(0, spannable.length, URLSpan::class.java)
                             for (urlSpan in urlSpans) {
@@ -233,10 +284,10 @@ fun CommentaryModal(
                         for (verse in verses) {
                             val processed = processor.processVerse(
                                 verseText = verse.text,
-                                baseFontSize = viewModel.fontSize.sp,
+                                baseFontSize = (viewModel.fontSize * 0.85f).sp,
                                 themeColors = themeColors,
                                 textColor = themeColors.textColor,
-                                onTagPress = { marker -> onTagPress(marker, passage.bookNumber, passage.chapter, verse.verseNumber) },
+                                onTagPress = { marker -> onTagPress(marker, passage) },
                                 onWordPress = onWordPress,
                                 onStrongsPress = { strong -> onStrongsPress(strong, passage.bookNumber) },
                                 isHighlighted = false,
@@ -278,7 +329,7 @@ fun CommentaryModal(
                                                 style = SpanStyle(
                                                     fontWeight = FontWeight.Bold,
                                                     color = themeColors.verseNumber,
-                                                    fontSize = (viewModel.fontSize * 0.778f).sp
+                                                    fontSize = (viewModel.fontSize * 0.85f * 0.778f).sp
                                                 )
                                             ) {
                                                 append("${verse.verseNumber} ")
@@ -299,14 +350,14 @@ fun CommentaryModal(
                                                                 when (annotation.tag) {
                                                                     "word" -> onWordPress(annotation.item)
                                                                     "strong" -> onStrongsPress(annotation.item, passage.bookNumber)
-                                                                    "tag" -> onTagPress(annotation.item, passage.bookNumber, passage.chapter, verse.verseNumber)
+                                                                    "tag" -> onTagPress(annotation.item, passage)
                                                                 }
                                                             }
                                                         }
                                                     }
                                                 },
-                                            fontSize = viewModel.fontSize.sp,
-                                            lineHeight = (viewModel.fontSize * 1.333f).sp,
+                                            fontSize = (viewModel.fontSize * 0.85f).sp,
+                                            lineHeight = (viewModel.fontSize * 0.85f * 1.333f).sp,
                                             fontFamily = currentFontFamily,
                                             onTextLayout = { textLayoutResult = it }
                                         )
@@ -341,7 +392,8 @@ fun CommentaryModal(
         onSwitch = {
             viewModel.selectedDictionary = if (viewModel.selectedDictionary == "noah") "atsbd" else "noah"
             wordDefinition = dictionaryDbHelper?.getWordDefinition(currentWord) ?: "Definition not found."
-        }
+        },
+        databaseHelper = databaseHelper
     )
 
     StrongsModal(
@@ -359,13 +411,32 @@ private fun parseVerseLink(href: String, linkText: String): PassageSelection? {
         if (parts.size != 2) return null
         val bookNumber = parts[0].toInt()
         val chapterVersePart = parts[1]
-        // Handle verse ranges like 38:4 or 38:4-7
+        // Handle verse ranges like 38:4 or 38:4-7 from href
         val chapterVerseSplit = chapterVersePart.split(":")
         if (chapterVerseSplit.size != 2) return null
         val chapter = chapterVerseSplit[0].toInt()
         val versePart = chapterVerseSplit[1]
         val verseStart = versePart.substringBefore("-").toInt()
-        val verseEnd = if (versePart.contains("-")) versePart.substringAfter("-").toInt() else null
+        var verseEnd: Int? = if (versePart.contains("-")) versePart.substringAfter("-").toInt() else null
+        // If no range in href, check linkText for range (e.g., "Ex. 4:5-7")
+        if (verseEnd == null) {
+            val textParts = linkText.split(":")
+            if (textParts.size >= 2) {
+                val textVersePart = textParts.last().trim()
+                    .replace("–", "-")
+                    .replace("—", "-")
+                if (textVersePart.contains("-")) {
+                    val rangeParts = textVersePart.split("-")
+                    if (rangeParts.size == 2) {
+                        val startFromText = rangeParts[0].trim().toIntOrNull()
+                        val endFromText = rangeParts[1].trim().toIntOrNull()
+                        if (startFromText == verseStart && endFromText != null) {
+                            verseEnd = endFromText
+                        }
+                    }
+                }
+            }
+        }
         // Get the book name from BibleData using the book number
         val book = BibleData.getBookByCustomNumber(bookNumber)
         return PassageSelection(

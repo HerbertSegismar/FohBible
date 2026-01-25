@@ -390,17 +390,20 @@ fun ReaderScreen(
                 onRemoveCustom = { viewModel.customTextureUri = null }
             )
         }
-        DefinitionModal(
-            show = showWordModal,
-            onDismiss = { showWordModal = false },
-            word = currentWord,
-            definition = wordDefinition,
-            selectedDictionary = viewModel.selectedDictionary,
-            onSwitch = {
-                viewModel.selectedDictionary = if (viewModel.selectedDictionary == "noah") "atsbd" else "noah"
-                wordDefinition = dictionaryDbHelper?.getWordDefinition(currentWord) ?: "Definition not found."
-            }
-        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            DefinitionModal(
+                show = showWordModal,
+                onDismiss = { showWordModal = false },
+                word = currentWord,
+                definition = wordDefinition,
+                selectedDictionary = viewModel.selectedDictionary,
+                onSwitch = {
+                    viewModel.selectedDictionary = if (viewModel.selectedDictionary == "noah") "atsbd" else "noah"
+                    wordDefinition = dictionaryDbHelper?.getWordDefinition(currentWord) ?: "Definition not found."
+                },
+                databaseHelper = databaseHelper
+            )
+        }
         StrongsModal(
             show = showStrongsModal,
             onDismiss = { showStrongsModal = false },
