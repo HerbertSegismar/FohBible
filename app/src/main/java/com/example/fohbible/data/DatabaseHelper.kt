@@ -47,6 +47,36 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
         }
     }
 
+    fun refreshDatabase(): Boolean {
+        return try {
+            database?.close()
+
+            val dbFile = context.getDatabasePath(databaseName)
+            if (dbFile.exists()) {
+                dbFile.delete()
+            }
+
+            // Wait a bit to ensure file is deleted
+            Thread.sleep(100)
+
+            copyDatabaseFromAssets(dbFile)
+
+            // Reopen the database
+            database = SQLiteDatabase.openDatabase(
+                dbFile.path,
+                null,
+                SQLiteDatabase.OPEN_READWRITE
+            )
+            createBookmarksTable()
+            Log.d(tag, "Database $databaseName refreshed successfully")
+            true
+        } catch (e: Exception) {
+            Log.e(tag, "Error refreshing database $databaseName: ${e.message}")
+            e.printStackTrace()
+            false
+        }
+    }
+
     private fun createBookmarksTable() {
         database?.execSQL(
             """

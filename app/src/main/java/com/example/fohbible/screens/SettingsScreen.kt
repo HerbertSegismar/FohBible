@@ -1,5 +1,6 @@
 package com.example.fohbible.screens
 
+import android.R
 import android.content.Intent
 import android.graphics.Typeface
 import android.net.Uri
@@ -37,6 +38,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -51,7 +53,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -67,6 +68,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -110,9 +112,21 @@ fun SettingsScreen() {
     var customColor by remember { mutableStateOf(viewModel.customColor) }
     var isUsingCustomColor by remember { mutableStateOf(viewModel.isCustomColor) }
 
+    // Refresh database states
+    var showRefreshConfirmDialog by remember { mutableStateOf(false) }
+    var showRefreshResultDialog by remember { mutableStateOf(false) }
+
     LaunchedEffect(viewModel.isCustomColor, viewModel.customColor) {
         isUsingCustomColor = viewModel.isCustomColor
         customColor = viewModel.customColor
+    }
+
+    // LaunchedEffect to show result dialog after refresh starts
+    LaunchedEffect(viewModel.isRefreshingDatabases) {
+        if (viewModel.isRefreshingDatabases && !showRefreshResultDialog) {
+            // Show result dialog when refresh starts
+            showRefreshResultDialog = true
+        }
     }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -366,6 +380,156 @@ fun SettingsScreen() {
         }
 
         item {
+            SettingsSection(
+                title = "Database Management",
+                subtitle = "Refresh and manage Bible databases"
+            ) {
+                SettingsItem(
+                    title = "Refresh All Databases",
+                    subtitle = "Force recopy all database files from assets",
+                    onClick = { showRefreshConfirmDialog = true }
+                ) {
+                    if (viewModel.isRefreshingDatabases) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh databases")
+                    }
+                }
+
+                Text(
+                    text = "This will recopy all Bible versions and dictionaries from the app assets. Useful if databases become corrupted.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+            if (showRefreshConfirmDialog) {
+                AlertDialog(
+                    onDismissRequest = { showRefreshConfirmDialog = false },
+                    title = {
+                        Text("Refresh All Databases", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    },
+                    text = {
+                        Column {
+                            Text("This action will:")
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("• Recopy ALL Bible versions from assets")
+                            Text("• Recopy dictionary databases")
+                            Text("• Recopy commentary databases")
+                            Text("• Note: Your bookmarks and settings will NOT be affected")
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "This may take a few moments. Continue?",
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                viewModel.refreshDatabases(context)
+                                showRefreshConfirmDialog = false
+                                // Show result dialog immediately
+                                showRefreshResultDialog = true
+                            },
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Text("Refresh")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { showRefreshConfirmDialog = false }
+                        ) {
+                            Text("Cancel")
+                        }
+                    }
+                )
+            }
+
+            // Refresh Result Dialog
+            if (showRefreshResultDialog) {
+                AlertDialog(
+                    onDismissRequest = {
+                        if (!viewModel.isRefreshingDatabases) {
+                            showRefreshResultDialog = false
+                            viewModel.lastRefreshMessage = ""
+                        }
+                    },
+                    title = {
+                        Text(
+                            if (viewModel.isRefreshingDatabases) "Refreshing Databases..."
+                            else if (viewModel.lastRefreshSuccess) "Refresh Complete"
+                            else "Refresh Incomplete", fontSize = 16.sp
+                        )
+                    },
+                    text = {
+                        Column {
+                            if (viewModel.isRefreshingDatabases) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(20.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                    Text("Please wait...")
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    viewModel.lastRefreshMessage,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            } else {
+                                if (viewModel.lastRefreshSuccess) {
+                                    Icon(
+                                        Icons.Default.Refresh,
+                                        contentDescription = "Success",
+                                        tint =  MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(40.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                }
+                                Text(
+                                    viewModel.lastRefreshMessage,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                if (!viewModel.lastRefreshSuccess) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        "Try restarting the app if issues persist.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        if (!viewModel.isRefreshingDatabases) {
+                            TextButton(
+                                onClick = {
+                                    showRefreshResultDialog = false
+                                    viewModel.lastRefreshMessage = ""
+                                }
+                            ) {
+                                Text("OK")
+                            }
+                        }
+                    }
+                )
+            }
+        }
+
+        item {
             SettingsSection(title = "More Options", subtitle = "Additional preferences") {
                 SettingsItem(
                     title = "Data & Storage",
@@ -489,6 +653,99 @@ fun SettingsScreen() {
                 showColorWheel = false
             },
             initialColor = customColor ?: viewModel.selectedColor ?: DefaultPrimaryColor
+        )
+    }
+
+    // Confirmation Dialog for Database Refresh
+    if (showRefreshConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showRefreshConfirmDialog = false },
+            title = {
+                Text("Refresh Databases", fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Column {
+                    Text("This action will:")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("• Recopy all Bible databases from assets")
+                    Text("• Recopy dictionary databases")
+                    Text("• Note: Your bookmarks and settings will NOT be affected")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "This may take a few seconds. Continue?",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.refreshDatabases(context)
+                        showRefreshConfirmDialog = false
+                        // We'll show the result dialog through the LaunchedEffect
+                        // when viewModel.isRefreshingDatabases becomes true
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Refresh")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showRefreshConfirmDialog = false }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Refresh Progress/Result Dialog
+    if (showRefreshResultDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showRefreshResultDialog = false
+                viewModel.lastRefreshMessage = ""
+            },
+            title = {
+                Text(
+                    if (viewModel.isRefreshingDatabases) "Refreshing Databases..."
+                    else "Refresh Complete"
+                )
+            },
+            text = {
+                Column {
+                    if (viewModel.isRefreshingDatabases) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp
+                            )
+                            Text("Please wait...")
+                        }
+                    } else {
+                        Text(viewModel.lastRefreshMessage)
+                    }
+                }
+            },
+            confirmButton = {
+                if (!viewModel.isRefreshingDatabases) {
+                    TextButton(
+                        onClick = {
+                            showRefreshResultDialog = false
+                            viewModel.lastRefreshMessage = ""
+                        }
+                    ) {
+                        Text("OK")
+                    }
+                }
+            }
         )
     }
 }

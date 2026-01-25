@@ -156,6 +156,7 @@ fun ReaderScreen(
             null
         }
     }
+
     LaunchedEffect(secondaryDatabaseHelper) {
         secondaryLoadedVerses.clear()
     }
@@ -247,7 +248,7 @@ fun ReaderScreen(
         } catch (e: Exception) {
             "Error loading commentary: ${e.message}"
         }
-        commentaryTitle = "Commentary for ${BibleData.getBookByCustomNumber(bookNumber)?.name ?: ""} $chapter:$verseNumber $marker"
+        commentaryTitle = "Notes on ${BibleData.getBookByCustomNumber(bookNumber)?.name ?: ""} $chapter:$verseNumber $marker"
         commentaryContent = text
         commentaryBibleDb = if (isPrimary) databaseHelper else secondaryDatabaseHelper
         showCommentaryModal = true

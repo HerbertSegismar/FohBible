@@ -199,7 +199,7 @@ fun CommentaryModal(
                 "No commentary found for marker \"$marker\" in this passage."
             }
             val rangeStr = if (end != start) "$start-$end" else "$start"
-            val newTitle = "Commentary for $bookName $chapter:$rangeStr – $marker"
+            val newTitle = "Notes on $bookName $chapter:$rangeStr – $marker"
             // Sanitize the commentary content before adding to stack
             val sanitizedCombined = sanitizeCommentaryContent(combined)
             stack.add(ModalPage(newTitle, "commentary", sanitizedCombined, null, null))
