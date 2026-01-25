@@ -67,7 +67,6 @@ fun sanitizeCommentaryContent(content: String?): String {
 
     var sanitized = content
 
-    // 1. Remove everything after </pp> tag if it exists
     val ppEndIndex = sanitized.indexOf("</pp>")
     if (ppEndIndex != -1) {
         sanitized = sanitized.take(ppEndIndex + "</pp>".length)
