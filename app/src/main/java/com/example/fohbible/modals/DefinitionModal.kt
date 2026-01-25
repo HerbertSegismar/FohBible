@@ -44,10 +44,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.text.HtmlCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.fohbible.AppViewModel
-import com.example.fohbible.data.BibleData
 import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.PassageSelection
-import com.example.fohbible.data.Verse
 import com.example.fohbible.utils.ProcessedVerse
 import com.example.fohbible.utils.ThemeColors
 import com.example.fohbible.utils.VerseTextProcessor
@@ -120,6 +118,8 @@ fun DefinitionModal(
             }
         }
 
+
+
         val onWordPress: (String) -> Unit = { w ->
             val trimmed = w.trim()
             val def = dictionaryDbHelper?.getWordDefinition(trimmed) ?: "Definition not found."
@@ -158,8 +158,9 @@ fun DefinitionModal(
                 "No commentary found for marker \"$marker\" in this passage."
             }
             val rangeStr = if (end != start) "$start-$end" else "$start"
-            val newTitle = "Commentary for $bookName $chapter:$rangeStr – $marker"
-            stack.add(ModalPage(newTitle, "commentary", combined, null, null))
+            val newTitle = "Notes on $bookName $chapter:$rangeStr – $marker"
+            val sanitizedCombined = sanitizeCommentaryContent(combined)
+            stack.add(ModalPage(newTitle, "commentary", sanitizedCombined, null, null))
         }
 
         if (stack.isEmpty()) return
@@ -379,61 +380,4 @@ fun DefinitionModal(
             definition = strongDefinition
         )
     }
-}
-
-private fun parseVerseLink(href: String, linkText: String): PassageSelection? {
-    try {
-        // Parse href: B:220 38:4 or B:220 38:4-7
-        val parts = href.substringAfter("B:").trim().split(" ")
-        if (parts.size != 2) return null
-        val bookNumber = parts[0].toInt()
-        val chapterVersePart = parts[1]
-        // Handle verse ranges like 38:4 or 38:4-7 from href
-        val chapterVerseSplit = chapterVersePart.split(":")
-        if (chapterVerseSplit.size != 2) return null
-        val chapter = chapterVerseSplit[0].toInt()
-        val versePart = chapterVerseSplit[1]
-        val verseStart = versePart.substringBefore("-").toInt()
-        var verseEnd: Int? = if (versePart.contains("-")) versePart.substringAfter("-").toInt() else null
-        // If no range in href, check linkText for range (e.g., "Ex. 4:5-7")
-        if (verseEnd == null) {
-            val textParts = linkText.split(":")
-            if (textParts.size >= 2) {
-                val textVersePart = textParts.last().trim()
-                    .replace("–", "-")
-                    .replace("—", "-")
-                if (textVersePart.contains("-")) {
-                    val rangeParts = textVersePart.split("-")
-                    if (rangeParts.size == 2) {
-                        val startFromText = rangeParts[0].trim().toIntOrNull()
-                        val endFromText = rangeParts[1].trim().toIntOrNull()
-                        if (startFromText == verseStart && endFromText != null) {
-                            verseEnd = endFromText
-                        }
-                    }
-                }
-            }
-        }
-        // Get the book name from BibleData using the book number
-        val book = BibleData.getBookByCustomNumber(bookNumber)
-        return PassageSelection(
-            bookNumber = bookNumber,
-            bookName = book?.name ?: "",
-            chapter = chapter,
-            verse = verseStart,
-            verseEnd = verseEnd
-        )
-    } catch (e: Exception) {
-        e.printStackTrace()
-        return null
-    }
-}
-
-private fun fetchVerses(passage: PassageSelection, db: DatabaseHelper?): List<Verse> {
-    if (db == null) return emptyList()
-    val verses = db.getVerses(passage.bookNumber, passage.chapter)
-    val start = passage.verse
-    val end = passage.verseEnd ?: start
-    val selectedVerses = verses.filter { it.verseNumber in start..end }
-    return selectedVerses
 }

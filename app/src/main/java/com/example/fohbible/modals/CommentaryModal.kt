@@ -403,7 +403,7 @@ fun CommentaryModal(
     )
 }
 
-private fun parseVerseLink(href: String, linkText: String): PassageSelection? {
+fun parseVerseLink(href: String, linkText: String): PassageSelection? {
     try {
         // Parse href: B:220 38:4 or B:220 38:4-7
         val parts = href.substringAfter("B:").trim().split(" ")
@@ -451,7 +451,7 @@ private fun parseVerseLink(href: String, linkText: String): PassageSelection? {
     }
 }
 
-private fun fetchVerses(passage: PassageSelection, db: DatabaseHelper?): List<Verse> {
+fun fetchVerses(passage: PassageSelection, db: DatabaseHelper?): List<Verse> {
     if (db == null) return emptyList()
     val verses = db.getVerses(passage.bookNumber, passage.chapter)
     val start = passage.verse
