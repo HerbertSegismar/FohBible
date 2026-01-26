@@ -681,7 +681,6 @@ object SimpleVerseProcessor {
 
         var processedText = text
 
-        // Remove entire <f>...</f> elements including contents
         processedText = processedText.replace(
             Regex("""<f[^>]*>.*?</f>""", RegexOption.DOT_MATCHES_ALL), ""
         )
