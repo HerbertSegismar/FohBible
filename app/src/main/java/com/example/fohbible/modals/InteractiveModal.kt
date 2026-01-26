@@ -1,4 +1,4 @@
-@file:Suppress("AssignedValueIsNeverRead")
+@file:Suppress("AssignedValueIsNeverRead", "COMPOSE_APPLIER_CALL_MISMATCH")
 
 package com.example.fohbible.modals
 
@@ -72,6 +72,7 @@ data class ModalPage(
 // Helper function to sanitize HTML content
 fun sanitizeHtmlContent(content: String?): String {
     if (content.isNullOrEmpty()) return ""
+
     var sanitized = content
 
     val ppEndIndex = sanitized.indexOf("</pp>")
@@ -142,6 +143,7 @@ fun parseVerseLink(href: String, linkText: String): PassageSelection? {
 
         // Get the book name from BibleData using the book number
         val book = BibleData.getBookByCustomNumber(bookNumber)
+
         return PassageSelection(
             bookNumber = bookNumber,
             bookName = book?.name ?: "",
@@ -157,10 +159,12 @@ fun parseVerseLink(href: String, linkText: String): PassageSelection? {
 
 fun fetchVerses(passage: PassageSelection, db: DatabaseHelper?): List<Verse> {
     if (db == null) return emptyList()
+
     val verses = db.getVerses(passage.bookNumber, passage.chapter)
     val start = passage.verse
     val end = passage.verseEnd ?: start
     val selectedVerses = verses.filter { it.verseNumber in start..end }
+
     return selectedVerses
 }
 
@@ -180,6 +184,7 @@ fun InteractiveModal(
 ) {
     val viewModel = viewModel<AppViewModel>()
     val context = LocalContext.current
+
     val themeColors = ThemeColors(
         textColor = MaterialTheme.colorScheme.onBackground,
         verseNumber = MaterialTheme.colorScheme.primary,
@@ -190,11 +195,14 @@ fun InteractiveModal(
         searchHighlightBg = if (viewModel.darkTheme) androidx.compose.ui.graphics.Color(0xFF81D4FA).copy(alpha = 0.3f) else androidx.compose.ui.graphics.Color.Yellow.copy(alpha = 0.3f),
         highlightIcon = MaterialTheme.colorScheme.primary
     )
+
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+
     val systemFont = FontFamily.Default
     val oswaldFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Oswald.ttf")) }
     val poppinsFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Poppins.ttf")) }
     val rubikGlitchFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/RubikGlitch.ttf")) }
+
     val currentFontFamily = when (viewModel.selectedFontFamily) {
         "system" -> systemFont
         "oswald" -> oswaldFont
@@ -210,8 +218,10 @@ fun InteractiveModal(
     LaunchedEffect(viewModel.selectedDictionary, databaseHelper?.databaseName) {
         dictionaryDbHelper?.close()
         dictionaryDbHelper = DatabaseHelper(context, "${viewModel.selectedDictionary}.dictionary.sqlite3")
+
         strongDbHelper?.close()
         strongDbHelper = DatabaseHelper(context, "secedictionary.sqlite3")
+
         commentaryDbHelper?.close()
         val name = databaseHelper?.databaseName ?: return@LaunchedEffect
         val comName = name.replace(".sqlite3", "com.sqlite3")
@@ -235,6 +245,7 @@ fun InteractiveModal(
                     val sanitizedContent = sanitizeHtmlContent(initialContent)
                     stack.add(ModalPage(initialTitle, "commentary", sanitizedContent, description = initialDescription))
                 }
+
                 "definition" -> {
                     val dbDisplayName = dictionaryDisplayNames[viewModel.selectedDictionary] ?: viewModel.selectedDictionary
                     val capitalizedWord = word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
@@ -242,6 +253,7 @@ fun InteractiveModal(
                     val sanitizedDefinition = sanitizeHtmlContent(definition)
                     stack.add(ModalPage(title, "definition", sanitizedDefinition, word = word, description = dbDisplayName))
                 }
+
                 "strong" -> {
                     val title = "Strong's Definition for $strongNumber"
                     val sanitizedDefinition = sanitizeHtmlContent(strongDefinition)
@@ -268,16 +280,19 @@ fun InteractiveModal(
     val onStrongsPress: (String, Int) -> Unit = Unit@{ strongNumber, _ ->
         val trimmed = strongNumber.trim()
         if (trimmed.isEmpty()) return@Unit
+
         val isOldTestament = viewModel.isOldTestament
         val prefixed = if (trimmed.firstOrNull()?.isLetter() ?: false) {
             trimmed.uppercase()
         } else {
             (if (isOldTestament) "H" else "G") + trimmed
         }
+
         if (!prefixed.matches(Regex("^[HG]\\d+$"))) {
             // Skip if not a valid Strong's format
             return@Unit
         }
+
         val definition = strongDbHelper?.getStrongDefinition(prefixed) ?: "Strong's definition not found."
         val title = "Strong's Definition for $prefixed"
         val sanitized = sanitizeHtmlContent(definition)
@@ -290,15 +305,18 @@ fun InteractiveModal(
         val bookName = passage.bookName
         val start = passage.verse
         val end = passage.verseEnd ?: start
+
         val commentaries = (start..end).mapNotNull { verseNum ->
             val text = commentaryDbHelper?.getCommentary(bookNumber, chapter, verseNum, marker)
             if (text?.isNotBlank() == true) "Verse $verseNum:\n$text" else null
         }
+
         val combined = if (commentaries.isNotEmpty()) {
             commentaries.joinToString("\n\n────────────────────────\n\n")
         } else {
             "No commentary found for marker \"$marker\" in this passage."
         }
+
         val rangeStr = if (end != start) "$start-$end" else "$start"
         val newTitle = "Notes on $bookName $chapter:$rangeStr – $marker"
         val sanitizedCombined = sanitizeHtmlContent(combined)
@@ -307,6 +325,7 @@ fun InteractiveModal(
 
     if (show) {
         if (stack.isEmpty()) return
+
         val currentPage = stack.last()
         val textColor = MaterialTheme.colorScheme.onBackground
         val linkColor = MaterialTheme.colorScheme.primary
@@ -337,9 +356,11 @@ fun InteractiveModal(
                 if (currentPage.type == "verses") {
                     val verses = currentPage.verses ?: emptyList()
                     val passage = currentPage.passage ?: return@AlertDialog
+
                     val processor = remember(verses) { VerseTextProcessor() }
                     val isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false
                     val isOldTestament = viewModel.isOldTestament
+
                     val processedVerses = remember(verses, themeColors, isKjvPlus) {
                         val result = mutableMapOf<Int, ProcessedVerse>()
                         for (verse in verses) {
@@ -348,9 +369,13 @@ fun InteractiveModal(
                                 baseFontSize = (viewModel.fontSize * 0.85f).sp,
                                 themeColors = themeColors,
                                 textColor = themeColors.textColor,
-                                onTagPress = { marker -> onTagPress(marker, passage) },
+                                onTagPress = { marker ->
+                                    onTagPress(marker, passage)
+                                },
                                 onWordPress = onWordPress,
-                                onStrongsPress = { strong -> onStrongsPress(strong, passage.bookNumber) },
+                                onStrongsPress = { strong ->
+                                    onStrongsPress(strong, passage.bookNumber)
+                                },
                                 isHighlighted = false,
                                 isKjvPlus = isKjvPlus,
                                 isOldTestament = isOldTestament
@@ -398,7 +423,9 @@ fun InteractiveModal(
                                             }
                                             append(processedVerse.body)
                                         }
+
                                         var textLayoutResult: androidx.compose.ui.text.TextLayoutResult? by remember { mutableStateOf(null) }
+
                                         Text(
                                             text = annotatedString,
                                             modifier = Modifier
@@ -450,6 +477,7 @@ fun InteractiveModal(
                             val content = currentPage.content ?: ""
                             val spanned = HtmlCompat.fromHtml(content, HtmlCompat.FROM_HTML_MODE_COMPACT)
                             val spannable = SpannableString(spanned)
+
                             val urlSpans = spannable.getSpans(0, spannable.length, URLSpan::class.java)
                             for (urlSpan in urlSpans) {
                                 val start = spannable.getSpanStart(urlSpan)
@@ -475,6 +503,7 @@ fun InteractiveModal(
                                 } else if (href.startsWith("S:")) {
                                     val seeContent = href.substringAfter("S:").trim()
                                     val cleanedLinkText = linkText.replace(Regex("^See\\s+", RegexOption.IGNORE_CASE), "").trim()
+
                                     val clickableSpan = when {
                                         seeContent.startsWith("B:") -> {
                                             // Handle verse reference under "See"
@@ -490,6 +519,7 @@ fun InteractiveModal(
                                                 }
                                             } else null
                                         }
+
                                         seeContent.matches(Regex("^[GH]\\d+$")) -> {
                                             // Handle prefixed Strong's number
                                             object : ClickableSpan() {
@@ -501,6 +531,7 @@ fun InteractiveModal(
                                                 }
                                             }
                                         }
+
                                         seeContent.matches(Regex("^\\d+$")) -> {
                                             // Handle unprefixed Strong's number (try H and G)
                                             object : ClickableSpan() {
@@ -509,9 +540,11 @@ fun InteractiveModal(
                                                     val gNum = "G$seeContent"
                                                     val hDef = strongDbHelper?.getStrongDefinition(hNum) ?: ""
                                                     val gDef = strongDbHelper?.getStrongDefinition(gNum) ?: ""
+
                                                     var combinedDef = ""
                                                     var combinedTitle = "Strong's Definition"
                                                     var combinedStrongNum = ""
+
                                                     if (hDef.isNotBlank() && gDef.isNotBlank()) {
                                                         combinedTitle += " for $hNum and $gNum"
                                                         combinedDef = "$hNum:\n$hDef\n\n$gNum:\n$gDef"
@@ -535,11 +568,13 @@ fun InteractiveModal(
                                                         stack.add(ModalPage(newTitle, "definition", sanitizedDef, word = wordFallback, description = dbDisplayName))
                                                         return
                                                     }
+
                                                     val sanitized = sanitizeHtmlContent(combinedDef)
                                                     stack.add(ModalPage(combinedTitle, "strong", sanitized, strongNumber = combinedStrongNum))
                                                 }
                                             }
                                         }
+
                                         else -> {
                                             // Handle word definition (e.g., S:God for word "God")
                                             object : ClickableSpan() {
@@ -555,6 +590,7 @@ fun InteractiveModal(
                                             }
                                         }
                                     }
+
                                     if (clickableSpan != null) {
                                         spannable.setSpan(clickableSpan, start, end, flags)
                                         handled = true
@@ -576,6 +612,7 @@ fun InteractiveModal(
                             } else {
                                 textView.setTextColor(textColor.toArgb())
                             }
+
                             textView.setLinkTextColor(linkColor.toArgb())
                             textView.text = spannable
                         },
@@ -588,9 +625,7 @@ fun InteractiveModal(
             confirmButton = {
                 Row {
                     if (stack.size > 1) {
-                        TextButton(onClick = {
-                            stack.removeAt(stack.lastIndex)
-                        }) {
+                        TextButton(onClick = { stack.removeAt(stack.lastIndex) }) {
                             Text("Back")
                         }
                     }
