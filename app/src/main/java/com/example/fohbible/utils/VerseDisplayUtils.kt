@@ -6,6 +6,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
+import java.util.LinkedHashMap
 
 sealed class ParsedNode {
     data class Text(val content: String) : ParsedNode()
@@ -47,7 +48,36 @@ data class ThemeColors(
     val highlightIcon: Color
 )
 
-class VerseTextProcessor {
+data class ProcessingOptions(
+    val enableWordClick: Boolean = true,
+    val enableStrongsClick: Boolean = true,
+    val enableTagClick: Boolean = true,
+    val showFootnotesInline: Boolean = true,
+    val preserveWhitespace: Boolean = false,
+    val showHeaders: Boolean = true
+)
+
+interface VerseProcessorLogger {
+    fun logParseError(tag: String, message: String)
+    fun logPerformance(operation: String, durationMs: Long)
+}
+
+class VerseTextProcessor(
+    private val logger: VerseProcessorLogger? = null
+) {
+    companion object {
+        private val ATTRIBUTE_REGEX = Regex("""(\w+)="([^"]*)"""")
+        private const val CACHE_SIZE = 200
+
+        private val ESCAPE_REGEX_PATTERN = Regex("[.*+?^${'$'}{}()|\\[\\]\\\\]")
+    }
+
+    private val verseCache = object : LinkedHashMap<String, ProcessedVerse>(CACHE_SIZE, 0.75f, true) {
+        override fun removeEldestEntry(eldest: Map.Entry<String, ProcessedVerse>): Boolean {
+            return size > CACHE_SIZE
+        }
+    }
+
     fun processVerse(
         verseText: String?,
         baseFontSize: TextUnit,
@@ -59,9 +89,33 @@ class VerseTextProcessor {
         onStrongsPress: ((String) -> Unit)? = null,
         isHighlighted: Boolean = false,
         isKjvPlus: Boolean = false,
-        isOldTestament: Boolean
+        isOldTestament: Boolean,
+        options: ProcessingOptions = ProcessingOptions()
     ): ProcessedVerse {
-        val nodes = parseXmlTags(verseText ?: "")
+        val startTime = System.currentTimeMillis()
+
+        // Handle empty/null input
+        if (verseText.isNullOrBlank()) {
+            return ProcessedVerse(
+                header = null,
+                body = AnnotatedString("")
+            )
+        }
+
+        // Generate cache key
+        val cacheKey = buildCacheKey(
+            verseText, baseFontSize, textColor, isKjvPlus, isOldTestament,
+            highlight, isHighlighted, options
+        )
+
+        // Check cache
+        verseCache[cacheKey]?.let { cached ->
+            logger?.logPerformance("Cache hit", System.currentTimeMillis() - startTime)
+            return cached
+        }
+
+        // Process the verse
+        val nodes = parseXmlTags(verseText)
         val tree = buildTree(nodes)
         val initialContext = TraversalContext(
             textColor = textColor ?: themeColors.textColor,
@@ -71,53 +125,133 @@ class VerseTextProcessor {
             baseFontSize = baseFontSize,
             isOldTestament = isOldTestament
         )
-        val (header, body) = traverseTree(tree, initialContext, highlight, themeColors, onTagPress, onWordPress, onStrongsPress, isHighlighted, isKjvPlus)
-        return ProcessedVerse(header, body)
+
+        val (header, body) = traverseTree(
+            tree, initialContext, highlight, themeColors,
+            onTagPress, onWordPress, onStrongsPress,
+            isHighlighted, isKjvPlus, options
+        )
+
+        val result = ProcessedVerse(
+            header = if (options.showHeaders) header else null,
+            body = body
+        )
+
+        // Cache the result
+        verseCache[cacheKey] = result
+
+        val duration = System.currentTimeMillis() - startTime
+        logger?.logPerformance("Process verse", duration)
+
+        return result
+    }
+
+    private fun buildCacheKey(
+        verseText: String,
+        baseFontSize: TextUnit,
+        textColor: Color?,
+        isKjvPlus: Boolean,
+        isOldTestament: Boolean,
+        highlight: String?,
+        isHighlighted: Boolean,
+        options: ProcessingOptions
+    ): String {
+        return StringBuilder()
+            .append(verseText.hashCode())
+            .append("|")
+            .append(baseFontSize.value)
+            .append("|")
+            .append(textColor?.value ?: 0)
+            .append("|")
+            .append(isKjvPlus)
+            .append("|")
+            .append(isOldTestament)
+            .append("|")
+            .append(highlight)
+            .append("|")
+            .append(isHighlighted)
+            .append("|")
+            .append(options.hashCode())
+            .toString()
     }
 
     private fun parseXmlTags(text: String): List<ParsedNode> {
         if (text.isEmpty()) return emptyList()
+
         val nodes = mutableListOf<ParsedNode>()
-        var currentText = ""
+        val currentText = StringBuilder()
         var i = 0
+        val stack = mutableListOf<String>() // Track opened tags for error reporting
+
         while (i < text.length) {
             if (text[i] == '<') {
+                // Add any accumulated text
                 if (currentText.isNotEmpty()) {
-                    nodes.add(ParsedNode.Text(currentText))
-                    currentText = ""
+                    nodes.add(ParsedNode.Text(currentText.toString()))
+                    currentText.clear()
                 }
+
                 val tagEnd = text.indexOf('>', i)
                 if (tagEnd == -1) {
-                    currentText += text.substring(i)
+                    // Malformed: no closing '>'
+                    logger?.logParseError("malformed_tag", "No closing '>' found at position $i")
+                    currentText.append(text.substring(i))
                     break
                 }
+
                 val fullTag = text.substring(i, tagEnd + 1)
-                if (fullTag.startsWith("</")) {
-                    val tagName = fullTag.substring(2, fullTag.length - 1).trim().split(" ")[0]
-                    nodes.add(ParsedNode.ClosingTag(tagName))
-                } else if (fullTag.endsWith("/>")) {
-                    val tagName = fullTag.substring(1, fullTag.length - 2).trim().split(" ")[0]
-                    nodes.add(ParsedNode.SelfClosingTag(tagName, fullTag))
-                } else {
-                    val tagName = fullTag.substring(1, fullTag.length - 1).trim().split(" ")[0]
-                    nodes.add(ParsedNode.OpeningTag(tagName, fullTag))
+
+                when {
+                    fullTag.startsWith("</") -> {
+                        val tagName = fullTag.substring(2, fullTag.length - 1).trim().split(" ")[0]
+                        if (stack.isNotEmpty() && stack.last() == tagName) {
+                            stack.removeAt(stack.size - 1)
+                        } else {
+                            logger?.logParseError("closing_tag", "Unexpected closing tag </$tagName>")
+                        }
+                        nodes.add(ParsedNode.ClosingTag(tagName))
+                    }
+                    fullTag.endsWith("/>") -> {
+                        val tagName = fullTag.substring(1, fullTag.length - 2).trim().split(" ")[0]
+                        nodes.add(ParsedNode.SelfClosingTag(tagName, fullTag))
+                    }
+                    else -> {
+                        val tagName = fullTag.substring(1, fullTag.length - 1).trim().split(" ")[0]
+                        stack.add(tagName)
+                        nodes.add(ParsedNode.OpeningTag(tagName, fullTag))
+                    }
                 }
+
                 i = tagEnd + 1
             } else {
-                currentText += text[i]
+                currentText.append(text[i])
                 i++
             }
         }
+
+        // Add any remaining text
         if (currentText.isNotEmpty()) {
-            nodes.add(ParsedNode.Text(currentText))
+            nodes.add(ParsedNode.Text(currentText.toString()))
         }
+
+        // Handle any unclosed tags
+        if (stack.isNotEmpty()) {
+            logger?.logParseError("unclosed_tags", "Found ${stack.size} unclosed tags: $stack")
+            // Auto-close them in reverse order
+            for (tag in stack.reversed()) {
+                nodes.add(ParsedNode.ClosingTag(tag))
+            }
+        }
+
         return nodes
     }
 
     private fun buildTree(nodes: List<ParsedNode>): List<TreeNode> {
         val root = mutableListOf<TreeNode>()
         val stack = mutableListOf<MutableList<TreeNode>>()
+        val elementStack = mutableListOf<TreeNode.Element>()
         var current = root
+
         for (node in nodes) {
             when (node) {
                 is ParsedNode.Text -> {
@@ -127,11 +261,24 @@ class VerseTextProcessor {
                     val element = TreeNode.Element(node.tag, node.fullTag, mutableListOf())
                     current.add(element)
                     stack.add(current)
+                    elementStack.add(element)
                     current = element.children as MutableList<TreeNode>
                 }
                 is ParsedNode.ClosingTag -> {
                     if (stack.isNotEmpty()) {
+                        // Validate closing tag matches the last opened element
+                        val lastElement = elementStack.lastOrNull()
+                        if (lastElement != null && lastElement.tag != node.tag) {
+                            logger?.logParseError("tag_mismatch",
+                                "Closing tag </${node.tag}> doesn't match opening tag <${lastElement.tag}>")
+                        }
+
+                        if (elementStack.isNotEmpty()) {
+                            elementStack.removeAt(elementStack.size - 1)
+                        }
                         current = stack.removeAt(stack.size - 1)
+                    } else {
+                        logger?.logParseError("extra_closing", "Extra closing tag </${node.tag}> with no matching opening tag")
                     }
                 }
                 is ParsedNode.SelfClosingTag -> {
@@ -139,6 +286,13 @@ class VerseTextProcessor {
                 }
             }
         }
+
+        // Handle any remaining unclosed elements
+        if (elementStack.isNotEmpty()) {
+            logger?.logParseError("unclosed_elements",
+                "${elementStack.size} elements were not properly closed")
+        }
+
         return root
     }
 
@@ -151,10 +305,12 @@ class VerseTextProcessor {
         onWordPress: ((String) -> Unit)?,
         onStrongsPress: ((String) -> Unit)?,
         isHighlighted: Boolean,
-        isKjvPlus: Boolean
+        isKjvPlus: Boolean,
+        options: ProcessingOptions
     ): Pair<AnnotatedString?, AnnotatedString> {
         val headerBuilder = AnnotatedString.Builder()
         val bodyBuilder = AnnotatedString.Builder()
+
         for (node in tree) {
             traverseNode(
                 node,
@@ -167,11 +323,14 @@ class VerseTextProcessor {
                 onWordPress,
                 onStrongsPress,
                 isHighlighted,
-                isKjvPlus
+                isKjvPlus,
+                options
             )
         }
+
         val header = if (headerBuilder.length > 0) headerBuilder.toAnnotatedString() else null
         val body = bodyBuilder.toAnnotatedString()
+
         return Pair(header, body)
     }
 
@@ -186,7 +345,8 @@ class VerseTextProcessor {
         onWordPress: ((String) -> Unit)?,
         onStrongsPress: ((String) -> Unit)?,
         isHighlighted: Boolean,
-        isKjvPlus: Boolean
+        isKjvPlus: Boolean,
+        options: ProcessingOptions
     ) {
         when (node) {
             is TreeNode.Text -> {
@@ -200,10 +360,13 @@ class VerseTextProcessor {
                     onWordPress,
                     onStrongsPress,
                     onTagPress,
-                    isHighlighted
+                    isHighlighted,
+                    options
                 )
             }
             is TreeNode.SelfClosingTag -> {
+                if (!options.showFootnotesInline) return
+
                 val builder = if (context.isHeader) headerBuilder else bodyBuilder
                 processSelfClosingTagNode(
                     node,
@@ -215,7 +378,7 @@ class VerseTextProcessor {
             is TreeNode.Element -> {
                 val newContext = when (node.tag) {
                     "n" -> context.copy(
-                        isHeader = !isKjvPlus,
+                        isHeader = !isKjvPlus && options.showHeaders,
                         textColor = themeColors.primary,
                         currentTag = node.tag
                     )
@@ -244,6 +407,7 @@ class VerseTextProcessor {
                     )
                     else -> context.copy(currentTag = node.tag)
                 }
+
                 for (child in node.children) {
                     traverseNode(
                         child,
@@ -256,7 +420,8 @@ class VerseTextProcessor {
                         onWordPress,
                         onStrongsPress,
                         isHighlighted,
-                        isKjvPlus
+                        isKjvPlus,
+                        options
                     )
                 }
             }
@@ -272,55 +437,76 @@ class VerseTextProcessor {
         onWordPress: ((String) -> Unit)?,
         onStrongsPress: ((String) -> Unit)?,
         onTagPress: ((String) -> Unit)?,
-        isHighlighted: Boolean
+        isHighlighted: Boolean,
+        options: ProcessingOptions
     ) {
         val effectiveMultiplier = if (context.currentTag == "f" && isEncircled(node.content)) {
             1.1f
         } else {
             context.fontSizeMultiplier
         }
+
         val textContext = context.copy(fontSizeMultiplier = effectiveMultiplier)
-        val text = node.content
-        if (context.currentTag == "S" && onStrongsPress != null) {
-            val trimmed = text.trim()
-            if (trimmed.isNotEmpty()) {
-                val prefixed = if (trimmed.firstOrNull()?.isLetter() ?: false) {
-                    trimmed
+        val text = if (options.preserveWhitespace) node.content else node.content.trim()
+
+        if (text.isEmpty()) return
+
+        // CRITICAL: Handle different types of content based on context
+        when {
+            // 1. STRONG'S NUMBER - Goes to Strong's dictionary
+            context.currentTag == "S" && options.enableStrongsClick && onStrongsPress != null -> {
+                val trimmed = text.trim()
+                if (trimmed.isNotEmpty() && isValidStrongsNumber(trimmed)) {
+                    val prefixed = formatStrongsNumber(trimmed, context.isOldTestament)
+                    builder.pushStringAnnotation("strong", prefixed)
+                    builder.withStyle(
+                        SpanStyle(
+                            color = textContext.textColor,
+                            fontSize = textContext.baseFontSize * textContext.fontSizeMultiplier,
+                            baselineShift = textContext.baselineShift ?: BaselineShift.None
+                        )
+                    ) {
+                        builder.append(text)
+                    }
+                    builder.pop()
                 } else {
-                    (if (context.isOldTestament) "H" else "G") + trimmed
+                    // Invalid Strong's number, fallback to regular text
+                    processNormalText(
+                        text, builder, textContext, highlight,
+                        themeColors, onWordPress, isHighlighted, options
+                    )
                 }
-                builder.pushStringAnnotation("strong", prefixed)
+            }
+
+            // 2. TAG/MARKER (t, n, f) - Goes to COMMENTARY database
+            listOf("n", "t", "f").contains(context.currentTag) &&
+                    options.enableTagClick && onTagPress != null -> {
+                val trimmed = text.trim()
+                if (trimmed.isNotEmpty()) {
+                    builder.pushStringAnnotation("tag", trimmed)
+                }
+                val appendText = if (context.currentTag == "f") "\u00A0${text.trim()}\u00A0" else text
                 builder.withStyle(
                     SpanStyle(
                         color = textContext.textColor,
                         fontSize = textContext.baseFontSize * textContext.fontSizeMultiplier,
-                        baselineShift = textContext.baselineShift ?: BaselineShift.None
+                        baselineShift = textContext.baselineShift ?: BaselineShift.None,
                     )
                 ) {
-                    builder.append(text)
+                    builder.append(appendText)
                 }
-                builder.pop()
+                if (trimmed.isNotEmpty()) {
+                    builder.pop()
+                }
             }
-        } else if (listOf("n", "t", "f").contains(context.currentTag) && onTagPress != null) {
-            val trimmed = text.trim()
-            if (trimmed.isNotEmpty()) {
-                builder.pushStringAnnotation("tag", trimmed)
-            }
-            val appendText = if (context.currentTag == "f") "\u00A0${text.trim()}\u00A0" else text
-            builder.withStyle(
-                SpanStyle(
-                    color = textContext.textColor,
-                    fontSize = textContext.baseFontSize * textContext.fontSizeMultiplier,
-                    baselineShift = textContext.baselineShift ?: BaselineShift.None,
+
+            // 3. REGULAR TEXT - Goes to DICTIONARY (word definitions)
+            else -> {
+                processNormalText(
+                    text, builder, textContext, highlight,
+                    themeColors, onWordPress, isHighlighted, options
                 )
-            ) {
-                builder.append(appendText)
             }
-            if (trimmed.isNotEmpty()) {
-                builder.pop()
-            }
-        } else {
-            processNormalText(text, builder, textContext, highlight, themeColors, onWordPress, isHighlighted)
         }
     }
 
@@ -331,6 +517,25 @@ class VerseTextProcessor {
         return code in 0x2460..0x24FF
     }
 
+    private fun isValidStrongsNumber(text: String): Boolean {
+        val trimmed = text.trim()
+        return when {
+            trimmed.isEmpty() -> false
+            trimmed.matches(Regex("""\d+""")) -> true
+            trimmed.matches(Regex("""[GH]\d+""", RegexOption.IGNORE_CASE)) -> true
+            else -> false
+        }
+    }
+
+    private fun formatStrongsNumber(text: String, isOldTestament: Boolean): String {
+        val trimmed = text.trim()
+        return when {
+            trimmed.matches(Regex("""[GH]\d+""", RegexOption.IGNORE_CASE)) -> trimmed.uppercase()
+            trimmed.firstOrNull()?.isLetter() == true -> trimmed
+            else -> (if (isOldTestament) "H" else "G") + trimmed
+        }
+    }
+
     private fun processNormalText(
         text: String,
         builder: AnnotatedString.Builder,
@@ -338,17 +543,24 @@ class VerseTextProcessor {
         highlight: String?,
         themeColors: ThemeColors,
         onWordPress: ((String) -> Unit)?,
-        isHighlighted: Boolean
+        isHighlighted: Boolean,
+        options: ProcessingOptions
     ) {
-        if (onWordPress != null) {
-            val words = splitIntoWords(text)
+        if (options.enableWordClick && onWordPress != null) {
+            val words = splitIntoWords(text, options.preserveWhitespace)
             for (word in words) {
+                // Only make actual words clickable (not numbers, punctuation, etc.)
                 if (isWord(word) && word.length > 1) {
-                    builder.pushStringAnnotation("word", word)
+                    builder.pushStringAnnotation("word", word.lowercase())
                     builder.withStyle(
                         SpanStyle(
                             color = context.textColor,
-                            background = if (highlight != null && word.contains(highlight, ignoreCase = true)) themeColors.searchHighlightBg else Color.Transparent,
+                            background = if (highlight != null &&
+                                word.contains(highlight, ignoreCase = true)) {
+                                themeColors.searchHighlightBg
+                            } else {
+                                Color.Transparent
+                            },
                             fontSize = context.baseFontSize * context.fontSizeMultiplier,
                             baselineShift = context.baselineShift ?: BaselineShift.None
                         )
@@ -369,45 +581,56 @@ class VerseTextProcessor {
                 }
             }
         } else {
-            if (highlight != null && text.contains(highlight, ignoreCase = true)) {
-                val regex = Regex(escapeRegex(highlight), RegexOption.IGNORE_CASE)
-                var lastIndex = 0
-                for (match in regex.findAll(text)) {
-                    if (match.range.first > lastIndex) {
-                        builder.withStyle(
-                            SpanStyle(
-                                color = context.textColor,
-                                fontSize = context.baseFontSize * context.fontSizeMultiplier,
-                                baselineShift = context.baselineShift ?: BaselineShift.None
-                            )
-                        ) {
-                            builder.append(text.substring(lastIndex, match.range.first))
-                        }
-                    }
+            // Fallback processing when onWordPress is not available or disabled
+            processTextWithoutWordClick(
+                text, builder, context, highlight, themeColors, options
+            )
+        }
+    }
+
+    private fun processTextWithoutWordClick(
+        text: String,
+        builder: AnnotatedString.Builder,
+        context: TraversalContext,
+        highlight: String?,
+        themeColors: ThemeColors,
+        options: ProcessingOptions
+    ) {
+        if (highlight != null && text.contains(highlight, ignoreCase = true)) {
+            val escapedHighlight = escapeRegex(highlight)
+            val regex = try {
+                Regex(escapedHighlight, RegexOption.IGNORE_CASE)
+            } catch (_: Exception) {
+                logger?.logParseError("regex_error", "Invalid highlight regex: $escapedHighlight")
+                return
+            }
+
+            var lastIndex = 0
+            for (match in regex.findAll(text)) {
+                if (match.range.first > lastIndex) {
                     builder.withStyle(
                         SpanStyle(
                             color = context.textColor,
-                            background = themeColors.searchHighlightBg,
                             fontSize = context.baseFontSize * context.fontSizeMultiplier,
                             baselineShift = context.baselineShift ?: BaselineShift.None
                         )
                     ) {
-                        builder.append(match.value)
-                    }
-                    lastIndex = match.range.last + 1
-                }
-                if (lastIndex < text.length) {
-                    builder.withStyle(
-                        SpanStyle(
-                            color = context.textColor,
-                            fontSize = context.baseFontSize * context.fontSizeMultiplier,
-                            baselineShift = context.baselineShift ?: BaselineShift.None
-                        )
-                    ) {
-                        builder.append(text.substring(lastIndex))
+                        builder.append(text.substring(lastIndex, match.range.first))
                     }
                 }
-            } else {
+                builder.withStyle(
+                    SpanStyle(
+                        color = context.textColor,
+                        background = themeColors.searchHighlightBg,
+                        fontSize = context.baseFontSize * context.fontSizeMultiplier,
+                        baselineShift = context.baselineShift ?: BaselineShift.None
+                    )
+                ) {
+                    builder.append(match.value)
+                }
+                lastIndex = match.range.last + 1
+            }
+            if (lastIndex < text.length) {
                 builder.withStyle(
                     SpanStyle(
                         color = context.textColor,
@@ -415,8 +638,18 @@ class VerseTextProcessor {
                         baselineShift = context.baselineShift ?: BaselineShift.None
                     )
                 ) {
-                    builder.append(text)
+                    builder.append(text.substring(lastIndex))
                 }
+            }
+        } else {
+            builder.withStyle(
+                SpanStyle(
+                    color = context.textColor,
+                    fontSize = context.baseFontSize * context.fontSizeMultiplier,
+                    baselineShift = context.baselineShift ?: BaselineShift.None
+                )
+            ) {
+                builder.append(text)
             }
         }
     }
@@ -429,86 +662,60 @@ class VerseTextProcessor {
     ) {
         val content = extractContentFromTag(node.fullTag)
         val trimmedContent = content.trim()
-        builder.withStyle(
-            SpanStyle(
-                fontSize = context.baseFontSize * 0.8f,
-                color = themeColors.tagColor,
-                background = themeColors.tagBg
-            )
-        ) {
-            builder.append(trimmedContent)
+        if (trimmedContent.isNotEmpty()) {
+            builder.withStyle(
+                SpanStyle(
+                    fontSize = context.baseFontSize * 0.8f,
+                    color = themeColors.tagColor,
+                    background = themeColors.tagBg
+                )
+            ) {
+                builder.append(trimmedContent)
+            }
         }
     }
 
     private fun extractContentFromTag(tag: String): String {
-        val regex = """<[^>]+="([^"]*)"/>""".toRegex()
-        val match = regex.find(tag)
-        return match?.groupValues?.get(1) ?: ""
+        val match = ATTRIBUTE_REGEX.find(tag)
+        return match?.groupValues?.get(2) ?: ""
     }
 
-    private fun splitIntoWords(text: String): List<String> {
-        val result = mutableListOf<String>()
-        var i = 0
-        while (i < text.length) {
-            val char = text[i]
-            when {
-                char.isLetter() -> {
-                    var word = char.toString()
-                    i++
-                    while (i < text.length && text[i].isLetter()) {
-                        word += text[i]
-                        i++
-                    }
-                    result.add(word)
-                }
-                char.isDigit() -> {
-                    var num = char.toString()
-                    i++
-                    while (i < text.length && text[i].isDigit()) {
-                        num += text[i]
-                        i++
-                    }
-                    result.add(num)
-                }
-                !char.isWhitespace() -> {
-                    var punct = char.toString()
-                    i++
-                    while (i < text.length && !text[i].isWhitespace() && !text[i].isLetter() && !text[i].isDigit()) {
-                        punct += text[i]
-                        i++
-                    }
-                    result.add(punct)
-                }
-                else -> {
-                    var whitespace = char.toString()
-                    i++
-                    while (i < text.length && text[i].isWhitespace()) {
-                        whitespace += text[i]
-                        i++
-                    }
-                    result.add(whitespace)
-                }
-            }
+    private fun splitIntoWords(text: String, preserveWhitespace: Boolean): List<String> {
+        return if (preserveWhitespace) {
+            // Split but keep whitespace sequences as separate items
+            text.split(Regex("(?<=\\S)(?=\\s)|(?<=\\s)(?=\\S)"))
+        } else {
+            // More efficient implementation using regex
+            text.split(Regex("(?<=\\w)(?=\\W)|(?<=\\W)(?=\\w)|\\s+"))
+                .filter { it.isNotEmpty() }
         }
-        return result
     }
 
     private fun isWord(text: String): Boolean {
-        return text.matches(Regex("[a-zA-ZÀ-ÿ]{2,}"))
+        // Allow apostrophes in words (e.g., "I'm", "don't")
+        return text.matches(Regex("""[a-zA-ZÀ-ÿ'][a-zA-ZÀ-ÿ']+"""))
     }
 
     private fun escapeRegex(string: String): String {
-        return string.replace(Regex("[.*+?^${'$'}{}()|\\[\\]\\\\]"), "\\$&")
+        return string.replace(ESCAPE_REGEX_PATTERN, "\\$0")
     }
 }
 
 object SimpleVerseProcessor {
     fun stripXmlTags(text: String): String {
+        if (text.isEmpty()) return ""
+
         var processedText = text
         // Remove entire <f>...</f> elements including contents
-        processedText = processedText.replace(Regex("""<f[^>]*>.*?</f>""", RegexOption.DOT_MATCHES_ALL), "")
+        processedText = processedText.replace(
+            Regex("""<f[^>]*>.*?</f>""", RegexOption.DOT_MATCHES_ALL),
+            ""
+        )
         // Remove entire <S>...</S> elements including contents
-        processedText = processedText.replace(Regex("""<S[^>]*>.*?</S>""", RegexOption.DOT_MATCHES_ALL), "")
+        processedText = processedText.replace(
+            Regex("""<S[^>]*>.*?</S>""", RegexOption.DOT_MATCHES_ALL),
+            ""
+        )
         // Remove remaining XML tags
         processedText = processedText.replace(Regex("""<[^>]+>"""), "")
         // Normalize whitespace

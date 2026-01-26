@@ -1,6 +1,5 @@
 package com.example.fohbible.screens
 
-import android.R
 import android.content.Intent
 import android.graphics.Typeface
 import android.net.Uri

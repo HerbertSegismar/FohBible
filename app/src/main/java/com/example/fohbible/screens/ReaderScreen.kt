@@ -1,4 +1,5 @@
 @file:Suppress("AssignedValueIsNeverRead")
+
 package com.example.fohbible.screens
 
 import android.annotation.SuppressLint
@@ -84,9 +85,7 @@ import com.example.fohbible.data.BibleData
 import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.PassageSelection
 import com.example.fohbible.data.Verse
-import com.example.fohbible.modals.CommentaryModal
-import com.example.fohbible.modals.DefinitionModal
-import com.example.fohbible.modals.StrongsModal
+import com.example.fohbible.modals.InteractiveModal
 import com.example.fohbible.ui.theme.FohBibleTheme
 import com.example.fohbible.utils.ProcessedVerse
 import com.example.fohbible.utils.ThemeColors
@@ -156,7 +155,6 @@ fun ReaderScreen(
             null
         }
     }
-
     LaunchedEffect(secondaryDatabaseHelper) {
         secondaryLoadedVerses.clear()
     }
@@ -194,9 +192,11 @@ fun ReaderScreen(
     var showWordModal by remember { mutableStateOf(false) }
     var currentWord by remember { mutableStateOf("") }
     var wordDefinition by remember { mutableStateOf("") }
+    var wordDb by remember { mutableStateOf<DatabaseHelper?>(null) }
     var showStrongsModal by remember { mutableStateOf(false) }
     var currentStrongNumber by remember { mutableStateOf("") }
     var strongDefinition by remember { mutableStateOf("") }
+    var strongDb by remember { mutableStateOf<DatabaseHelper?>(null) }
     var showCommentaryModal by remember { mutableStateOf(false) }
     var commentaryTitle by remember { mutableStateOf("") }
     var commentaryContent by remember { mutableStateOf("") }
@@ -220,16 +220,17 @@ fun ReaderScreen(
         val comName = name.replace(".sqlite3", "com.sqlite3")
         secondaryCommentaryDbHelper = if (viewModel.multiVersion && comName.isNotEmpty()) DatabaseHelper(context, comName) else null
     }
-    val onWordPress: (String) -> Unit = { word ->
+    val onWordPress: (String, Boolean) -> Unit = { word, isPrimary ->
         val trimmed = word.trim()
         val definition = dictionaryDbHelper?.getWordDefinition(trimmed) ?: "Definition not found."
         currentWord = trimmed
         wordDefinition = definition
+        wordDb = if (isPrimary) databaseHelper else secondaryDatabaseHelper
         showWordModal = true
     }
-    val onStrongsPress: (String, Int) -> Unit = { strongNumber, bookNumber ->
+    val onStrongsPress: (String, Int, Boolean) -> Unit = { strongNumber, _, isPrimary ->
         val trimmed = strongNumber.trim()
-        val isOldTestament = bookNumber <= 39
+        val isOldTestament = viewModel.isOldTestament
         val prefixed = if (trimmed.firstOrNull()?.isLetter() ?: false) {
             trimmed
         } else {
@@ -238,17 +239,15 @@ fun ReaderScreen(
         val definition = strongDbHelper?.getStrongDefinition(prefixed) ?: "Strong's definition not found."
         currentStrongNumber = prefixed
         strongDefinition = definition
+        strongDb = if (isPrimary) databaseHelper else secondaryDatabaseHelper
         showStrongsModal = true
     }
+    // In ReaderScreen.kt, update the onTagPress function
     val onTagPress: (String, Int, Int, Int, Boolean) -> Unit = { marker, bookNumber, chapter, verseNumber, isPrimary ->
         val dbHelper = if (isPrimary) commentaryDbHelper else secondaryCommentaryDbHelper
-        var text = "No commentary found."
-        text = try {
-            dbHelper?.getCommentary(bookNumber, chapter, verseNumber, marker) ?: text
-        } catch (e: Exception) {
-            "Error loading commentary: ${e.message}"
-        }
-        commentaryTitle = "Notes on ${BibleData.getBookByCustomNumber(bookNumber)?.name ?: ""} $chapter:$verseNumber $marker"
+        // ONLY fetch commentary for actual markers (t, n, f tags)
+        val text = dbHelper?.getCommentary(bookNumber, chapter, verseNumber, marker) ?: "No commentary found."
+        commentaryTitle = "Notes on ${BibleData.getBookByCustomNumber(bookNumber)?.name ?: ""} $chapter:$verseNumber – $marker"
         commentaryContent = text
         commentaryBibleDb = if (isPrimary) databaseHelper else secondaryDatabaseHelper
         showCommentaryModal = true
@@ -392,32 +391,31 @@ fun ReaderScreen(
             )
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-            DefinitionModal(
+            InteractiveModal(
                 show = showWordModal,
                 onDismiss = { showWordModal = false },
+                databaseHelper = wordDb,
+                initialType = "definition",
                 word = currentWord,
-                definition = wordDefinition,
-                selectedDictionary = viewModel.selectedDictionary,
-                onSwitch = {
-                    viewModel.selectedDictionary = if (viewModel.selectedDictionary == "noah") "atsbd" else "noah"
-                    wordDefinition = dictionaryDbHelper?.getWordDefinition(currentWord) ?: "Definition not found."
-                },
-                databaseHelper = databaseHelper
+                definition = wordDefinition
             )
         }
-        StrongsModal(
+        InteractiveModal(
             show = showStrongsModal,
             onDismiss = { showStrongsModal = false },
+            databaseHelper = strongDb,
+            initialType = "strong",
             strongNumber = currentStrongNumber,
-            definition = strongDefinition
+            strongDefinition = strongDefinition
         )
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-            CommentaryModal(
+            InteractiveModal(
                 show = showCommentaryModal,
                 onDismiss = { showCommentaryModal = false },
+                databaseHelper = commentaryBibleDb,
+                initialType = "commentary",
                 initialTitle = commentaryTitle,
-                initialContent = commentaryContent,
-                databaseHelper = commentaryBibleDb
+                initialContent = commentaryContent
             )
         }
     }
@@ -435,8 +433,8 @@ private fun SingleVersionReader(
     viewModel: AppViewModel,
     onPassageChange: (PassageSelection) -> Unit,
     scheduleFade: () -> Unit,
-    onWordPress: (String) -> Unit,
-    onStrongsPress: (String, Int) -> Unit,
+    onWordPress: (String, Boolean) -> Unit,
+    onStrongsPress: (String, Int, Boolean) -> Unit,
     onTagPress: (String, Int, Int, Int, Boolean) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -566,8 +564,8 @@ private fun SyncedMultiVersionReader(
     viewModel: AppViewModel,
     onPassageChange: (PassageSelection) -> Unit,
     scheduleFade: () -> Unit,
-    onWordPress: (String) -> Unit,
-    onStrongsPress: (String, Int) -> Unit,
+    onWordPress: (String, Boolean) -> Unit,
+    onStrongsPress: (String, Int, Boolean) -> Unit,
     onTagPress: (String, Int, Int, Int, Boolean) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -831,8 +829,8 @@ private fun IndependentMultiVersionReader(
     onPrimaryPassageChange: (PassageSelection) -> Unit,
     onSecondaryPassageChange: (PassageSelection) -> Unit,
     scheduleFade: () -> Unit,
-    onWordPress: (String) -> Unit,
-    onStrongsPress: (String, Int) -> Unit,
+    onWordPress: (String, Boolean) -> Unit,
+    onStrongsPress: (String, Int, Boolean) -> Unit,
     onTagPress: (String, Int, Int, Int, Boolean) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -1159,8 +1157,8 @@ fun ChapterView(
     modifier: Modifier = Modifier,
     isKjvPlus: Boolean = false,
     onInitialScrollComplete: () -> Unit = {},
-    onWordPress: ((String) -> Unit)? = null,
-    onStrongsPress: ((String, Int) -> Unit)? = null,
+    onWordPress: ((String, Boolean) -> Unit)? = null,
+    onStrongsPress: ((String, Int, Boolean) -> Unit)? = null,
     onTagPress: ((String, Int, Int, Int, Boolean) -> Unit)? = null
 ) {
     val processor = remember(verses) { VerseTextProcessor() }
@@ -1168,14 +1166,10 @@ fun ChapterView(
         val result = mutableMapOf<Int, ProcessedVerse>()
         for (verse in verses) {
             val onStrongsLocal = if (onStrongsPress != null) {
-                { strongNumber: String ->
-                    onStrongsPress.invoke(strongNumber, passage.bookNumber)
-                }
+                { strongNumber: String -> onStrongsPress.invoke(strongNumber, passage.bookNumber, isPrimary) }
             } else null
             val onTagLocal = if (onTagPress != null) {
-                { marker: String ->
-                    onTagPress.invoke(marker, passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary)
-                }
+                { marker: String -> onTagPress.invoke(marker, passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary) }
             } else null
             val processed = processor.processVerse(
                 verseText = verse.text,
@@ -1183,7 +1177,7 @@ fun ChapterView(
                 themeColors = themeColors,
                 textColor = themeColors.textColor,
                 onTagPress = onTagLocal,
-                onWordPress = onWordPress,
+                onWordPress = { word: String -> onWordPress?.invoke(word, isPrimary) },
                 onStrongsPress = onStrongsLocal,
                 isHighlighted = false,
                 isKjvPlus = isKjvPlus,
@@ -1344,8 +1338,8 @@ fun ChapterView(
                                                     val annotations = annotatedString.getStringAnnotations(start = position, end = position)
                                                     annotations.forEach { annotation ->
                                                         when (annotation.tag) {
-                                                            "word" -> onWordPress?.invoke(annotation.item)
-                                                            "strong" -> onStrongsPress?.invoke(annotation.item, passage.bookNumber)
+                                                            "word" -> onWordPress?.invoke(annotation.item, isPrimary)
+                                                            "strong" -> onStrongsPress?.invoke(annotation.item, passage.bookNumber, isPrimary)
                                                             "tag" -> onTagPress?.invoke(annotation.item, passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary)
                                                         }
                                                     }
