@@ -233,7 +233,7 @@ private fun loadBookmarks(
         Thread {
             val dbHelper = DatabaseHelper(
                 context as MainActivity,
-                databaseName = currentDbName // Using currentDbName from AppViewModel
+                databaseName = currentDbName
             )
             val verses = dbHelper.getBookmarks()
             dbHelper.close()
