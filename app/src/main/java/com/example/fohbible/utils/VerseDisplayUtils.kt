@@ -1,4 +1,3 @@
-
 package com.example.fohbible.utils
 
 import androidx.compose.ui.graphics.Color
@@ -93,6 +92,7 @@ class VerseTextProcessor(
         options: ProcessingOptions = ProcessingOptions()
     ): ProcessedVerse {
         val startTime = System.currentTimeMillis()
+
         // Handle empty/null input
         if (verseText.isNullOrBlank()) {
             return ProcessedVerse(
@@ -100,22 +100,18 @@ class VerseTextProcessor(
                 body = AnnotatedString("")
             )
         }
+
         // Generate cache key
         val cacheKey = buildCacheKey(
-            verseText,
-            baseFontSize,
-            textColor,
-            isKjvPlus,
-            isOldTestament,
-            highlight,
-            isHighlighted,
-            options
+            verseText, baseFontSize, textColor, isKjvPlus, isOldTestament, highlight, isHighlighted, options
         )
+
         // Check cache
         verseCache[cacheKey]?.let { cached ->
             logger?.logPerformance("Cache hit", System.currentTimeMillis() - startTime)
             return cached
         }
+
         // Process the verse
         val nodes = parseXmlTags(verseText)
         val tree = buildTree(nodes)
@@ -128,21 +124,14 @@ class VerseTextProcessor(
             isOldTestament = isOldTestament
         )
         val (header, body) = traverseTree(
-            tree,
-            initialContext,
-            highlight,
-            themeColors,
-            onTagPress,
-            onWordPress,
-            onStrongsPress,
-            isHighlighted,
-            isKjvPlus,
-            options
+            tree, initialContext, highlight, themeColors, onTagPress, onWordPress, onStrongsPress,
+            isHighlighted, isKjvPlus, options
         )
         val result = ProcessedVerse(
             header = if (options.showHeaders) header else null,
             body = body
         )
+
         // Cache the result
         verseCache[cacheKey] = result
         val duration = System.currentTimeMillis() - startTime
@@ -304,18 +293,8 @@ class VerseTextProcessor(
         val bodyBuilder = AnnotatedString.Builder()
         for (node in tree) {
             traverseNode(
-                node,
-                headerBuilder,
-                bodyBuilder,
-                initialContext,
-                highlight,
-                themeColors,
-                onTagPress,
-                onWordPress,
-                onStrongsPress,
-                isHighlighted,
-                isKjvPlus,
-                options
+                node, headerBuilder, bodyBuilder, initialContext, highlight, themeColors,
+                onTagPress, onWordPress, onStrongsPress, isHighlighted, isKjvPlus, options
             )
         }
         val header = if (headerBuilder.length > 0) headerBuilder.toAnnotatedString() else null
@@ -341,27 +320,14 @@ class VerseTextProcessor(
             is TreeNode.Text -> {
                 val builder = if (context.isHeader) headerBuilder else bodyBuilder
                 processTextNode(
-                    node,
-                    builder,
-                    context,
-                    highlight,
-                    themeColors,
-                    onWordPress,
-                    onStrongsPress,
-                    onTagPress,
-                    isHighlighted,
-                    options
+                    node, builder, context, highlight, themeColors, onWordPress, onStrongsPress,
+                    onTagPress, isHighlighted, options
                 )
             }
             is TreeNode.SelfClosingTag -> {
                 if (!options.showFootnotesInline) return
                 val builder = if (context.isHeader) headerBuilder else bodyBuilder
-                processSelfClosingTagNode(
-                    node,
-                    builder,
-                    context,
-                    themeColors
-                )
+                processSelfClosingTagNode(node, builder, context, themeColors)
             }
             is TreeNode.Element -> {
                 val newContext = when (node.tag) {
@@ -375,10 +341,7 @@ class VerseTextProcessor(
                         textColor = if (!isHighlighted) themeColors.wordsOfJesus else context.textColor,
                         currentTag = node.tag
                     )
-                    "t" -> context.copy(
-                        isTextContainer = true,
-                        currentTag = node.tag
-                    )
+                    "t" -> context.copy(isTextContainer = true, currentTag = node.tag)
                     "S" -> context.copy(
                         isTextContainer = true,
                         textColor = themeColors.tagColor,
@@ -397,21 +360,17 @@ class VerseTextProcessor(
                 }
                 for (child in node.children) {
                     traverseNode(
-                        child,
-                        headerBuilder,
-                        bodyBuilder,
-                        newContext,
-                        highlight,
-                        themeColors,
-                        onTagPress,
-                        onWordPress,
-                        onStrongsPress,
-                        isHighlighted,
-                        isKjvPlus,
-                        options
+                        child, headerBuilder, bodyBuilder, newContext, highlight, themeColors,
+                        onTagPress, onWordPress, onStrongsPress, isHighlighted, isKjvPlus, options
                     )
                 }
             }
+        }
+    }
+
+    private fun normalizeSpacing(text: String): String {
+        return text.replace(Regex("""([.,])(\p{L})""")) { match ->
+            match.groupValues[1] + " " + match.groupValues[2]
         }
     }
 
@@ -433,13 +392,17 @@ class VerseTextProcessor(
             context.fontSizeMultiplier
         }
         val textContext = context.copy(fontSizeMultiplier = effectiveMultiplier)
-        val text = if (options.preserveWhitespace) node.content else node.content.trim()
-        if (text.isEmpty()) return
+
+        val rawText = if (options.preserveWhitespace) node.content else node.content.trim()
+        if (rawText.isEmpty()) return
+
+        val normalizedText = normalizeSpacing(rawText)
+
         // CRITICAL: Handle different types of content based on context
         when (context.currentTag) {
             // 1. STRONG'S NUMBER - Goes to Strong's dictionary
             "S" -> if (options.enableStrongsClick && onStrongsPress != null) {
-                val trimmed = text.trim()
+                val trimmed = normalizedText.trim()
                 if (trimmed.isNotEmpty() && isValidStrongsNumber(trimmed)) {
                     val prefixed = formatStrongsNumber(trimmed, context.isOldTestament)
                     builder.pushStringAnnotation("strong", prefixed)
@@ -450,41 +413,31 @@ class VerseTextProcessor(
                             baselineShift = textContext.baselineShift ?: BaselineShift.None
                         )
                     ) {
-                        builder.append(text)
+                        builder.append(normalizedText)
                     }
                     builder.pop()
+                    builder.append(" ")
                 } else {
                     // Invalid Strong's number, fallback to regular text
                     processNormalText(
-                        text,
-                        builder,
-                        textContext,
-                        highlight,
-                        themeColors,
-                        onWordPress,
-                        isHighlighted,
-                        options
+                        normalizedText, builder, textContext, highlight, themeColors,
+                        onWordPress, isHighlighted, options
                     )
                 }
             } else {
                 processNormalText(
-                    text,
-                    builder,
-                    textContext,
-                    highlight,
-                    themeColors,
-                    onWordPress,
-                    isHighlighted,
-                    options
+                    normalizedText, builder, textContext, highlight, themeColors,
+                    onWordPress, isHighlighted, options
                 )
             }
+
             // 2. COMMENTARY MARKER (only f) - Goes to COMMENTARY database
             "f" -> if (options.enableTagClick && onTagPress != null) {
-                val trimmed = text.trim()
+                val trimmed = normalizedText.trim()
                 if (trimmed.isNotEmpty()) {
                     builder.pushStringAnnotation("tag", trimmed)
                 }
-                val appendText = "\u00A0${text.trim()}\u00A0"
+                val appendText = "\u00A0${normalizedText.trim()}\u00A0"
                 builder.withStyle(
                     SpanStyle(
                         color = textContext.textColor,
@@ -499,27 +452,16 @@ class VerseTextProcessor(
                 }
             } else {
                 processNormalText(
-                    text,
-                    builder,
-                    textContext,
-                    highlight,
-                    themeColors,
-                    onWordPress,
-                    isHighlighted,
-                    options
+                    normalizedText, builder, textContext, highlight, themeColors,
+                    onWordPress, isHighlighted, options
                 )
             }
+
             // 3. REGULAR TEXT (including non-f tags like n, t) - Goes to DICTIONARY (word definitions)
             else -> {
                 processNormalText(
-                    text,
-                    builder,
-                    textContext,
-                    highlight,
-                    themeColors,
-                    onWordPress,
-                    isHighlighted,
-                    options
+                    normalizedText, builder, textContext, highlight, themeColors,
+                    onWordPress, isHighlighted, options
                 )
             }
         }
@@ -563,8 +505,12 @@ class VerseTextProcessor(
     ) {
         if (options.enableWordClick && onWordPress != null) {
             val words = splitIntoWords(text, options.preserveWhitespace)
+            var addSpaceAfterPunct = false
             for (word in words) {
-                // Only make actual words clickable (not numbers, punctuation, etc.)
+                if (addSpaceAfterPunct && word.firstOrNull()?.isLetter() == true) {
+                    builder.append(" ")
+                }
+
                 if (isWord(word) && word.length > 1) {
                     builder.pushStringAnnotation("word", word.lowercase())
                     builder.withStyle(
@@ -593,17 +539,13 @@ class VerseTextProcessor(
                         builder.append(word)
                     }
                 }
+
+                val trimmedWord = word.trim()
+                addSpaceAfterPunct = (trimmedWord == "." || trimmedWord == "," || trimmedWord == ":" || trimmedWord == ";")
             }
         } else {
             // Fallback processing when onWordPress is not available or disabled
-            processTextWithoutWordClick(
-                text,
-                builder,
-                context,
-                highlight,
-                themeColors,
-                options
-            )
+            processTextWithoutWordClick(text, builder, context, highlight, themeColors, options)
         }
     }
 
@@ -724,13 +666,10 @@ object SimpleVerseProcessor {
         if (text.isEmpty()) return ""
         var processedText = text
         processedText = processedText.replace(
-            Regex("""<f[^>]*>.*?</f>""", RegexOption.DOT_MATCHES_ALL),
-            ""
-        )
-        // Remove entire <S>...</S> elements including contents
+            Regex("""<f[^>]*>.*?</f>""", RegexOption.DOT_MATCHES_ALL), ""
+        ) // Remove entire <S>...</S> elements including contents
         processedText = processedText.replace(
-            Regex("""<S[^>]*>.*?</S>""", RegexOption.DOT_MATCHES_ALL),
-            ""
+            Regex("""<S[^>]*>.*?</S>""", RegexOption.DOT_MATCHES_ALL), ""
         )
         // Remove remaining XML tags
         processedText = processedText.replace(Regex("""<[^>]+>"""), "")

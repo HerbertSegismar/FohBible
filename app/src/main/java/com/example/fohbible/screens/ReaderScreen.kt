@@ -425,7 +425,7 @@ fun ReaderScreen(
 @Composable
 private fun SingleVersionReader(
     primaryCurrent: PassageSelection,
-    targetVerse: Int,
+    targetVerse: Int?,
     databaseHelper: DatabaseHelper?,
     primaryLoadedVerses: MutableMap<Pair<Int, Int>, List<Verse>>,
     themeColors: ThemeColors,
@@ -554,7 +554,7 @@ private fun SingleVersionReader(
 @Composable
 private fun SyncedMultiVersionReader(
     primaryCurrent: PassageSelection,
-    targetVerse: Int,
+    targetVerse: Int?,
     databaseHelper: DatabaseHelper?,
     secondaryDatabaseHelper: DatabaseHelper?,
     primaryLoadedVerses: MutableMap<Pair<Int, Int>, List<Verse>>,
@@ -817,8 +817,8 @@ private fun SyncedMultiVersionReader(
 private fun IndependentMultiVersionReader(
     primaryCurrent: PassageSelection,
     secondaryCurrent: PassageSelection,
-    targetVerse: Int,
-    secondaryTargetVerse: Int,
+    targetVerse: Int?,
+    secondaryTargetVerse: Int?,
     databaseHelper: DatabaseHelper?,
     secondaryDatabaseHelper: DatabaseHelper?,
     primaryLoadedVerses: MutableMap<Pair<Int, Int>, List<Verse>>,
@@ -1383,17 +1383,19 @@ fun ChapterView(
                 }
                 if (isCurrentPage) {
                     LaunchedEffect(targetVerse, verses) {
-                        targetVerse?.let { v ->
-                            if (verses.isNotEmpty() && v > 0) {
-                                delay(200)
-                                val offset = offsets[v] ?: return@let
-                                state.animateScrollTo(offset.toInt())
-                                highlightedVerse = targetVerse
-                                delay(2000)
-                                highlightedVerse = null
+                        if (targetVerse != null && verses.isNotEmpty() && targetVerse > 0) {
+                            delay(200)
+                            val offset = offsets[targetVerse]
+                            if (offset == null) {
                                 onInitialScrollComplete()
+                                return@LaunchedEffect
                             }
+                            state.animateScrollTo(offset.toInt())
+                            highlightedVerse = targetVerse
+                            delay(2000)
+                            highlightedVerse = null
                         }
+                        onInitialScrollComplete()
                     }
                 }
             }
@@ -1405,9 +1407,9 @@ fun getPreviousPassage(current: PassageSelection, currentBook: BibleBook?): Pass
     if (currentBook == null) return current
     if (currentBook.chapters <= 2 && current.chapter == 1) return current
     return if (current.chapter == 1) {
-        current.copy(chapter = currentBook.chapters, verse = 1)
+        current.copy(chapter = currentBook.chapters, verse = null)
     } else {
-        current.copy(chapter = current.chapter - 1, verse = 1)
+        current.copy(chapter = current.chapter - 1, verse = null)
     }
 }
 
@@ -1415,9 +1417,9 @@ fun getNextPassage(current: PassageSelection, currentBook: BibleBook?): PassageS
     if (currentBook == null) return current
     if (currentBook.chapters <= 2 && current.chapter == currentBook.chapters) return current
     return if (current.chapter == currentBook.chapters) {
-        current.copy(chapter = 1, verse = 1)
+        current.copy(chapter = 1, verse = null)
     } else {
-        current.copy(chapter = current.chapter + 1, verse = 1)
+        current.copy(chapter = current.chapter + 1, verse = null)
     }
 }
 

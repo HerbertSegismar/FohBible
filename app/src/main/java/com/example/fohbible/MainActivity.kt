@@ -1301,9 +1301,9 @@ fun ReaderAppBar(
                             containerColor = Color.White
                         ),
                         shape = RoundedCornerShape(4.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                         modifier = Modifier
-                            .height(36.dp)
+                            .height(30.dp)
                             .width(120.dp)
                             .padding(end = 8.dp)
                     ) {
@@ -1334,9 +1334,9 @@ fun ReaderAppBar(
                             containerColor = Color.White
                         ),
                         shape = RoundedCornerShape(4.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                         modifier = Modifier
-                            .height(36.dp)
+                            .height(30.dp)
                             .padding(end = if (viewModel.multiVersion) 8.dp else 0.dp)
                     ) {
                         Text(

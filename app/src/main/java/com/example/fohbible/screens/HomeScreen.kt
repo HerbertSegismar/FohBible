@@ -540,7 +540,7 @@ fun RecentReadingItem(reading: RecentReading) {
 }
 
 // Helper function to load random verses
-private fun loadRandomVerses(
+fun loadRandomVerses(
     context: Context,
     databaseHelper: DatabaseHelper?,
     onComplete: (List<Verse>) -> Unit
