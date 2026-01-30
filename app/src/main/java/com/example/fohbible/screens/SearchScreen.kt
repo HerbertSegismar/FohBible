@@ -79,7 +79,7 @@ import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import androidx.core.graphics.toColorInt
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.fohbible.AppViewModel
+import com.example.fohbible.models.AppViewModel
 import com.example.fohbible.data.BibleData
 import com.example.fohbible.data.scopeColors
 import kotlin.Boolean

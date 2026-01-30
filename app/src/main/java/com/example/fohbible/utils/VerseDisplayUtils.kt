@@ -6,7 +6,6 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
-import java.util.LinkedHashMap
 
 sealed class ParsedNode {
     data class Text(val content: String) : ParsedNode()

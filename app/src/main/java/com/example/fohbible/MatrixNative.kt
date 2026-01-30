@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.fohbible.models.AppViewModel
 import com.example.fohbible.screens.getFontFamily
 import com.example.fohbible.ui.theme.DefaultPrimaryColor
 import kotlinx.coroutines.CoroutineScope

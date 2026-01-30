@@ -45,7 +45,7 @@ import com.example.fohbible.data.BibleData
 import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.PassageSelection
 import com.example.fohbible.data.Verse
-import com.example.fohbible.AppViewModel
+import com.example.fohbible.models.AppViewModel
 import com.example.fohbible.utils.BibleVersionUtils
 import com.example.fohbible.utils.SimpleVerseProcessor
 

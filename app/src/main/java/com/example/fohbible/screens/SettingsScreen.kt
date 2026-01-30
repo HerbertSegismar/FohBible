@@ -72,7 +72,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.example.fohbible.AppViewModel
+import com.example.fohbible.models.AppViewModel
 import com.example.fohbible.ColorWheelDialog
 import com.example.fohbible.ui.theme.DefaultPrimaryColor
 import com.example.fohbible.ui.theme.PredefinedColorThemes
