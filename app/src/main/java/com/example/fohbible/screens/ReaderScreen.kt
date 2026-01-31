@@ -3,6 +3,7 @@
 package com.example.fohbible.screens
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.graphics.Typeface
 import android.net.Uri
 import android.os.Build
@@ -78,7 +79,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.example.fohbible.models.AppViewModel
 import com.example.fohbible.MainActivity
 import com.example.fohbible.data.BibleBook
 import com.example.fohbible.data.BibleData
@@ -87,6 +87,7 @@ import com.example.fohbible.data.PassageSelection
 import com.example.fohbible.data.Verse
 import com.example.fohbible.modals.InteractiveModal
 import com.example.fohbible.modals.VerseOptionsModal
+import com.example.fohbible.models.AppViewModel
 import com.example.fohbible.ui.theme.FohBibleTheme
 import com.example.fohbible.utils.ProcessedVerse
 import com.example.fohbible.utils.ThemeColors
@@ -293,10 +294,12 @@ fun ReaderScreen(
     var showVerseOptions by remember { mutableStateOf(false) }
     var selectedVerse by remember { mutableStateOf<Verse?>(null) }
     var selectedPassage by remember { mutableStateOf<PassageSelection?>(null) }
+    var selectedIsPrimary by remember { mutableStateOf(false) }
 
-    val onVerseLongPress: (Verse, PassageSelection) -> Unit = { verse, currentPassage ->
+    val onVerseLongPress: (Verse, PassageSelection, Boolean) -> Unit = { verse, currentPassage, isPrimary ->
         selectedVerse = verse
         selectedPassage = currentPassage
+        selectedIsPrimary = isPrimary
         showVerseOptions = true
     }
 
@@ -468,21 +471,37 @@ fun ReaderScreen(
 
         val selVerse = selectedVerse
         val selPassage = selectedPassage
-        VerseOptionsModal(
-            show = showVerseOptions && selVerse != null && selPassage != null,
-            onDismiss = { showVerseOptions = false },
-            passage = selPassage ?: PassageSelection(0, "", 0, 0),
-            verse = selVerse ?: Verse(0, ""),
-            onAddBookmark = {
-                // TODO: Implement add bookmark logic
-            },
-            onAddHighlight = {
-                // TODO: Implement add highlight logic
-            },
-            onShare = {
-                // TODO: Implement share verse logic
-            }
-        )
+        val selIsPrimary = selectedIsPrimary
+        if (showVerseOptions && selVerse != null && selPassage != null) {
+            val db = if (selIsPrimary) databaseHelper else secondaryDatabaseHelper
+            val fullVerse = selVerse.copy(bookName = selPassage.bookName, chapter = selPassage.chapter)
+            VerseOptionsModal(
+                show = true,
+                onDismiss = { showVerseOptions = false },
+                passage = selPassage,
+                verse = selVerse,
+                onAddBookmark = {
+                    if (db?.isBookmarked(fullVerse) == true) {
+                        db.removeBookmark(fullVerse)
+                    } else {
+                        db?.addBookmark(fullVerse)
+                    }
+                },
+                onAddHighlight = {
+                    // TODO: Implement add highlight logic
+                },
+                onShare = {
+                    val shareIntent = Intent().apply {
+                        action = Intent.ACTION_SEND
+                        putExtra(Intent.EXTRA_TEXT, "${selPassage.bookName} ${selPassage.chapter}:${selVerse.verseNumber} ${selVerse.text}")
+                        type = "text/plain"
+                    }
+                    context.startActivity(Intent.createChooser(shareIntent, "Share verse"))
+                },
+                isBookmarked = db?.isBookmarked(fullVerse) ?: false,
+                isHighlighted = false
+            )
+        }
     }
 }
 
@@ -501,7 +520,7 @@ private fun SingleVersionReader(
     onWordPress: (String, Boolean) -> Unit,
     onStrongsPress: (String, Int, Boolean) -> Unit,
     onTagPress: (String, Int, Int, Int, Boolean) -> Unit,
-    onVerseLongPress: (Verse, PassageSelection) -> Unit
+    onVerseLongPress: (Verse, PassageSelection, Boolean) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     val currentBook by remember(primaryCurrent.bookNumber) { derivedStateOf { BibleData.getBookByCustomNumber(primaryCurrent.bookNumber) } }
@@ -617,7 +636,9 @@ private fun SingleVersionReader(
                     onWordPress = onWordPress,
                     onStrongsPress = onStrongsPress,
                     onTagPress = onTagPress,
-                    onVerseLongPress = { verse -> onVerseLongPress(verse, thisPassage) }
+                    onVerseLongPress = { verse ->
+                        onVerseLongPress(verse, thisPassage, true)
+                    }
                 )
             }
         }
@@ -641,7 +662,7 @@ private fun SyncedMultiVersionReader(
     onWordPress: (String, Boolean) -> Unit,
     onStrongsPress: (String, Int, Boolean) -> Unit,
     onTagPress: (String, Int, Int, Int, Boolean) -> Unit,
-    onVerseLongPress: (Verse, PassageSelection) -> Unit
+    onVerseLongPress: (Verse, PassageSelection, Boolean) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     val currentBook by remember(primaryCurrent.bookNumber) { derivedStateOf { BibleData.getBookByCustomNumber(primaryCurrent.bookNumber) } }
@@ -815,7 +836,9 @@ private fun SyncedMultiVersionReader(
                             onWordPress = onWordPress,
                             onStrongsPress = onStrongsPress,
                             onTagPress = onTagPress,
-                            onVerseLongPress = { verse -> onVerseLongPress(verse, thisPassage) }
+                            onVerseLongPress = { verse ->
+                                onVerseLongPress(verse, thisPassage, true)
+                            }
                         )
                         ChapterView(
                             passage = thisPassage,
@@ -840,7 +863,9 @@ private fun SyncedMultiVersionReader(
                             onWordPress = onWordPress,
                             onStrongsPress = onStrongsPress,
                             onTagPress = onTagPress,
-                            onVerseLongPress = { verse -> onVerseLongPress(verse, thisPassage) }
+                            onVerseLongPress = { verse ->
+                                onVerseLongPress(verse, thisPassage, false)
+                            }
                         )
                     }
                 } else {
@@ -868,7 +893,9 @@ private fun SyncedMultiVersionReader(
                             onWordPress = onWordPress,
                             onStrongsPress = onStrongsPress,
                             onTagPress = onTagPress,
-                            onVerseLongPress = { verse -> onVerseLongPress(verse, thisPassage) }
+                            onVerseLongPress = { verse ->
+                                onVerseLongPress(verse, thisPassage, true)
+                            }
                         )
                         ChapterView(
                             passage = thisPassage,
@@ -893,7 +920,9 @@ private fun SyncedMultiVersionReader(
                             onWordPress = onWordPress,
                             onStrongsPress = onStrongsPress,
                             onTagPress = onTagPress,
-                            onVerseLongPress = { verse -> onVerseLongPress(verse, thisPassage) }
+                            onVerseLongPress = { verse ->
+                                onVerseLongPress(verse, thisPassage, false)
+                            }
                         )
                     }
                 }
@@ -922,7 +951,7 @@ private fun IndependentMultiVersionReader(
     onWordPress: (String, Boolean) -> Unit,
     onStrongsPress: (String, Int, Boolean) -> Unit,
     onTagPress: (String, Int, Int, Int, Boolean) -> Unit,
-    onVerseLongPress: (Verse, PassageSelection) -> Unit
+    onVerseLongPress: (Verse, PassageSelection, Boolean) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     val primaryBook by remember(primaryCurrent.bookNumber) { derivedStateOf { BibleData.getBookByCustomNumber(primaryCurrent.bookNumber) } }
@@ -1112,7 +1141,9 @@ private fun IndependentMultiVersionReader(
                             onWordPress = onWordPress,
                             onStrongsPress = onStrongsPress,
                             onTagPress = onTagPress,
-                            onVerseLongPress = { verse -> onVerseLongPress(verse, thisPassage) }
+                            onVerseLongPress = { verse ->
+                                onVerseLongPress(verse, thisPassage, true)
+                            }
                         )
                     }
                 }
@@ -1150,7 +1181,9 @@ private fun IndependentMultiVersionReader(
                             onWordPress = onWordPress,
                             onStrongsPress = onStrongsPress,
                             onTagPress = onTagPress,
-                            onVerseLongPress = { verse -> onVerseLongPress(verse, thisPassage) }
+                            onVerseLongPress = { verse ->
+                                onVerseLongPress(verse, thisPassage, false)
+                            }
                         )
                     }
                 }
@@ -1191,7 +1224,9 @@ private fun IndependentMultiVersionReader(
                             onWordPress = onWordPress,
                             onStrongsPress = onStrongsPress,
                             onTagPress = onTagPress,
-                            onVerseLongPress = { verse -> onVerseLongPress(verse, thisPassage) }
+                            onVerseLongPress = { verse ->
+                                onVerseLongPress(verse, thisPassage, true)
+                            }
                         )
                     }
                 }
@@ -1229,7 +1264,9 @@ private fun IndependentMultiVersionReader(
                             onWordPress = onWordPress,
                             onStrongsPress = onStrongsPress,
                             onTagPress = onTagPress,
-                            onVerseLongPress = { verse -> onVerseLongPress(verse, thisPassage) }
+                            onVerseLongPress = { verse ->
+                                onVerseLongPress(verse, thisPassage, false)
+                            }
                         )
                     }
                 }
