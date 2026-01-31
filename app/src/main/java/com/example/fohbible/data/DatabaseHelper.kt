@@ -22,6 +22,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
         private const val COLUMN_CHAPTER = "chapter"
         private const val COLUMN_VERSE = "verse"
         const val BOOKMARKS_TABLE = "bookmarks"
+        const val HIGHLIGHTS_TABLE = "highlights"
         const val COLUMN_BOOK_NAME = "book_name"
         const val COLUMN_VERSE_NUMBER = "verse_number"
     }
@@ -42,6 +43,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                 SQLiteDatabase.OPEN_READWRITE
             )
             createBookmarksTable()
+            createHighlightsTable()
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -50,17 +52,13 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
     fun refreshDatabase(): Boolean {
         return try {
             database?.close()
-
             val dbFile = context.getDatabasePath(databaseName)
             if (dbFile.exists()) {
                 dbFile.delete()
             }
-
             // Wait a bit to ensure file is deleted
             Thread.sleep(100)
-
             copyDatabaseFromAssets(dbFile)
-
             // Reopen the database
             database = SQLiteDatabase.openDatabase(
                 dbFile.path,
@@ -68,6 +66,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                 SQLiteDatabase.OPEN_READWRITE
             )
             createBookmarksTable()
+            createHighlightsTable()
             Log.d(tag, "Database $databaseName refreshed successfully")
             true
         } catch (e: Exception) {
@@ -81,6 +80,20 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
         database?.execSQL(
             """
             CREATE TABLE IF NOT EXISTS $BOOKMARKS_TABLE (
+                $COLUMN_BOOK_NAME TEXT,
+                $COLUMN_CHAPTER INTEGER,
+                $COLUMN_VERSE_NUMBER INTEGER,
+                $COLUMN_TEXT TEXT,
+                PRIMARY KEY ($COLUMN_BOOK_NAME, $COLUMN_CHAPTER, $COLUMN_VERSE_NUMBER)
+            )
+            """.trimIndent()
+        )
+    }
+
+    private fun createHighlightsTable() {
+        database?.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS $HIGHLIGHTS_TABLE (
                 $COLUMN_BOOK_NAME TEXT,
                 $COLUMN_CHAPTER INTEGER,
                 $COLUMN_VERSE_NUMBER INTEGER,
@@ -109,8 +122,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
         var count = 0
         try {
             val query = """
-                SELECT COUNT(*) FROM $VERSES_TABLE 
-                WHERE $COLUMN_BOOK_NUMBER = ? AND $COLUMN_CHAPTER = ?
+                SELECT COUNT(*) FROM $VERSES_TABLE WHERE $COLUMN_BOOK_NUMBER = ? AND $COLUMN_CHAPTER = ?
             """.trimIndent()
             val cursor = database?.rawQuery(query, arrayOf(bookNumber.toString(), chapter.toString()))
             cursor?.use {
@@ -177,8 +189,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             val numberOfVerses = minOf(random.nextInt(5) + 1, verseCount)
             val startVerse = random.nextInt(verseCount - numberOfVerses + 1) + 1
             val query = """
-                SELECT $COLUMN_VERSE, $COLUMN_TEXT 
-                FROM $VERSES_TABLE 
+                SELECT $COLUMN_VERSE, $COLUMN_TEXT FROM $VERSES_TABLE 
                 WHERE $COLUMN_BOOK_NUMBER = ? AND $COLUMN_CHAPTER = ? 
                 AND $COLUMN_VERSE >= ? AND $COLUMN_VERSE < ? + ? 
                 ORDER BY $COLUMN_VERSE ASC
@@ -245,9 +256,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                 arrayOf(COLUMN_VERSE_NUMBER),
                 "$COLUMN_BOOK_NAME = ? AND $COLUMN_CHAPTER = ? AND $COLUMN_VERSE_NUMBER = ?",
                 arrayOf(verse.bookName, verse.chapter.toString(), verse.verseNumber.toString()),
-                null,
-                null,
-                null
+                null, null, null
             )
             cursor?.use {
                 exists = it.count > 0
@@ -275,6 +284,51 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             Log.e(tag, "Error getting bookmarks: ${e.message}")
         }
         return verses
+    }
+
+    fun addHighlight(verse: Verse) {
+        try {
+            val values = ContentValues().apply {
+                put(COLUMN_BOOK_NAME, verse.bookName)
+                put(COLUMN_CHAPTER, verse.chapter)
+                put(COLUMN_VERSE_NUMBER, verse.verseNumber)
+                put(COLUMN_TEXT, verse.text)
+            }
+            database?.insertWithOnConflict(HIGHLIGHTS_TABLE, null, values, SQLiteDatabase.CONFLICT_IGNORE)
+        } catch (e: Exception) {
+            Log.e(tag, "Error adding highlight: ${e.message}")
+        }
+    }
+
+    fun removeHighlight(verse: Verse) {
+        try {
+            database?.delete(
+                HIGHLIGHTS_TABLE,
+                "$COLUMN_BOOK_NAME = ? AND $COLUMN_CHAPTER = ? AND $COLUMN_VERSE_NUMBER = ?",
+                arrayOf(verse.bookName, verse.chapter.toString(), verse.verseNumber.toString())
+            )
+        } catch (e: Exception) {
+            Log.e(tag, "Error removing highlight: ${e.message}")
+        }
+    }
+
+    fun isHighlighted(verse: Verse): Boolean {
+        var exists = false
+        try {
+            val cursor = database?.query(
+                HIGHLIGHTS_TABLE,
+                arrayOf(COLUMN_VERSE_NUMBER),
+                "$COLUMN_BOOK_NAME = ? AND $COLUMN_CHAPTER = ? AND $COLUMN_VERSE_NUMBER = ?",
+                arrayOf(verse.bookName, verse.chapter.toString(), verse.verseNumber.toString()),
+                null, null, null
+            )
+            cursor?.use {
+                exists = it.count > 0
+            }
+        } catch (e: Exception) {
+            Log.e(tag, "Error checking highlight: ${e.message}")
+        }
+        return exists
     }
 
     fun getWordDefinition(word: String): String? {

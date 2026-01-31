@@ -29,7 +29,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
@@ -40,12 +39,12 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
@@ -72,8 +71,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.example.fohbible.models.AppViewModel
 import com.example.fohbible.ColorWheelDialog
+import com.example.fohbible.models.AppViewModel
 import com.example.fohbible.ui.theme.DefaultPrimaryColor
 import com.example.fohbible.ui.theme.PredefinedColorThemes
 import com.example.fohbible.utils.BibleVersionUtils
@@ -165,13 +164,6 @@ fun SettingsScreen() {
                     onVersionSelected = { file, abbr ->
                         viewModel.currentDbName = file
                         viewModel.currentVersionAbbr = abbr
-                    },
-                    onInfoClick = { file, abbr ->
-                        selectedVersionInfo = Pair(
-                            abbr,
-                            BibleVersionUtils.descriptionMap[file] ?: "No description available"
-                        )
-                        showVersionInfoDialog = true
                     }
                 )
 
@@ -205,13 +197,6 @@ fun SettingsScreen() {
                         onVersionSelected = { file, abbr ->
                             viewModel.secondaryDbName = file
                             viewModel.secondaryVersionAbbr = abbr
-                        },
-                        onInfoClick = { file, abbr ->
-                            selectedVersionInfo = Pair(
-                                abbr,
-                                BibleVersionUtils.descriptionMap[file] ?: "No description available"
-                            )
-                            showVersionInfoDialog = true
                         }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -756,7 +741,6 @@ fun BibleVersionSelector(
     currentAbbr: String,
     description: String,
     onVersionSelected: (String, String) -> Unit,
-    onInfoClick: (String, String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -800,25 +784,6 @@ fun BibleVersionSelector(
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Info button
-                    IconButton(
-                        onClick = {
-                            val selectedFile = BibleVersionUtils.versionMap.entries
-                                .find { it.value == currentAbbr }
-                                ?.key
-                            if (selectedFile != null) {
-                                onInfoClick(selectedFile, currentAbbr)
-                            }
-                        },
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Info,
-                            contentDescription = "Version info",
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                    // Dropdown arrow
                     Icon(
                         Icons.Default.ArrowDropDown,
                         contentDescription = if (expanded) "Collapse" else "Expand",
