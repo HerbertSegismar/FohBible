@@ -34,7 +34,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkRemove
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
@@ -54,6 +53,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBar
+import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -97,6 +97,7 @@ import com.example.fohbible.utils.BibleVersionUtils
 import com.example.fohbible.utils.SimpleVerseProcessor
 import kotlinx.coroutines.launch
 
+@Suppress("AssignedValueIsNeverRead")
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun BookmarksScreen(
@@ -251,20 +252,26 @@ fun BookmarksScreen(
                 exit = shrinkVertically(animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy))
             ) {
                 SearchBar(
-                    query = searchQuery,
-                    onQueryChange = { searchQuery = it },
-                    onSearch = { searchActive = false },
-                    active = searchActive,
-                    onActiveChange = { searchActive = it },
-                    placeholder = { Text("Search in bookmarks...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { searchQuery = "" }) {
-                                Icon(Icons.Default.Close, contentDescription = "Clear")
+                    inputField = {
+                        SearchBarDefaults.InputField(
+                            query = searchQuery,
+                            onQueryChange = { searchQuery = it },
+                            onSearch = { searchActive = false },
+                            expanded = searchActive,
+                            onExpandedChange = { searchActive = it },
+                            placeholder = { Text("Search in bookmarks...") },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                            trailingIcon = {
+                                if (searchQuery.isNotEmpty()) {
+                                    IconButton(onClick = { searchQuery = "" }) {
+                                        Icon(Icons.Default.Close, contentDescription = "Clear")
+                                    }
+                                }
                             }
-                        }
+                        )
                     },
+                    expanded = searchActive,
+                    onExpandedChange = { searchActive = it },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -354,8 +361,10 @@ fun BookmarksScreen(
         if (showSortOptions) {
             SortOptionsDialog(
                 currentSortOrder = sortOrder,
-                onSortOrderSelected = { sortOrder = it
-                    showSortOptions = false },
+                onSortOrderSelected = {
+                    sortOrder = it
+                    showSortOptions = false
+                },
                 onDismiss = { showSortOptions = false }
             )
         }
@@ -444,13 +453,10 @@ fun SwipeToDeleteBookmarkItem(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) {
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
             } else {
-                MaterialTheme.colorScheme.surfaceVariant
+                MaterialTheme.colorScheme.primaryContainer
             }
-        ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isSelected) 8.dp else 2.dp
         )
     ) {
         Column(
@@ -489,8 +495,8 @@ fun SwipeToDeleteBookmarkItem(
                             modifier = Modifier.size(32.dp)
                         ) {
                             Icon(
-                                Icons.Default.BookmarkRemove,
-                                contentDescription = "Remove Bookmark",
+                                Icons.Default.Delete,
+                                contentDescription = "Delete Bookmark",
                                 tint = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.size(20.dp)
                             )
