@@ -5,11 +5,10 @@ data class PassageSelection(
     val bookName: String,
     val chapter: Int,
     val verse: Int? = null,
-    val verseEnd: Int? = null,
-    val endChapter: Int? = null
-) {
+    var verseEnd: Int? = null,
+    var chapterEnd: Int? = null
+)
 
-}
 data class Verse(
     val verseNumber: Int,
     val text: String,

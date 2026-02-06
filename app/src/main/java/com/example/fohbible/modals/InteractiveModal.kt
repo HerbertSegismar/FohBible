@@ -27,6 +27,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -77,7 +78,7 @@ fun sanitizeHtmlContent(content: String?): String {
         sanitized = sanitized.take(ppEndIndex + "</pp>".length)
     }
     // 2. Remove all JavaScript code (script tags and inline event handlers)
-    sanitized = sanitized.replace(Regex("<script[^>]*>.*?</script>", RegexOption.DOT_MATCHES_ALL), "")
+    sanitized = sanitized.replace(Regex("<script[\\s\\S]*?</script>", RegexOption.DOT_MATCHES_ALL), "")
     // 3. Remove all on* event handlers
     sanitized = sanitized.replace(Regex("\\s+on\\w+\\s*=\\s*\"[^\"]*\""), "")
     sanitized = sanitized.replace(Regex("\\s+on\\w+\\s*=\\s*'[^']*'"), "")
@@ -153,11 +154,25 @@ fun parseVerseLink(href: String, linkText: String): PassageSelection? {
 
 fun fetchVerses(passage: PassageSelection, db: DatabaseHelper?): List<Verse> {
     if (db == null) return emptyList()
-    val verses = db.getVerses(passage.bookNumber, passage.chapter)
-    val start = passage.verse ?: return emptyList()
-    val end = passage.verseEnd ?: start
-    val selectedVerses = verses.filter { it.verseNumber in start..end }
-    return selectedVerses
+    val verses = mutableListOf<Verse>()
+    val startChapter = passage.chapter
+    val endChapter = passage.chapterEnd ?: passage.chapter
+    // Cap endChapter to book's max chapters
+    val maxChapters = BibleData.getBookByCustomNumber(passage.bookNumber)?.chapters ?: endChapter
+    val cappedEndChapter = minOf(endChapter, maxChapters)
+    val startVerse = passage.verse ?: 1
+    for (ch in startChapter..cappedEndChapter) {
+        val chapterStartVerse = if (ch == startChapter) startVerse else 1
+        val chapterEndVerse = if (ch == cappedEndChapter) {
+            passage.verseEnd ?: if (passage.chapterEnd == null) chapterStartVerse else db.getVerseCount(passage.bookNumber, ch)
+        } else {
+            db.getVerseCount(passage.bookNumber, ch)
+        }
+        val chVerses = db.getVerses(passage.bookNumber, ch).filter { it.verseNumber in chapterStartVerse..chapterEndVerse }
+        val updatedVerses = chVerses.map { Verse(it.verseNumber, it.text, passage.bookName, ch) }
+        verses.addAll(updatedVerses)
+    }
+    return verses
 }
 
 fun levenshteinDistance(s1: String, s2: String): Int {
@@ -419,12 +434,30 @@ fun InteractiveModal(
                         }
                         result
                     }
+                    var currentBatch by remember(verses) { mutableIntStateOf(50) } // Initial batch size
+                    val showChapterHeaders = remember(verses) {
+                        verses.mapNotNull { it.chapter }.distinct().size > 1
+                    }
                     Column(
                         modifier = Modifier
                             .verticalScroll(rememberScrollState())
                             .padding(bottom = 8.dp)
                     ) {
-                        verses.forEach { verse ->
+                        var lastChapter: Int? = null
+                        verses.take(currentBatch).forEach { verse ->
+                            if (showChapterHeaders && verse.chapter != lastChapter) {
+                                Text(
+                                    text = "Chapter ${verse.chapter}",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp),
+                                    fontFamily = currentFontFamily
+                                )
+                                lastChapter = verse.chapter
+                            }
                             val processedVerse = processedVerses[verse.verseNumber]
                             if (processedVerse != null) {
                                 Column(
@@ -486,6 +519,14 @@ fun InteractiveModal(
                                 }
                             }
                         }
+                        if (currentBatch < verses.size) {
+                            TextButton(
+                                onClick = { currentBatch += 50 },
+                                modifier = Modifier.align(androidx.compose.ui.Alignment.CenterHorizontally)
+                            ) {
+                                Text("Load More")
+                            }
+                        }
                     }
                 } else {
                     AndroidView(
@@ -527,8 +568,23 @@ fun InteractiveModal(
                                     if (passage != null) {
                                         clickableSpan = object : ClickableSpan() {
                                             override fun onClick(widget: View) {
+                                                // Detect and handle multi-chapter reinterpretation
+                                                val verseStart = passage.verse ?: return
+                                                val verseEndTemp = passage.verseEnd
+                                                if (verseEndTemp != null) {
+                                                    val maxVerse = databaseHelper?.getVerseCount(passage.bookNumber, passage.chapter) ?: 0
+                                                    if (verseEndTemp !in verseStart..maxVerse) {
+                                                        passage.chapterEnd = verseEndTemp
+                                                        passage.verseEnd = null // To end of final chapter
+                                                    }
+                                                }
                                                 val verses = fetchVerses(passage, databaseHelper)
-                                                val newTitle = "${passage.bookName} ${passage.chapter}:${passage.verse}" + if (passage.verseEnd != null) "-${passage.verseEnd}" else ""
+                                                val rangeStr = if (passage.chapterEnd != null) {
+                                                    "${passage.verse}-Ch${passage.chapterEnd}"
+                                                } else {
+                                                    "${passage.verse}" + (passage.verseEnd?.let { "-$it" } ?: "")
+                                                }
+                                                val newTitle = "${passage.bookName} ${passage.chapter}:$rangeStr"
                                                 stack.add(ModalPage(newTitle, "verses", verses = verses, passage = passage))
                                             }
                                         }
@@ -544,8 +600,23 @@ fun InteractiveModal(
                                             if (passage != null) {
                                                 clickableSpan = object : ClickableSpan() {
                                                     override fun onClick(widget: View) {
+                                                        // Similar detection for multi-chapter
+                                                        val verseStart = passage.verse ?: return
+                                                        val verseEndTemp = passage.verseEnd
+                                                        if (verseEndTemp != null) {
+                                                            val maxVerse = databaseHelper?.getVerseCount(passage.bookNumber, passage.chapter) ?: 0
+                                                            if (verseEndTemp !in verseStart..maxVerse) {
+                                                                passage.chapterEnd = verseEndTemp
+                                                                passage.verseEnd = null
+                                                            }
+                                                        }
                                                         val verses = fetchVerses(passage, databaseHelper)
-                                                        val newTitle = "${passage.bookName} ${passage.chapter}:${passage.verse}" + if (passage.verseEnd != null) "-${passage.verseEnd}" else ""
+                                                        val rangeStr = if (passage.chapterEnd != null) {
+                                                            "${passage.verse}-Ch${passage.chapterEnd}"
+                                                        } else {
+                                                            "${passage.verse}" + (passage.verseEnd?.let { "-$it" } ?: "")
+                                                        }
+                                                        val newTitle = "${passage.bookName} ${passage.chapter}:$rangeStr"
                                                         stack.add(ModalPage(newTitle, "verses", verses = verses, passage = passage))
                                                     }
                                                 }
