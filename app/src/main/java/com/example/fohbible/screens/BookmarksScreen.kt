@@ -10,11 +10,8 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,6 +48,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
@@ -59,12 +57,9 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -74,8 +69,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -167,60 +160,13 @@ fun BookmarksScreen(
                     onShare = { shareVerses(context, selectedVerses) }
                 )
             } else {
-                TopAppBar(
-                    title = {
-                        Text(
-                            "Bookmarks (${bookmarkedVerses.size})",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    },
-                    actions = {
-                        IconButton(onClick = { searchActive = true }) {
-                            Icon(
-                                Icons.Default.Search,
-                                contentDescription = "Search",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        Box {
-                            IconButton(onClick = { showSortOptions = true }) {
-                                BadgedBox(
-                                    badge = {
-                                        if (sortOrder != SortOrder.DATE_ADDED) {
-                                            Badge(
-                                                modifier = Modifier.size(8.dp),
-                                                containerColor = MaterialTheme.colorScheme.primary
-                                            )
-                                        }
-                                    }
-                                ) {
-                                    Icon(
-                                        Icons.AutoMirrored.Filled.Sort,
-                                        contentDescription = "Sort",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                        }
-                        IconButton(onClick = { showFilterOptions = true }) {
-                            Icon(
-                                Icons.Default.FilterList,
-                                contentDescription = "Filter",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        IconButton(onClick = { multiSelectMode = true }) {
-                            Icon(
-                                Icons.Default.MoreVert,
-                                contentDescription = "More options",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        titleContentColor = MaterialTheme.colorScheme.primary
-                    )
+                NormalTopBar(
+                    bookmarksCount = bookmarkedVerses.size,
+                    onSearch = { searchActive = true },
+                    onSort = { showSortOptions = true },
+                    showSortBadge = sortOrder != SortOrder.DATE_ADDED,
+                    onFilter = { showFilterOptions = true },
+                    onMore = { multiSelectMode = true }
                 )
             }
         },
@@ -409,6 +355,83 @@ fun BookmarksScreen(
     }
 }
 
+@Composable
+fun NormalTopBar(
+    bookmarksCount: Int,
+    onSearch: () -> Unit,
+    onSort: () -> Unit,
+    showSortBadge: Boolean,
+    onFilter: () -> Unit,
+    onMore: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(4.dp)
+            .height(64.dp),
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "Bookmarks ($bookmarksCount)",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onSearch) {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = "Search",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Box {
+                    IconButton(onClick = onSort) {
+                        BadgedBox(
+                            badge = {
+                                if (showSortBadge) {
+                                    Badge(
+                                        modifier = Modifier.size(8.dp),
+                                        containerColor = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.Sort,
+                                contentDescription = "Sort",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+                IconButton(onClick = onFilter) {
+                    Icon(
+                        Icons.Default.FilterList,
+                        contentDescription = "Filter",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                IconButton(onClick = onMore) {
+                    Icon(
+                        Icons.Default.MoreVert,
+                        contentDescription = "More options",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun SwipeToDeleteBookmarkItem(
@@ -419,9 +442,6 @@ fun SwipeToDeleteBookmarkItem(
     onRemove: () -> Unit,
     onNavigate: () -> Unit
 ) {
-    var scale by remember { mutableFloatStateOf(1f) }
-    var rotation by remember { mutableFloatStateOf(0f) }
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -438,18 +458,7 @@ fun SwipeToDeleteBookmarkItem(
                         onToggleSelect()
                     }
                 }
-            )
-            .pointerInput(Unit) {
-                detectTransformGestures { _, _, zoom, _ ->
-                    scale *= zoom
-                    scale = scale.coerceIn(0.8f, 1.2f)
-                }
-            }
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-                rotationZ = rotation
-            },
+            ),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) {
@@ -573,13 +582,14 @@ fun MultiSelectTopBar(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(4.dp),
+            .shadow(4.dp)
+            .height(64.dp),
         color = MaterialTheme.colorScheme.primaryContainer
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -600,7 +610,9 @@ fun MultiSelectTopBar(
                     Icon(
                         Icons.Default.Share,
                         contentDescription = "Share",
-                        tint = if (selectedCount > 0) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        tint = if (selectedCount > 0) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(
+                            alpha = 0.38f
+                        )
                     )
                 }
                 IconButton(
@@ -610,7 +622,9 @@ fun MultiSelectTopBar(
                     Icon(
                         Icons.Default.Delete,
                         contentDescription = "Delete",
-                        tint = if (selectedCount > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.error.copy(alpha = 0.38f)
+                        tint = if (selectedCount > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.error.copy(
+                            alpha = 0.38f
+                        )
                     )
                 }
             }
@@ -825,39 +839,6 @@ enum class SortOrder(val displayName: String) {
     BOOK("By Book"),
     CHAPTER("By Chapter"),
     DATE_ADDED("Recently Added")
-}
-
-// Add these extension functions for better user experience
-@Composable
-fun RadioButton(
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .size(24.dp)
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .size(20.dp)
-                .clip(CircleShape)
-                .border(
-                    width = 2.dp,
-                    color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                    shape = CircleShape
-                )
-        )
-        if (selected) {
-            Box(
-                modifier = Modifier
-                    .size(12.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary)
-            )
-        }
-    }
 }
 
 // Helper functions remain the same

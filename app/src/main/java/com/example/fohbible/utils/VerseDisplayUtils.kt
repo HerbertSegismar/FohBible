@@ -102,7 +102,7 @@ class VerseTextProcessor(
         }
         // Generate cache key
         val cacheKey = buildCacheKey(
-            verseText, baseFontSize, textColor, isKjvPlus, isOldTestament, highlight, isHighlighted, options
+            verseText, baseFontSize, textColor, isKjvPlus, isOldTestament, highlight, isHighlighted, options, themeColors
         )
         // Check cache
         verseCache[cacheKey]?.let { cached ->
@@ -143,7 +143,8 @@ class VerseTextProcessor(
         isOldTestament: Boolean,
         highlight: String?,
         isHighlighted: Boolean,
-        options: ProcessingOptions
+        options: ProcessingOptions,
+        themeColors: ThemeColors
     ): String {
         return StringBuilder()
             .append(verseText.hashCode())
@@ -161,6 +162,8 @@ class VerseTextProcessor(
             .append(isHighlighted)
             .append("|")
             .append(options.hashCode())
+            .append("|")
+            .append(themeColors.hashCode())
             .toString()
     }
 
