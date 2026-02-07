@@ -406,7 +406,7 @@ class VerseTextProcessor(
                         isTextContainer = true,
                         textColor = themeColors.tagColor,
                         fontSizeMultiplier = 1.0f,
-                        baselineShift = BaselineShift(0.2f),
+                        baselineShift = BaselineShift.None,
                         currentTag = node.tag
                     )
 
@@ -448,7 +448,7 @@ class VerseTextProcessor(
         options: ProcessingOptions
     ) {
         val effectiveMultiplier = if (context.currentTag == "f" && isEncircled(node.content)) {
-            1.1f
+            1.25f
         } else {
             context.fontSizeMultiplier
         }
