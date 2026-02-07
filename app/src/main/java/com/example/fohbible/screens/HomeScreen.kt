@@ -1,6 +1,7 @@
 package com.example.fohbible.screens
 
 import android.content.Context
+import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import androidx.compose.foundation.Image
@@ -61,13 +62,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.fohbible.Footer
 import com.example.fohbible.MainActivity
+import com.example.fohbible.R
 import com.example.fohbible.data.BibleData
 import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.PassageSelection
 import com.example.fohbible.data.Verse
 import com.example.fohbible.utils.SimpleVerseProcessor
 import com.example.fohbible.MatrixNative
-import com.example.fohbible.R
+import kotlin.random.Random
 
 data class QuickAction(
     val title: String,
@@ -75,9 +77,12 @@ data class QuickAction(
     val color: Color
 )
 
-data class RecentReading(
+data class PopularDevotional(
     val title: String,
-    val preview: String
+    val preview: String,
+    val bookName: String,
+    val chapter: Int,
+    val verse: Int
 )
 
 @Composable
@@ -99,11 +104,14 @@ fun HomeScreen(
         }
     }
 
-    val recentReadings = listOf(
-        RecentReading("Psalm 23", "The Lord is my shepherd..."),
-        RecentReading("Matthew 6:9-13", "The Lord's Prayer"),
-        RecentReading("1 Corinthians 13", "The Love Chapter")
-    )
+    var popularDevotionals by remember { mutableStateOf<List<PopularDevotional>>(emptyList()) }
+
+    // Load random popular devotionals on first composition
+    LaunchedEffect(Unit) {
+        if (popularDevotionals.isEmpty()) {
+            popularDevotionals = getRandomDevotionals()
+        }
+    }
 
     val quickActions = listOf(
         QuickAction("Read Bible", Icons.Filled.Book, color = MaterialTheme.colorScheme.primary),
@@ -197,7 +205,10 @@ fun HomeScreen(
             QuickActionsGrid(actions = quickActions, onBibleClick = onBibleClick)
         }
         item {
-            RecentReadingsSection(readings = recentReadings)
+            PopularDevotionalsSection(
+                devotionals = popularDevotionals,
+                onNavigateToReader = onNavigateToReader
+            )
         }
         item { Spacer(modifier = Modifier.height(40.dp)) }
         item {
@@ -225,6 +236,7 @@ fun DailyVerseCard(
     onClick: (List<Verse>) -> Unit = {},
     databaseHelper: DatabaseHelper
 ) {
+    val context = LocalContext.current
     val isLoading = remember { mutableStateOf(false) }
     var isBookmarked by remember(verses) { mutableStateOf(false) }
 
@@ -381,7 +393,12 @@ fun DailyVerseCard(
                                         append("${verse.bookName ?: ""} ${verse.chapter ?: 0}:${verse.verseNumber} $cleanedText\n")
                                     }
                                 }
-                                // Implement share logic
+                                val shareIntent = Intent().apply {
+                                    action = Intent.ACTION_SEND
+                                    putExtra(Intent.EXTRA_TEXT, shareText)
+                                    type = "text/plain"
+                                }
+                                context.startActivity(Intent.createChooser(shareIntent, "Share verses via"))
                             }
                         }
                 )
@@ -404,7 +421,6 @@ fun QuickActionsGrid(
         actions.forEach { action ->
             QuickActionItem(action = action, onClick = {
                 if (action.title == "Read Bible") onBibleClick()
-                // Add handlers for other actions if needed
             })
         }
     }
@@ -449,7 +465,10 @@ fun QuickActionItem(action: QuickAction, onClick: () -> Unit) {
 }
 
 @Composable
-fun RecentReadingsSection(readings: List<RecentReading>) {
+fun PopularDevotionalsSection(
+    devotionals: List<PopularDevotional>,
+    onNavigateToReader: (PassageSelection) -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -461,20 +480,18 @@ fun RecentReadingsSection(readings: List<RecentReading>) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Recent Readings",
+                text = "Popular Devotionals",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
-            Text(
-                text = "See All",
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.clickable { /* Navigate to all readings */ }
-            )
         }
         Spacer(modifier = Modifier.height(12.dp))
-        readings.forEachIndexed { index, reading ->
-            RecentReadingItem(reading = reading)
-            if (index < readings.lastIndex) {
+        devotionals.forEachIndexed { index, devotional ->
+            DevotionalItem(
+                devotional = devotional,
+                onNavigateToReader = onNavigateToReader
+            )
+            if (index < devotionals.lastIndex) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             }
         }
@@ -482,11 +499,23 @@ fun RecentReadingsSection(readings: List<RecentReading>) {
 }
 
 @Composable
-fun RecentReadingItem(reading: RecentReading) {
+fun DevotionalItem(
+    devotional: PopularDevotional,
+    onNavigateToReader: (PassageSelection) -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { /* Navigate to Reader */ }
+            .clickable {
+                val bookNumber = BibleData.getBookByName(devotional.bookName)?.customNumber ?: 1
+                val passage = PassageSelection(
+                    bookNumber = bookNumber,
+                    bookName = devotional.bookName,
+                    chapter = devotional.chapter,
+                    verse = devotional.verse
+                )
+                onNavigateToReader(passage)
+            }
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -517,12 +546,12 @@ fun RecentReadingItem(reading: RecentReading) {
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
-                text = reading.title,
+                text = devotional.title,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
             Text(
-                text = reading.preview,
+                text = devotional.preview,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                 maxLines = 2,
@@ -539,14 +568,12 @@ fun RecentReadingItem(reading: RecentReading) {
     }
 }
 
-// Helper function to load random verses
 fun loadRandomVerses(
     context: Context,
     databaseHelper: DatabaseHelper?,
     onComplete: (List<Verse>) -> Unit
 ) {
     if (databaseHelper != null) {
-        // Use existing database helper
         Thread {
             val verses = databaseHelper.getRandomVerses()
             Handler(Looper.getMainLooper()).post {
@@ -554,7 +581,6 @@ fun loadRandomVerses(
             }
         }.start()
     } else {
-        // Create new database helper
         Thread {
             val dbHelper = DatabaseHelper(
                 context as MainActivity,
@@ -569,7 +595,33 @@ fun loadRandomVerses(
     }
 }
 
-// Helper functions for bookmarks (assume DatabaseHelper has addBookmark, removeBookmark, isBookmarked methods)
+fun getRandomDevotionals(): List<PopularDevotional> {
+    val allDevotionals = listOf(
+        PopularDevotional("Psalm 23", "The Lord is my shepherd...", "Psalms", 23, 1),
+        PopularDevotional("The Lord's Prayer", "Our Father in heaven...", "Matthew", 6, 9),
+        PopularDevotional("The Love Chapter", "Love is patient, love is kind...", "1 Corinthians", 13, 1),
+        PopularDevotional("John 3:16", "For God so loved the world...", "John", 3, 16),
+        PopularDevotional("The Beatitudes", "Blessed are the poor in spirit...", "Matthew", 5, 3),
+        PopularDevotional("The Good Samaritan", "A man was going down from Jerusalem...", "Luke", 10, 30),
+        PopularDevotional("The Prodigal Son", "There was a man who had two sons...", "Luke", 15, 11),
+        PopularDevotional("The Sermon on the Mount", "Seeing the crowds, he went up on the mountain...", "Matthew", 5, 1),
+        PopularDevotional("The Great Commandment", "You shall love the Lord your God...", "Matthew", 22, 37),
+        PopularDevotional("The Golden Rule", "So whatever you wish that others would do to you...", "Matthew", 7, 12),
+        PopularDevotional("I Can Do All Things", "I can do all things through him who strengthens me...", "Philippians", 4, 13),
+        PopularDevotional("God's Plans for You", "For I know the plans I have for you...", "Jeremiah", 29, 11),
+        PopularDevotional("Trust in the Lord", "Trust in the Lord with all your heart...", "Proverbs", 3, 5),
+        PopularDevotional("All Things Work Together for Good", "And we know that for those who love God all things work together for good...", "Romans", 8, 28),
+        PopularDevotional("Wait for the Lord", "But they who wait for the Lord shall renew their strength...", "Isaiah", 40, 31),
+        PopularDevotional("Saved by Grace", "For by grace you have been saved through faith...", "Ephesians", 2, 8),
+        PopularDevotional("Lamp to My Feet", "Your word is a lamp to my feet...", "Psalms", 119, 105),
+        PopularDevotional("Be Strong and Courageous", "Have I not commanded you? Be strong and courageous...", "Joshua", 1, 9),
+        PopularDevotional("Come to Me", "Come to me, all who labor and are heavy laden...", "Matthew", 11, 28),
+        PopularDevotional("Rejoice Always", "Rejoice always, pray without ceasing...", "1 Thessalonians", 5, 16),
+        PopularDevotional("The Alpha & Omega", "Behold, He comes with clouds...", "Revelation", 1, 7)
+    )
+    return allDevotionals.shuffled(Random).take(5)
+}
+
 private fun saveToBookmarks(verses: List<Verse>, databaseHelper: DatabaseHelper) {
     Thread {
         verses.forEach { verse ->
