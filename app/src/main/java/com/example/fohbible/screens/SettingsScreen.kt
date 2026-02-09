@@ -1,3 +1,4 @@
+
 package com.example.fohbible.screens
 
 import android.content.Intent
@@ -109,7 +110,8 @@ fun SettingsScreen() {
     var showColorWheel by remember { mutableStateOf(false) }
     var customColor by remember { mutableStateOf(viewModel.customColor) }
     var isUsingCustomColor by remember { mutableStateOf(viewModel.isCustomColor) }
-
+    var showLightOverlayColorWheel by remember { mutableStateOf(false) }
+    var showDarkOverlayColorWheel by remember { mutableStateOf(false) }
     // Refresh database states
     var showRefreshConfirmDialog by remember { mutableStateOf(false) }
     var showRefreshResultDialog by remember { mutableStateOf(false) }
@@ -166,7 +168,6 @@ fun SettingsScreen() {
                         viewModel.currentVersionAbbr = abbr
                     }
                 )
-
                 SettingsItem(
                     title = "Multi-Version Display",
                     subtitle = "Show two Bible versions side by side"
@@ -180,7 +181,6 @@ fun SettingsScreen() {
                         )
                     )
                 }
-
                 if (viewModel.multiVersion) {
                     Spacer(modifier = Modifier.height(8.dp))
                     BibleVersionSelector(
@@ -189,8 +189,7 @@ fun SettingsScreen() {
                         description = if (viewModel.secondaryVersionAbbr.isNotEmpty()) {
                             BibleVersionUtils.versionMap.entries
                                 .find { it.value == viewModel.secondaryVersionAbbr }
-                                ?.let { BibleVersionUtils.descriptionMap[it.key] }
-                                ?: "Bible translation"
+                                ?.let { BibleVersionUtils.descriptionMap[it.key] } ?: "Bible translation"
                         } else {
                             "Select a secondary version"
                         },
@@ -250,7 +249,6 @@ fun SettingsScreen() {
                         )
                     )
                 }
-
                 Column {
                     Text("Color Scheme", style = MaterialTheme.typography.labelLarge)
                     Spacer(Modifier.height(8.dp))
@@ -277,9 +275,7 @@ fun SettingsScreen() {
                         }
                     }
                 }
-
                 Spacer(Modifier.height(8.dp))
-
                 Column {
                     Text("Font Family", style = MaterialTheme.typography.labelLarge)
                     Spacer(Modifier.height(8.dp))
@@ -293,7 +289,6 @@ fun SettingsScreen() {
                         }
                     }
                 }
-
                 SettingsItem(
                     title = "Font Size",
                     subtitle = "Adjust text size for better readability",
@@ -318,7 +313,6 @@ fun SettingsScreen() {
                         }
                     }
                 }
-
                 SettingsItem(
                     title = "Custom Background",
                     subtitle = "Add your own photo as background"
@@ -330,7 +324,6 @@ fun SettingsScreen() {
                         Icon(Icons.Default.AddCircleOutline, contentDescription = "Add custom background")
                     }
                 }
-
                 SettingsItem(
                     title = "Background Texture",
                     subtitle = "Choose from built-in textures",
@@ -338,7 +331,6 @@ fun SettingsScreen() {
                 ) {
                     Icon(Icons.Default.ChevronRight, contentDescription = null)
                 }
-
                 SettingsItem(
                     title = "Overlay Opacity",
                     subtitle = "Adjust the overlay transparency"
@@ -358,6 +350,32 @@ fun SettingsScreen() {
                                     )
                             )
                         },
+                    )
+                }
+                SettingsItem(
+                    title = "Light Overlay Color",
+                    subtitle = "Overlay color for light theme"
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(viewModel.lightOverlayColor)
+                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                            .clickable { showLightOverlayColorWheel = true }
+                    )
+                }
+                SettingsItem(
+                    title = "Dark Overlay Color",
+                    subtitle = "Overlay color for dark theme"
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(viewModel.darkOverlayColor)
+                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                            .clickable { showDarkOverlayColorWheel = true }
                     )
                 }
             }
@@ -382,7 +400,6 @@ fun SettingsScreen() {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh databases")
                     }
                 }
-
                 Text(
                     text = "This will recopy all Bible versions and dictionaries from the app assets. Useful if databases become corrupted.",
                     style = MaterialTheme.typography.bodySmall,
@@ -393,9 +410,7 @@ fun SettingsScreen() {
             if (showRefreshConfirmDialog) {
                 AlertDialog(
                     onDismissRequest = { showRefreshConfirmDialog = false },
-                    title = {
-                        Text("Refresh All Databases", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    },
+                    title = { Text("Refresh All Databases", fontWeight = FontWeight.Bold, fontSize = 16.sp) },
                     text = {
                         Column {
                             Text("This action will:")
@@ -436,7 +451,6 @@ fun SettingsScreen() {
                     }
                 )
             }
-
             // Refresh Result Dialog
             if (showRefreshResultDialog) {
                 AlertDialog(
@@ -448,9 +462,8 @@ fun SettingsScreen() {
                     },
                     title = {
                         Text(
-                            if (viewModel.isRefreshingDatabases) "Refreshing Databases..."
-                            else if (viewModel.lastRefreshSuccess) "Refresh Complete"
-                            else "Refresh Incomplete", fontSize = 16.sp
+                            if (viewModel.isRefreshingDatabases) "Refreshing Databases..." else if (viewModel.lastRefreshSuccess) "Refresh Complete" else "Refresh Incomplete",
+                            fontSize = 16.sp
                         )
                     },
                     text = {
@@ -477,7 +490,7 @@ fun SettingsScreen() {
                                     Icon(
                                         Icons.Default.Refresh,
                                         contentDescription = "Success",
-                                        tint =  MaterialTheme.colorScheme.primary,
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(40.dp)
                                     )
                                     Spacer(modifier = Modifier.height(12.dp))
@@ -557,6 +570,8 @@ fun SettingsScreen() {
                             viewModel.customTextureUri = null
                             viewModel.bgImageIndex = 0
                             viewModel.overlayOpacity = 0.5f
+                            viewModel.lightOverlayColor = Color(0xFFF5F5DC)
+                            viewModel.darkOverlayColor = Color(0xFF100F21)
                         },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
@@ -640,13 +655,33 @@ fun SettingsScreen() {
         )
     }
 
+    if (showLightOverlayColorWheel) {
+        ColorWheelDialog(
+            onDismissRequest = { showLightOverlayColorWheel = false },
+            onColorSelected = { color ->
+                viewModel.lightOverlayColor = color
+                showLightOverlayColorWheel = false
+            },
+            initialColor = viewModel.lightOverlayColor
+        )
+    }
+
+    if (showDarkOverlayColorWheel) {
+        ColorWheelDialog(
+            onDismissRequest = { showDarkOverlayColorWheel = false },
+            onColorSelected = { color ->
+                viewModel.darkOverlayColor = color
+                showDarkOverlayColorWheel = false
+            },
+            initialColor = viewModel.darkOverlayColor
+        )
+    }
+
     // Confirmation Dialog for Database Refresh
     if (showRefreshConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showRefreshConfirmDialog = false },
-            title = {
-                Text("Refresh Databases", fontWeight = FontWeight.Bold)
-            },
+            title = { Text("Refresh Databases", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     Text("This action will:")
@@ -696,8 +731,7 @@ fun SettingsScreen() {
             },
             title = {
                 Text(
-                    if (viewModel.isRefreshingDatabases) "Refreshing Databases..."
-                    else "Refresh Complete"
+                    if (viewModel.isRefreshingDatabases) "Refreshing Databases..." else "Refresh Complete"
                 )
             },
             text = {
@@ -878,7 +912,9 @@ fun VersionInfoDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
         }
     )
 }
@@ -1096,7 +1132,9 @@ fun BgModal(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel")
+                    }
                 }
             }
         }
@@ -1143,10 +1181,14 @@ fun FontModal(
             TextButton(
                 onClick = onConfirm,
                 enabled = tempSize.toIntOrNull()?.let { it in MIN_FONT_SIZE..MAX_FONT_SIZE } ?: false
-            ) { Text("Apply") }
+            ) {
+                Text("Apply")
+            }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
         }
     )
 }

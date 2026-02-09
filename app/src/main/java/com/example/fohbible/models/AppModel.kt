@@ -24,6 +24,7 @@ import kotlinx.coroutines.withContext
 import java.io.IOException
 
 class AppViewModel : ViewModel() {
+
     var showSecondaryNavigationModal by mutableStateOf(false)
     var fontSize by mutableIntStateOf(18)
     var darkTheme by mutableStateOf(false)
@@ -57,6 +58,8 @@ class AppViewModel : ViewModel() {
     var bgImageIndex by mutableIntStateOf(0)
     var customTextureUri by mutableStateOf<String?>(null)
     var overlayOpacity by mutableFloatStateOf(0.15f)
+    var lightOverlayColor by mutableStateOf(Color(0xFFF5F5DC))
+    var darkOverlayColor by mutableStateOf(Color(0xFF100F21))
     var selectedDictionary by mutableStateOf("atsbd")
 
     val isOldTestament: Boolean
@@ -68,6 +71,8 @@ class AppViewModel : ViewModel() {
     var isRefreshingDatabases by mutableStateOf(false)
     var lastRefreshMessage by mutableStateOf("")
     var lastRefreshSuccess by mutableStateOf(false)
+
+    var showReaderOverlayColorWheel by mutableStateOf(false)
 
     fun refreshDatabases(context: Context) {
         isRefreshingDatabases = true

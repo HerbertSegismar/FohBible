@@ -183,6 +183,7 @@ fun ReaderScreen(
     val oswaldFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/Oswald.ttf")) }
     val poppinsFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/Poppins.ttf")) }
     val rubikGlitchFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/RubikGlitch.ttf")) }
+
     val currentFontFamily = when (viewModel.selectedFontFamily) {
         "system" -> systemFont
         "oswald" -> oswaldFont
@@ -480,6 +481,7 @@ fun ReaderScreen(
         val selVerse = selectedVerse
         val selPassage = selectedPassage
         val selIsPrimary = selectedIsPrimary
+
         if (showVerseOptions && selVerse != null && selPassage != null) {
             val db = if (selIsPrimary) databaseHelper else secondaryDatabaseHelper
             val fullVerse = selVerse.copy(bookName = selPassage.bookName, chapter = selPassage.chapter)
@@ -1068,6 +1070,7 @@ private fun IndependentMultiVersionReader(
         initialPage = primaryOffset,
         pageCount = { primaryPageCount }
     )
+
     val secondaryPagerState = rememberPagerState(
         initialPage = secondaryOffset,
         pageCount = { secondaryPageCount }
@@ -1204,6 +1207,7 @@ private fun IndependentMultiVersionReader(
                     }
                 }
             }
+
             HorizontalPager(
                 state = secondaryPagerState,
                 modifier = Modifier.weight(1f),
@@ -1291,6 +1295,7 @@ private fun IndependentMultiVersionReader(
                     }
                 }
             }
+
             HorizontalPager(
                 state = secondaryPagerState,
                 modifier = Modifier.weight(1f),
@@ -1377,10 +1382,14 @@ fun ChapterView(
         val result = mutableMapOf<Int, ProcessedVerse>()
         for (verse in verses) {
             val onStrongsLocal = if (onStrongsPress != null) {
-                { strongNumber: String -> onStrongsPress.invoke(strongNumber, passage.bookNumber, isPrimary) }
+                { strongNumber: String ->
+                    onStrongsPress.invoke(strongNumber, passage.bookNumber, isPrimary)
+                }
             } else null
             val onTagLocal = if (onTagPress != null) {
-                { marker: String -> onTagPress.invoke(marker, passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary) }
+                { marker: String ->
+                    onTagPress.invoke(marker, passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary)
+                }
             } else null
             val isPersistentHighlighted = databaseHelper?.isHighlighted(verse.copy(bookName = passage.bookName, chapter = passage.chapter)) ?: false
             val processed = processor.processVerse(
@@ -1431,7 +1440,7 @@ fun ChapterView(
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
-            val overlayColor = if (viewModel.darkTheme) Color(0xFF100F21).copy(alpha = viewModel.overlayOpacity) else Color(0xFFF5F5DC).copy(alpha = viewModel.overlayOpacity)
+            val overlayColor = (if (viewModel.darkTheme) viewModel.darkOverlayColor else viewModel.lightOverlayColor).copy(alpha = viewModel.overlayOpacity)
             Box(
                 modifier = Modifier
                     .fillMaxSize()
