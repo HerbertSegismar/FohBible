@@ -156,7 +156,6 @@ fun SettingsScreen() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-
         item {
             SettingsSection(title = "Bible Version", subtitle = "Choose your preferred translation") {
                 BibleVersionSelector(
@@ -236,7 +235,6 @@ fun SettingsScreen() {
                 }
             }
         }
-
         item {
             SettingsSection(title = "Reader Settings", subtitle = "Customize reading experience") {
                 SettingsItem(title = "Dark Mode", subtitle = "Toggle between light and dark themes") {
@@ -380,7 +378,6 @@ fun SettingsScreen() {
                 }
             }
         }
-
         item {
             SettingsSection(
                 title = "Database Management",
@@ -525,7 +522,6 @@ fun SettingsScreen() {
                 )
             }
         }
-
         item {
             SettingsSection(title = "More Options", subtitle = "Additional preferences") {
                 SettingsItem(
@@ -545,7 +541,6 @@ fun SettingsScreen() {
                 }
             }
         }
-
         item {
             SettingsSection(title = "Quick Actions", subtitle = "Common tasks") {
                 Row(
@@ -777,7 +772,6 @@ fun BibleVersionSelector(
     onVersionSelected: (String, String) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = title,

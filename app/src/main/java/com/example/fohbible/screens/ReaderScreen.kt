@@ -1,4 +1,4 @@
-@file:Suppress("AssignedValueIsNeverRead")
+@file:Suppress("AssignedValueIsNeverRead", "VariableNeverRead")
 
 package com.example.fohbible.screens
 
