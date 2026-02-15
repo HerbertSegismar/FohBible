@@ -10,6 +10,13 @@ import java.io.FileOutputStream
 import java.util.Locale.getDefault
 import java.util.Random
 
+data class Subheading(val verse: Int, val text: String)
+
+sealed class VerseContent {
+    data class SubheadingVal(val subheading: Subheading) : VerseContent()
+    data class VerseVal(val verse: Verse) : VerseContent()
+}
+
 class DatabaseHelper(private val context: Context, val databaseName: String) {
     var database: SQLiteDatabase? = null
     private val tag = "DatabaseHelper"
@@ -107,7 +114,11 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
     private fun copyDatabaseFromAssets(dbFile: File) {
         try {
             dbFile.parentFile?.mkdirs()
-            val assetPath = if (databaseName.endsWith("dictionary.sqlite3")) "dictionaries/$databaseName" else "databases/$databaseName"
+            val assetPath = when {
+                databaseName.endsWith("dictionary.sqlite3") -> "dictionaries/$databaseName"
+                databaseName.endsWith("kjvsubheadings.sqlite3") -> "subheadings/$databaseName"
+                else -> "databases/$databaseName"
+            }
             context.assets.open(assetPath).use { inputStream ->
                 FileOutputStream(dbFile).use { outputStream ->
                     inputStream.copyTo(outputStream)
@@ -122,7 +133,8 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
         var count = 0
         try {
             val query = """
-                SELECT COUNT(*) FROM $VERSES_TABLE WHERE $COLUMN_BOOK_NUMBER = ? AND $COLUMN_CHAPTER = ?
+                SELECT COUNT(*) FROM $VERSES_TABLE 
+                WHERE $COLUMN_BOOK_NUMBER = ? AND $COLUMN_CHAPTER = ?
             """.trimIndent()
             val cursor = database?.rawQuery(query, arrayOf(bookNumber.toString(), chapter.toString()))
             cursor?.use {
@@ -170,6 +182,37 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
         return verses
     }
 
+    // New method for subheadings
+    fun getSubheadings(bookNumber: Int, chapter: Int): List<Subheading> {
+        val subheadings = mutableListOf<Subheading>()
+        try {
+            if (database == null || !database!!.isOpen) {
+                return subheadings
+            }
+            val query = """
+                SELECT verse, subheading FROM subheadings 
+                WHERE book_number = ? AND chapter = ? 
+                ORDER BY verse ASC
+            """.trimIndent()
+            val cursor = database?.rawQuery(query, arrayOf(bookNumber.toString(), chapter.toString()))
+            cursor?.use {
+                while (it.moveToNext()) {
+                    try {
+                        val verse = it.getInt(it.getColumnIndexOrThrow("verse"))
+                        val text = it.getString(it.getColumnIndexOrThrow("subheading"))
+                        subheadings.add(Subheading(verse, text))
+                    } catch (e: Exception) {
+                        Log.e(tag, "Error reading subheading: ${e.message}")
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(tag, "Error in getSubheadings: ${e.message}")
+            e.printStackTrace()
+        }
+        return subheadings
+    }
+
     fun getRandomVerses(): List<Verse> {
         val verses = mutableListOf<Verse>()
         try {
@@ -189,7 +232,8 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             val numberOfVerses = minOf(random.nextInt(5) + 1, verseCount)
             val startVerse = random.nextInt(verseCount - numberOfVerses + 1) + 1
             val query = """
-                SELECT $COLUMN_VERSE, $COLUMN_TEXT FROM $VERSES_TABLE 
+                SELECT $COLUMN_VERSE, $COLUMN_TEXT 
+                FROM $VERSES_TABLE 
                 WHERE $COLUMN_BOOK_NUMBER = ? AND $COLUMN_CHAPTER = ? 
                 AND $COLUMN_VERSE >= ? AND $COLUMN_VERSE < ? + ? 
                 ORDER BY $COLUMN_VERSE ASC
@@ -256,7 +300,9 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                 arrayOf(COLUMN_VERSE_NUMBER),
                 "$COLUMN_BOOK_NAME = ? AND $COLUMN_CHAPTER = ? AND $COLUMN_VERSE_NUMBER = ?",
                 arrayOf(verse.bookName, verse.chapter.toString(), verse.verseNumber.toString()),
-                null, null, null
+                null,
+                null,
+                null
             )
             cursor?.use {
                 exists = it.count > 0
@@ -320,7 +366,9 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                 arrayOf(COLUMN_VERSE_NUMBER),
                 "$COLUMN_BOOK_NAME = ? AND $COLUMN_CHAPTER = ? AND $COLUMN_VERSE_NUMBER = ?",
                 arrayOf(verse.bookName, verse.chapter.toString(), verse.verseNumber.toString()),
-                null, null, null
+                null,
+                null,
+                null
             )
             cursor?.use {
                 exists = it.count > 0
@@ -391,4 +439,25 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
         database?.close()
         Log.d(tag, "Database closed")
     }
+}
+
+fun getVersesWithSubheadings(
+    versesHelper: DatabaseHelper,
+    subheadingsHelper: DatabaseHelper,
+    bookNumber: Int,
+    chapter: Int
+): List<VerseContent> {
+    val verses = versesHelper.getVerses(bookNumber, chapter)
+    val subheadings = subheadingsHelper.getSubheadings(bookNumber, chapter)
+    // Use a map keyed by verse number to group content
+    val contentMap: MutableMap<Int, MutableList<VerseContent>> = mutableMapOf()
+    verses.forEach { verse ->
+        contentMap.getOrPut(verse.verseNumber) { mutableListOf() }.add(VerseContent.VerseVal(verse))
+    }
+    subheadings.forEach { subheading ->
+        // Insert subheading before the verse(s) at that position
+        contentMap.getOrPut(subheading.verse) { mutableListOf() }.add(0, VerseContent.SubheadingVal(subheading))
+    }
+    // Flatten into a sorted list by verse number
+    return contentMap.toSortedMap().flatMap { it.value }
 }
