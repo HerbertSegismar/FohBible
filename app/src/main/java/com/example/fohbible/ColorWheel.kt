@@ -89,13 +89,10 @@ fun ColorWheelDialog(
     onColorSelected: (Color) -> Unit,
     initialColor: Color = ThemeManager.primaryColor
 ) {
-    // State for color selection
     var selectedColor by remember { mutableStateOf(initialColor) }
     var brightness by remember { mutableFloatStateOf(initialColor.getBrightness()) }
     var saturation by remember { mutableFloatStateOf(initialColor.getSaturation()) }
     val initialHex = "#${(initialColor.toArgb() and 0xFFFFFF).toString(16).padStart(6, '0').uppercase()}"
-
-    // Use TextFieldValue to control cursor position
     var hexTextFieldValue by remember {
         mutableStateOf(TextFieldValue(initialHex, selection = TextRange(initialHex.length)))
     }
@@ -113,8 +110,6 @@ fun ColorWheelDialog(
             Color(0xFF6B7280), Color(0xFF000000), Color(0xFFFFFFFF)
         )
     }
-
-    // Track scroll state
     val scrollState = rememberScrollState()
 
     Dialog(
@@ -154,14 +149,12 @@ fun ColorWheelDialog(
                             .verticalScroll(scrollState),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        // Unified content container
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
                             verticalArrangement = Arrangement.spacedBy(20.dp)
                         ) {
-                            // Color Wheel Section
                             ColorWheelSection(
                                 selectedColor = selectedColor,
                                 brightness = brightness,
@@ -173,8 +166,6 @@ fun ColorWheelDialog(
                                     isValidHex = true
                                 }
                             )
-
-                            // Color Preview and Hex Input
                             ColorPreviewSection(
                                 selectedColor = selectedColor,
                                 hexTextFieldValue = hexTextFieldValue,
@@ -182,16 +173,12 @@ fun ColorWheelDialog(
                                 lightBackground = lightBackground,
                                 darkBackground = darkBackground,
                                 onHexTextFieldValueChange = { newValue ->
-                                    // Process the input to maintain the "#" prefix
                                     val processed = processHexInput(newValue.text, newValue.selection)
 
                                     hexTextFieldValue = processed
-
-                                    // Validate and update color
                                     if (processed.text.length > 1 && validateHex(processed.text)) {
                                         try {
                                             val colorInt = if (processed.text.length == 4) {
-                                                // Handle shorthand hex (#RGB)
                                                 val hexValue = processed.text.substring(1)
                                                 val expanded = "#${hexValue[0]}${hexValue[0]}${hexValue[1]}${hexValue[1]}${hexValue[2]}${hexValue[2]}"
                                                 expanded.toColorInt()
@@ -212,8 +199,6 @@ fun ColorWheelDialog(
                                     }
                                 }
                             )
-
-                            // Color Adjustments
                             ColorAdjustmentsSection(
                                 brightness = brightness,
                                 saturation = saturation,
@@ -231,8 +216,6 @@ fun ColorWheelDialog(
                                     hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
                                 }
                             )
-
-                            // Color Palette
                             ColorPaletteSection(
                                 colorPalette = colorPalette,
                                 selectedColor = selectedColor,
@@ -245,8 +228,6 @@ fun ColorWheelDialog(
                                     isValidHex = true
                                 }
                             )
-
-                            // Action Buttons
                             ActionButtonsSection(
                                 selectedColor = selectedColor,
                                 isValidHex = isValidHex,
@@ -267,15 +248,9 @@ fun ColorWheelDialog(
         }
     }
 }
-
-/**
- * Process hex input to ensure it always starts with # and maintain cursor position
- */
 private fun processHexInput(input: String, selection: TextRange): TextFieldValue {
     var processed = input.uppercase()
     var newSelection = selection
-
-    // Ensure it starts with #
     if (!processed.startsWith("#")) {
         processed = "#$processed"
         newSelection = if (selection.start == 0) {
@@ -284,86 +259,57 @@ private fun processHexInput(input: String, selection: TextRange): TextFieldValue
             TextRange(selection.start + 1, selection.end + 1)
         }
     }
-
-    // Filter out invalid characters and track cursor position
     val filtered = StringBuilder()
     val originalToFilteredMapping = mutableListOf<Int>()
 
     for (i in processed.indices) {
         val char = processed[i]
         if (i == 0 && char == '#') {
-            // Always keep the # at position 0
             filtered.append('#')
             originalToFilteredMapping.add(filtered.length - 1)
         } else if (char.isDigit() || char in 'A'..'F') {
             filtered.append(char)
             originalToFilteredMapping.add(filtered.length - 1)
         } else {
-            // Invalid character - skip it
-            originalToFilteredMapping.add(-1) // Mark as removed
+            originalToFilteredMapping.add(-1)
         }
     }
-
-    // Limit length to 9 characters (#AARRGGBB format)
     if (filtered.length > 9) {
-        // Trim from the end
         filtered.length - 9
         filtered.delete(9, filtered.length)
-
-        // Update mapping for trimmed characters
         for (i in originalToFilteredMapping.indices) {
             if (originalToFilteredMapping[i] >= 9) {
                 originalToFilteredMapping[i] = -1
             }
         }
     }
-
-    // Calculate new cursor position based on mapping
     val newStart = calculateNewCursorPosition(newSelection.start, originalToFilteredMapping)
     val newEnd = calculateNewCursorPosition(newSelection.end, originalToFilteredMapping)
-
-    // Ensure cursor stays after the # and within bounds
     val finalStart = newStart.coerceIn(1, filtered.length)
     val finalEnd = newEnd.coerceIn(1, filtered.length)
 
     return TextFieldValue(filtered.toString(), selection = TextRange(finalStart, finalEnd))
 }
-
-/**
- * Calculate new cursor position based on character mapping
- * This ensures cursor doesn't jump when invalid characters are entered
- */
 private fun calculateNewCursorPosition(
     originalPos: Int,
     mapping: List<Int>
 ): Int {
     if (originalPos >= mapping.size) {
-        // Cursor is at the end of the original string
-        // Find the last valid position in the filtered string
         return mapping.lastOrNull { it != -1 }?.plus(1) ?: 1
     }
-
-    // Find the closest valid position to the original cursor
-    // First try the exact position
     if (mapping[originalPos] != -1) {
         return mapping[originalPos] + 1
     }
-
-    // If exact position is invalid, look left
     for (i in originalPos - 1 downTo 0) {
         if (mapping[i] != -1) {
             return mapping[i] + 1
         }
     }
-
-    // If nothing found on the left, look right
     for (i in originalPos + 1 until mapping.size) {
         if (mapping[i] != -1) {
             return mapping[i] + 1
         }
     }
-
-    // Default to position 1 (after #)
     return 1
 }
 
@@ -501,14 +447,11 @@ fun ColorPreviewSection(
             ),
             color = MaterialTheme.colorScheme.onSurface
         )
-
-        // Color preview row
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Color preview circle
             Box(
                 modifier = Modifier
                     .size(30.dp)
@@ -525,7 +468,6 @@ fun ColorPreviewSection(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // Hex input using TextFieldValue for better cursor control
                 TextField(
                     value = hexTextFieldValue,
                     onValueChange = onHexTextFieldValueChange,
@@ -555,8 +497,6 @@ fun ColorPreviewSection(
                     )
                 }
             }
-
-            // Background previews
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -643,8 +583,6 @@ fun ColorAdjustmentsSection(
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
-
-        // Brightness Slider
         Column(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -671,8 +609,6 @@ fun ColorAdjustmentsSection(
                 thumbColor = selectedColor
             )
         }
-
-        // Saturation Slider
         Column(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -769,7 +705,6 @@ fun ActionButtonsSection(
     onCancel: () -> Unit,
     onApply: () -> Unit
 ) {
-    // Calculate appropriate text color based on selected color brightness
     val buttonTextColor = if (selectedColor.getBrightness() > 0.6f) Color.Black else Color.White
 
     Row(
@@ -853,7 +788,6 @@ fun CompactCircularColorSwatch(
             ) { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        // Color circle with border
         Box(
             modifier = Modifier
                 .size(if (isSelected) 26.dp else 30.dp)
@@ -877,8 +811,6 @@ fun CompactCircularColorSwatch(
         }
     }
 }
-
-// Improved Color Wheel with dragging support
 @Composable
 fun ImprovedColorWheel(
     modifier: Modifier = Modifier,
@@ -886,7 +818,6 @@ fun ImprovedColorWheel(
     brightness: Float = 0.5f,
     onColorSelected: (Color) -> Unit
 ) {
-    // Get hue and saturation from the selected color
     val hsv = FloatArray(3)
     AndroidColor.colorToHSV(selectedColor.toArgb(), hsv)
     val hue = hsv[0]
@@ -895,19 +826,17 @@ fun ImprovedColorWheel(
     Canvas(
         modifier = modifier
             .pointerInput(Unit) {
-                // Use detectDragGestures which gives us continuous drag events
                 detectDragGestures(
                     onDragStart = { offset ->
                         updateColorFromOffset(offset, size, brightness, onColorSelected)
                     },
                     onDrag = { change, _ ->
-                        change.consume() // Consume the event to prevent scrolling
+                        change.consume()
                         updateColorFromOffset(change.position, size, brightness, onColorSelected)
                     },
                 )
             }
             .pointerInput(Unit) {
-                // Also handle simple taps
                 detectTapGestures(
                     onPress = { offset ->
                         updateColorFromOffset(offset, size, brightness, onColorSelected)
@@ -921,8 +850,6 @@ fun ImprovedColorWheel(
     ) {
         val radius = min(size.width, size.height) / 2f
         val center = Offset(size.width / 2f, size.height / 2f)
-
-        // Draw color wheel
         for (angle in 0 until 360 step 3) {
             val wheelHue = angle.toFloat()
             val color = Color.hsv(wheelHue, 1f, brightness)
@@ -935,8 +862,6 @@ fun ImprovedColorWheel(
                 size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2)
             )
         }
-
-        // Draw saturation gradient
         drawCircle(
             brush = Brush.radialGradient(
                 colors = listOf(
@@ -949,37 +874,27 @@ fun ImprovedColorWheel(
             center = center,
             radius = radius
         )
-
-        // Draw selection indicator
         val radians = (hue * PI / 180).toFloat()
         val indicatorRadius = saturation * radius
         val indicatorX = center.x + indicatorRadius * cos(radians)
         val indicatorY = center.y + indicatorRadius * sin(radians)
-
-        // Draw a line from center to indicator for better visibility
         drawLine(
             color = Color.White.copy(alpha = 0.3f),
             start = center,
             end = Offset(indicatorX, indicatorY),
             strokeWidth = 1.dp.toPx()
         )
-
-        // Outer ring
         drawCircle(
             color = Color.White,
             center = Offset(indicatorX, indicatorY),
             radius = 12.dp.toPx(),
             style = Stroke(width = 2.dp.toPx())
         )
-
-        // Inner color
         drawCircle(
             color = selectedColor,
             center = Offset(indicatorX, indicatorY),
             radius = 8.dp.toPx()
         )
-
-        // Center dot for reference
         drawCircle(
             color = Color.White.copy(alpha = 0.5f),
             center = center,
@@ -987,8 +902,6 @@ fun ImprovedColorWheel(
         )
     }
 }
-
-// Helper function to update color from offset
 private fun updateColorFromOffset(
     offset: Offset,
     size: IntSize,
@@ -1005,8 +918,6 @@ private fun updateColorFromOffset(
     val color = Color.hsv(newAngle, newSaturation, brightness)
     onColorSelected(color)
 }
-
-// Helper functions
 fun Color.getBrightness(): Float {
     val hsv = FloatArray(3)
     AndroidColor.colorToHSV(this.toArgb(), hsv)
@@ -1032,18 +943,9 @@ fun adjustSaturation(color: Color, saturation: Float): Color {
     hsv[1] = saturation.coerceIn(0f, 1f)
     return Color(AndroidColor.HSVToColor(hsv))
 }
-
-/**
- * Validates a hex color string
- * Supported formats: #RGB, #RRGGBB, #AARRGGBB
- */
 fun validateHex(hex: String): Boolean {
     if (hex.isEmpty() || !hex.startsWith("#")) return false
-
-    // Check valid lengths
     if (hex.length != 4 && hex.length != 7 && hex.length != 9) return false
-
-    // Check that each character is a valid hex digit
     for (i in 1 until hex.length) {
         val char = hex[i].uppercaseChar()
         if (!(char in '0'..'9' || char in 'A'..'F')) {
@@ -1052,9 +954,7 @@ fun validateHex(hex: String): Boolean {
     }
 
     return try {
-        // Try to parse the color to ensure it's valid
         if (hex.length == 4) {
-            // Expand shorthand hex (#RGB)
             val hexValue = hex.substring(1)
             val expanded = "#${hexValue[0]}${hexValue[0]}${hexValue[1]}${hexValue[1]}${hexValue[2]}${hexValue[2]}"
             expanded.toColorInt()

@@ -68,8 +68,6 @@ data class ModalPage(
     val strongNumber: String? = null,
     val description: String? = null
 )
-
-// Helper function to sanitize HTML content
 fun sanitizeHtmlContent(content: String?): String {
     if (content.isNullOrEmpty()) return ""
     var sanitized = content
@@ -77,19 +75,13 @@ fun sanitizeHtmlContent(content: String?): String {
     if (ppEndIndex != -1) {
         sanitized = sanitized.take(ppEndIndex + "</pp>".length)
     }
-    // 2. Remove all JavaScript code (script tags and inline event handlers)
     sanitized = sanitized.replace(Regex("<script[\\s\\S]*?</script>", RegexOption.DOT_MATCHES_ALL), "")
-    // 3. Remove all on* event handlers
     sanitized = sanitized.replace(Regex("\\s+on\\w+\\s*=\\s*\"[^\"]*\""), "")
     sanitized = sanitized.replace(Regex("\\s+on\\w+\\s*=\\s*'[^']*'"), "")
     sanitized = sanitized.replace(Regex("\\s+on\\w+\\s*=\\s*[^\\s>]+"), "")
-    // 4. Remove javascript: links
     sanitized = sanitized.replace(Regex("javascript:[^\"'>]+"), "#")
-    // 5. Remove any remaining HTML comments that might contain JS
     sanitized = sanitized.replace(Regex("<!--.*?-->", RegexOption.DOT_MATCHES_ALL), "")
-    // 6. Remove any style tags that might contain JS
     sanitized = sanitized.replace(Regex("<style[^>]*>.*?</style>", RegexOption.DOT_MATCHES_ALL), "")
-    // 7. Remove any meta refresh tags
     sanitized = sanitized.replace(Regex("<meta[^>]*http-equiv\\s*=\\s*['\"]?refresh['\"]?[^>]*>", RegexOption.IGNORE_CASE), "")
     return sanitized.trim()
 }
@@ -106,19 +98,16 @@ fun prepareStrongContent(rawDefinition: String): String {
 
 fun parseVerseLink(href: String, linkText: String): PassageSelection? {
     try {
-        // Parse href: B:220 38:4 or B:220 38:4-7
         val parts = href.substringAfter("B:").trim().split(" ")
         if (parts.size != 2) return null
         val bookNumber = parts[0].toInt()
         val chapterVersePart = parts[1]
-        // Handle verse ranges like 38:4 or 38:4-7 from href
         val chapterVerseSplit = chapterVersePart.split(":")
         if (chapterVerseSplit.size != 2) return null
         val chapter = chapterVerseSplit[0].toInt()
         val versePart = chapterVerseSplit[1]
         val verseStart = versePart.substringBefore("-").toInt()
         var verseEnd: Int? = if (versePart.contains("-")) versePart.substringAfter("-").toInt() else null
-        // If no range in href, check linkText for range (e.g., "Ex. 4:5-7")
         if (verseEnd == null) {
             val textParts = linkText.split(":")
             if (textParts.size >= 2) {
@@ -137,7 +126,6 @@ fun parseVerseLink(href: String, linkText: String): PassageSelection? {
                 }
             }
         }
-        // Get the book name from BibleData using the book number
         val book = BibleData.getBookByCustomNumber(bookNumber)
         return PassageSelection(
             bookNumber = bookNumber,
@@ -157,7 +145,6 @@ fun fetchVerses(passage: PassageSelection, db: DatabaseHelper?): List<Verse> {
     val verses = mutableListOf<Verse>()
     val startChapter = passage.chapter
     val endChapter = passage.chapterEnd ?: passage.chapter
-    // Cap endChapter to book's max chapters
     val maxChapters = BibleData.getBookByCustomNumber(passage.bookNumber)?.chapters ?: endChapter
     val cappedEndChapter = minOf(endChapter, maxChapters)
     val startVerse = passage.verse ?: 1
@@ -198,7 +185,6 @@ fun getDefinitionOrClosest(dbHelper: DatabaseHelper?, originalWord: String): Pai
     if (dbHelper == null) return null
     val db = dbHelper.database ?: return null
     val lowerWord = originalWord.trim().lowercase(Locale.ROOT)
-    // Exact match (case-insensitive)
     var cursor = db.query("dictionary", arrayOf("topic", "definition"), "LOWER(topic) = ?", arrayOf(lowerWord), null, null, null)
     if (cursor.moveToFirst()) {
         val exactWord = cursor.getString(0)
@@ -207,7 +193,6 @@ fun getDefinitionOrClosest(dbHelper: DatabaseHelper?, originalWord: String): Pai
         return Pair(exactWord, def)
     }
     cursor.close()
-    // Find next word > original (case-insensitive)
     cursor = db.query("dictionary", arrayOf("topic", "definition"), "LOWER(topic) > ?", arrayOf(lowerWord), null, null, "LOWER(topic) ASC", "1")
     var nextPair: Pair<String, String>? = null
     if (cursor.moveToFirst()) {
@@ -216,7 +201,6 @@ fun getDefinitionOrClosest(dbHelper: DatabaseHelper?, originalWord: String): Pai
         nextPair = Pair(word, def)
     }
     cursor.close()
-    // Find previous word < original (case-insensitive)
     cursor = db.query("dictionary", arrayOf("topic", "definition"), "LOWER(topic) < ?", arrayOf(lowerWord), null, null, "LOWER(topic) DESC", "1")
     var prevPair: Pair<String, String>? = null
     if (cursor.moveToFirst()) {
@@ -226,7 +210,6 @@ fun getDefinitionOrClosest(dbHelper: DatabaseHelper?, originalWord: String): Pai
     }
     cursor.close()
     if (nextPair == null && prevPair == null) return null
-    // If both exist, choose the one with smaller Levenshtein distance
     val distNext = if (nextPair != null) levenshteinDistance(lowerWord, nextPair.first.lowercase(Locale.ROOT)) else Int.MAX_VALUE
     val distPrev = if (prevPair != null) levenshteinDistance(lowerWord, prevPair.first.lowercase(Locale.ROOT)) else Int.MAX_VALUE
     return when {
@@ -322,7 +305,6 @@ fun InteractiveModal(
     val onWordPress: (String) -> Unit = Unit@{ w ->
         val trimmed = w.trim()
         if (trimmed.isEmpty() || trimmed.matches(Regex(".*\\d.*"))) {
-            // Skip if empty or contains numbers (not a typical word)
             return@Unit
         }
         val pair = getDefinitionOrClosest(dictionaryDbHelper, trimmed)
@@ -353,7 +335,6 @@ fun InteractiveModal(
             (if (isOldTestament) "H" else "G") + trimmed
         }
         if (!prefixed.matches(Regex("^[HG]\\d+"))) {
-            // Skip if not a valid Strong's format
             return@Unit
         }
         val definition = strongDbHelper?.getStrongDefinition(prefixed) ?: "Strong's definition not found."
@@ -558,9 +539,7 @@ fun InteractiveModal(
                                 val flags = spannable.getSpanFlags(urlSpan)
                                 val href = urlSpan.url
                                 val linkText = spannable.substring(start, end)
-                                // Always remove the original URLSpan
                                 spannable.removeSpan(urlSpan)
-                                // Decide whether to add a ClickableSpan
                                 var clickableSpan: ClickableSpan? = null
                                 var addClickable = false
                                 if (href.startsWith("B:")) {
@@ -568,14 +547,12 @@ fun InteractiveModal(
                                     if (passage != null) {
                                         clickableSpan = object : ClickableSpan() {
                                             override fun onClick(widget: View) {
-                                                // Detect and handle multi-chapter reinterpretation
                                                 val verseStart = passage.verse ?: return
                                                 val verseEndTemp = passage.verseEnd
                                                 if (verseEndTemp != null) {
                                                     val maxVerse = databaseHelper?.getVerseCount(passage.bookNumber, passage.chapter) ?: 0
                                                     if (verseEndTemp !in verseStart..maxVerse) {
                                                         passage.chapterEnd = verseEndTemp
-                                                        passage.verseEnd = null // To end of final chapter
                                                     }
                                                 }
                                                 val verses = fetchVerses(passage, databaseHelper)
@@ -600,7 +577,6 @@ fun InteractiveModal(
                                             if (passage != null) {
                                                 clickableSpan = object : ClickableSpan() {
                                                     override fun onClick(widget: View) {
-                                                        // Similar detection for multi-chapter
                                                         val verseStart = passage.verse ?: return
                                                         val verseEndTemp = passage.verseEnd
                                                         if (verseEndTemp != null) {
@@ -752,7 +728,6 @@ fun InteractiveModal(
                                                     }
                                                 }
                                             } else {
-                                                // Handle word definition (e.g., S:God for word "God")
                                                 val wordToFetch = cleanedLinkText.ifEmpty { seeContent }
                                                 val pair = getDefinitionOrClosest(dictionaryDbHelper, wordToFetch)
                                                 val dbDisplayName = dictionaryDisplayNames[viewModel.selectedDictionary] ?: viewModel.selectedDictionary
@@ -781,7 +756,6 @@ fun InteractiveModal(
                                     spannable.setSpan(clickableSpan, start, end, flags)
                                 }
                             }
-                            // Handle dark mode text colors by removing all custom colors and forcing white
                             if (isDark) {
                                 val colorSpans = spannable.getSpans(0, spannable.length, ForegroundColorSpan::class.java)
                                 for (span in colorSpans) {

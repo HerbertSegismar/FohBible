@@ -46,6 +46,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -74,6 +75,7 @@ import com.example.fohbible.data.scopeColors
 import com.example.fohbible.ui.theme.FohBibleTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.collections.iterator
 
@@ -120,9 +122,14 @@ fun NavigationModal(
     var focusedInput by remember { mutableStateOf<String?>("chapter") }
     var maxVerse by remember { mutableIntStateOf(0) }
     var isLoadingVerseCount by remember { mutableStateOf(false) }
-    val selectedBibleBook by remember(selectedBook) { derivedStateOf { selectedBook?.let { BibleData.getBookByCustomNumber(it.bookNumber) } } }
+    val selectedBibleBook by remember(selectedBook) {
+        derivedStateOf {
+            selectedBook?.let { BibleData.getBookByCustomNumber(it.bookNumber) }
+        }
+    }
     var showChapterFlash by remember { mutableStateOf(false) }
     var showVerseFlash by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(showChapterFlash) {
         if (showChapterFlash) {
@@ -407,7 +414,10 @@ fun NavigationModal(
                                                     if (verseNum in 1..maxVerse && verseNum.toString() == newVerseValue) {
                                                         verseInput = newVerseValue
                                                         if (verseNum * 10 > maxVerse) {
-                                                            confirm()
+                                                            coroutineScope.launch {
+                                                                delay(300)
+                                                                confirm()
+                                                            }
                                                         }
                                                     } else {
                                                         showVerseFlash = true
@@ -422,12 +432,18 @@ fun NavigationModal(
                                             if (num in 1..maxVerse && num.toString() == newValue) {
                                                 verseInput = newValue
                                                 if (num * 10 > maxVerse) {
-                                                    confirm()
+                                                    coroutineScope.launch {
+                                                        delay(300)
+                                                        confirm()
+                                                    }
                                                 }
                                             } else {
                                                 val currentNum = verseInput.toIntOrNull()
                                                 if (verseInput.isNotEmpty() && currentNum != null && currentNum in 1..maxVerse) {
-                                                    confirm()
+                                                    coroutineScope.launch {
+                                                        delay(300)
+                                                        confirm()
+                                                    }
                                                 } else {
                                                     showVerseFlash = true
                                                 }

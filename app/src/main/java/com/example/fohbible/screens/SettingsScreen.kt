@@ -112,7 +112,6 @@ fun SettingsScreen() {
     var isUsingCustomColor by remember { mutableStateOf(viewModel.isCustomColor) }
     var showLightOverlayColorWheel by remember { mutableStateOf(false) }
     var showDarkOverlayColorWheel by remember { mutableStateOf(false) }
-    // Refresh database states
     var showRefreshConfirmDialog by remember { mutableStateOf(false) }
     var showRefreshResultDialog by remember { mutableStateOf(false) }
 
@@ -120,11 +119,8 @@ fun SettingsScreen() {
         isUsingCustomColor = viewModel.isCustomColor
         customColor = viewModel.customColor
     }
-
-    // LaunchedEffect to show result dialog after refresh starts
     LaunchedEffect(viewModel.isRefreshingDatabases) {
         if (viewModel.isRefreshingDatabases && !showRefreshResultDialog) {
-            // Show result dialog when refresh starts
             showRefreshResultDialog = true
         }
     }
@@ -549,7 +545,6 @@ fun SettingsScreen() {
                 ) {
                     Button(
                         onClick = {
-                            // Reset all settings to default
                             viewModel.fontSize = 18
                             viewModel.darkTheme = false
                             viewModel.selectedColor = DefaultPrimaryColor
@@ -671,8 +666,6 @@ fun SettingsScreen() {
             initialColor = viewModel.darkOverlayColor
         )
     }
-
-    // Confirmation Dialog for Database Refresh
     if (showRefreshConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showRefreshConfirmDialog = false },
@@ -697,8 +690,6 @@ fun SettingsScreen() {
                     onClick = {
                         viewModel.refreshDatabases(context)
                         showRefreshConfirmDialog = false
-                        // We'll show the result dialog through the LaunchedEffect
-                        // when viewModel.isRefreshingDatabases becomes true
                     },
                     colors = ButtonDefaults.textButtonColors(
                         contentColor = MaterialTheme.colorScheme.error
@@ -716,8 +707,6 @@ fun SettingsScreen() {
             }
         )
     }
-
-    // Refresh Progress/Result Dialog
     if (showRefreshResultDialog) {
         AlertDialog(
             onDismissRequest = {

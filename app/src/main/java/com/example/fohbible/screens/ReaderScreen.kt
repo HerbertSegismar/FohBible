@@ -273,11 +273,8 @@ fun ReaderScreen(
         strongDb = if (isPrimary) databaseHelper else secondaryDatabaseHelper
         showStrongsModal = true
     }
-
-    // In ReaderScreen.kt, update the onTagPress function
     val onTagPress: (String, Int, Int, Int, Boolean) -> Unit = { marker, bookNumber, chapter, verseNumber, isPrimary ->
         val dbHelper = if (isPrimary) commentaryDbHelper else secondaryCommentaryDbHelper
-        // ONLY fetch commentary for actual markers (t, n, f tags)
         val text = dbHelper?.getCommentary(bookNumber, chapter, verseNumber, marker) ?: "No commentary found."
         commentaryTitle = "Notes on ${BibleData.getBookByCustomNumber(bookNumber)?.name ?: ""} $chapter:$verseNumber – $marker"
         commentaryContent = text
@@ -1534,7 +1531,7 @@ fun ChapterView(
                             text = item.subheading.text,
                             fontWeight = FontWeight.Bold,
                             color = themeColors.primary,
-                            fontSize = (viewModel.fontSize).sp,
+                            fontSize = (viewModel.fontSize + 1).sp,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 2.dp),

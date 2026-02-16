@@ -102,7 +102,6 @@ fun VerseOptionsModal(
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
                 ) {
-                    // Header with gradient background
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -137,8 +136,6 @@ fun VerseOptionsModal(
                                 fontWeight = FontWeight.Medium
                             )
                         }
-
-                        // Close button
                         IconButton(
                             onClick = onDismiss,
                             modifier = Modifier
@@ -154,8 +151,6 @@ fun VerseOptionsModal(
                             Icon(Icons.Default.Close, contentDescription = "Close")
                         }
                     }
-
-                    // Verse content preview
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -178,15 +173,12 @@ fun VerseOptionsModal(
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
-
-                    // Action buttons
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp, vertical = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // Bookmark option
                         ActionButton(
                             icon = if (isBookmarked) Icons.Outlined.BookmarkAdded
                             else Icons.Outlined.BookmarkAdd,
@@ -198,8 +190,6 @@ fun VerseOptionsModal(
                                 onDismiss()
                             }
                         )
-
-                        // Highlight option
                         ActionButton(
                             icon = if (isHighlighted) Icons.Default.Star
                             else Icons.Outlined.StarBorder,
@@ -211,8 +201,6 @@ fun VerseOptionsModal(
                                 onDismiss()
                             }
                         )
-
-                        // Share option
                         ActionButton(
                             icon = Icons.Outlined.Share,
                             title = "Share Verse",
@@ -222,20 +210,15 @@ fun VerseOptionsModal(
                                 onDismiss()
                             }
                         )
-
-                        // Additional options could be added here
                         ActionButton(
                             icon = Icons.AutoMirrored.Filled.Note,
                             title = "Add Note",
                             subtitle = "Add personal notes to this verse",
                             onClick = {
-                                // Handle note addition
                                 onDismiss()
                             }
                         )
                     }
-
-                    // Quick action chips
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -246,7 +229,6 @@ fun VerseOptionsModal(
                             text = "Copy",
                             icon = Icons.Default.ContentCopy,
                             onClick = {
-                                // Handle copy
                                 onDismiss()
                             }
                         )
@@ -254,13 +236,10 @@ fun VerseOptionsModal(
                             text = "Compare",
                             icon = Icons.AutoMirrored.Filled.CompareArrows,
                             onClick = {
-                                // Handle compare
                                 onDismiss()
                             }
                         )
                     }
-
-                    // Cancel button
                     TextButton(
                         onClick = onDismiss,
                         modifier = Modifier
@@ -383,8 +362,6 @@ private fun QuickActionChip(
         shape = RoundedCornerShape(12.dp)
     )
 }
-
-// Preview composable for testing
 @Preview(showBackground = true, backgroundColor = 0xFFF5F5F5)
 @Composable
 private fun VerseOptionsModalPreview() {

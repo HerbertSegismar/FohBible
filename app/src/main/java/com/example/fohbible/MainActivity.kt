@@ -36,6 +36,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.AutoAwesomeMosaic
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Bookmark
@@ -46,9 +47,11 @@ import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.LinkOff
+import androidx.compose.material.icons.filled.LooksOne
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ViewStream
 import androidx.compose.material.icons.outlined.Texture
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -1278,26 +1281,68 @@ fun ReaderAppBar(
                 onDismissRequest = { showMultiDropdown = false },
                 modifier = Modifier.background(MaterialTheme.colorScheme.surface)
             ) {
+                Text(
+                    text = "Windows Layout",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.primary),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+
                 val current = if (!viewModel.multiVersion) "single" else viewModel.multiViewLayout
 
                 @Composable
                 fun createItem(title: String, onClick: () -> Unit) {
                     val isActive = title.lowercase() == current
-                    val backgroundColor by animateColorAsState(
-                        if (isActive) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                        animationSpec = tween(durationMillis = 200)
-                    )
                     val textColor by animateColorAsState(
-                        if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                        animationSpec = tween(durationMillis = 200)
+                        targetValue = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                     )
+
+                    val leadingIcon: (@Composable () -> Unit) = {
+                        when (title.lowercase()) {
+                            "single" -> Icon(
+                                Icons.Default.LooksOne,
+                                contentDescription = null,
+                                tint = textColor
+                            )
+                            "horizontal" -> Icon(
+                                Icons.Default.ViewStream,
+                                contentDescription = null,
+                                tint = textColor,
+                                modifier = Modifier.rotate(90f)
+                            )
+                            "vertical" -> Icon(
+                                Icons.Default.ViewStream,
+                                contentDescription = null,
+                                tint = textColor
+                            )
+                            else -> Icon(
+                                Icons.AutoMirrored.Filled.Label,
+                                contentDescription = null,
+                                tint = textColor
+                            )
+                        }
+                    }
+
                     DropdownMenuItem(
-                        text = { Text(title, fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal, color = textColor) },
+                        text = {
+                            Text(
+                                text = title,
+                                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+                                color = textColor,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        },
                         onClick = {
                             onClick()
                             showMultiDropdown = false
                         },
-                        modifier = Modifier.background(backgroundColor)
+                        leadingIcon = leadingIcon,
+                        modifier = Modifier
+                            .fillMaxWidth()
                     )
                 }
 

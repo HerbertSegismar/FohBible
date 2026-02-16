@@ -3,7 +3,6 @@ package com.example.fohbible.data
 import android.content.Context
 import com.example.fohbible.MainActivity
 
-// Data classes and enums from BibleData.kt
 data class BibleBook(
     val customNumber: Int,
     val name: String,
@@ -24,15 +23,12 @@ data class BibleBook(
 
 enum class Testament { OLD, NEW }
 
-// Utility functions from testamentUtils
 fun getBookInfo(bookNumber: Int): BibleBook? {
     return BibleData.BIBLE_BOOKS_MAP[bookNumber]
 }
 
-// Search Scope types
 typealias SearchScope = String
 
-// Search scope constants
 const val SCOPE_WHOLE = "whole"
 const val SCOPE_OLD_TESTAMENT = "old-testament"
 const val SCOPE_NEW_TESTAMENT = "new-testament"
@@ -49,7 +45,6 @@ const val SCOPE_VISION = "vision"
 
 fun createBookScope(bookNumber: Int): SearchScope = "book-$bookNumber"
 
-// Scope ranges
 data class ScopeRange(val start: Int, val end: Int)
 
 val SCOPE_RANGES: Map<String, ScopeRange?> = mapOf(
@@ -68,7 +63,6 @@ val SCOPE_RANGES: Map<String, ScopeRange?> = mapOf(
     SCOPE_VISION to ScopeRange(730, 730)
 )
 
-// Scope configuration
 data class ScopeConfig(
     val label: String,
     val description: String,
@@ -156,7 +150,6 @@ val SCOPE_CONFIG: Map<String, ScopeConfig> = mapOf(
     )
 )
 
-// Utility functions
 fun isBookScope(scope: SearchScope): Boolean {
     return scope.startsWith("book-")
 }
@@ -190,12 +183,10 @@ fun getScopeConfig(scope: SearchScope): ScopeConfig {
     return SCOPE_CONFIG[scope] ?: ScopeConfig("Unknown", "Unknown scope", "Unknown")
 }
 
-// Individual book scopes
 val INDIVIDUAL_BOOK_SCOPES: List<SearchScope> = BibleData.BIBLE_BOOKS_MAP.keys.map { bookNumber ->
     createBookScope(bookNumber)
 }
 
-// Scope categories
 val SCOPE_CATEGORIES: Map<String, List<SearchScope>> = mapOf(
     "All" to listOf(SCOPE_WHOLE),
     "Old Testament" to listOf(

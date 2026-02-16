@@ -93,23 +93,19 @@ class VerseTextProcessor(
         options: ProcessingOptions = ProcessingOptions()
     ): ProcessedVerse {
         val startTime = System.currentTimeMillis()
-        // Handle empty/null input
         if (verseText.isNullOrBlank()) {
             return ProcessedVerse(
                 header = null,
                 body = AnnotatedString("")
             )
         }
-        // Generate cache key
         val cacheKey = buildCacheKey(
             verseText, baseFontSize, textColor, isKjvPlus, isOldTestament, highlight, isHighlighted, options, themeColors
         )
-        // Check cache
         verseCache[cacheKey]?.let { cached ->
             logger?.logPerformance("Cache hit", System.currentTimeMillis() - startTime)
             return cached
         }
-        // Process the verse
         val nodes = parseXmlTags(verseText)
         val tree = buildTree(nodes)
         val initialContext = TraversalContext(
@@ -128,7 +124,6 @@ class VerseTextProcessor(
             header = if (options.showHeaders) header else null,
             body = body
         )
-        // Cache the result
         verseCache[cacheKey] = result
         val duration = System.currentTimeMillis() - startTime
         logger?.logPerformance("Process verse", duration)
@@ -172,17 +167,15 @@ class VerseTextProcessor(
         val nodes = mutableListOf<ParsedNode>()
         val currentText = StringBuilder()
         var i = 0
-        val stack = mutableListOf<String>() // Track opened tags for error reporting
+        val stack = mutableListOf<String>()
         while (i < text.length) {
             if (text[i] == '<') {
-                // Add any accumulated text
                 if (currentText.isNotEmpty()) {
                     nodes.add(ParsedNode.Text(currentText.toString()))
                     currentText.clear()
                 }
                 val tagEnd = text.indexOf('>', i)
                 if (tagEnd == -1) {
-                    // Malformed: no closing '>'
                     logger?.logParseError("malformed_tag", "No closing '>' found at position $i")
                     currentText.append(text.substring(i))
                     break
@@ -216,14 +209,11 @@ class VerseTextProcessor(
                 i++
             }
         }
-        // Add any remaining text
         if (currentText.isNotEmpty()) {
             nodes.add(ParsedNode.Text(currentText.toString()))
         }
-        // Handle any unclosed tags
         if (stack.isNotEmpty()) {
             logger?.logParseError("unclosed_tags", "Found ${stack.size} unclosed tags: $stack")
-            // Auto-close them in reverse order
             for (tag in stack.reversed()) {
                 nodes.add(ParsedNode.ClosingTag(tag))
             }
@@ -252,7 +242,6 @@ class VerseTextProcessor(
 
                 is ParsedNode.ClosingTag -> {
                     if (stack.isNotEmpty()) {
-                        // Validate closing tag matches the last opened element
                         val lastElement = elementStack.lastOrNull()
                         if (lastElement != null && lastElement.tag != node.tag) {
                             logger?.logParseError(
@@ -274,7 +263,6 @@ class VerseTextProcessor(
                 }
             }
         }
-        // Handle any remaining unclosed elements
         if (elementStack.isNotEmpty()) {
             logger?.logParseError("unclosed_elements", "${elementStack.size} elements were not properly closed")
         }
@@ -456,9 +444,7 @@ class VerseTextProcessor(
         val rawText = if (options.preserveWhitespace) node.content else node.content.trim()
         if (rawText.isEmpty()) return
         val normalizedText = normalizeSpacing(rawText)
-        // CRITICAL: Handle different types of content based on context
         when (context.currentTag) {
-            // 1. STRONG'S NUMBER - Goes to Strong's dictionary
             "S" -> if (options.enableStrongsClick && onStrongsPress != null) {
                 val trimmed = normalizedText.trim()
                 if (trimmed.isNotEmpty() && isValidStrongsNumber(trimmed)) {
@@ -475,7 +461,6 @@ class VerseTextProcessor(
                     }
                     builder.pop()
                 } else {
-                    // Invalid Strong's number, fallback to regular text
                     processNormalText(
                         normalizedText, builder, textContext, highlight, themeColors, onWordPress,
                         options
@@ -487,8 +472,6 @@ class VerseTextProcessor(
                     options
                 )
             }
-
-            // 2. COMMENTARY MARKER (only f) - Goes to COMMENTARY database
             "f" -> if (options.enableTagClick && onTagPress != null) {
                 val trimmed = normalizedText.trim()
                 if (trimmed.isNotEmpty()) {
@@ -512,8 +495,6 @@ class VerseTextProcessor(
                     options
                 )
             }
-
-            // 3. REGULAR TEXT (including non-f tags like n, t) - Goes to DICTIONARY (word definitions)
             else -> {
                 processNormalText(
                     normalizedText, builder, textContext, highlight, themeColors, onWordPress,
@@ -597,7 +578,6 @@ class VerseTextProcessor(
                 addSpaceAfterPunct = (trimmedWord == "." || trimmedWord == "," || trimmedWord == ":" || trimmedWord == ";")
             }
         } else {
-            // Fallback processing when onWordPress is not available or disabled
             processTextWithoutWordClick(text, builder, context, highlight, themeColors)
         }
     }
@@ -694,17 +674,14 @@ class VerseTextProcessor(
 
     private fun splitIntoWords(text: String, preserveWhitespace: Boolean): List<String> {
         return if (preserveWhitespace) {
-            // Split but keep whitespace sequences as separate items
             text.split(Regex("(?<=\\S)(?=\\s)|(?<=\\s)(?=\\S)"))
         } else {
-            // More efficient implementation using regex
             text.split(Regex("(?<=\\w)(?=\\W)|(?<=\\W)(?=\\w)|\\s+"))
                 .filter { it.isNotEmpty() }
         }
     }
 
     private fun isWord(text: String): Boolean {
-        // Allow apostrophes in words (e.g., "I'm", "don't")
         return text.matches(Regex("""[a-zA-ZÀ-ÿ'][a-zA-ZÀ-ÿ']+"""))
     }
 
@@ -720,13 +697,10 @@ object SimpleVerseProcessor {
         processedText = processedText.replace(
             Regex("""<f[^>]*>.*?</f>""", RegexOption.DOT_MATCHES_ALL), ""
         )
-        // Remove entire <S>...</S> elements including contents
         processedText = processedText.replace(
             Regex("""<S[^>]*>.*?</S>""", RegexOption.DOT_MATCHES_ALL), ""
         )
-        // Remove remaining XML tags
         processedText = processedText.replace(Regex("""<[^>]+>"""), "")
-        // Normalize whitespace
         processedText = processedText.replace(Regex("""\s+"""), " ")
         return processedText.trim()
     }

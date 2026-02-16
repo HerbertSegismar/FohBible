@@ -104,7 +104,6 @@ fun MatrixNative() {
     val viewModel: AppViewModel = viewModel()
     val safeMatrixColor = viewModel.selectedColor ?: DefaultPrimaryColor
     val bgColor = MaterialTheme.colorScheme.surface
-    // Get the theme's primary color for overlays
     val overlayColor = MaterialTheme.colorScheme.primary
     val context = LocalContext.current
     val typeface = remember(viewModel.selectedFontFamily) {
@@ -135,12 +134,10 @@ fun MatrixNative() {
             this.typeface = typeface
         }
     }
-    // Remember overlayPaint with overlayColor as a key to update when theme changes
     val overlayPaint = remember(overlayColor, overlayTypeface) {
         Paint().apply {
             isAntiAlias = false
             this.typeface = overlayTypeface
-            // We'll set textSize and alpha dynamically in the Canvas
         }
     }
     Card(
@@ -178,14 +175,10 @@ fun MatrixNative() {
                 LaunchedEffect(containerWidth) {
                     if (containerWidth == 0f) return@LaunchedEffect
                     val numColumns = (containerWidth / fontSizePx).toInt()
-
-                    // CHANGED: Only create drops for 70% of the columns
                     val numDrops = (numColumns * 0.7).roundToInt()
 
                     drops.forEach { it.headAnim.stop() }
                     drops.clear()
-
-                    // CHANGED: Create a list of column indices and take 70% of them
                     val columns = (0 until numColumns).shuffled().take(numDrops)
 
                     for (i in columns) {
@@ -218,7 +211,6 @@ fun MatrixNative() {
                             containerHeight = size.height.toFloat()
                         }
                 ) {
-                    // Draw the matrix drops
                     drops.forEach { drop ->
                         for (j in 0 until TRAIL_LENGTH) {
                             val offset = -j * fontSizePx
@@ -232,9 +224,7 @@ fun MatrixNative() {
                             }
                         }
                     }
-                    // Draw the overlay directly on the Canvas using theme primary color
                     overlay?.let { o ->
-                        // Update overlayPaint with current values
                         overlayPaint.apply {
                             textSize = o.fontSize * density.density
                             color = overlayColor.copy(alpha = o.fadeAnim.value).toArgb()
@@ -265,8 +255,7 @@ private suspend fun startDropAnimation(
             targetValue = totalHeight,
             animationSpec = tween(duration, easing = LinearEasing)
         )
-        // Increased gap delay for sparser rain
-        val gapDelay = 1000 + Random.nextInt(3000)  // Changed from 500-2500 to 1000-4000
+        val gapDelay = 1000 + Random.nextInt(3000)
         delay(gapDelay.toLong())
     }
 }

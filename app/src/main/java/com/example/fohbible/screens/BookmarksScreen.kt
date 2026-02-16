@@ -102,8 +102,6 @@ fun BookmarksScreen(
     var bookmarkedVerses by remember { mutableStateOf<List<Verse>>(emptyList()) }
     var selectedDbName by remember { mutableStateOf(appViewModel.currentDbName) }
     var selectedVersionAbbr by remember { mutableStateOf(appViewModel.currentVersionAbbr) }
-
-    // Interactive states
     var multiSelectMode by remember { mutableStateOf(false) }
     val selectedVerses = remember { mutableStateListOf<Verse>() }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
@@ -131,8 +129,6 @@ fun BookmarksScreen(
             bookmarkedVerses = sortVerses(bookmarkedVerses, sortOrder)
         }
     }
-
-    // Filter verses based on search query
     val filteredVerses = remember(bookmarkedVerses, searchQuery) {
         if (searchQuery.isEmpty()) {
             bookmarkedVerses
@@ -191,7 +187,6 @@ fun BookmarksScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Search Bar
             AnimatedVisibility(
                 visible = searchActive,
                 enter = expandVertically(animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)),
@@ -222,11 +217,8 @@ fun BookmarksScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
-                    // Search suggestions could be added here
                 }
             }
-
-            // Version Selector
             if (!searchActive) {
                 Column(modifier = Modifier.fillMaxWidth().padding(18.dp)) {
                     BibleVersionSelector(
@@ -302,8 +294,6 @@ fun BookmarksScreen(
                 }
             }
         }
-
-        // Sort Options Dialog
         if (showSortOptions) {
             SortOptionsDialog(
                 currentSortOrder = sortOrder,
@@ -314,15 +304,11 @@ fun BookmarksScreen(
                 onDismiss = { showSortOptions = false }
             )
         }
-
-        // Filter Options Dialog
         if (showFilterOptions) {
             FilterOptionsDialog(
                 onDismiss = { showFilterOptions = false }
             )
         }
-
-        // Delete Confirmation Dialog
         if (showDeleteConfirmation) {
             DeleteConfirmationDialog(
                 count = selectedVerses.size,
@@ -534,7 +520,6 @@ fun SwipeToDeleteBookmarkItem(
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis
             )
-            // Tags/Categories could be added here
             Row(
                 modifier = Modifier.padding(top = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -831,7 +816,7 @@ private fun sortVerses(verses: List<Verse>, sortOrder: SortOrder): List<Verse> {
                 .thenBy { BibleData.getBookByName(it.bookName ?: "")?.customNumber ?: 0 }
                 .thenBy { it.verseNumber }
         )
-        SortOrder.DATE_ADDED -> verses // Assuming original order is by addition date
+        SortOrder.DATE_ADDED -> verses
     }
 }
 
@@ -840,8 +825,6 @@ enum class SortOrder(val displayName: String) {
     CHAPTER("By Chapter"),
     DATE_ADDED("Recently Added")
 }
-
-// Helper functions remain the same
 private fun loadBookmarks(
     context: Context,
     databaseHelper: DatabaseHelper?,

@@ -34,11 +34,7 @@ class AppViewModel : ViewModel() {
     val navigationStack = mutableStateListOf<Screen>(Screen.Home)
     var currentDbName by mutableStateOf("kj2.sqlite3")
     var currentVersionAbbr by mutableStateOf(BibleVersionUtils.versionMap["kj2.sqlite3"]!!)
-
-    // New: Track custom color separately
     var customColor by mutableStateOf<Color?>(null)
-
-    // Multi-version fields
     var multiVersion by mutableStateOf(false)
     var secondaryDbName by mutableStateOf("esv.sqlite3")
     var secondaryVersionAbbr by mutableStateOf(BibleVersionUtils.versionMap["esv.sqlite3"]!!)
@@ -51,8 +47,6 @@ class AppViewModel : ViewModel() {
     var showColorThemeDialog by mutableStateOf(false)
     var showColorWheelDialog by mutableStateOf(false)
     var showBgModal by mutableStateOf(false)
-
-    // Independent navigation fields
     var primaryPassage by mutableStateOf(PassageSelection(10, "Genesis", 1, 1))
     var secondaryPassage by mutableStateOf(PassageSelection(10, "Genesis", 1, 1))
     var bgImageIndex by mutableIntStateOf(0)
@@ -81,12 +75,9 @@ class AppViewModel : ViewModel() {
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // Get ALL database files from assets
                 val databaseFiles = mutableListOf<String>()
                 var successCount = 0
                 var totalCount: Int
-
-                // Get Bible databases from both directories
                 val assetDirs = listOf("databases", "dictionaries")
 
                 assetDirs.forEach { dir ->
@@ -100,11 +91,7 @@ class AppViewModel : ViewModel() {
                     } catch (_: IOException) {
                     }
                 }
-
-                // Also add the current and secondary versions if they're not in the list
                 val allDatabases = databaseFiles.distinct().toMutableList()
-
-                // Add current and secondary versions if they exist
                 if (!allDatabases.contains(currentDbName) && currentDbName.isNotEmpty()) {
                     allDatabases.add(currentDbName)
                 }
@@ -113,8 +100,6 @@ class AppViewModel : ViewModel() {
                 }
 
                 totalCount = allDatabases.size
-
-                // Refresh each database
                 allDatabases.forEachIndexed { index, dbName ->
                     try {
                         withContext(Dispatchers.Main) {

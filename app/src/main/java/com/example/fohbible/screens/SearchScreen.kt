@@ -94,8 +94,6 @@ fun getScopeForBookNumber(bookNumber: Int): String? {
 }
 
 data class SearchOptions(val bookRange: Pair<Int, Int>? = null)
-
-// Add to DatabaseHelper
 fun DatabaseHelper.searchVerses(query: String, options: SearchOptions? = null): List<Verse> {
     val verses = mutableListOf<Verse>()
     try {

@@ -63,10 +63,8 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             if (dbFile.exists()) {
                 dbFile.delete()
             }
-            // Wait a bit to ensure file is deleted
             Thread.sleep(100)
             copyDatabaseFromAssets(dbFile)
-            // Reopen the database
             database = SQLiteDatabase.openDatabase(
                 dbFile.path,
                 null,
@@ -182,7 +180,6 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
         return verses
     }
 
-    // New method for subheadings
     fun getSubheadings(bookNumber: Int, chapter: Int): List<Subheading> {
         val subheadings = mutableListOf<Subheading>()
         try {
@@ -207,7 +204,6 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                 }
             }
         } catch (e: Exception) {
-            Log.e(tag, "Error in getSubheadings: ${e.message}")
             e.printStackTrace()
         }
         return subheadings
@@ -254,13 +250,11 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                         val verseNumber = it.getInt(it.getColumnIndexOrThrow(COLUMN_VERSE))
                         val text = it.getString(it.getColumnIndexOrThrow(COLUMN_TEXT))
                         verses.add(Verse(verseNumber, text, randomBook.name, randomChapter))
-                    } catch (e: Exception) {
-                        Log.e(tag, "Error reading verse: ${e.message}")
+                    } catch (_: Exception) {
                     }
                 }
             }
         } catch (e: Exception) {
-            Log.e(tag, "Error in getRandomVerses: ${e.message}")
             e.printStackTrace()
         }
         return verses
@@ -425,7 +419,6 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             cursor?.use {
                 if (it.moveToFirst()) {
                     commentary = it.getString(it.getColumnIndexOrThrow("text"))
-                    // Process commentary to remove JavaScript code
                     commentary = commentary?.replace(Regex("<script[\\s\\S]*?</script>"), "")
                 }
             }
@@ -449,15 +442,12 @@ fun getVersesWithSubheadings(
 ): List<VerseContent> {
     val verses = versesHelper.getVerses(bookNumber, chapter)
     val subheadings = subheadingsHelper.getSubheadings(bookNumber, chapter)
-    // Use a map keyed by verse number to group content
     val contentMap: MutableMap<Int, MutableList<VerseContent>> = mutableMapOf()
     verses.forEach { verse ->
         contentMap.getOrPut(verse.verseNumber) { mutableListOf() }.add(VerseContent.VerseVal(verse))
     }
     subheadings.forEach { subheading ->
-        // Insert subheading before the verse(s) at that position
         contentMap.getOrPut(subheading.verse) { mutableListOf() }.add(0, VerseContent.SubheadingVal(subheading))
     }
-    // Flatten into a sorted list by verse number
     return contentMap.toSortedMap().flatMap { it.value }
 }

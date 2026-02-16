@@ -94,8 +94,6 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     var dailyVerses by remember { mutableStateOf<List<Verse>?>(null) }
-
-    // Load random verses on first composition
     LaunchedEffect(Unit) {
         if (dailyVerses == null) {
             loadRandomVerses(context, databaseHelper) { verses ->
@@ -105,8 +103,6 @@ fun HomeScreen(
     }
 
     var popularDevotionals by remember { mutableStateOf<List<PopularDevotional>>(emptyList()) }
-
-    // Load random popular devotionals on first composition
     LaunchedEffect(Unit) {
         if (popularDevotionals.isEmpty()) {
             popularDevotionals = getRandomDevotionals()
@@ -212,14 +208,12 @@ fun HomeScreen(
         }
         item { Spacer(modifier = Modifier.height(40.dp)) }
         item {
-            // Use remember to prevent unnecessary recompositions
             val isMatrixVisible by remember { mutableStateOf(true) }
             if (isMatrixVisible) {
                 key("matrix_component") {
                     MatrixNative()
                 }
             } else {
-                // Fallback content when matrix is hidden
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
@@ -239,10 +233,8 @@ fun DailyVerseCard(
     val context = LocalContext.current
     val isLoading = remember { mutableStateOf(false) }
     var isBookmarked by remember(verses) { mutableStateOf(false) }
-
-    // Check if the verses are already bookmarked
     LaunchedEffect(verses) {
-        if (verses != null && verses.isNotEmpty()) {
+        if (!verses.isNullOrEmpty()) {
             val isSaved = checkIfBookmarked(verses.first(), databaseHelper)
             isBookmarked = isSaved
         }
@@ -298,7 +290,7 @@ fun DailyVerseCard(
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
-            if (verses != null && verses.isNotEmpty()) {
+            if (!verses.isNullOrEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -324,7 +316,6 @@ fun DailyVerseCard(
                                 ) {
                                     append("${verse.verseNumber} ")
                                 }
-                                // Add the verse text
                                 append(SimpleVerseProcessor.stripXmlTags(verse.text))
                             }
                             Text(
@@ -338,7 +329,6 @@ fun DailyVerseCard(
                     }
                 }
             } else {
-                // Loading state
                 Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -558,7 +548,7 @@ fun DevotionalItem(
                 overflow = TextOverflow.Ellipsis
             )
         }
-        IconButton(onClick = { /* Bookmark */ }) {
+        IconButton(onClick = {}) {
             Icon(
                 Icons.Filled.BookmarkBorder,
                 contentDescription = "Bookmark",

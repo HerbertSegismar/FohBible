@@ -33,7 +33,6 @@ import java.util.Calendar
 @Composable
 fun Footer() {
     val context = LocalContext.current
-    // Pre-calculate the year to avoid Calendar.getInstance() on every recomposition
     val currentYear = Calendar.getInstance().get(Calendar.YEAR)
 
     Column(
@@ -42,7 +41,6 @@ fun Footer() {
             .padding(top = 16.dp, bottom = 80.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Main text
         Text(
             text = "Made with ❤️ For All Believers Worldwide",
             style = MaterialTheme.typography.bodySmall,
@@ -51,7 +49,7 @@ fun Footer() {
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "© Copyright $currentYear", // Use pre-calculated year
+            text = "© Copyright $currentYear",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 12.sp
@@ -64,8 +62,6 @@ fun Footer() {
             fontSize = 12.sp
         )
         Spacer(modifier = Modifier.height(16.dp))
-
-        // Contact email
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
@@ -100,8 +96,6 @@ fun Footer() {
             )
         }
         Spacer(modifier = Modifier.height(16.dp))
-
-        // Image section - optimized
         Box(
             modifier = Modifier
                 .height(45.dp)
@@ -155,7 +149,6 @@ fun Footer() {
                             try {
                                 context.startActivity(intent)
                             } catch (_: Exception) {
-                                // Handle exception if needed
                             }
                         }
                     )
@@ -203,7 +196,6 @@ fun Footer() {
                     try {
                         context.startActivity(intent)
                     } catch (_: Exception) {
-                        // Handle exception if needed
                     }
                 }
             )
