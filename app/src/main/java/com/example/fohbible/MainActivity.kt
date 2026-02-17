@@ -93,6 +93,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -1258,6 +1259,22 @@ fun ReaderAppBar(
                     modifier = Modifier.rotate(colorAnimatedRotation)
                 )
             }
+            if (viewModel.multiVersion) {
+                IconButton(
+                    onClick = {
+                        syncTargetRotation += 180f
+                        viewModel.scrollSync = !viewModel.scrollSync
+                    },
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        if (viewModel.scrollSync) Icons.Filled.Link else Icons.Filled.LinkOff,
+                        contentDescription = "Toggle Scroll Sync",
+                        tint = Color.White,
+                        modifier = Modifier.rotate(syncAnimatedRotation)
+                    )
+                }
+            }
             IconButton(
                 onClick = { showMultiDropdown = !showMultiDropdown },
                 modifier = Modifier
@@ -1279,19 +1296,18 @@ fun ReaderAppBar(
             DropdownMenu(
                 expanded = showMultiDropdown,
                 onDismissRequest = { showMultiDropdown = false },
-                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                modifier = Modifier.background(MaterialTheme.colorScheme.surface),
+                offset = DpOffset(x = 100.dp, y = 0.dp)
             ) {
                 Text(
                     text = "Windows Layout",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.primary),
+                    modifier = Modifier.fillMaxWidth().height(25.dp),
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.primary,
                 )
-
+                HorizontalDivider()
                 val current = if (!viewModel.multiVersion) "single" else viewModel.multiViewLayout
 
                 @Composable
@@ -1331,7 +1347,7 @@ fun ReaderAppBar(
                         text = {
                             Text(
                                 text = title,
-                                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+                                fontWeight = FontWeight.Bold,
                                 color = textColor,
                                 style = MaterialTheme.typography.bodyLarge
                             )
@@ -1354,22 +1370,6 @@ fun ReaderAppBar(
                 createItem("Vertical") {
                     viewModel.multiVersion = true
                     viewModel.multiViewLayout = "vertical"
-                }
-            }
-            if (viewModel.multiVersion) {
-                IconButton(
-                    onClick = {
-                        syncTargetRotation += 180f
-                        viewModel.scrollSync = !viewModel.scrollSync
-                    },
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Icon(
-                        if (viewModel.scrollSync) Icons.Filled.Link else Icons.Filled.LinkOff,
-                        contentDescription = "Toggle Scroll Sync",
-                        tint = Color.White,
-                        modifier = Modifier.rotate(syncAnimatedRotation)
-                    )
                 }
             }
             IconButton(
