@@ -274,7 +274,7 @@ fun SearchScreen(
     }
 
     val handleVersePress: (Verse) -> Unit = { verse ->
-        val bookName = getBookInfo(verse.bookNumber)?.name ?: verse.bookName ?: "Unknown Book"
+        val bookName = verse.bookName ?: "Unknown Book"
         onPassageSelected(
             PassageSelection(
                 bookNumber = verse.bookNumber,
@@ -567,7 +567,7 @@ fun SearchResultItem(
     onVersePress: (Verse) -> Unit,
     colors: Map<String, Color>
 ) {
-    val longName = getBookInfo(verse.bookNumber)?.name ?: verse.bookName ?: "Unknown Book"
+    val longName = verse.bookName ?: getBookInfo(verse.bookNumber)?.name ?: "Unknown Book"
     val bookColorStr = verse.bookColor ?: getBookColor(longName, verse)
     val bookColor = Color(bookColorStr.toColorInt())
     val processor = VerseTextProcessor()

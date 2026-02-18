@@ -721,7 +721,6 @@ fun UpdatedColorThemeDialog(
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
-            HorizontalDivider()
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(12.dp)

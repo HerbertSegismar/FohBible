@@ -6,7 +6,6 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.graphics.Typeface
 import android.net.Uri
-import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
@@ -127,7 +126,6 @@ fun ReaderScreen(
     var secondaryCurrent by remember { mutableStateOf(viewModel.secondaryPassage.copy(verse = 1)) }
     var targetVerse by remember { mutableStateOf(passage.verse) }
     var secondaryTargetVerse by remember { mutableStateOf(viewModel.secondaryPassage.verse) }
-
     LaunchedEffect(passage.bookNumber, passage.chapter, passage.verse) {
         if (passage.bookNumber != primaryCurrent.bookNumber || passage.chapter != primaryCurrent.chapter) {
             primaryCurrent = passage.copy(verse = 1)
@@ -136,7 +134,6 @@ fun ReaderScreen(
             targetVerse = passage.verse
         }
     }
-
     LaunchedEffect(viewModel.secondaryPassage.bookNumber, viewModel.secondaryPassage.chapter, viewModel.secondaryPassage.verse) {
         if (viewModel.secondaryPassage.bookNumber != secondaryCurrent.bookNumber || viewModel.secondaryPassage.chapter != secondaryCurrent.chapter) {
             secondaryCurrent = viewModel.secondaryPassage.copy(verse = 1)
@@ -145,25 +142,19 @@ fun ReaderScreen(
             secondaryTargetVerse = viewModel.secondaryPassage.verse
         }
     }
-
     LaunchedEffect(viewModel.scrollSync, viewModel.multiVersion) {
         if (viewModel.multiVersion && viewModel.scrollSync) {
             viewModel.secondaryPassage = viewModel.primaryPassage
             secondaryCurrent = primaryCurrent
         }
     }
-
     val primaryLoadedVerses = remember { mutableStateMapOf<Pair<Int, Int>, List<VerseContent>>() }
     val secondaryLoadedVerses = remember { mutableStateMapOf<Pair<Int, Int>, List<VerseContent>>() }
-
     LaunchedEffect(databaseHelper) {
         primaryLoadedVerses.clear()
     }
-
     val context = LocalContext.current
-
     var secondaryDatabaseHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
-
     LaunchedEffect(viewModel.multiVersion, viewModel.secondaryDbName) {
         secondaryDatabaseHelper?.close()
         secondaryDatabaseHelper = if (viewModel.multiVersion && viewModel.secondaryDbName.isNotEmpty()) {
@@ -172,14 +163,11 @@ fun ReaderScreen(
             null
         }
     }
-
     LaunchedEffect(secondaryDatabaseHelper) {
         secondaryLoadedVerses.clear()
     }
-
     val multi = viewModel.multiVersion
     val synced = viewModel.scrollSync && multi && secondaryDatabaseHelper != null
-
     val contextFont = LocalContext.current
     val systemFont = FontFamily.Default
     val oswaldFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/Oswald.ttf")) }
@@ -192,43 +180,35 @@ fun ReaderScreen(
         "poppins" -> poppinsFont
         else -> systemFont
     }
-
     var isButtonVisible by remember { mutableStateOf(true) }
     val buttonAlpha by animateFloatAsState(if (isButtonVisible) 1f else 0.2f, label = "buttonAlpha")
     val scope = rememberCoroutineScope()
-
     fun scheduleFade() {
         scope.launch {
             delay(5000)
             isButtonVisible = false
         }
     }
-
     LaunchedEffect(primaryCurrent) {
         isButtonVisible = true
         scheduleFade()
     }
-
     var dictionaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var strongDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var commentaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var secondaryCommentaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
-
     var showWordModal by remember { mutableStateOf(false) }
     var currentWord by remember { mutableStateOf("") }
     var wordDefinition by remember { mutableStateOf("") }
     var wordDb by remember { mutableStateOf<DatabaseHelper?>(null) }
-
     var showStrongsModal by remember { mutableStateOf(false) }
     var currentStrongNumber by remember { mutableStateOf("") }
     var strongDefinition by remember { mutableStateOf("") }
     var strongDb by remember { mutableStateOf<DatabaseHelper?>(null) }
-
     var showCommentaryModal by remember { mutableStateOf(false) }
     var commentaryTitle by remember { mutableStateOf("") }
     var commentaryContent by remember { mutableStateOf("") }
     var commentaryBibleDb by remember { mutableStateOf<DatabaseHelper?>(null) }
-
     LaunchedEffect(viewModel.selectedDictionary, databaseHelper?.databaseName) {
         dictionaryDbHelper?.close()
         dictionaryDbHelper = DatabaseHelper(context, "${viewModel.selectedDictionary}.dictionary.sqlite3")
@@ -242,14 +222,12 @@ fun ReaderScreen(
             wordDefinition = dictionaryDbHelper?.getWordDefinition(currentWord) ?: "Definition not found."
         }
     }
-
     LaunchedEffect(viewModel.multiVersion, viewModel.secondaryDbName, secondaryDatabaseHelper?.databaseName) {
         secondaryCommentaryDbHelper?.close()
         val name = secondaryDatabaseHelper?.databaseName ?: return@LaunchedEffect
         val comName = name.replace(".sqlite3", "com.sqlite3")
         secondaryCommentaryDbHelper = if (viewModel.multiVersion && comName.isNotEmpty()) DatabaseHelper(context, comName) else null
     }
-
     val onWordPress: (String, Boolean) -> Unit = { word, isPrimary ->
         val trimmed = word.trim()
         val definition = dictionaryDbHelper?.getWordDefinition(trimmed) ?: "Definition not found."
@@ -258,7 +236,6 @@ fun ReaderScreen(
         wordDb = if (isPrimary) databaseHelper else secondaryDatabaseHelper
         showWordModal = true
     }
-
     val onStrongsPress: (String, Int, Boolean) -> Unit = { strongNumber, _, isPrimary ->
         val trimmed = strongNumber.trim()
         val isOldTestament = viewModel.isOldTestament
@@ -281,7 +258,6 @@ fun ReaderScreen(
         commentaryBibleDb = if (isPrimary) databaseHelper else secondaryDatabaseHelper
         showCommentaryModal = true
     }
-
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -290,25 +266,20 @@ fun ReaderScreen(
             viewModel.bgImageIndex = 34
         }
     }
-
     var showMenu by remember { mutableStateOf(false) }
     var showBgModal by remember { mutableStateOf(false) }
     var showVerseOptions by remember { mutableStateOf(false) }
     var selectedVerse by remember { mutableStateOf<Verse?>(null) }
     var selectedPassage by remember { mutableStateOf<PassageSelection?>(null) }
     var selectedIsPrimary by remember { mutableStateOf(false) }
-
     val onVerseLongPress: (Verse, PassageSelection, Boolean) -> Unit = { verse, currentPassage, isPrimary ->
         selectedVerse = verse
         selectedPassage = currentPassage
         selectedIsPrimary = isPrimary
         showVerseOptions = true
     }
-
     var refreshKey by remember { mutableStateOf(0) }
-
     val subheadingsDbHelper = remember { DatabaseHelper(context, "kjvsubheadings.sqlite3") }
-
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
@@ -393,7 +364,6 @@ fun ReaderScreen(
                 refreshKey = refreshKey
             )
         }
-
         FloatingActionButton(
             onClick = {
                 viewModel.isReaderFullScreen = !viewModel.isReaderFullScreen
@@ -413,7 +383,6 @@ fun ReaderScreen(
                 contentDescription = if (viewModel.isReaderFullScreen) "Exit Fullscreen" else "Enter Fullscreen"
             )
         }
-
         DropdownMenu(
             expanded = showMenu,
             onDismissRequest = { showMenu = false },
@@ -435,7 +404,6 @@ fun ReaderScreen(
                 )
             }
         }
-
         if (showBgModal) {
             BgModal(
                 currentIndex = viewModel.bgImageIndex,
@@ -449,18 +417,14 @@ fun ReaderScreen(
                 onRemoveCustom = { viewModel.customTextureUri = null }
             )
         }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-            InteractiveModal(
-                show = showWordModal,
-                onDismiss = { showWordModal = false },
-                databaseHelper = wordDb,
-                initialType = "definition",
-                word = currentWord,
-                definition = wordDefinition
-            )
-        }
-
+        InteractiveModal(
+            show = showWordModal,
+            onDismiss = { showWordModal = false },
+            databaseHelper = wordDb,
+            initialType = "definition",
+            word = currentWord,
+            definition = wordDefinition
+        )
         InteractiveModal(
             show = showStrongsModal,
             onDismiss = { showStrongsModal = false },
@@ -469,18 +433,14 @@ fun ReaderScreen(
             strongNumber = currentStrongNumber,
             strongDefinition = strongDefinition
         )
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-            InteractiveModal(
-                show = showCommentaryModal,
-                onDismiss = { showCommentaryModal = false },
-                databaseHelper = commentaryBibleDb,
-                initialType = "commentary",
-                initialTitle = commentaryTitle,
-                initialContent = commentaryContent
-            )
-        }
-
+        InteractiveModal(
+            show = showCommentaryModal,
+            onDismiss = { showCommentaryModal = false },
+            databaseHelper = commentaryBibleDb,
+            initialType = "commentary",
+            initialTitle = commentaryTitle,
+            initialContent = commentaryContent
+        )
         val selVerse = selectedVerse
         val selPassage = selectedPassage
         val selIsPrimary = selectedIsPrimary
