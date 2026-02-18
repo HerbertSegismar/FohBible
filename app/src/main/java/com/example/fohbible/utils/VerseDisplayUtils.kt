@@ -1,5 +1,4 @@
 @file:Suppress("CanConvertToMultiDollarString")
-
 package com.example.fohbible.utils
 
 import androidx.compose.ui.graphics.Color
@@ -99,15 +98,19 @@ class VerseTextProcessor(
                 body = AnnotatedString("")
             )
         }
+
         val cacheKey = buildCacheKey(
-            verseText, baseFontSize, textColor, isKjvPlus, isOldTestament, highlight, isHighlighted, options, themeColors
+            verseText, baseFontSize, textColor, isKjvPlus, isOldTestament,
+            highlight, isHighlighted, options, themeColors
         )
         verseCache[cacheKey]?.let { cached ->
             logger?.logPerformance("Cache hit", System.currentTimeMillis() - startTime)
             return cached
         }
+
         val nodes = parseXmlTags(verseText)
         val tree = buildTree(nodes)
+
         val initialContext = TraversalContext(
             textColor = textColor ?: themeColors.textColor,
             isTextContainer = false,
@@ -116,15 +119,19 @@ class VerseTextProcessor(
             baseFontSize = baseFontSize,
             isOldTestament = isOldTestament
         )
+
         val (header, body) = traverseTree(
-            tree, initialContext, highlight, themeColors, onTagPress, onWordPress, onStrongsPress, isHighlighted,
-            isKjvPlus, options
+            tree, initialContext, highlight, themeColors,
+            onTagPress, onWordPress, onStrongsPress,
+            isHighlighted, isKjvPlus, options
         )
+
         val result = ProcessedVerse(
             header = if (options.showHeaders) header else null,
             body = body
         )
         verseCache[cacheKey] = result
+
         val duration = System.currentTimeMillis() - startTime
         logger?.logPerformance("Process verse", duration)
         return result
@@ -168,6 +175,7 @@ class VerseTextProcessor(
         val currentText = StringBuilder()
         var i = 0
         val stack = mutableListOf<String>()
+
         while (i < text.length) {
             if (text[i] == '<') {
                 if (currentText.isNotEmpty()) {
@@ -191,12 +199,10 @@ class VerseTextProcessor(
                         }
                         nodes.add(ParsedNode.ClosingTag(tagName))
                     }
-
                     fullTag.endsWith("/>") -> {
                         val tagName = fullTag.substring(1, fullTag.length - 2).trim().split(" ")[0]
                         nodes.add(ParsedNode.SelfClosingTag(tagName, fullTag))
                     }
-
                     else -> {
                         val tagName = fullTag.substring(1, fullTag.length - 1).trim().split(" ")[0]
                         stack.add(tagName)
@@ -226,12 +232,12 @@ class VerseTextProcessor(
         val stack = mutableListOf<MutableList<TreeNode>>()
         val elementStack = mutableListOf<TreeNode.Element>()
         var current = root
+
         for (node in nodes) {
             when (node) {
                 is ParsedNode.Text -> {
                     current.add(TreeNode.Text(node.content))
                 }
-
                 is ParsedNode.OpeningTag -> {
                     val element = TreeNode.Element(node.tag, node.fullTag, mutableListOf())
                     current.add(element)
@@ -239,7 +245,6 @@ class VerseTextProcessor(
                     elementStack.add(element)
                     current = element.children as MutableList<TreeNode>
                 }
-
                 is ParsedNode.ClosingTag -> {
                     if (stack.isNotEmpty()) {
                         val lastElement = elementStack.lastOrNull()
@@ -257,7 +262,6 @@ class VerseTextProcessor(
                         logger?.logParseError("extra_closing", "Extra closing tag </${node.tag}> with no matching opening tag")
                     }
                 }
-
                 is ParsedNode.SelfClosingTag -> {
                     current.add(TreeNode.SelfClosingTag(node.tag, node.fullTag))
                 }
@@ -284,18 +288,9 @@ class VerseTextProcessor(
         val headerBuilder = AnnotatedString.Builder()
         val bodyBuilder = AnnotatedString.Builder()
         traverseChildren(
-            tree,
-            headerBuilder,
-            bodyBuilder,
-            initialContext,
-            highlight,
-            themeColors,
-            onTagPress,
-            onWordPress,
-            onStrongsPress,
-            isHighlighted,
-            isKjvPlus,
-            options
+            tree, headerBuilder, bodyBuilder, initialContext,
+            highlight, themeColors, onTagPress, onWordPress, onStrongsPress,
+            isHighlighted, isKjvPlus, options
         )
         val header = if (headerBuilder.length > 0) headerBuilder.toAnnotatedString() else null
         val body = bodyBuilder.toAnnotatedString()
@@ -322,18 +317,9 @@ class VerseTextProcessor(
                 builder.append(" ")
             }
             traverseNode(
-                children[i],
-                headerBuilder,
-                bodyBuilder,
-                context,
-                highlight,
-                themeColors,
-                onTagPress,
-                onWordPress,
-                onStrongsPress,
-                isHighlighted,
-                isKjvPlus,
-                options
+                children[i], headerBuilder, bodyBuilder, context,
+                highlight, themeColors, onTagPress, onWordPress, onStrongsPress,
+                isHighlighted, isKjvPlus, options
             )
         }
     }
@@ -356,17 +342,15 @@ class VerseTextProcessor(
             is TreeNode.Text -> {
                 val builder = if (context.isHeader) headerBuilder else bodyBuilder
                 processTextNode(
-                    node, builder, context, highlight, themeColors, onWordPress, onStrongsPress, onTagPress,
-                    options
+                    node, builder, context, highlight, themeColors,
+                    onWordPress, onStrongsPress, onTagPress, options
                 )
             }
-
             is TreeNode.SelfClosingTag -> {
                 if (!options.showFootnotesInline) return
                 val builder = if (context.isHeader) headerBuilder else bodyBuilder
                 processSelfClosingTagNode(node, builder, context, themeColors)
             }
-
             is TreeNode.Element -> {
                 val newContext = when (node.tag) {
                     "n" -> context.copy(
@@ -374,13 +358,11 @@ class VerseTextProcessor(
                         textColor = themeColors.primary,
                         currentTag = node.tag
                     )
-
                     "J" -> context.copy(
                         isTextContainer = true,
                         textColor = if (!isHighlighted) themeColors.wordsOfJesus else context.textColor,
                         currentTag = node.tag
                     )
-
                     "t" -> context.copy(isTextContainer = true, currentTag = node.tag)
                     "S" -> context.copy(
                         isTextContainer = true,
@@ -389,7 +371,6 @@ class VerseTextProcessor(
                         baselineShift = BaselineShift(0.2f),
                         currentTag = node.tag
                     )
-
                     "f" -> context.copy(
                         isTextContainer = true,
                         textColor = themeColors.tagColor,
@@ -397,22 +378,12 @@ class VerseTextProcessor(
                         baselineShift = BaselineShift.None,
                         currentTag = node.tag
                     )
-
                     else -> context.copy(currentTag = node.tag)
                 }
                 traverseChildren(
-                    node.children,
-                    headerBuilder,
-                    bodyBuilder,
-                    newContext,
-                    highlight,
-                    themeColors,
-                    onTagPress,
-                    onWordPress,
-                    onStrongsPress,
-                    isHighlighted,
-                    isKjvPlus,
-                    options
+                    node.children, headerBuilder, bodyBuilder, newContext,
+                    highlight, themeColors, onTagPress, onWordPress, onStrongsPress,
+                    isHighlighted, isKjvPlus, options
                 )
             }
         }
@@ -441,9 +412,12 @@ class VerseTextProcessor(
             context.fontSizeMultiplier
         }
         val textContext = context.copy(fontSizeMultiplier = effectiveMultiplier)
+
         val rawText = if (options.preserveWhitespace) node.content else node.content.trim()
         if (rawText.isEmpty()) return
+
         val normalizedText = normalizeSpacing(rawText)
+
         when (context.currentTag) {
             "S" -> if (options.enableStrongsClick && onStrongsPress != null) {
                 val trimmed = normalizedText.trim()
@@ -461,45 +435,56 @@ class VerseTextProcessor(
                     }
                     builder.pop()
                 } else {
-                    processNormalText(
-                        normalizedText, builder, textContext, highlight, themeColors, onWordPress,
-                        options
-                    )
+                    processNormalText(normalizedText, builder, textContext, highlight, themeColors, onWordPress, options)
                 }
             } else {
-                processNormalText(
-                    normalizedText, builder, textContext, highlight, themeColors, onWordPress,
-                    options
-                )
+                processNormalText(normalizedText, builder, textContext, highlight, themeColors, onWordPress, options)
             }
-            "f" -> if (options.enableTagClick && onTagPress != null) {
+
+            "f" -> {
                 val trimmed = normalizedText.trim()
-                if (trimmed.isNotEmpty()) {
-                    builder.pushStringAnnotation("tag", trimmed)
-                }
-                builder.withStyle(
-                    SpanStyle(
-                        color = textContext.textColor,
-                        fontSize = textContext.baseFontSize * textContext.fontSizeMultiplier,
-                        baselineShift = textContext.baselineShift ?: BaselineShift.None,
-                    )
-                ) {
-                    builder.append(normalizedText)
-                }
-                if (trimmed.isNotEmpty()) {
-                    builder.pop()
-                }
-            } else {
-                processNormalText(
-                    normalizedText, builder, textContext, highlight, themeColors, onWordPress,
-                    options
+                val visibleStyle = SpanStyle(
+                    color = textContext.textColor,
+                    fontSize = textContext.baseFontSize * textContext.fontSizeMultiplier,
+                    baselineShift = textContext.baselineShift ?: BaselineShift.None
                 )
+
+                if (options.enableTagClick && onTagPress != null) {
+                    if (isEncircled(node.content) && trimmed.isNotEmpty()) {
+                        builder.pushStringAnnotation("tag", trimmed)
+
+                        builder.withStyle(visibleStyle) {
+                            builder.append(normalizedText)
+                        }
+                        builder.withStyle(
+                            SpanStyle(
+                                color = Color.Transparent,
+                                fontSize = textContext.baseFontSize * textContext.fontSizeMultiplier,
+                                baselineShift = BaselineShift.None
+                            )
+                        ) {
+                            builder.append(" ")
+                        }
+
+                        builder.pop()
+                    } else if (trimmed.isNotEmpty()) {
+                        builder.pushStringAnnotation("tag", trimmed)
+                        builder.withStyle(visibleStyle) {
+                            builder.append(normalizedText)
+                        }
+                        builder.pop()
+                    } else {
+                        builder.withStyle(visibleStyle) {
+                            builder.append(normalizedText)
+                        }
+                    }
+                } else {
+                    processNormalText(normalizedText, builder, textContext, highlight, themeColors, onWordPress, options)
+                }
             }
+
             else -> {
-                processNormalText(
-                    normalizedText, builder, textContext, highlight, themeColors, onWordPress,
-                    options
-                )
+                processNormalText(normalizedText, builder, textContext, highlight, themeColors, onWordPress, options)
             }
         }
     }
@@ -695,10 +680,12 @@ object SimpleVerseProcessor {
         if (text.isEmpty()) return ""
         var processedText = text
         processedText = processedText.replace(
-            Regex("""<f[^>]*>.*?</f>""", RegexOption.DOT_MATCHES_ALL), ""
+            Regex("""<f[^>]*>.*?</f>""", RegexOption.DOT_MATCHES_ALL),
+            ""
         )
         processedText = processedText.replace(
-            Regex("""<S[^>]*>.*?</S>""", RegexOption.DOT_MATCHES_ALL), ""
+            Regex("""<S[^>]*>.*?</S>""", RegexOption.DOT_MATCHES_ALL),
+            ""
         )
         processedText = processedText.replace(Regex("""<[^>]+>"""), "")
         processedText = processedText.replace(Regex("""\s+"""), " ")

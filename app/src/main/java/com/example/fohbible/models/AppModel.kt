@@ -1,8 +1,6 @@
 package com.example.fohbible.models
 
 import android.content.Context
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -140,10 +138,9 @@ class AppViewModel : ViewModel() {
         navigationStack.add(screen)
     }
 
-    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     fun goBack() {
         if (navigationStack.size > 1) {
-            navigationStack.removeLast()
+            navigationStack.removeAt(navigationStack.lastIndex)
         }
     }
 

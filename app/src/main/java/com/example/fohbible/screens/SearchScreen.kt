@@ -1,4 +1,4 @@
-@file:Suppress("UnusedImport", "VariableNaming", "FunctionName", "LocalVariableName", "UnusedParameter")
+@file:Suppress("VariableNaming", "FunctionName", "LocalVariableName", "UnusedParameter")
 
 package com.example.fohbible.screens
 
@@ -60,16 +60,20 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.core.graphics.toColorInt
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.fohbible.data.DatabaseHelper
-import com.example.fohbible.data.Testament
-import com.example.fohbible.data.getBookInfo
-import com.example.fohbible.data.getScopeConfig
-import com.example.fohbible.data.isBookScope
-import com.example.fohbible.data.getBookNumberFromScope
+import com.example.fohbible.data.PassageSelection
 import com.example.fohbible.data.SCOPE_CATEGORIES
 import com.example.fohbible.data.SCOPE_RANGES
 import com.example.fohbible.data.SearchScope
-import com.example.fohbible.data.PassageSelection
+import com.example.fohbible.data.Testament
+import com.example.fohbible.data.getBookInfo
+import com.example.fohbible.data.getBookNumberFromScope
+import com.example.fohbible.data.getScopeConfig
+import com.example.fohbible.data.isBookScope
+import com.example.fohbible.data.scopeColors
+import com.example.fohbible.models.AppViewModel
 import com.example.fohbible.ui.theme.LocalAppTheme
 import com.example.fohbible.utils.ThemeColors
 import com.example.fohbible.utils.VerseTextProcessor
@@ -77,12 +81,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
-import androidx.core.graphics.toColorInt
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.fohbible.models.AppViewModel
-import com.example.fohbible.data.BibleData
-import com.example.fohbible.data.scopeColors
-import kotlin.Boolean
 
 fun getScopeForBookNumber(bookNumber: Int): String? {
     for ((scope, range) in SCOPE_RANGES) {
