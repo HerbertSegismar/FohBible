@@ -411,6 +411,10 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 modifier = Modifier.fillMaxSize(),
                                 onBibleClick = { viewModel.showNavigationModal = true },
                                 onNavigateToReader = { passage ->
+                                    viewModel.primaryPassage = passage
+                                    if (viewModel.scrollSync) {
+                                        viewModel.secondaryPassage = passage
+                                    }
                                     viewModel.navigateTo(Screen.Reader(passage))
                                 },
                                 databaseHelper = dbHelper
