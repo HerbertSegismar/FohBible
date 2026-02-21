@@ -51,6 +51,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.fohbible.data.BibleData
 import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.PassageSelection
+import com.example.fohbible.data.Testament
 import com.example.fohbible.data.Verse
 import com.example.fohbible.models.AppViewModel
 import com.example.fohbible.utils.ProcessedVerse
@@ -66,8 +67,10 @@ data class ModalPage(
     val passage: PassageSelection? = null,
     val word: String? = null,
     val strongNumber: String? = null,
-    val description: String? = null
+    val description: String? = null,
+    val isOldTestament: Boolean
 )
+
 fun sanitizeHtmlContent(content: String?): String {
     if (content.isNullOrEmpty()) return ""
     var sanitized = content
@@ -232,7 +235,8 @@ fun InteractiveModal(
     definition: String = "",
     strongNumber: String = "",
     strongDefinition: String = "",
-    initialDescription: String = ""
+    initialDescription: String = "",
+    isOldTestament: Boolean
 ) {
     val viewModel = viewModel<AppViewModel>()
     val context = LocalContext.current
@@ -258,9 +262,11 @@ fun InteractiveModal(
         "poppins" -> poppinsFont
         else -> systemFont
     }
+
     var dictionaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var strongDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var commentaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
+
     LaunchedEffect(viewModel.selectedDictionary, databaseHelper?.databaseName) {
         dictionaryDbHelper?.close()
         dictionaryDbHelper = DatabaseHelper(context, "${viewModel.selectedDictionary}.dictionary.sqlite3")
@@ -271,6 +277,7 @@ fun InteractiveModal(
         val comName = name.replace(".sqlite3", "com.sqlite3")
         commentaryDbHelper = if (comName.isNotEmpty()) DatabaseHelper(context, comName) else null
     }
+
     val stack = remember { mutableStateListOf<ModalPage>() }
     val dictionaries = listOf("noah", "cbtel", "isbe", "atsbd")
     val dictionaryDisplayNames = mapOf(
@@ -279,29 +286,31 @@ fun InteractiveModal(
         "isbe" to "International Standard Bible Encyclopedia",
         "atsbd" to "American Tract Society Bible Dictionary"
     )
+
     LaunchedEffect(show) {
         if (show) {
             stack.clear()
             when (initialType) {
                 "commentary" -> {
                     val sanitizedContent = sanitizeHtmlContent(initialContent)
-                    stack.add(ModalPage(initialTitle, "commentary", sanitizedContent, description = initialDescription))
+                    stack.add(ModalPage(initialTitle, "commentary", sanitizedContent, description = initialDescription, isOldTestament = isOldTestament))
                 }
                 "definition" -> {
                     val dbDisplayName = dictionaryDisplayNames[viewModel.selectedDictionary] ?: viewModel.selectedDictionary
                     val capitalizedWord = word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
                     val title = "Definition of $capitalizedWord"
                     val sanitizedDefinition = sanitizeHtmlContent(definition)
-                    stack.add(ModalPage(title, "definition", sanitizedDefinition, word = word, description = dbDisplayName))
+                    stack.add(ModalPage(title, "definition", sanitizedDefinition, word = word, description = dbDisplayName, isOldTestament = isOldTestament))
                 }
                 "strong" -> {
                     val title = "Strong's Definition for $strongNumber"
                     val preparedDefinition = prepareStrongContent(strongDefinition)
-                    stack.add(ModalPage(title, "strong", preparedDefinition, strongNumber = strongNumber, description = initialDescription))
+                    stack.add(ModalPage(title, "strong", preparedDefinition, strongNumber = strongNumber, description = initialDescription, isOldTestament = isOldTestament))
                 }
             }
         }
     }
+
     val onWordPress: (String) -> Unit = Unit@{ w ->
         val trimmed = w.trim()
         if (trimmed.isEmpty() || trimmed.matches(Regex(".*\\d.*"))) {
@@ -310,6 +319,7 @@ fun InteractiveModal(
         val pair = getDefinitionOrClosest(dictionaryDbHelper, trimmed)
         val dbDisplayName = dictionaryDisplayNames[viewModel.selectedDictionary] ?: viewModel.selectedDictionary
         val capitalizedWord = trimmed.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
+        val currentIsOld = stack.last().isOldTestament
         if (pair != null) {
             val (usedWord, def) = pair
             val capitalizedUsed = usedWord.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
@@ -319,20 +329,21 @@ fun InteractiveModal(
                 "No exact match for \"$capitalizedWord\". Closest match: $capitalizedUsed"
             }
             val sanitized = sanitizeHtmlContent(def)
-            stack.add(ModalPage(title, "definition", sanitized, word = trimmed, description = dbDisplayName))
+            stack.add(ModalPage(title, "definition", sanitized, word = trimmed, description = dbDisplayName, isOldTestament = currentIsOld))
         } else {
             val title = "Definition of $capitalizedWord not found"
-            stack.add(ModalPage(title, "definition", "No definition found.", word = trimmed, description = dbDisplayName))
+            stack.add(ModalPage(title, "definition", "No definition found.", word = trimmed, description = dbDisplayName, isOldTestament = currentIsOld))
         }
     }
+
     val onStrongsPress: (String, Int) -> Unit = Unit@{ strongNumber, _ ->
         val trimmed = strongNumber.trim()
         if (trimmed.isEmpty()) return@Unit
-        val isOldTestament = viewModel.isOldTestament
+        val currentIsOld = stack.last().isOldTestament
         val prefixed = if (trimmed.firstOrNull()?.isLetter() ?: false) {
             trimmed.uppercase()
         } else {
-            (if (isOldTestament) "H" else "G") + trimmed
+            (if (currentIsOld) "H" else "G") + trimmed
         }
         if (!prefixed.matches(Regex("^[HG]\\d+"))) {
             return@Unit
@@ -340,8 +351,9 @@ fun InteractiveModal(
         val definition = strongDbHelper?.getStrongDefinition(prefixed) ?: "Strong's definition not found."
         val title = "Strong's Definition for $prefixed"
         val prepared = prepareStrongContent(definition)
-        stack.add(ModalPage(title, "strong", prepared, strongNumber = prefixed))
+        stack.add(ModalPage(title, "strong", prepared, strongNumber = prefixed, isOldTestament = currentIsOld))
     }
+
     val onTagPress: (String, PassageSelection) -> Unit = Unit@{ marker, passage ->
         val bookNumber = passage.bookNumber
         val chapter = passage.chapter
@@ -360,8 +372,11 @@ fun InteractiveModal(
         val rangeStr = if (end != start) "$start-$end" else "$start"
         val newTitle = "Notes on $bookName $chapter:$rangeStr – [$marker]"
         val sanitizedCombined = sanitizeHtmlContent(combined)
-        stack.add(ModalPage(newTitle, "commentary", sanitizedCombined))
+        val book = BibleData.getBookByCustomNumber(passage.bookNumber)
+        val isOld = book?.testament == Testament.OLD
+        stack.add(ModalPage(newTitle, "commentary", sanitizedCombined, isOldTestament = isOld))
     }
+
     if (show) {
         if (stack.isEmpty()) return
         val currentPage = stack.last()
@@ -395,7 +410,6 @@ fun InteractiveModal(
                     val passage = currentPage.passage ?: return@AlertDialog
                     val processor = remember(verses) { VerseTextProcessor() }
                     val isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false
-                    val isOldTestament = viewModel.isOldTestament
                     val processedVerses = remember(verses, themeColors, isKjvPlus) {
                         val result = mutableMapOf<Int, ProcessedVerse>()
                         for (verse in verses) {
@@ -409,16 +423,14 @@ fun InteractiveModal(
                                 onStrongsPress = { strong -> onStrongsPress(strong, passage.bookNumber) },
                                 isHighlighted = false,
                                 isKjvPlus = isKjvPlus,
-                                isOldTestament = isOldTestament
+                                isOldTestament = currentPage.isOldTestament
                             )
                             result[verse.verseNumber] = processed
                         }
                         result
                     }
-                    var currentBatch by remember(verses) { mutableIntStateOf(50) } // Initial batch size
-                    val showChapterHeaders = remember(verses) {
-                        verses.mapNotNull { it.chapter }.distinct().size > 1
-                    }
+                    var currentBatch by remember(verses) { mutableIntStateOf(50) }
+                    val showChapterHeaders = remember(verses) { verses.mapNotNull { it.chapter }.distinct().size > 1 }
                     Column(
                         modifier = Modifier
                             .verticalScroll(rememberScrollState())
@@ -532,7 +544,6 @@ fun InteractiveModal(
                             val spanned = HtmlCompat.fromHtml(content, HtmlCompat.FROM_HTML_MODE_COMPACT)
                             val spannable = SpannableString(spanned)
                             val urlSpans = spannable.getSpans(0, spannable.length, URLSpan::class.java)
-                            val isStrongMode = currentPage.type == "strong"
                             for (urlSpan in urlSpans) {
                                 val start = spannable.getSpanStart(urlSpan)
                                 val end = spannable.getSpanEnd(urlSpan)
@@ -545,6 +556,8 @@ fun InteractiveModal(
                                 if (href.startsWith("B:")) {
                                     val passage = parseVerseLink(href, linkText)
                                     if (passage != null) {
+                                        val book = BibleData.getBookByCustomNumber(passage.bookNumber)
+                                        val isOld = book?.testament == Testament.OLD
                                         clickableSpan = object : ClickableSpan() {
                                             override fun onClick(widget: View) {
                                                 val verseStart = passage.verse ?: return
@@ -562,10 +575,10 @@ fun InteractiveModal(
                                                     "${passage.verse}" + (passage.verseEnd?.let { "-$it" } ?: "")
                                                 }
                                                 val newTitle = "${passage.bookName} ${passage.chapter}:$rangeStr"
-                                                stack.add(ModalPage(newTitle, "verses", verses = verses, passage = passage))
+                                                stack.add(ModalPage(newTitle, "verses", verses = verses, passage = passage, isOldTestament = isOld))
                                             }
                                         }
-                                        addClickable = !isStrongMode
+                                        addClickable = true
                                     }
                                 } else if (href.startsWith("S:")) {
                                     val seeContent = href.substringAfter("S:").trim()
@@ -575,6 +588,8 @@ fun InteractiveModal(
                                             val verseHref = "B:" + seeContent.substringAfter("B:")
                                             val passage = parseVerseLink(verseHref, linkText)
                                             if (passage != null) {
+                                                val book = BibleData.getBookByCustomNumber(passage.bookNumber)
+                                                val isOld = book?.testament == Testament.OLD
                                                 clickableSpan = object : ClickableSpan() {
                                                     override fun onClick(widget: View) {
                                                         val verseStart = passage.verse ?: return
@@ -593,24 +608,26 @@ fun InteractiveModal(
                                                             "${passage.verse}" + (passage.verseEnd?.let { "-$it" } ?: "")
                                                         }
                                                         val newTitle = "${passage.bookName} ${passage.chapter}:$rangeStr"
-                                                        stack.add(ModalPage(newTitle, "verses", verses = verses, passage = passage))
+                                                        stack.add(ModalPage(newTitle, "verses", verses = verses, passage = passage, isOldTestament = isOld))
                                                     }
                                                 }
-                                                addClickable = !isStrongMode
+                                                addClickable = true
                                             }
                                         }
                                         seeContent.matches(Regex("^[GH]\\d+")) -> {
+                                            val isOld = seeContent.startsWith("H")
                                             clickableSpan = object : ClickableSpan() {
                                                 override fun onClick(widget: View) {
                                                     val definition = strongDbHelper?.getStrongDefinition(seeContent) ?: "Strong's definition not found."
                                                     val newTitle = "Strong's Definition for $seeContent"
                                                     val prepared = prepareStrongContent(definition)
-                                                    stack.add(ModalPage(newTitle, "strong", prepared, strongNumber = seeContent))
+                                                    stack.add(ModalPage(newTitle, "strong", prepared, strongNumber = seeContent, isOldTestament = isOld))
                                                 }
                                             }
                                             addClickable = true
                                         }
                                         seeContent.matches(Regex("^\\d+")) -> {
+                                            val currentIsOld = stack.last().isOldTestament
                                             val hNum = "H$seeContent"
                                             val gNum = "G$seeContent"
                                             val hDef = strongDbHelper?.getStrongDefinition(hNum) ?: ""
@@ -620,36 +637,44 @@ fun InteractiveModal(
                                             var combinedStrongNum = ""
                                             val preparedH = if (hDef.isNotBlank()) prepareStrongContent(hDef) else ""
                                             val preparedG = if (gDef.isNotBlank()) prepareStrongContent(gDef) else ""
-                                            if (preparedH.isNotBlank() && preparedG.isNotBlank()) {
-                                                combinedTitle += " for $hNum and $gNum"
-                                                combinedDef = "$hNum:\n$preparedH\n\n$gNum:\n$preparedG"
-                                                combinedStrongNum = "$hNum,$gNum"
-                                            } else if (preparedH.isNotBlank()) {
-                                                combinedTitle += " for $hNum"
-                                                combinedDef = preparedH
-                                                combinedStrongNum = hNum
-                                            } else if (preparedG.isNotBlank()) {
-                                                combinedTitle += " for $gNum"
-                                                combinedDef = preparedG
-                                                combinedStrongNum = gNum
+                                            when {
+                                                preparedH.isNotBlank() && preparedG.isNotBlank() -> {
+                                                    combinedTitle += " for $hNum and $gNum"
+                                                    combinedDef = "$hNum:\n$preparedH\n\n$gNum:\n$preparedG"
+                                                    combinedStrongNum = "$hNum,$gNum"
+                                                }
+                                                preparedH.isNotBlank() -> {
+                                                    combinedTitle += " for $hNum"
+                                                    combinedDef = preparedH
+                                                    combinedStrongNum = hNum
+                                                }
+                                                preparedG.isNotBlank() -> {
+                                                    combinedTitle += " for $gNum"
+                                                    combinedDef = preparedG
+                                                    combinedStrongNum = gNum
+                                                }
                                             }
                                             if (preparedH.isNotBlank() || preparedG.isNotBlank()) {
                                                 clickableSpan = object : ClickableSpan() {
                                                     override fun onClick(widget: View) {
-                                                        stack.add(ModalPage(combinedTitle, "strong", combinedDef, strongNumber = combinedStrongNum))
+                                                        stack.add(ModalPage(combinedTitle, "strong", combinedDef, strongNumber = combinedStrongNum, isOldTestament = currentIsOld))
                                                     }
                                                 }
                                                 addClickable = true
                                             } else {
-                                                // Fallback to word definition
-                                                val wordFallback = cleanedLinkText
-                                                val pair = getDefinitionOrClosest(dictionaryDbHelper, wordFallback)
+                                                val pair = getDefinitionOrClosest(dictionaryDbHelper,
+                                                    cleanedLinkText
+                                                )
                                                 val dbDisplayName = dictionaryDisplayNames[viewModel.selectedDictionary] ?: viewModel.selectedDictionary
-                                                val capitalizedWordFallback = wordFallback.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
+                                                val capitalizedWordFallback =
+                                                    cleanedLinkText.replaceFirstChar {
+                                                        if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+                                                    }
                                                 if (pair != null) {
                                                     val (usedWord, definition) = pair
                                                     val capitalizedUsed = usedWord.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
-                                                    val newTitle = if (usedWord.equals(wordFallback, ignoreCase = true)) {
+                                                    val newTitle = if (usedWord.equals(
+                                                            cleanedLinkText, ignoreCase = true)) {
                                                         "Definition of $capitalizedUsed"
                                                     } else {
                                                         "No exact match for \"$capitalizedWordFallback\". Closest match: $capitalizedUsed"
@@ -657,26 +682,29 @@ fun InteractiveModal(
                                                     val sanitizedDef = sanitizeHtmlContent(definition)
                                                     clickableSpan = object : ClickableSpan() {
                                                         override fun onClick(widget: View) {
-                                                            stack.add(ModalPage(newTitle, "definition", sanitizedDef, word = wordFallback, description = dbDisplayName))
+                                                            stack.add(ModalPage(newTitle, "definition", sanitizedDef,
+                                                                word = cleanedLinkText, description = dbDisplayName, isOldTestament = currentIsOld))
                                                         }
                                                     }
-                                                    addClickable = !isStrongMode
+                                                    addClickable = true
                                                 }
                                             }
                                         }
                                         else -> {
                                             val potentialStrong = cleanedLinkText.uppercase()
                                             if (potentialStrong.matches(Regex("^[GH]\\d+"))) {
+                                                val isOld = potentialStrong.startsWith("H")
                                                 clickableSpan = object : ClickableSpan() {
                                                     override fun onClick(widget: View) {
                                                         val definition = strongDbHelper?.getStrongDefinition(potentialStrong) ?: "Strong's definition not found."
                                                         val newTitle = "Strong's Definition for $potentialStrong"
                                                         val prepared = prepareStrongContent(definition)
-                                                        stack.add(ModalPage(newTitle, "strong", prepared, strongNumber = potentialStrong))
+                                                        stack.add(ModalPage(newTitle, "strong", prepared, strongNumber = potentialStrong, isOldTestament = isOld))
                                                     }
                                                 }
                                                 addClickable = true
                                             } else if (potentialStrong.matches(Regex("^\\d+"))) {
+                                                val currentIsOld = stack.last().isOldTestament
                                                 val hNum = "H$potentialStrong"
                                                 val gNum = "G$potentialStrong"
                                                 val hDef = strongDbHelper?.getStrongDefinition(hNum) ?: ""
@@ -686,23 +714,27 @@ fun InteractiveModal(
                                                 var combinedStrongNum = ""
                                                 val preparedH = if (hDef.isNotBlank()) prepareStrongContent(hDef) else ""
                                                 val preparedG = if (gDef.isNotBlank()) prepareStrongContent(gDef) else ""
-                                                if (preparedH.isNotBlank() && preparedG.isNotBlank()) {
-                                                    combinedTitle += " for $hNum and $gNum"
-                                                    combinedDef = "$hNum:\n$preparedH\n\n$gNum:\n$preparedG"
-                                                    combinedStrongNum = "$hNum,$gNum"
-                                                } else if (preparedH.isNotBlank()) {
-                                                    combinedTitle += " for $hNum"
-                                                    combinedDef = preparedH
-                                                    combinedStrongNum = hNum
-                                                } else if (preparedG.isNotBlank()) {
-                                                    combinedTitle += " for $gNum"
-                                                    combinedDef = preparedG
-                                                    combinedStrongNum = gNum
+                                                when {
+                                                    preparedH.isNotBlank() && preparedG.isNotBlank() -> {
+                                                        combinedTitle += " for $hNum and $gNum"
+                                                        combinedDef = "$hNum:\n$preparedH\n\n$gNum:\n$preparedG"
+                                                        combinedStrongNum = "$hNum,$gNum"
+                                                    }
+                                                    preparedH.isNotBlank() -> {
+                                                        combinedTitle += " for $hNum"
+                                                        combinedDef = preparedH
+                                                        combinedStrongNum = hNum
+                                                    }
+                                                    preparedG.isNotBlank() -> {
+                                                        combinedTitle += " for $gNum"
+                                                        combinedDef = preparedG
+                                                        combinedStrongNum = gNum
+                                                    }
                                                 }
                                                 if (preparedH.isNotBlank() || preparedG.isNotBlank()) {
                                                     clickableSpan = object : ClickableSpan() {
                                                         override fun onClick(widget: View) {
-                                                            stack.add(ModalPage(combinedTitle, "strong", combinedDef, strongNumber = combinedStrongNum))
+                                                            stack.add(ModalPage(combinedTitle, "strong", combinedDef, strongNumber = combinedStrongNum, isOldTestament = currentIsOld))
                                                         }
                                                     }
                                                     addClickable = true
@@ -721,10 +753,10 @@ fun InteractiveModal(
                                                         val sanitizedDef = sanitizeHtmlContent(definition)
                                                         clickableSpan = object : ClickableSpan() {
                                                             override fun onClick(widget: View) {
-                                                                stack.add(ModalPage(newTitle, "definition", sanitizedDef, word = cleanedLinkText, description = dbDisplayName))
+                                                                stack.add(ModalPage(newTitle, "definition", sanitizedDef, word = cleanedLinkText, description = dbDisplayName, isOldTestament = currentIsOld))
                                                             }
                                                         }
-                                                        addClickable = !isStrongMode
+                                                        addClickable = true
                                                     }
                                                 }
                                             } else {
@@ -741,12 +773,13 @@ fun InteractiveModal(
                                                         "No exact match for \"$capitalizedWordToFetch\". Closest match: $capitalizedUsed"
                                                     }
                                                     val sanitizedDef = sanitizeHtmlContent(definition)
+                                                    val currentIsOld = stack.last().isOldTestament
                                                     clickableSpan = object : ClickableSpan() {
                                                         override fun onClick(widget: View) {
-                                                            stack.add(ModalPage(newTitle, "definition", sanitizedDef, word = wordToFetch, description = dbDisplayName))
+                                                            stack.add(ModalPage(newTitle, "definition", sanitizedDef, word = wordToFetch, description = dbDisplayName, isOldTestament = currentIsOld))
                                                         }
                                                     }
-                                                    addClickable = !isStrongMode
+                                                    addClickable = true
                                                 }
                                             }
                                         }
@@ -810,7 +843,8 @@ fun InteractiveModal(
                                 title = newTitle,
                                 content = sanitizedNewDef,
                                 word = currentWord,
-                                description = nextDisplayName
+                                description = nextDisplayName,
+                                isOldTestament = currentPage.isOldTestament
                             )
                         } else {
                             val newTitle = "Definition of $capitalizedWord not found"
@@ -818,7 +852,8 @@ fun InteractiveModal(
                                 title = newTitle,
                                 content = "No definition found.",
                                 word = currentWord,
-                                description = nextDisplayName
+                                description = nextDisplayName,
+                                isOldTestament = currentPage.isOldTestament
                             )
                         }
                         viewModel.selectedDictionary = nextDictionary

@@ -126,6 +126,7 @@ fun ReaderScreen(
     var secondaryCurrent by remember { mutableStateOf(viewModel.secondaryPassage.copy(verse = 1)) }
     var targetVerse by remember { mutableStateOf(passage.verse) }
     var secondaryTargetVerse by remember { mutableStateOf(viewModel.secondaryPassage.verse) }
+    var currentModalIsOldTestament by remember { mutableStateOf(false) }
     LaunchedEffect(passage.bookNumber, passage.chapter, passage.verse) {
         if (passage.bookNumber != primaryCurrent.bookNumber || passage.chapter != primaryCurrent.chapter) {
             primaryCurrent = passage.copy(verse = 1)
@@ -229,6 +230,7 @@ fun ReaderScreen(
         secondaryCommentaryDbHelper = if (viewModel.multiVersion && comName.isNotEmpty()) DatabaseHelper(context, comName) else null
     }
     val onWordPress: (String, Boolean) -> Unit = { word, isPrimary ->
+        currentModalIsOldTestament = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
         val trimmed = word.trim()
         val definition = dictionaryDbHelper?.getWordDefinition(trimmed) ?: "Definition not found."
         currentWord = trimmed
@@ -237,12 +239,13 @@ fun ReaderScreen(
         showWordModal = true
     }
     val onStrongsPress: (String, Int, Boolean) -> Unit = { strongNumber, _, isPrimary ->
+        val isOldTestamentForVersion = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
+        currentModalIsOldTestament = isOldTestamentForVersion
         val trimmed = strongNumber.trim()
-        val isOldTestament = viewModel.isOldTestament
         val prefixed = if (trimmed.firstOrNull()?.isLetter() ?: false) {
             trimmed
         } else {
-            (if (isOldTestament) "H" else "G") + trimmed
+            (if (isOldTestamentForVersion) "H" else "G") + trimmed
         }
         val definition = strongDbHelper?.getStrongDefinition(prefixed) ?: "Strong's definition not found."
         currentStrongNumber = prefixed
@@ -251,6 +254,7 @@ fun ReaderScreen(
         showStrongsModal = true
     }
     val onTagPress: (String, Int, Int, Int, Boolean) -> Unit = { marker, bookNumber, chapter, verseNumber, isPrimary ->
+        currentModalIsOldTestament = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
         val dbHelper = if (isPrimary) commentaryDbHelper else secondaryCommentaryDbHelper
         val text = dbHelper?.getCommentary(bookNumber, chapter, verseNumber, marker) ?: "No commentary found."
         commentaryTitle = "Notes on ${BibleData.getBookByCustomNumber(bookNumber)?.name ?: ""} $chapter:$verseNumber – $marker"
@@ -423,7 +427,8 @@ fun ReaderScreen(
             databaseHelper = wordDb,
             initialType = "definition",
             word = currentWord,
-            definition = wordDefinition
+            definition = wordDefinition,
+            isOldTestament = currentModalIsOldTestament
         )
         InteractiveModal(
             show = showStrongsModal,
@@ -431,7 +436,8 @@ fun ReaderScreen(
             databaseHelper = strongDb,
             initialType = "strong",
             strongNumber = currentStrongNumber,
-            strongDefinition = strongDefinition
+            strongDefinition = strongDefinition,
+            isOldTestament = currentModalIsOldTestament
         )
         InteractiveModal(
             show = showCommentaryModal,
@@ -439,7 +445,8 @@ fun ReaderScreen(
             databaseHelper = commentaryBibleDb,
             initialType = "commentary",
             initialTitle = commentaryTitle,
-            initialContent = commentaryContent
+            initialContent = commentaryContent,
+            isOldTestament = currentModalIsOldTestament
         )
         val selVerse = selectedVerse
         val selPassage = selectedPassage
