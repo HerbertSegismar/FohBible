@@ -121,8 +121,7 @@ fun MatrixNative() {
     var overlay by remember { mutableStateOf<Overlay?>(null) }
     val drops = remember { mutableStateListOf<Drop>() }
     val coroutineScope = rememberCoroutineScope()
-    val matrixChars =
-        "アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッン0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ~!@#$%^&*()_-+=ᜀᜁᜂᜃᜄᜅᜆᜇᜈᜉᜊᜋᜌᜎᜏᜐᜑ"
+    val matrixChars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ~!@#$%^&*()_-+=ᜀᜁᜂᜃᜄᜅᜆᜇᜈᜉᜊᜋᜌᜎᜏᜐᜑαβγδεζηθικλμνξοπρστυφχψωΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩאבגדהוזחטיכלמנסעפצקרשתךםןףץ"
     val density = LocalDensity.current
     val fontSizePx = with(density) { FONT_SIZE.toPx() }
     val paint = remember(safeMatrixColor, typeface) {

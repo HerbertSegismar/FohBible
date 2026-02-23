@@ -1,9 +1,9 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.example.fohbible
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -62,8 +62,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
@@ -81,8 +81,6 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import android.graphics.Color as AndroidColor
 
-@SuppressLint("FrequentlyChangingValue")
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ColorWheelDialog(
     onDismissRequest: () -> Unit,
@@ -427,7 +425,6 @@ fun ColorWheelSection(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ColorPreviewSection(
     selectedColor: Color,
@@ -638,7 +635,6 @@ fun ColorAdjustmentsSection(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomSlider(
     value: Float,

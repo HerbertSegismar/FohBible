@@ -90,7 +90,6 @@ fun Footer() {
                     try {
                         context.startActivity(intent)
                     } catch (_: Exception) {
-                        // Handle exception if needed
                     }
                 }
             )

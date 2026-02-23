@@ -1,15 +1,15 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.example.fohbible.screens
 
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -90,8 +90,6 @@ import com.example.fohbible.utils.BibleVersionUtils
 import com.example.fohbible.utils.SimpleVerseProcessor
 import kotlinx.coroutines.launch
 
-@Suppress("AssignedValueIsNeverRead")
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun BookmarksScreen(
     databaseHelper: DatabaseHelper? = null,
@@ -418,7 +416,6 @@ fun NormalTopBar(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun SwipeToDeleteBookmarkItem(
     verse: Verse,

@@ -1,5 +1,3 @@
-@file:Suppress("VariableNaming", "FunctionName", "LocalVariableName", "UnusedParameter")
-
 package com.example.fohbible.screens
 
 import android.util.Log

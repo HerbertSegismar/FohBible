@@ -5,9 +5,7 @@ plugins {
 
 android {
     namespace = "com.example.fohbible"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.fohbible"
@@ -39,11 +37,10 @@ android {
 }
 
 dependencies {
-    //noinspection UseTomlInstead
-    implementation("io.coil-kt:coil-compose:2.7.0")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
-    implementation("androidx.datastore:datastore-preferences:1.2.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    implementation(libs.coil.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -54,16 +51,11 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.compose.material.icons.extended)
     implementation(libs.androidx.compose.foundation)
-    implementation(libs.androidx.compiler)
-    implementation(libs.androidx.room.common.jvm)
-    implementation(libs.androidx.compose.remote.creation.core)
     implementation(libs.guava)
     implementation(libs.androidx.datastore.core)
-    implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.navigation.runtime.ktx)
-    implementation(libs.androidx.material3)
     implementation(libs.androidx.navigation.compose)
-    implementation(libs.androidx.foundation)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -71,10 +63,4 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
-}
-
-configurations.all {
-    resolutionStrategy {
-        // No longer forcing listenablefuture, as Guava 33.2.1-android includes it.
-    }
 }

@@ -1,7 +1,6 @@
 package com.example.fohbible.modals
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -62,7 +61,6 @@ import com.example.fohbible.data.PassageSelection
 import com.example.fohbible.data.Verse
 import com.example.fohbible.utils.SimpleVerseProcessor
 
-@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun VerseOptionsModal(
     show: Boolean,

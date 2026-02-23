@@ -1,15 +1,11 @@
-@file:Suppress("AssignedValueIsNeverRead", "VariableNeverRead")
-
 package com.example.fohbible.screens
 
-import android.annotation.SuppressLint
 import android.content.Intent
 import android.graphics.Typeface
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -103,8 +99,6 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-@SuppressLint("AutoboxingStateCreation")
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ReaderScreen(
     passage: PassageSelection,
@@ -282,7 +276,7 @@ fun ReaderScreen(
         selectedIsPrimary = isPrimary
         showVerseOptions = true
     }
-    var refreshKey by remember { mutableStateOf(0) }
+    var refreshKey by remember { mutableIntStateOf(0) }
     val subheadingsDbHelper = remember { DatabaseHelper(context, "kjvsubheadings.sqlite3") }
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -490,7 +484,6 @@ fun ReaderScreen(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SingleVersionReader(
     primaryCurrent: PassageSelection,
@@ -639,7 +632,6 @@ private fun SingleVersionReader(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SyncedMultiVersionReader(
     primaryCurrent: PassageSelection,
@@ -944,7 +936,6 @@ private fun SyncedMultiVersionReader(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun IndependentMultiVersionReader(
     primaryCurrent: PassageSelection,

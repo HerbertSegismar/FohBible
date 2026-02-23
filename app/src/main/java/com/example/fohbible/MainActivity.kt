@@ -1,8 +1,8 @@
-@file:Suppress("VariableNeverRead", "AssignedValueIsNeverRead")
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.example.fohbible
 
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -10,7 +10,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.RequiresApi
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -151,7 +150,6 @@ private val DARK_OVERLAY_COLOR_KEY = intPreferencesKey("dark_overlay_color")
 val ComponentActivity.appDataStore: DataStore<Preferences> by preferencesDataStore(name = "app_preferences")
 
 class MainActivity : ComponentActivity() {
-    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -162,9 +160,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
-@Suppress("AssignedValueIsNeverRead")
 @Composable
 fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     val currentScreen = viewModel.navigationStack.last()
@@ -449,7 +444,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                     if (viewModel.scrollSync) {
                                         viewModel.secondaryPassage = passage
                                     }
-                                    // Close search and navigate/update to Reader
                                     if (viewModel.navigationStack.size > 1 && viewModel.navigationStack[viewModel.navigationStack.size - 2] is Screen.Reader) {
                                         viewModel.navigationStack[viewModel.navigationStack.size - 2] = Screen.Reader(passage)
                                         viewModel.goBack()
@@ -881,7 +875,6 @@ fun ColorOptionItem(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeAppBar(
     currentScreen: Screen,
@@ -1083,7 +1076,6 @@ fun HomeAppBar(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReaderAppBar(
     currentScreen: Screen.Reader,

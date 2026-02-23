@@ -141,7 +141,6 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                 }
             }
         } catch (e: Exception) {
-            Log.e(tag, "Error in getVerseCount: ${e.message}")
             e.printStackTrace()
         }
         return count
@@ -168,13 +167,11 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                         val verseNumber = it.getInt(it.getColumnIndexOrThrow(COLUMN_VERSE))
                         val text = it.getString(it.getColumnIndexOrThrow(COLUMN_TEXT))
                         verses.add(Verse(verseNumber, text))
-                    } catch (e: Exception) {
-                        Log.e(tag, "Error reading verse: ${e.message}")
+                    } catch (_: Exception) {
                     }
                 }
             }
         } catch (e: Exception) {
-            Log.e(tag, "Error in getVerses: ${e.message}")
             e.printStackTrace()
         }
         return verses
@@ -198,8 +195,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                         val verse = it.getInt(it.getColumnIndexOrThrow("verse"))
                         val text = it.getString(it.getColumnIndexOrThrow("subheading"))
                         subheadings.add(Subheading(verse, text))
-                    } catch (e: Exception) {
-                        Log.e(tag, "Error reading subheading: ${e.message}")
+                    } catch (_: Exception) {
                     }
                 }
             }
@@ -269,8 +265,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                 put(COLUMN_TEXT, verse.text)
             }
             database?.insertWithOnConflict(BOOKMARKS_TABLE, null, values, SQLiteDatabase.CONFLICT_IGNORE)
-        } catch (e: Exception) {
-            Log.e(tag, "Error adding bookmark: ${e.message}")
+        } catch (_: Exception) {
         }
     }
 
@@ -281,8 +276,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                 "$COLUMN_BOOK_NAME = ? AND $COLUMN_CHAPTER = ? AND $COLUMN_VERSE_NUMBER = ?",
                 arrayOf(verse.bookName, verse.chapter.toString(), verse.verseNumber.toString())
             )
-        } catch (e: Exception) {
-            Log.e(tag, "Error removing bookmark: ${e.message}")
+        } catch (_: Exception) {
         }
     }
 
@@ -301,8 +295,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             cursor?.use {
                 exists = it.count > 0
             }
-        } catch (e: Exception) {
-            Log.e(tag, "Error checking bookmark: ${e.message}")
+        } catch (_: Exception) {
         }
         return exists
     }
@@ -320,8 +313,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                     verses.add(Verse(verseNumber, text, bookName, chapter))
                 }
             }
-        } catch (e: Exception) {
-            Log.e(tag, "Error getting bookmarks: ${e.message}")
+        } catch (_: Exception) {
         }
         return verses
     }
@@ -335,8 +327,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                 put(COLUMN_TEXT, verse.text)
             }
             database?.insertWithOnConflict(HIGHLIGHTS_TABLE, null, values, SQLiteDatabase.CONFLICT_IGNORE)
-        } catch (e: Exception) {
-            Log.e(tag, "Error adding highlight: ${e.message}")
+        } catch (_: Exception) {
         }
     }
 
@@ -347,8 +338,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                 "$COLUMN_BOOK_NAME = ? AND $COLUMN_CHAPTER = ? AND $COLUMN_VERSE_NUMBER = ?",
                 arrayOf(verse.bookName, verse.chapter.toString(), verse.verseNumber.toString())
             )
-        } catch (e: Exception) {
-            Log.e(tag, "Error removing highlight: ${e.message}")
+        } catch (_: Exception) {
         }
     }
 
@@ -367,8 +357,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             cursor?.use {
                 exists = it.count > 0
             }
-        } catch (e: Exception) {
-            Log.e(tag, "Error checking highlight: ${e.message}")
+        } catch (_: Exception) {
         }
         return exists
     }
@@ -385,8 +374,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                     definition = it.getString(it.getColumnIndexOrThrow("definition"))
                 }
             }
-        } catch (e: Exception) {
-            Log.e(tag, "Error fetching word definition: ${e.message}")
+        } catch (_: Exception) {
         }
         return definition
     }
@@ -403,8 +391,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                     result = it.getString(it.getColumnIndexOrThrow("definition"))
                 }
             }
-        } catch (e: Exception) {
-            Log.e(tag, "Error fetching strong definition: ${e.message}")
+        } catch (_: Exception) {
         }
         return result
     }
@@ -422,15 +409,13 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                     commentary = commentary?.replace(Regex("<script[\\s\\S]*?</script>"), "")
                 }
             }
-        } catch (e: Exception) {
-            Log.e(tag, "Error fetching commentary: ${e.message}")
+        } catch (_: Exception) {
         }
         return commentary
     }
 
     fun close() {
         database?.close()
-        Log.d(tag, "Database closed")
     }
 }
 

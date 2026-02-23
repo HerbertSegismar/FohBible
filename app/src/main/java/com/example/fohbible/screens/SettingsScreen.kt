@@ -1,9 +1,10 @@
-
+@file:OptIn(ExperimentalMaterial3Api::class)
 package com.example.fohbible.screens
 
 import android.content.Intent
 import android.graphics.Typeface
 import android.net.Uri
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -96,12 +97,11 @@ fun getFontFamily(family: String): FontFamily {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Suppress("AssignedValueIsNeverRead")
 @Composable
 fun SettingsScreen() {
     val viewModel: AppViewModel = viewModel()
     val context = LocalContext.current
+
     var showVersionInfoDialog by remember { mutableStateOf(false) }
     var selectedVersionInfo by remember { mutableStateOf<Pair<String, String>?>(null) }
     var showBgModal by remember { mutableStateOf(false) }
@@ -114,11 +114,13 @@ fun SettingsScreen() {
     var showDarkOverlayColorWheel by remember { mutableStateOf(false) }
     var showRefreshConfirmDialog by remember { mutableStateOf(false) }
     var showRefreshResultDialog by remember { mutableStateOf(false) }
+    var showAboutDialog by remember { mutableStateOf(false) }   // NEW: About dialog state
 
     LaunchedEffect(viewModel.isCustomColor, viewModel.customColor) {
         isUsingCustomColor = viewModel.isCustomColor
         customColor = viewModel.customColor
     }
+
     LaunchedEffect(viewModel.isRefreshingDatabases) {
         if (viewModel.isRefreshingDatabases && !showRefreshResultDialog) {
             showRefreshResultDialog = true
@@ -152,6 +154,7 @@ fun SettingsScreen() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+
         item {
             SettingsSection(title = "Bible Version", subtitle = "Choose your preferred translation") {
                 BibleVersionSelector(
@@ -163,6 +166,7 @@ fun SettingsScreen() {
                         viewModel.currentVersionAbbr = abbr
                     }
                 )
+
                 SettingsItem(
                     title = "Multi-Version Display",
                     subtitle = "Show two Bible versions side by side"
@@ -176,6 +180,7 @@ fun SettingsScreen() {
                         )
                     )
                 }
+
                 if (viewModel.multiVersion) {
                     Spacer(modifier = Modifier.height(8.dp))
                     BibleVersionSelector(
@@ -231,6 +236,7 @@ fun SettingsScreen() {
                 }
             }
         }
+
         item {
             SettingsSection(title = "Reader Settings", subtitle = "Customize reading experience") {
                 SettingsItem(title = "Dark Mode", subtitle = "Toggle between light and dark themes") {
@@ -243,6 +249,7 @@ fun SettingsScreen() {
                         )
                     )
                 }
+
                 Column {
                     Text("Color Scheme", style = MaterialTheme.typography.labelLarge)
                     Spacer(Modifier.height(8.dp))
@@ -269,7 +276,9 @@ fun SettingsScreen() {
                         }
                     }
                 }
+
                 Spacer(Modifier.height(8.dp))
+
                 Column {
                     Text("Font Family", style = MaterialTheme.typography.labelLarge)
                     Spacer(Modifier.height(8.dp))
@@ -283,6 +292,7 @@ fun SettingsScreen() {
                         }
                     }
                 }
+
                 SettingsItem(
                     title = "Font Size",
                     subtitle = "Adjust text size for better readability",
@@ -307,6 +317,7 @@ fun SettingsScreen() {
                         }
                     }
                 }
+
                 SettingsItem(
                     title = "Custom Background",
                     subtitle = "Add your own photo as background"
@@ -318,6 +329,7 @@ fun SettingsScreen() {
                         Icon(Icons.Default.AddCircleOutline, contentDescription = "Add custom background")
                     }
                 }
+
                 SettingsItem(
                     title = "Background Texture",
                     subtitle = "Choose from built-in textures",
@@ -325,6 +337,7 @@ fun SettingsScreen() {
                 ) {
                     Icon(Icons.Default.ChevronRight, contentDescription = null)
                 }
+
                 SettingsItem(
                     title = "Overlay Opacity",
                     subtitle = "Adjust the overlay transparency"
@@ -346,6 +359,7 @@ fun SettingsScreen() {
                         },
                     )
                 }
+
                 SettingsItem(
                     title = "Light Overlay Color",
                     subtitle = "Overlay color for light theme"
@@ -359,6 +373,7 @@ fun SettingsScreen() {
                             .clickable { showLightOverlayColorWheel = true }
                     )
                 }
+
                 SettingsItem(
                     title = "Dark Overlay Color",
                     subtitle = "Overlay color for dark theme"
@@ -374,6 +389,7 @@ fun SettingsScreen() {
                 }
             }
         }
+
         item {
             SettingsSection(
                 title = "Database Management",
@@ -400,143 +416,36 @@ fun SettingsScreen() {
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }
-            if (showRefreshConfirmDialog) {
-                AlertDialog(
-                    onDismissRequest = { showRefreshConfirmDialog = false },
-                    title = { Text("Refresh All Databases", fontWeight = FontWeight.Bold, fontSize = 16.sp) },
-                    text = {
-                        Column {
-                            Text("This action will:")
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("• Recopy ALL Bible versions from assets")
-                            Text("• Recopy dictionary databases")
-                            Text("• Recopy commentary databases")
-                            Text("• Note: Your bookmarks and settings will NOT be affected")
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                "This may take a few moments. Continue?",
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                viewModel.refreshDatabases(context)
-                                showRefreshConfirmDialog = false
-                                // Show result dialog immediately
-                                showRefreshResultDialog = true
-                            },
-                            colors = ButtonDefaults.textButtonColors(
-                                contentColor = MaterialTheme.colorScheme.error
-                            )
-                        ) {
-                            Text("Refresh")
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(
-                            onClick = { showRefreshConfirmDialog = false }
-                        ) {
-                            Text("Cancel")
-                        }
-                    }
-                )
-            }
-            // Refresh Result Dialog
-            if (showRefreshResultDialog) {
-                AlertDialog(
-                    onDismissRequest = {
-                        if (!viewModel.isRefreshingDatabases) {
-                            showRefreshResultDialog = false
-                            viewModel.lastRefreshMessage = ""
-                        }
-                    },
-                    title = {
-                        Text(
-                            if (viewModel.isRefreshingDatabases) "Refreshing Databases..." else if (viewModel.lastRefreshSuccess) "Refresh Complete" else "Refresh Incomplete",
-                            fontSize = 16.sp
-                        )
-                    },
-                    text = {
-                        Column {
-                            if (viewModel.isRefreshingDatabases) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(20.dp),
-                                        strokeWidth = 2.dp
-                                    )
-                                    Text("Please wait...")
-                                }
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    viewModel.lastRefreshMessage,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            } else {
-                                if (viewModel.lastRefreshSuccess) {
-                                    Icon(
-                                        Icons.Default.Refresh,
-                                        contentDescription = "Success",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(40.dp)
-                                    )
-                                    Spacer(modifier = Modifier.height(12.dp))
-                                }
-                                Text(
-                                    viewModel.lastRefreshMessage,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                if (!viewModel.lastRefreshSuccess) {
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        "Try restarting the app if issues persist.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-                    },
-                    confirmButton = {
-                        if (!viewModel.isRefreshingDatabases) {
-                            TextButton(
-                                onClick = {
-                                    showRefreshResultDialog = false
-                                    viewModel.lastRefreshMessage = ""
-                                }
-                            ) {
-                                Text("OK")
-                            }
-                        }
-                    }
-                )
-            }
         }
+
         item {
             SettingsSection(title = "More Options", subtitle = "Additional preferences") {
                 SettingsItem(
                     title = "Data & Storage",
                     subtitle = "Manage app data and cache",
-                    onClick = { /* TODO: Implement */ }
+                    onClick = {
+                        // Implemented: Open system app info screen (user can clear cache/data from there)
+                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = Uri.fromParts("package", context.packageName, null)
+                        }
+                        context.startActivity(intent)
+                    }
                 ) {
                     Icon(Icons.Default.ChevronRight, contentDescription = null)
                 }
+
                 HorizontalDivider()
+
                 SettingsItem(
                     title = "About",
                     subtitle = "App version and information",
-                    onClick = { /* TODO: Show about dialog */ }
+                    onClick = { showAboutDialog = true }   // Implemented: Show about dialog
                 ) {
                     Icon(Icons.Default.ChevronRight, contentDescription = null)
                 }
             }
         }
+
         item {
             SettingsSection(title = "Quick Actions", subtitle = "Common tasks") {
                 Row(
@@ -554,7 +463,7 @@ fun SettingsScreen() {
                             viewModel.currentVersionAbbr = BibleVersionUtils.versionMap["kj2.sqlite3"] ?: "KJ2"
                             viewModel.multiVersion = false
                             viewModel.secondaryDbName = "nkjv.sqlite3"
-                            viewModel.secondaryVersionAbbr = BibleVersionUtils.versionMap["kj2.sqlite3"] ?: "KJ2"
+                            viewModel.secondaryVersionAbbr = BibleVersionUtils.versionMap["nkjv.sqlite3"] ?: "NKJV"
                             viewModel.multiViewLayout = "horizontal"
                             viewModel.scrollSync = true
                             viewModel.customTextureUri = null
@@ -573,6 +482,7 @@ fun SettingsScreen() {
                         Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
                         Text("Reset All")
                     }
+
                     Button(
                         onClick = {
                             val intent = Intent(Intent.ACTION_SENDTO).apply {
@@ -592,14 +502,12 @@ fun SettingsScreen() {
         }
     }
 
+    // Dialogs (moved outside LazyColumn for correct lifecycle)
     if (showVersionInfoDialog && selectedVersionInfo != null) {
         VersionInfoDialog(
             versionName = selectedVersionInfo!!.first,
             versionDescription = selectedVersionInfo!!.second,
-            onDismiss = {
-                showVersionInfoDialog = false
-                selectedVersionInfo = null
-            }
+            onDismiss = { showVersionInfoDialog = false; selectedVersionInfo = null }
         )
     }
 
@@ -666,20 +574,22 @@ fun SettingsScreen() {
             initialColor = viewModel.darkOverlayColor
         )
     }
+
     if (showRefreshConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showRefreshConfirmDialog = false },
-            title = { Text("Refresh Databases", fontWeight = FontWeight.Bold) },
+            title = { Text("Refresh All Databases", fontWeight = FontWeight.Bold, fontSize = 16.sp) },
             text = {
                 Column {
                     Text("This action will:")
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("• Recopy all Bible databases from assets")
+                    Text("• Recopy ALL Bible versions from assets")
                     Text("• Recopy dictionary databases")
+                    Text("• Recopy commentary databases")
                     Text("• Note: Your bookmarks and settings will NOT be affected")
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "This may take a few seconds. Continue?",
+                        "This may take a few moments. Continue?",
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Medium
                     )
@@ -690,32 +600,33 @@ fun SettingsScreen() {
                     onClick = {
                         viewModel.refreshDatabases(context)
                         showRefreshConfirmDialog = false
+                        showRefreshResultDialog = true
                     },
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
                     Text("Refresh")
                 }
             },
             dismissButton = {
-                TextButton(
-                    onClick = { showRefreshConfirmDialog = false }
-                ) {
+                TextButton(onClick = { showRefreshConfirmDialog = false }) {
                     Text("Cancel")
                 }
             }
         )
     }
+
     if (showRefreshResultDialog) {
         AlertDialog(
             onDismissRequest = {
-                showRefreshResultDialog = false
-                viewModel.lastRefreshMessage = ""
+                if (!viewModel.isRefreshingDatabases) {
+                    showRefreshResultDialog = false
+                    viewModel.lastRefreshMessage = ""
+                }
             },
             title = {
                 Text(
-                    if (viewModel.isRefreshingDatabases) "Refreshing Databases..." else "Refresh Complete"
+                    if (viewModel.isRefreshingDatabases) "Refreshing Databases..." else if (viewModel.lastRefreshSuccess) "Refresh Complete" else "Refresh Incomplete",
+                    fontSize = 16.sp
                 )
             },
             text = {
@@ -725,14 +636,34 @@ fun SettingsScreen() {
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp
-                            )
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                             Text("Please wait...")
                         }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            viewModel.lastRefreshMessage,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     } else {
-                        Text(viewModel.lastRefreshMessage)
+                        if (viewModel.lastRefreshSuccess) {
+                            Icon(
+                                Icons.Default.Refresh,
+                                contentDescription = "Success",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(40.dp)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+                        Text(viewModel.lastRefreshMessage, style = MaterialTheme.typography.bodyMedium)
+                        if (!viewModel.lastRefreshSuccess) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "Try restarting the app if issues persist.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             },
@@ -750,9 +681,13 @@ fun SettingsScreen() {
             }
         )
     }
+
+    // NEW: About dialog
+    if (showAboutDialog) {
+        AboutDialog(onDismiss = { showAboutDialog = false })
+    }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BibleVersionSelector(
     title: String,
@@ -808,6 +743,7 @@ fun BibleVersionSelector(
                     )
                 }
             }
+
             ExposedDropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
@@ -1036,9 +972,7 @@ fun BgModal(
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     item {
                         Box(
                             modifier = Modifier
@@ -1092,6 +1026,7 @@ fun BgModal(
                         }
                     }
                 }
+
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = onPickCustom,
@@ -1101,6 +1036,7 @@ fun BgModal(
                     Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
                     Text("Choose Custom Image")
                 }
+
                 if (customUri != null) {
                     Spacer(modifier = Modifier.height(8.dp))
                     TextButton(
@@ -1110,6 +1046,7 @@ fun BgModal(
                         Text("Remove Custom Image")
                     }
                 }
+
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1171,6 +1108,60 @@ fun FontModal(
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text("Cancel")
+            }
+        }
+    )
+}
+
+// NEW: About dialog implementation
+@Composable
+fun AboutDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val versionName = remember {
+        try {
+            @Suppress("DEPRECATION")
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.0"
+        } catch (_: Exception) {
+            "Unknown"
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                "About FoH Bible",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    "Version: $versionName",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    "Developed by Fount of Hope Devotionals",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    "fountofhopedevotionals@gmail.com",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Thank you for using Fount Of Hope Bible. Your support means a lot to us!",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
             }
         }
     )

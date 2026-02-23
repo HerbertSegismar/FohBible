@@ -7,7 +7,7 @@ object BibleVersionUtils {
         "csb17.sqlite3" to "CSB17",
         "esv.sqlite3" to "ESV",
         "esvgsb.sqlite3" to "ESVGSB",
-        "hilab82.sqlite3" to "HILAB82",
+        "hilab82.sqlite3" to "HILAB",
         "kj2.sqlite3" to "KJ2",
         "kjv+.sqlite3" to "KJV+",
         "logos.sqlite3" to "Logos",
@@ -15,7 +15,7 @@ object BibleVersionUtils {
         "niv11.sqlite3" to "NIV11",
         "nkjv.sqlite3" to "NKJV",
         "nlt15.sqlite3" to "NLT15",
-        "tagab01.sqlite3" to "TAGAB01",
+        "tagab01.sqlite3" to "TAGAB",
         "ylt.sqlite3" to "YLT"
     )
     val descriptionMap: Map<String, String> = mapOf(

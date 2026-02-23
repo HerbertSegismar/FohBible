@@ -1,13 +1,13 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.example.fohbible.modals
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -45,8 +45,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -77,7 +77,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.collections.iterator
 
 data class BookUi(
     val bookNumber: Int,
@@ -106,7 +105,6 @@ fun getScopeForBookNumber(bookNumber: Int): String? {
     return null
 }
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun NavigationModal(
     onDismissRequest: () -> Unit,
@@ -454,7 +452,9 @@ fun NavigationModal(
                                         val isChapter = focusedInput == "chapter"
                                         val current = if (isChapter) chapterInput else verseInput
                                         if (current.isNotEmpty()) {
-                                            if (isChapter) chapterInput = current.dropLast(1) else verseInput = current.dropLast(1)
+                                            if (isChapter) chapterInput =
+                                                current.dropLast(1) else verseInput =
+                                                current.dropLast(1)
                                         }
                                     },
                                     onClear = {
@@ -469,6 +469,7 @@ fun NavigationModal(
                                     chapterInput = chapterInput,
                                     verseInput = verseInput,
                                     isLoadingVerseCount = isLoadingVerseCount,
+                                    modifier = Modifier.fillMaxWidth(),
                                 )
                             }
                         }
@@ -492,7 +493,7 @@ fun CustomInputDisplay(
     isFocused: Boolean,
     isError: Boolean,
     onClick: () -> Unit,
-    @SuppressLint("ModifierParameter") modifier: Modifier = Modifier
+    modifier: Modifier = Modifier
 ) {
     val borderColor = if (isError) MaterialTheme.colorScheme.error else if (isFocused) MaterialTheme.colorScheme.primary else Color.Transparent
     val borderWidth = 2.dp
@@ -540,7 +541,7 @@ fun NumPad(
     chapterInput: String,
     verseInput: String,
     isLoadingVerseCount: Boolean = false,
-    @SuppressLint("ModifierParameter") modifier: Modifier = Modifier
+    modifier: Modifier
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -636,7 +637,7 @@ fun ActionButton(
     containerColor: Color,
     contentColor: Color,
     enabled: Boolean = true,
-    @SuppressLint("ModifierParameter") modifier: Modifier = Modifier
+    modifier: Modifier
 ) {
     Button(
         onClick = onClick,
@@ -719,7 +720,6 @@ fun BookHeader(book: BookUi) {
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TestamentSection(
     title: String,
@@ -762,7 +762,6 @@ fun TestamentSection(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookCard(
     book: BookUi,
