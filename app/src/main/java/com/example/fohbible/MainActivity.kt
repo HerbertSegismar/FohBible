@@ -1141,7 +1141,7 @@ fun ReaderAppBar(
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                         modifier = Modifier
                             .height(30.dp)
-                            .width(120.dp)
+                            .weight(0.7f)
                             .padding(end = 8.dp)
                     ) {
                         Row(
@@ -1154,7 +1154,6 @@ fun ReaderAppBar(
                                 fontSize = 16.sp,
                                 overflow = TextOverflow.Ellipsis,
                                 maxLines = 1,
-                                modifier = Modifier.weight(1f),
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Text(
@@ -1174,6 +1173,7 @@ fun ReaderAppBar(
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                         modifier = Modifier
                             .height(30.dp)
+                            .weight(0.3f)
                             .padding(end = if (viewModel.multiVersion) 8.dp else 0.dp)
                     ) {
                         Text(

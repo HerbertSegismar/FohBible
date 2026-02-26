@@ -83,7 +83,7 @@ import java.util.Locale
 private const val MAX_FONT_SIZE = 50
 private const val MIN_FONT_SIZE = 8
 
-val availableFontFamilies = listOf("system", "oswald", "rubik-glitch", "poppins")
+val availableFontFamilies = listOf("system", "oswald", "rubikglitch", "rubiklines", "poppins", "cookie", "emilyscandy", "googlesanscode", "pirataone", "quintessential", "rougescript", "sairastencilone", "shadowsintolight", "smoochsans", "truculenta", "honk" )
 
 @Composable
 fun getFontFamily(family: String): FontFamily {
@@ -91,8 +91,20 @@ fun getFontFamily(family: String): FontFamily {
     return when (family) {
         "system" -> FontFamily.Default
         "oswald" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Oswald.ttf")) }
-        "rubik-glitch" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/RubikGlitch.ttf")) }
+        "rubikglitch" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/RubikGlitch.ttf")) }
+        "rubiklines" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/RubikLines.ttf")) }
         "poppins" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Poppins.ttf")) }
+        "cookie" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Cookie.ttf")) }
+        "emilyscandy" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/EmilysCandy.ttf")) }
+        "googlesanscode" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/GoogleSansCode.ttf")) }
+        "pirataone" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/PirataOne.ttf")) }
+        "quintessential" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Quintessential.ttf")) }
+        "rougescript" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/RougeScript.ttf")) }
+        "sairastencilone" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/SairaStencilOne.ttf")) }
+        "shadowsintolight" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/ShadowsIntoLight.ttf")) }
+        "smoochsans" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/SmoochSans.ttf")) }
+        "truculenta" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Truculenta.ttf")) }
+        "honk" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/HonkVariable.ttf")) }
         else -> FontFamily.Default
     }
 }

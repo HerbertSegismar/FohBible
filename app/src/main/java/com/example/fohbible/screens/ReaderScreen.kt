@@ -168,11 +168,36 @@ fun ReaderScreen(
     val oswaldFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/Oswald.ttf")) }
     val poppinsFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/Poppins.ttf")) }
     val rubikGlitchFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/RubikGlitch.ttf")) }
+    val rubikLinesFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/RubikLines.ttf")) }
+    val cookieFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/Cookie.ttf")) }
+    val emilysCandyFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/EmilysCandy.ttf")) }
+    val googleSansCodeFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/GoogleSansCode.ttf")) }
+    val pirataOneFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/PirataOne.ttf")) }
+    val quintessentialFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Quintessential.ttf")) }
+    val rougeScriptFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/RougeScript.ttf")) }
+    val sairaStencilOneFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/SairaStencilOne.ttf")) }
+    val shadowsIntoLightFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/ShadowsIntoLight.ttf")) }
+    val smoochSansFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/SmoochSans.ttf")) }
+    val truculentaFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Truculenta.ttf")) }
+    val honkFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/HonkVariable.ttf")) }
+
     val currentFontFamily = when (viewModel.selectedFontFamily) {
         "system" -> systemFont
         "oswald" -> oswaldFont
-        "rubik-glitch" -> rubikGlitchFont
+        "rubikglitch" -> rubikGlitchFont
+        "rubiklines" -> rubikLinesFont
         "poppins" -> poppinsFont
+        "cookie" -> cookieFont
+        "emilyscandy" -> emilysCandyFont
+        "googlesanscode" -> googleSansCodeFont
+        "pirataone" -> pirataOneFont
+        "quintessential" -> quintessentialFont
+        "rougescript" -> rougeScriptFont
+        "sairastencilone" -> sairaStencilOneFont
+        "shadowsintolight" -> shadowsIntoLightFont
+        "smoochsans" -> smoochSansFont
+        "truculenta" -> truculentaFont
+        "honk" -> honkFont
         else -> systemFont
     }
     var isButtonVisible by remember { mutableStateOf(true) }
@@ -1130,7 +1155,6 @@ private fun IndependentMultiVersionReader(
         Row(modifier = containerModifier) {
             HorizontalPager(
                 state = primaryPagerState,
-                modifier = Modifier.weight(1f),
                 key = { pageIndex ->
                     val pk = primaryPassages[pageIndex]
                     "${pk.bookNumber}-${pk.chapter}-primary-${viewModel.currentDbName}"
@@ -1171,7 +1195,6 @@ private fun IndependentMultiVersionReader(
             }
             HorizontalPager(
                 state = secondaryPagerState,
-                modifier = Modifier.weight(1f),
                 key = { pageIndex ->
                     val pk = secondaryPassages[pageIndex]
                     "${pk.bookNumber}-${pk.chapter}-secondary-${viewModel.secondaryDbName}"
@@ -1215,7 +1238,6 @@ private fun IndependentMultiVersionReader(
         Column(modifier = containerModifier) {
             HorizontalPager(
                 state = primaryPagerState,
-                modifier = Modifier.weight(1f),
                 key = { pageIndex ->
                     val pk = primaryPassages[pageIndex]
                     "${pk.bookNumber}-${pk.chapter}-primary-${viewModel.currentDbName}"
@@ -1256,7 +1278,6 @@ private fun IndependentMultiVersionReader(
             }
             HorizontalPager(
                 state = secondaryPagerState,
-                modifier = Modifier.weight(1f),
                 key = { pageIndex ->
                     val pk = secondaryPassages[pageIndex]
                     "${pk.bookNumber}-${pk.chapter}-secondary-${viewModel.secondaryDbName}"
@@ -1427,7 +1448,7 @@ fun ChapterView(
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
                         modifier = Modifier
                             .height(36.dp)
-                            .weight(1f)
+                            .weight(0.7f)
                             .padding(end = 8.dp)
                     ) {
                         Row(
@@ -1440,7 +1461,6 @@ fun ChapterView(
                                 fontSize = 16.sp,
                                 overflow = TextOverflow.Ellipsis,
                                 maxLines = 1,
-                                modifier = Modifier.weight(1f),
                                 color = MaterialTheme.colorScheme.primary,
                                 textAlign = TextAlign.Start
                             )
@@ -1465,7 +1485,7 @@ fun ChapterView(
                         ),
                         shape = RoundedCornerShape(4.dp),
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
-                        modifier = Modifier.height(36.dp)
+                        modifier = Modifier.height(36.dp).weight(0.3f)
                     ) {
                         Text(
                             text = versionAbbr,

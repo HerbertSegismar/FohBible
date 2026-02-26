@@ -134,7 +134,7 @@ fun HomeScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(8.dp),
-                    fontFamily = getFontFamily("rubik-glitch")
+                    fontFamily = getFontFamily("rubikglitch")
                 )
                 Image(
                     painter = painterResource(id = R.drawable.foh),
@@ -152,7 +152,7 @@ fun HomeScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(8.dp),
-                    fontFamily = getFontFamily("rubik-glitch")
+                    fontFamily = getFontFamily("rubikglitch")
                 )
                 Text(
                     text = "Your Daily Source of Inspiration",
