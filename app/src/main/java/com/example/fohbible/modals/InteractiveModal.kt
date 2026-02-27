@@ -1,5 +1,3 @@
-@file:Suppress("AssignedValueIsNeverRead", "COMPOSE_APPLIER_CALL_MISMATCH")
-
 package com.example.fohbible.modals
 
 import android.graphics.Typeface
@@ -21,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -31,7 +30,9 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.luminance
@@ -57,6 +58,9 @@ import com.example.fohbible.models.AppViewModel
 import com.example.fohbible.utils.ProcessedVerse
 import com.example.fohbible.utils.ThemeColors
 import com.example.fohbible.utils.VerseTextProcessor
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 data class ModalPage(
@@ -184,42 +188,44 @@ fun levenshteinDistance(s1: String, s2: String): Int {
     return cost[len1][len2]
 }
 
-fun getDefinitionOrClosest(dbHelper: DatabaseHelper?, originalWord: String): Pair<String, String>? {
-    if (dbHelper == null) return null
-    val db = dbHelper.database ?: return null
-    val lowerWord = originalWord.trim().lowercase(Locale.ROOT)
-    var cursor = db.query("dictionary", arrayOf("topic", "definition"), "LOWER(topic) = ?", arrayOf(lowerWord), null, null, null)
-    if (cursor.moveToFirst()) {
-        val exactWord = cursor.getString(0)
-        val def = cursor.getString(1)
+suspend fun getDefinitionOrClosest(dbHelper: DatabaseHelper?, originalWord: String): Pair<String, String>? {
+    return withContext(Dispatchers.IO) {
+        if (dbHelper == null) return@withContext null
+        val db = dbHelper.database ?: return@withContext null
+        val lowerWord = originalWord.trim().lowercase(Locale.ROOT)
+        var cursor = db.query("dictionary", arrayOf("topic", "definition"), "LOWER(topic) = ?", arrayOf(lowerWord), null, null, null)
+        if (cursor.moveToFirst()) {
+            val exactWord = cursor.getString(0)
+            val def = cursor.getString(1)
+            cursor.close()
+            return@withContext Pair(exactWord, def)
+        }
         cursor.close()
-        return Pair(exactWord, def)
-    }
-    cursor.close()
-    cursor = db.query("dictionary", arrayOf("topic", "definition"), "LOWER(topic) > ?", arrayOf(lowerWord), null, null, "LOWER(topic) ASC", "1")
-    var nextPair: Pair<String, String>? = null
-    if (cursor.moveToFirst()) {
-        val word = cursor.getString(0)
-        val def = cursor.getString(1)
-        nextPair = Pair(word, def)
-    }
-    cursor.close()
-    cursor = db.query("dictionary", arrayOf("topic", "definition"), "LOWER(topic) < ?", arrayOf(lowerWord), null, null, "LOWER(topic) DESC", "1")
-    var prevPair: Pair<String, String>? = null
-    if (cursor.moveToFirst()) {
-        val word = cursor.getString(0)
-        val def = cursor.getString(1)
-        prevPair = Pair(word, def)
-    }
-    cursor.close()
-    if (nextPair == null && prevPair == null) return null
-    val distNext = if (nextPair != null) levenshteinDistance(lowerWord, nextPair.first.lowercase(Locale.ROOT)) else Int.MAX_VALUE
-    val distPrev = if (prevPair != null) levenshteinDistance(lowerWord, prevPair.first.lowercase(Locale.ROOT)) else Int.MAX_VALUE
-    return when {
-        distNext < distPrev -> nextPair
-        distPrev < distNext -> prevPair
-        nextPair != null -> nextPair
-        else -> prevPair
+        cursor = db.query("dictionary", arrayOf("topic", "definition"), "LOWER(topic) > ?", arrayOf(lowerWord), null, null, "LOWER(topic) ASC", "1")
+        var nextPair: Pair<String, String>? = null
+        if (cursor.moveToFirst()) {
+            val word = cursor.getString(0)
+            val def = cursor.getString(1)
+            nextPair = Pair(word, def)
+        }
+        cursor.close()
+        cursor = db.query("dictionary", arrayOf("topic", "definition"), "LOWER(topic) < ?", arrayOf(lowerWord), null, null, "LOWER(topic) DESC", "1")
+        var prevPair: Pair<String, String>? = null
+        if (cursor.moveToFirst()) {
+            val word = cursor.getString(0)
+            val def = cursor.getString(1)
+            prevPair = Pair(word, def)
+        }
+        cursor.close()
+        if (nextPair == null && prevPair == null) return@withContext null
+        val distNext = if (nextPair != null) levenshteinDistance(lowerWord, nextPair.first.lowercase(Locale.ROOT)) else Int.MAX_VALUE
+        val distPrev = if (prevPair != null) levenshteinDistance(lowerWord, prevPair.first.lowercase(Locale.ROOT)) else Int.MAX_VALUE
+        return@withContext when {
+            distNext < distPrev -> nextPair
+            distPrev < distNext -> prevPair
+            nextPair != null -> nextPair
+            else -> prevPair
+        }
     }
 }
 
@@ -311,28 +317,40 @@ fun InteractiveModal(
         }
     }
 
+    val scope = rememberCoroutineScope()
+
     val onWordPress: (String) -> Unit = Unit@{ w ->
         val trimmed = w.trim()
         if (trimmed.isEmpty() || trimmed.matches(Regex(".*\\d.*"))) {
             return@Unit
         }
-        val pair = getDefinitionOrClosest(dictionaryDbHelper, trimmed)
         val dbDisplayName = dictionaryDisplayNames[viewModel.selectedDictionary] ?: viewModel.selectedDictionary
         val capitalizedWord = trimmed.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
         val currentIsOld = stack.last().isOldTestament
-        if (pair != null) {
-            val (usedWord, def) = pair
-            val capitalizedUsed = usedWord.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
-            val title = if (usedWord.equals(trimmed, ignoreCase = true)) {
-                "Definition of $capitalizedUsed"
+        val loadingTitle = "Loading Definition of $capitalizedWord"
+        val loadingPage = ModalPage(loadingTitle, "definition", "Loading...", word = trimmed, description = dbDisplayName, isOldTestament = currentIsOld)
+        stack.add(loadingPage)
+        scope.launch {
+            val pair = getDefinitionOrClosest(dictionaryDbHelper, trimmed)
+            val newContent: String
+            val newTitle: String
+            if (pair != null) {
+                val (usedWord, def) = pair
+                val capitalizedUsed = usedWord.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
+                newTitle = if (usedWord.equals(trimmed, ignoreCase = true)) {
+                    "Definition of $capitalizedUsed"
+                } else {
+                    "No exact match for \"$capitalizedWord\". Closest match: $capitalizedUsed"
+                }
+                newContent = sanitizeHtmlContent(def)
             } else {
-                "No exact match for \"$capitalizedWord\". Closest match: $capitalizedUsed"
+                newTitle = "Definition of $capitalizedWord not found"
+                newContent = "No definition found."
             }
-            val sanitized = sanitizeHtmlContent(def)
-            stack.add(ModalPage(title, "definition", sanitized, word = trimmed, description = dbDisplayName, isOldTestament = currentIsOld))
-        } else {
-            val title = "Definition of $capitalizedWord not found"
-            stack.add(ModalPage(title, "definition", "No definition found.", word = trimmed, description = dbDisplayName, isOldTestament = currentIsOld))
+            val index = stack.indexOf(loadingPage)
+            if (index != -1) {
+                stack[index] = loadingPage.copy(title = newTitle, content = newContent)
+            }
         }
     }
 
@@ -348,10 +366,19 @@ fun InteractiveModal(
         if (!prefixed.matches(Regex("^[HG]\\d+"))) {
             return@Unit
         }
-        val definition = strongDbHelper?.getStrongDefinition(prefixed) ?: "Strong's definition not found."
         val title = "Strong's Definition for $prefixed"
-        val prepared = prepareStrongContent(definition)
-        stack.add(ModalPage(title, "strong", prepared, strongNumber = prefixed, isOldTestament = currentIsOld))
+        val loadingPage = ModalPage(title, "strong", "Loading...", strongNumber = prefixed, isOldTestament = currentIsOld)
+        stack.add(loadingPage)
+        scope.launch {
+            val definition = withContext(Dispatchers.IO) {
+                strongDbHelper?.getStrongDefinition(prefixed) ?: "Strong's definition not found."
+            }
+            val prepared = prepareStrongContent(definition)
+            val index = stack.indexOf(loadingPage)
+            if (index != -1) {
+                stack[index] = loadingPage.copy(content = prepared)
+            }
+        }
     }
 
     val onTagPress: (String, PassageSelection) -> Unit = Unit@{ marker, passage ->
@@ -360,21 +387,30 @@ fun InteractiveModal(
         val bookName = passage.bookName
         val start = passage.verse ?: return@Unit
         val end = passage.verseEnd ?: start
-        val commentaries = (start..end).mapNotNull { verseNum ->
-            val text = commentaryDbHelper?.getCommentary(bookNumber, chapter, verseNum, marker)
-            if (text?.isNotBlank() == true) "Verse $verseNum: \n$text" else null
-        }
-        val combined = if (commentaries.isNotEmpty()) {
-            commentaries.joinToString("\n\n────────────────────────\n\n")
-        } else {
-            "No commentary found for marker \"$marker\" in this passage."
-        }
         val rangeStr = if (end != start) "$start-$end" else "$start"
         val newTitle = "Notes on $bookName $chapter:$rangeStr – [$marker]"
-        val sanitizedCombined = sanitizeHtmlContent(combined)
-        val book = BibleData.getBookByCustomNumber(passage.bookNumber)
-        val isOld = book?.testament == Testament.OLD
-        stack.add(ModalPage(newTitle, "commentary", sanitizedCombined, isOldTestament = isOld))
+        val loadingPage = ModalPage(newTitle, "commentary", "Loading...", isOldTestament = stack.last().isOldTestament)
+        stack.add(loadingPage)
+        scope.launch {
+            val commentaries = (start..end).mapNotNull { verseNum ->
+                val text = withContext(Dispatchers.IO) {
+                    commentaryDbHelper?.getCommentary(bookNumber, chapter, verseNum, marker)
+                }
+                if (text?.isNotBlank() == true) "Verse $verseNum: \n$text" else null
+            }
+            val combined = if (commentaries.isNotEmpty()) {
+                commentaries.joinToString("\n\n────────────────────────\n\n")
+            } else {
+                "No commentary found for marker \"$marker\" in this passage."
+            }
+            val sanitizedCombined = sanitizeHtmlContent(combined)
+            val index = stack.indexOf(loadingPage)
+            if (index != -1) {
+                val book = BibleData.getBookByCustomNumber(passage.bookNumber)
+                val isOld = book?.testament == Testament.OLD
+                stack[index] = loadingPage.copy(content = sanitizedCombined, isOldTestament = isOld)
+            }
+        }
     }
 
     if (show) {
@@ -515,296 +551,243 @@ fun InteractiveModal(
                         if (currentBatch < verses.size) {
                             TextButton(
                                 onClick = { currentBatch += 50 },
-                                modifier = Modifier.align(androidx.compose.ui.Alignment.CenterHorizontally)
+                                modifier = Modifier.align(Alignment.CenterHorizontally)
                             ) {
                                 Text("Load More")
                             }
                         }
                     }
                 } else {
-                    AndroidView(
-                        factory = { ctx ->
-                            TextView(ctx).apply {
-                                movementMethod = LinkMovementMethod.getInstance()
-                                textSize = viewModel.fontSize.toFloat() * 0.85f
-                                setLineSpacing(0f, 1.333f)
-                                typeface = when (viewModel.selectedFontFamily) {
-                                    "system" -> Typeface.DEFAULT
-                                    "oswald" -> Typeface.createFromAsset(ctx.assets, "fonts/Oswald.ttf")
-                                    "rubik-glitch" -> Typeface.createFromAsset(ctx.assets, "fonts/RubikGlitch.ttf")
-                                    "poppins" -> Typeface.createFromAsset(ctx.assets, "fonts/Poppins.ttf")
-                                    else -> Typeface.DEFAULT
-                                }
-                                textDirection = View.TEXT_DIRECTION_LTR
-                                gravity = Gravity.START
-                            }
-                        },
-                        update = { textView ->
-                            val content = currentPage.content ?: ""
-                            val spanned = HtmlCompat.fromHtml(content, HtmlCompat.FROM_HTML_MODE_COMPACT)
-                            val spannable = SpannableString(spanned)
-                            val urlSpans = spannable.getSpans(0, spannable.length, URLSpan::class.java)
-                            for (urlSpan in urlSpans) {
-                                val start = spannable.getSpanStart(urlSpan)
-                                val end = spannable.getSpanEnd(urlSpan)
-                                val flags = spannable.getSpanFlags(urlSpan)
-                                val href = urlSpan.url
-                                val linkText = spannable.substring(start, end)
-                                spannable.removeSpan(urlSpan)
-                                var clickableSpan: ClickableSpan? = null
-                                var addClickable = false
-                                if (href.startsWith("B:")) {
-                                    val passage = parseVerseLink(href, linkText)
-                                    if (passage != null) {
-                                        val book = BibleData.getBookByCustomNumber(passage.bookNumber)
-                                        val isOld = book?.testament == Testament.OLD
-                                        clickableSpan = object : ClickableSpan() {
-                                            override fun onClick(widget: View) {
-                                                val verseStart = passage.verse ?: return
-                                                val verseEndTemp = passage.verseEnd
-                                                if (verseEndTemp != null) {
-                                                    val maxVerse = databaseHelper?.getVerseCount(passage.bookNumber, passage.chapter) ?: 0
-                                                    if (verseEndTemp !in verseStart..maxVerse) {
-                                                        passage.chapterEnd = verseEndTemp
-                                                    }
-                                                }
-                                                val verses = fetchVerses(passage, databaseHelper)
-                                                val rangeStr = if (passage.chapterEnd != null) {
-                                                    "${passage.verse}-Ch${passage.chapterEnd}"
-                                                } else {
-                                                    "${passage.verse}" + (passage.verseEnd?.let { "-$it" } ?: "")
-                                                }
-                                                val newTitle = "${passage.bookName} ${passage.chapter}:$rangeStr"
-                                                stack.add(ModalPage(newTitle, "verses", verses = verses, passage = passage, isOldTestament = isOld))
-                                            }
-                                        }
-                                        addClickable = true
+                    val content = currentPage.content
+                    if (content == "Loading...") {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            CircularProgressIndicator()
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Loading...")
+                        }
+                    } else {
+                        AndroidView(
+                            factory = { ctx ->
+                                TextView(ctx).apply {
+                                    movementMethod = LinkMovementMethod.getInstance()
+                                    textSize = viewModel.fontSize.toFloat() * 0.85f
+                                    setLineSpacing(0f, 1.333f)
+                                    typeface = when (viewModel.selectedFontFamily) {
+                                        "system" -> Typeface.DEFAULT
+                                        "oswald" -> Typeface.createFromAsset(ctx.assets, "fonts/Oswald.ttf")
+                                        "rubik-glitch" -> Typeface.createFromAsset(ctx.assets, "fonts/RubikGlitch.ttf")
+                                        "poppins" -> Typeface.createFromAsset(ctx.assets, "fonts/Poppins.ttf")
+                                        else -> Typeface.DEFAULT
                                     }
-                                } else if (href.startsWith("S:")) {
-                                    val seeContent = href.substringAfter("S:").trim()
-                                    val cleanedLinkText = linkText.replace(Regex("^See\\s+", RegexOption.IGNORE_CASE), "").trim()
-                                    when {
-                                        seeContent.startsWith("B:") -> {
-                                            val verseHref = "B:" + seeContent.substringAfter("B:")
-                                            val passage = parseVerseLink(verseHref, linkText)
-                                            if (passage != null) {
-                                                val book = BibleData.getBookByCustomNumber(passage.bookNumber)
-                                                val isOld = book?.testament == Testament.OLD
-                                                clickableSpan = object : ClickableSpan() {
-                                                    override fun onClick(widget: View) {
-                                                        val verseStart = passage.verse ?: return
-                                                        val verseEndTemp = passage.verseEnd
-                                                        if (verseEndTemp != null) {
-                                                            val maxVerse = databaseHelper?.getVerseCount(passage.bookNumber, passage.chapter) ?: 0
-                                                            if (verseEndTemp !in verseStart..maxVerse) {
-                                                                passage.chapterEnd = verseEndTemp
-                                                                passage.verseEnd = null
-                                                            }
-                                                        }
-                                                        val verses = fetchVerses(passage, databaseHelper)
-                                                        val rangeStr = if (passage.chapterEnd != null) {
-                                                            "${passage.verse}-Ch${passage.chapterEnd}"
-                                                        } else {
-                                                            "${passage.verse}" + (passage.verseEnd?.let { "-$it" } ?: "")
-                                                        }
-                                                        val newTitle = "${passage.bookName} ${passage.chapter}:$rangeStr"
-                                                        stack.add(ModalPage(newTitle, "verses", verses = verses, passage = passage, isOldTestament = isOld))
-                                                    }
-                                                }
-                                                addClickable = true
-                                            }
-                                        }
-                                        seeContent.matches(Regex("^[GH]\\d+")) -> {
-                                            val isOld = seeContent.startsWith("H")
+                                    textDirection = View.TEXT_DIRECTION_LTR
+                                    gravity = Gravity.START
+                                }
+                            },
+                            update = { textView ->
+                                val spanned = HtmlCompat.fromHtml(content ?: "", HtmlCompat.FROM_HTML_MODE_COMPACT)
+                                val spannable = SpannableString(spanned)
+                                val urlSpans = spannable.getSpans(0, spannable.length, URLSpan::class.java)
+                                for (urlSpan in urlSpans) {
+                                    val start = spannable.getSpanStart(urlSpan)
+                                    val end = spannable.getSpanEnd(urlSpan)
+                                    val flags = spannable.getSpanFlags(urlSpan)
+                                    val href = urlSpan.url
+                                    val linkText = spannable.substring(start, end)
+                                    spannable.removeSpan(urlSpan)
+                                    var clickableSpan: ClickableSpan? = null
+                                    var addClickable = false
+                                    if (href.startsWith("B:")) {
+                                        val passage = parseVerseLink(href, linkText)
+                                        if (passage != null) {
+                                            val book = BibleData.getBookByCustomNumber(passage.bookNumber)
+                                            val isOld = book?.testament == Testament.OLD
                                             clickableSpan = object : ClickableSpan() {
                                                 override fun onClick(widget: View) {
-                                                    val definition = strongDbHelper?.getStrongDefinition(seeContent) ?: "Strong's definition not found."
-                                                    val newTitle = "Strong's Definition for $seeContent"
-                                                    val prepared = prepareStrongContent(definition)
-                                                    stack.add(ModalPage(newTitle, "strong", prepared, strongNumber = seeContent, isOldTestament = isOld))
+                                                    val verseStart = passage.verse ?: return
+                                                    val verseEndTemp = passage.verseEnd
+                                                    if (verseEndTemp != null) {
+                                                        val maxVerse = databaseHelper?.getVerseCount(passage.bookNumber, passage.chapter) ?: 0
+                                                        if (verseEndTemp !in verseStart..maxVerse) {
+                                                            passage.chapterEnd = verseEndTemp
+                                                        }
+                                                    }
+                                                    val verses = fetchVerses(passage, databaseHelper)
+                                                    val rangeStr = if (passage.chapterEnd != null) {
+                                                        "${passage.verse}-Ch${passage.chapterEnd}"
+                                                    } else {
+                                                        "${passage.verse}" + (passage.verseEnd?.let { "-$it" } ?: "")
+                                                    }
+                                                    val newTitle = "${passage.bookName} ${passage.chapter}:$rangeStr"
+                                                    stack.add(ModalPage(newTitle, "verses", verses = verses, passage = passage, isOldTestament = isOld))
                                                 }
                                             }
                                             addClickable = true
                                         }
-                                        seeContent.matches(Regex("^\\d+")) -> {
-                                            val currentIsOld = stack.last().isOldTestament
-                                            val hNum = "H$seeContent"
-                                            val gNum = "G$seeContent"
-                                            val hDef = strongDbHelper?.getStrongDefinition(hNum) ?: ""
-                                            val gDef = strongDbHelper?.getStrongDefinition(gNum) ?: ""
-                                            var combinedDef = ""
-                                            var combinedTitle = "Strong's Definition"
-                                            var combinedStrongNum = ""
-                                            val preparedH = if (hDef.isNotBlank()) prepareStrongContent(hDef) else ""
-                                            val preparedG = if (gDef.isNotBlank()) prepareStrongContent(gDef) else ""
-                                            when {
-                                                preparedH.isNotBlank() && preparedG.isNotBlank() -> {
-                                                    combinedTitle += " for $hNum and $gNum"
-                                                    combinedDef = "$hNum:\n$preparedH\n\n$gNum:\n$preparedG"
-                                                    combinedStrongNum = "$hNum,$gNum"
-                                                }
-                                                preparedH.isNotBlank() -> {
-                                                    combinedTitle += " for $hNum"
-                                                    combinedDef = preparedH
-                                                    combinedStrongNum = hNum
-                                                }
-                                                preparedG.isNotBlank() -> {
-                                                    combinedTitle += " for $gNum"
-                                                    combinedDef = preparedG
-                                                    combinedStrongNum = gNum
-                                                }
-                                            }
-                                            if (preparedH.isNotBlank() || preparedG.isNotBlank()) {
-                                                clickableSpan = object : ClickableSpan() {
-                                                    override fun onClick(widget: View) {
-                                                        stack.add(ModalPage(combinedTitle, "strong", combinedDef, strongNumber = combinedStrongNum, isOldTestament = currentIsOld))
-                                                    }
-                                                }
-                                                addClickable = true
-                                            } else {
-                                                val pair = getDefinitionOrClosest(dictionaryDbHelper,
-                                                    cleanedLinkText
-                                                )
-                                                val dbDisplayName = dictionaryDisplayNames[viewModel.selectedDictionary] ?: viewModel.selectedDictionary
-                                                val capitalizedWordFallback =
-                                                    cleanedLinkText.replaceFirstChar {
-                                                        if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
-                                                    }
-                                                if (pair != null) {
-                                                    val (usedWord, definition) = pair
-                                                    val capitalizedUsed = usedWord.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
-                                                    val newTitle = if (usedWord.equals(
-                                                            cleanedLinkText, ignoreCase = true)) {
-                                                        "Definition of $capitalizedUsed"
-                                                    } else {
-                                                        "No exact match for \"$capitalizedWordFallback\". Closest match: $capitalizedUsed"
-                                                    }
-                                                    val sanitizedDef = sanitizeHtmlContent(definition)
+                                    } else if (href.startsWith("S:")) {
+                                        val seeContent = href.substringAfter("S:").trim()
+                                        val cleanedLinkText = linkText.replace(Regex("^See\\s+", RegexOption.IGNORE_CASE), "").trim()
+                                        when {
+                                            seeContent.startsWith("B:") -> {
+                                                val verseHref = "B:" + seeContent.substringAfter("B:")
+                                                val passage = parseVerseLink(verseHref, linkText)
+                                                if (passage != null) {
+                                                    val book = BibleData.getBookByCustomNumber(passage.bookNumber)
+                                                    val isOld = book?.testament == Testament.OLD
                                                     clickableSpan = object : ClickableSpan() {
                                                         override fun onClick(widget: View) {
-                                                            stack.add(ModalPage(newTitle, "definition", sanitizedDef,
-                                                                word = cleanedLinkText, description = dbDisplayName, isOldTestament = currentIsOld))
+                                                            val verseStart = passage.verse ?: return
+                                                            val verseEndTemp = passage.verseEnd
+                                                            if (verseEndTemp != null) {
+                                                                val maxVerse = databaseHelper?.getVerseCount(passage.bookNumber, passage.chapter) ?: 0
+                                                                if (verseEndTemp !in verseStart..maxVerse) {
+                                                                    passage.chapterEnd = verseEndTemp
+                                                                    passage.verseEnd = null
+                                                                }
+                                                            }
+                                                            val verses = fetchVerses(passage, databaseHelper)
+                                                            val rangeStr = if (passage.chapterEnd != null) {
+                                                                "${passage.verse}-Ch${passage.chapterEnd}"
+                                                            } else {
+                                                                "${passage.verse}" + (passage.verseEnd?.let { "-$it" } ?: "")
+                                                            }
+                                                            val newTitle = "${passage.bookName} ${passage.chapter}:$rangeStr"
+                                                            stack.add(ModalPage(newTitle, "verses", verses = verses, passage = passage, isOldTestament = isOld))
                                                         }
                                                     }
                                                     addClickable = true
                                                 }
                                             }
-                                        }
-                                        else -> {
-                                            val potentialStrong = cleanedLinkText.uppercase()
-                                            if (potentialStrong.matches(Regex("^[GH]\\d+"))) {
-                                                val isOld = potentialStrong.startsWith("H")
+                                            seeContent.matches(Regex("^[GH]\\d+")) -> {
+                                                val isOld = seeContent.startsWith("H")
                                                 clickableSpan = object : ClickableSpan() {
                                                     override fun onClick(widget: View) {
-                                                        val definition = strongDbHelper?.getStrongDefinition(potentialStrong) ?: "Strong's definition not found."
-                                                        val newTitle = "Strong's Definition for $potentialStrong"
-                                                        val prepared = prepareStrongContent(definition)
-                                                        stack.add(ModalPage(newTitle, "strong", prepared, strongNumber = potentialStrong, isOldTestament = isOld))
-                                                    }
-                                                }
-                                                addClickable = true
-                                            } else if (potentialStrong.matches(Regex("^\\d+"))) {
-                                                val currentIsOld = stack.last().isOldTestament
-                                                val hNum = "H$potentialStrong"
-                                                val gNum = "G$potentialStrong"
-                                                val hDef = strongDbHelper?.getStrongDefinition(hNum) ?: ""
-                                                val gDef = strongDbHelper?.getStrongDefinition(gNum) ?: ""
-                                                var combinedDef = ""
-                                                var combinedTitle = "Strong's Definition"
-                                                var combinedStrongNum = ""
-                                                val preparedH = if (hDef.isNotBlank()) prepareStrongContent(hDef) else ""
-                                                val preparedG = if (gDef.isNotBlank()) prepareStrongContent(gDef) else ""
-                                                when {
-                                                    preparedH.isNotBlank() && preparedG.isNotBlank() -> {
-                                                        combinedTitle += " for $hNum and $gNum"
-                                                        combinedDef = "$hNum:\n$preparedH\n\n$gNum:\n$preparedG"
-                                                        combinedStrongNum = "$hNum,$gNum"
-                                                    }
-                                                    preparedH.isNotBlank() -> {
-                                                        combinedTitle += " for $hNum"
-                                                        combinedDef = preparedH
-                                                        combinedStrongNum = hNum
-                                                    }
-                                                    preparedG.isNotBlank() -> {
-                                                        combinedTitle += " for $gNum"
-                                                        combinedDef = preparedG
-                                                        combinedStrongNum = gNum
-                                                    }
-                                                }
-                                                if (preparedH.isNotBlank() || preparedG.isNotBlank()) {
-                                                    clickableSpan = object : ClickableSpan() {
-                                                        override fun onClick(widget: View) {
-                                                            stack.add(ModalPage(combinedTitle, "strong", combinedDef, strongNumber = combinedStrongNum, isOldTestament = currentIsOld))
-                                                        }
-                                                    }
-                                                    addClickable = true
-                                                } else {
-                                                    val pair = getDefinitionOrClosest(dictionaryDbHelper, cleanedLinkText)
-                                                    val dbDisplayName = dictionaryDisplayNames[viewModel.selectedDictionary] ?: viewModel.selectedDictionary
-                                                    val capitalizedCleaned = cleanedLinkText.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
-                                                    if (pair != null) {
-                                                        val (usedWord, definition) = pair
-                                                        val capitalizedUsed = usedWord.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
-                                                        val newTitle = if (usedWord.equals(cleanedLinkText, ignoreCase = true)) {
-                                                            "Definition of $capitalizedUsed"
-                                                        } else {
-                                                            "No exact match for \"$capitalizedCleaned\". Closest match: $capitalizedUsed"
-                                                        }
-                                                        val sanitizedDef = sanitizeHtmlContent(definition)
-                                                        clickableSpan = object : ClickableSpan() {
-                                                            override fun onClick(widget: View) {
-                                                                stack.add(ModalPage(newTitle, "definition", sanitizedDef, word = cleanedLinkText, description = dbDisplayName, isOldTestament = currentIsOld))
+                                                        val loadingPage = ModalPage("Strong's Definition for $seeContent", "strong", "Loading...", strongNumber = seeContent, isOldTestament = isOld)
+                                                        stack.add(loadingPage)
+                                                        scope.launch {
+                                                            val definition = withContext(Dispatchers.IO) {
+                                                                strongDbHelper?.getStrongDefinition(seeContent) ?: "Strong's definition not found."
+                                                            }
+                                                            val prepared = prepareStrongContent(definition)
+                                                            val index = stack.indexOf(loadingPage)
+                                                            if (index != -1) {
+                                                                stack[index] = loadingPage.copy(content = prepared)
                                                             }
                                                         }
-                                                        addClickable = true
                                                     }
                                                 }
-                                            } else {
-                                                val wordToFetch = cleanedLinkText.ifEmpty { seeContent }
-                                                val pair = getDefinitionOrClosest(dictionaryDbHelper, wordToFetch)
-                                                val dbDisplayName = dictionaryDisplayNames[viewModel.selectedDictionary] ?: viewModel.selectedDictionary
-                                                val capitalizedWordToFetch = wordToFetch.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
-                                                if (pair != null) {
-                                                    val (usedWord, definition) = pair
-                                                    val capitalizedUsed = usedWord.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
-                                                    val newTitle = if (usedWord.equals(wordToFetch, ignoreCase = true)) {
-                                                        "Definition of $capitalizedUsed"
-                                                    } else {
-                                                        "No exact match for \"$capitalizedWordToFetch\". Closest match: $capitalizedUsed"
-                                                    }
-                                                    val sanitizedDef = sanitizeHtmlContent(definition)
-                                                    val currentIsOld = stack.last().isOldTestament
-                                                    clickableSpan = object : ClickableSpan() {
-                                                        override fun onClick(widget: View) {
-                                                            stack.add(ModalPage(newTitle, "definition", sanitizedDef, word = wordToFetch, description = dbDisplayName, isOldTestament = currentIsOld))
+                                                addClickable = true
+                                            }
+                                            seeContent.matches(Regex("^\\d+")) -> {
+                                                val currentIsOld = stack.last().isOldTestament
+                                                val hNum = "H$seeContent"
+                                                val gNum = "G$seeContent"
+                                                clickableSpan = object : ClickableSpan() {
+                                                    override fun onClick(widget: View) {
+                                                        val loadingPage = ModalPage("Loading Strong's Definition", "strong", "Loading...", strongNumber = "$hNum,$gNum", isOldTestament = currentIsOld)
+                                                        stack.add(loadingPage)
+                                                        scope.launch {
+                                                            val hDef = withContext(Dispatchers.IO) {
+                                                                strongDbHelper?.getStrongDefinition(hNum) ?: ""
+                                                            }
+                                                            val gDef = withContext(Dispatchers.IO) {
+                                                                strongDbHelper?.getStrongDefinition(gNum) ?: ""
+                                                            }
+                                                            var combinedDef = ""
+                                                            var combinedTitle = "Strong's Definition"
+                                                            var combinedStrongNum = ""
+                                                            val preparedH = if (hDef.isNotBlank()) prepareStrongContent(hDef) else ""
+                                                            val preparedG = if (gDef.isNotBlank()) prepareStrongContent(gDef) else ""
+                                                            when {
+                                                                preparedH.isNotBlank() && preparedG.isNotBlank() -> {
+                                                                    combinedTitle += " for $hNum and $gNum"
+                                                                    combinedDef = "$hNum:\n$preparedH\n\n$gNum:\n$preparedG"
+                                                                    combinedStrongNum = "$hNum,$gNum"
+                                                                }
+                                                                preparedH.isNotBlank() -> {
+                                                                    combinedTitle += " for $hNum"
+                                                                    combinedDef = preparedH
+                                                                    combinedStrongNum = hNum
+                                                                }
+                                                                preparedG.isNotBlank() -> {
+                                                                    combinedTitle += " for $gNum"
+                                                                    combinedDef = preparedG
+                                                                    combinedStrongNum = gNum
+                                                                }
+                                                                else -> {
+                                                                    combinedTitle = "Strong's Definition not found"
+                                                                    combinedDef = "No definition found."
+                                                                }
+                                                            }
+                                                            val index = stack.indexOf(loadingPage)
+                                                            if (index != -1) {
+                                                                stack[index] = loadingPage.copy(title = combinedTitle, content = combinedDef, strongNumber = combinedStrongNum)
+                                                            }
                                                         }
                                                     }
-                                                    addClickable = true
                                                 }
+                                                addClickable = true
+                                            }
+                                            else -> {
+                                                val wordToFetch = cleanedLinkText.ifEmpty { seeContent }
+                                                clickableSpan = object : ClickableSpan() {
+                                                    override fun onClick(widget: View) {
+                                                        val dbDisplayName = dictionaryDisplayNames[viewModel.selectedDictionary] ?: viewModel.selectedDictionary
+                                                        val capitalizedWordToFetch = wordToFetch.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
+                                                        val loadingTitle = "Loading Definition of $capitalizedWordToFetch"
+                                                        val loadingPage = ModalPage(loadingTitle, "definition", "Loading...", word = wordToFetch, description = dbDisplayName, isOldTestament = stack.last().isOldTestament)
+                                                        stack.add(loadingPage)
+                                                        scope.launch {
+                                                            val pair = getDefinitionOrClosest(dictionaryDbHelper, wordToFetch)
+                                                            val newContent: String
+                                                            val newTitle: String
+                                                            if (pair != null) {
+                                                                val (usedWord, definition) = pair
+                                                                val capitalizedUsed = usedWord.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
+                                                                newTitle = if (usedWord.equals(wordToFetch, ignoreCase = true)) {
+                                                                    "Definition of $capitalizedUsed"
+                                                                } else {
+                                                                    "No exact match for \"$capitalizedWordToFetch\". Closest match: $capitalizedUsed"
+                                                                }
+                                                                newContent = sanitizeHtmlContent(definition)
+                                                            } else {
+                                                                newTitle = "Definition of $capitalizedWordToFetch not found"
+                                                                newContent = "No definition found."
+                                                            }
+                                                            val index = stack.indexOf(loadingPage)
+                                                            if (index != -1) {
+                                                                stack[index] = loadingPage.copy(title = newTitle, content = newContent)
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                addClickable = true
                                             }
                                         }
                                     }
+                                    if (addClickable) {
+                                        spannable.setSpan(clickableSpan, start, end, flags)
+                                    }
                                 }
-                                if (addClickable && clickableSpan != null) {
-                                    spannable.setSpan(clickableSpan, start, end, flags)
+                                if (isDark) {
+                                    val colorSpans = spannable.getSpans(0, spannable.length, ForegroundColorSpan::class.java)
+                                    for (span in colorSpans) {
+                                        spannable.removeSpan(span)
+                                    }
+                                    textView.setTextColor(androidx.compose.ui.graphics.Color.White.toArgb())
+                                } else {
+                                    textView.setTextColor(textColor.toArgb())
                                 }
-                            }
-                            if (isDark) {
-                                val colorSpans = spannable.getSpans(0, spannable.length, ForegroundColorSpan::class.java)
-                                for (span in colorSpans) {
-                                    spannable.removeSpan(span)
-                                }
-                                textView.setTextColor(androidx.compose.ui.graphics.Color.White.toArgb())
-                            } else {
-                                textView.setTextColor(textColor.toArgb())
-                            }
-                            textView.setLinkTextColor(linkColor.toArgb())
-                            textView.text = spannable
-                        },
-                        modifier = Modifier
-                            .verticalScroll(rememberScrollState())
-                            .padding(bottom = 8.dp)
-                    )
+                                textView.setLinkTextColor(linkColor.toArgb())
+                                textView.text = spannable
+                            },
+                            modifier = Modifier
+                                .verticalScroll(rememberScrollState())
+                                .padding(bottom = 8.dp)
+                        )
+                    }
                 }
             },
             confirmButton = {
@@ -827,37 +810,40 @@ fun InteractiveModal(
                     val nextDisplayName = dictionaryDisplayNames[nextDictionary] ?: nextDictionary
                     TextButton(onClick = {
                         val currentWord = currentPage.word ?: return@TextButton
-                        val tempDbHelper = DatabaseHelper(context, "${nextDictionary}.dictionary.sqlite3")
-                        val pair = getDefinitionOrClosest(tempDbHelper, currentWord)
-                        val capitalizedWord = currentWord.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
-                        if (pair != null) {
-                            val (usedWord, newDef) = pair
-                            val capitalizedUsed = usedWord.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
-                            val newTitle = if (usedWord.equals(currentWord, ignoreCase = true)) {
-                                "Definition of $capitalizedUsed"
-                            } else {
-                                "No exact match for \"$capitalizedWord\". Closest match: $capitalizedUsed"
+                        val loadingTitle = "Switching to ${nextDictionary.uppercase()}"
+                        val loadingPage = currentPage.copy(title = loadingTitle, content = "Loading...", description = nextDisplayName)
+                        val index = stack.lastIndex
+                        stack[index] = loadingPage
+                        scope.launch {
+                            val tempDbHelper = withContext(Dispatchers.IO) {
+                                DatabaseHelper(context, "${nextDictionary}.dictionary.sqlite3")
                             }
-                            val sanitizedNewDef = sanitizeHtmlContent(newDef)
-                            stack[stack.lastIndex] = currentPage.copy(
-                                title = newTitle,
-                                content = sanitizedNewDef,
-                                word = currentWord,
-                                description = nextDisplayName,
-                                isOldTestament = currentPage.isOldTestament
-                            )
-                        } else {
-                            val newTitle = "Definition of $capitalizedWord not found"
-                            stack[stack.lastIndex] = currentPage.copy(
-                                title = newTitle,
-                                content = "No definition found.",
-                                word = currentWord,
-                                description = nextDisplayName,
-                                isOldTestament = currentPage.isOldTestament
-                            )
+                            val pair = getDefinitionOrClosest(tempDbHelper, currentWord)
+                            val capitalizedWord = currentWord.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
+                            val newContent: String
+                            val newTitle: String
+                            if (pair != null) {
+                                val (usedWord, newDef) = pair
+                                val capitalizedUsed = usedWord.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
+                                newTitle = if (usedWord.equals(currentWord, ignoreCase = true)) {
+                                    "Definition of $capitalizedUsed"
+                                } else {
+                                    "No exact match for \"$capitalizedWord\". Closest match: $capitalizedUsed"
+                                }
+                                newContent = sanitizeHtmlContent(newDef)
+                            } else {
+                                newTitle = "Definition of $capitalizedWord not found"
+                                newContent = "No definition found."
+                            }
+                            val updateIndex = stack.indexOf(loadingPage)
+                            if (updateIndex != -1) {
+                                stack[updateIndex] = loadingPage.copy(title = newTitle, content = newContent)
+                            }
+                            withContext(Dispatchers.IO) {
+                                tempDbHelper.close()
+                            }
                         }
                         viewModel.selectedDictionary = nextDictionary
-                        tempDbHelper.close()
                     }) {
                         Text("Switch to ${nextDictionary.uppercase()}")
                     }

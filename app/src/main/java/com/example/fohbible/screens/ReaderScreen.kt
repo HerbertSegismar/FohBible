@@ -1155,6 +1155,7 @@ private fun IndependentMultiVersionReader(
         Row(modifier = containerModifier) {
             HorizontalPager(
                 state = primaryPagerState,
+                modifier = Modifier.weight(1f),
                 key = { pageIndex ->
                     val pk = primaryPassages[pageIndex]
                     "${pk.bookNumber}-${pk.chapter}-primary-${viewModel.currentDbName}"
@@ -1195,6 +1196,7 @@ private fun IndependentMultiVersionReader(
             }
             HorizontalPager(
                 state = secondaryPagerState,
+                modifier = Modifier.weight(1f),
                 key = { pageIndex ->
                     val pk = secondaryPassages[pageIndex]
                     "${pk.bookNumber}-${pk.chapter}-secondary-${viewModel.secondaryDbName}"
@@ -1238,6 +1240,7 @@ private fun IndependentMultiVersionReader(
         Column(modifier = containerModifier) {
             HorizontalPager(
                 state = primaryPagerState,
+                modifier = Modifier.weight(1f),
                 key = { pageIndex ->
                     val pk = primaryPassages[pageIndex]
                     "${pk.bookNumber}-${pk.chapter}-primary-${viewModel.currentDbName}"
@@ -1278,6 +1281,7 @@ private fun IndependentMultiVersionReader(
             }
             HorizontalPager(
                 state = secondaryPagerState,
+                modifier = Modifier.weight(1f),
                 key = { pageIndex ->
                     val pk = secondaryPassages[pageIndex]
                     "${pk.bookNumber}-${pk.chapter}-secondary-${viewModel.secondaryDbName}"
@@ -1332,7 +1336,6 @@ private fun LoadingIndicator() {
         Text("Loading verses...")
     }
 }
-
 @Composable
 fun ChapterView(
     passage: PassageSelection,
