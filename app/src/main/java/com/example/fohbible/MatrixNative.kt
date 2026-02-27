@@ -110,7 +110,7 @@ fun MatrixNative() {
         when (viewModel.selectedFontFamily) {
             "system" -> Typeface.DEFAULT
             "oswald" -> Typeface.createFromAsset(context.assets, "fonts/Oswald.ttf")
-            "rubik-glitch" -> Typeface.createFromAsset(context.assets, "fonts/RubikGlitch.ttf")
+            "rubikglitch" -> Typeface.createFromAsset(context.assets, "fonts/RubikGlitch.ttf")
             "poppins" -> Typeface.createFromAsset(context.assets, "fonts/Poppins.ttf")
             else -> Typeface.DEFAULT
         }
@@ -158,7 +158,7 @@ fun MatrixNative() {
                     fontSize = FONT_SIZE * 1.5f,
                     textAlign = TextAlign.Center,
                     color = safeMatrixColor,
-                    fontFamily = getFontFamily("rubik-glitch")
+                    fontFamily = getFontFamily("rubikglitch")
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
