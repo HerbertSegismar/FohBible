@@ -2,6 +2,7 @@ package com.example.fohbible.screens
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Typeface
 import android.os.Handler
 import android.os.Looper
 import androidx.compose.foundation.Image
@@ -54,12 +55,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.fohbible.Footer
 import com.example.fohbible.MainActivity
 import com.example.fohbible.R
@@ -67,6 +70,7 @@ import com.example.fohbible.data.BibleData
 import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.PassageSelection
 import com.example.fohbible.data.Verse
+import com.example.fohbible.models.AppViewModel
 import com.example.fohbible.utils.SimpleVerseProcessor
 import com.example.fohbible.MatrixNative
 import kotlin.random.Random
@@ -94,6 +98,7 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     var dailyVerses by remember { mutableStateOf<List<Verse>?>(null) }
+
     LaunchedEffect(Unit) {
         if (dailyVerses == null) {
             loadRandomVerses(context, databaseHelper) { verses ->
@@ -103,6 +108,7 @@ fun HomeScreen(
     }
 
     var popularDevotionals by remember { mutableStateOf<List<PopularDevotional>>(emptyList()) }
+
     LaunchedEffect(Unit) {
         if (popularDevotionals.isEmpty()) {
             popularDevotionals = getRandomDevotionals()
@@ -121,6 +127,7 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item { Spacer(modifier = Modifier.height(8.dp)) }
+
         item {
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -136,6 +143,7 @@ fun HomeScreen(
                         .padding(8.dp),
                     fontFamily = getFontFamily("rubikglitch")
                 )
+
                 Image(
                     painter = painterResource(id = R.drawable.foh),
                     contentDescription = "Fount of Hope Logo",
@@ -144,6 +152,7 @@ fun HomeScreen(
                         .clip(RoundedCornerShape(8.dp)),
                     contentScale = ContentScale.Fit
                 )
+
                 Text(
                     text = "Bible App",
                     fontSize = 30.sp,
@@ -154,6 +163,7 @@ fun HomeScreen(
                         .padding(8.dp),
                     fontFamily = getFontFamily("rubikglitch")
                 )
+
                 Text(
                     text = "Your Daily Source of Inspiration",
                     fontSize = 20.sp,
@@ -167,6 +177,7 @@ fun HomeScreen(
             }
             Spacer(modifier = Modifier.height(30.dp))
         }
+
         item {
             DailyVerseCard(
                 verses = dailyVerses,
@@ -191,6 +202,7 @@ fun HomeScreen(
                 databaseHelper = databaseHelper ?: DatabaseHelper(context as MainActivity, "kj2.sqlite3")
             )
         }
+
         item {
             Text(
                 text = "Quick Access",
@@ -200,13 +212,16 @@ fun HomeScreen(
             )
             QuickActionsGrid(actions = quickActions, onBibleClick = onBibleClick)
         }
+
         item {
             PopularDevotionalsSection(
                 devotionals = popularDevotionals,
                 onNavigateToReader = onNavigateToReader
             )
         }
+
         item { Spacer(modifier = Modifier.height(40.dp)) }
+
         item {
             val isMatrixVisible by remember { mutableStateOf(true) }
             if (isMatrixVisible) {
@@ -217,8 +232,11 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
+
         item { Spacer(modifier = Modifier.height(40.dp)) }
+
         item { Footer() }
+
         item { Spacer(modifier = Modifier.height(80.dp)) }
     }
 }
@@ -231,8 +249,47 @@ fun DailyVerseCard(
     databaseHelper: DatabaseHelper
 ) {
     val context = LocalContext.current
+    val viewModel = viewModel<AppViewModel>()
     val isLoading = remember { mutableStateOf(false) }
     var isBookmarked by remember(verses) { mutableStateOf(false) }
+
+    val systemFont = FontFamily.Default
+    val oswaldFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Oswald.ttf")) }
+    val poppinsFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Poppins.ttf")) }
+    val rubikGlitchFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/RubikGlitch.ttf")) }
+    val rubikLinesFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/RubikLines.ttf")) }
+    val cookieFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Cookie.ttf")) }
+    val emilysCandyFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/EmilysCandy.ttf")) }
+    val googleSansCodeFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/GoogleSansCode.ttf")) }
+    val pirataOneFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/PirataOne.ttf")) }
+    val quintessentialFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Quintessential.ttf")) }
+    val rougeScriptFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/RougeScript.ttf")) }
+    val sairaStencilOneFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/SairaStencilOne.ttf")) }
+    val shadowsIntoLightFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/ShadowsIntoLight.ttf")) }
+    val smoochSansFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/SmoochSans.ttf")) }
+    val truculentaFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Truculenta.ttf")) }
+    val honkFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/HonkVariable.ttf")) }
+
+    val currentFontFamily = when (viewModel.selectedFontFamily) {
+        "system" -> systemFont
+        "oswald" -> oswaldFont
+        "rubikglitch" -> rubikGlitchFont
+        "rubiklines" -> rubikLinesFont
+        "poppins" -> poppinsFont
+        "cookie" -> cookieFont
+        "emilyscandy" -> emilysCandyFont
+        "googlesanscode" -> googleSansCodeFont
+        "pirataone" -> pirataOneFont
+        "quintessential" -> quintessentialFont
+        "rougescript" -> rougeScriptFont
+        "sairastencilone" -> sairaStencilOneFont
+        "shadowsintolight" -> shadowsIntoLightFont
+        "smoochsans" -> smoochSansFont
+        "truculenta" -> truculentaFont
+        "honk" -> honkFont
+        else -> systemFont
+    }
+
     LaunchedEffect(verses) {
         if (!verses.isNullOrEmpty()) {
             val isSaved = checkIfBookmarked(verses.first(), databaseHelper)
@@ -263,7 +320,8 @@ fun DailyVerseCard(
                     text = "Fresh Revelations",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
+                    fontFamily = currentFontFamily
                 )
                 IconButton(
                     onClick = {
@@ -289,7 +347,9 @@ fun DailyVerseCard(
                     }
                 }
             }
+
             Spacer(modifier = Modifier.height(12.dp))
+
             if (!verses.isNullOrEmpty()) {
                 Box(
                     modifier = Modifier
@@ -302,9 +362,12 @@ fun DailyVerseCard(
                             text = reference,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                            fontFamily = currentFontFamily
                         )
+
                         Spacer(modifier = Modifier.height(8.dp))
+
                         verses.forEach { verse ->
                             val annotatedText = buildAnnotatedString {
                                 withStyle(
@@ -318,12 +381,14 @@ fun DailyVerseCard(
                                 }
                                 append(SimpleVerseProcessor.stripXmlTags(verse.text))
                             }
+
                             Text(
                                 text = annotatedText,
                                 style = MaterialTheme.typography.bodyLarge,
                                 lineHeight = 24.sp,
                                 textAlign = TextAlign.Justify,
-                                modifier = Modifier.padding(bottom = 8.dp)
+                                modifier = Modifier.padding(bottom = 8.dp),
+                                fontFamily = currentFontFamily
                             )
                         }
                     }
@@ -343,7 +408,9 @@ fun DailyVerseCard(
                     }
                 }
             }
+
             Spacer(modifier = Modifier.height(16.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -368,6 +435,7 @@ fun DailyVerseCard(
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
+
                 Text(
                     text = "Share",
                     color = MaterialTheme.colorScheme.primary,
@@ -475,12 +543,15 @@ fun PopularDevotionalsSection(
                 fontWeight = FontWeight.Bold
             )
         }
+
         Spacer(modifier = Modifier.height(12.dp))
+
         devotionals.forEachIndexed { index, devotional ->
             DevotionalItem(
                 devotional = devotional,
                 onNavigateToReader = onNavigateToReader
             )
+
             if (index < devotionals.lastIndex) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             }
@@ -531,6 +602,7 @@ fun DevotionalItem(
                 modifier = Modifier.size(24.dp)
             )
         }
+
         Column(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -540,6 +612,7 @@ fun DevotionalItem(
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
+
             Text(
                 text = devotional.preview,
                 style = MaterialTheme.typography.bodySmall,
@@ -548,6 +621,7 @@ fun DevotionalItem(
                 overflow = TextOverflow.Ellipsis
             )
         }
+
         IconButton(onClick = {}) {
             Icon(
                 Icons.Filled.BookmarkBorder,

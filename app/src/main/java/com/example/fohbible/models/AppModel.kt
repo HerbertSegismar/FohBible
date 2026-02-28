@@ -24,6 +24,8 @@ import java.io.IOException
 class AppViewModel : ViewModel() {
 
     var showSecondaryNavigationModal by mutableStateOf(false)
+    var lightModalBackgroundColor by mutableStateOf(Color(0xFFE0E0E0))
+    var darkModalBackgroundColor by mutableStateOf(Color(0xFF2D2D2D))
     var fontSize by mutableIntStateOf(18)
     var darkTheme by mutableStateOf(false)
     var selectedColor by mutableStateOf<Color?>(null)

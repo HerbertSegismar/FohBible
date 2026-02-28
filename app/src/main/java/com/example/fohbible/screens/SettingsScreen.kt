@@ -25,7 +25,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCircleOutline
@@ -47,7 +46,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -66,7 +64,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -74,14 +71,15 @@ import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.fohbible.ColorWheelDialog
+import com.example.fohbible.modals.FontModal
 import com.example.fohbible.models.AppViewModel
 import com.example.fohbible.ui.theme.DefaultPrimaryColor
 import com.example.fohbible.ui.theme.PredefinedColorThemes
 import com.example.fohbible.utils.BibleVersionUtils
 import java.util.Locale
 
-private const val MAX_FONT_SIZE = 50
-private const val MIN_FONT_SIZE = 8
+const val MAX_FONT_SIZE = 50
+const val MIN_FONT_SIZE = 8
 
 val availableFontFamilies = listOf("system", "oswald", "rubikglitch", "rubiklines", "poppins", "cookie", "emilyscandy", "googlesanscode", "pirataone", "quintessential", "rougescript", "sairastencilone", "shadowsintolight", "smoochsans", "truculenta", "honk" )
 
@@ -126,7 +124,7 @@ fun SettingsScreen() {
     var showDarkOverlayColorWheel by remember { mutableStateOf(false) }
     var showRefreshConfirmDialog by remember { mutableStateOf(false) }
     var showRefreshResultDialog by remember { mutableStateOf(false) }
-    var showAboutDialog by remember { mutableStateOf(false) }   // NEW: About dialog state
+    var showAboutDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(viewModel.isCustomColor, viewModel.customColor) {
         isUsingCustomColor = viewModel.isCustomColor
@@ -319,7 +317,9 @@ fun SettingsScreen() {
                         }
                         Text(
                             "${viewModel.fontSize}",
-                            modifier = Modifier.padding(horizontal = 8.dp)
+                            modifier = Modifier.padding(horizontal = 8.dp),
+                            color = MaterialTheme.colorScheme.primary
+
                         )
                         IconButton(
                             onClick = { viewModel.fontSize = minOf(MAX_FONT_SIZE, viewModel.fontSize + 1) },
@@ -483,6 +483,9 @@ fun SettingsScreen() {
                             viewModel.overlayOpacity = 0.5f
                             viewModel.lightOverlayColor = Color(0xFFF5F5DC)
                             viewModel.darkOverlayColor = Color(0xFF100F21)
+                            viewModel.lightModalBackgroundColor = Color(0xFFE0E0E0)
+                            viewModel.darkModalBackgroundColor = Color(0xFF2D2D2D)
+
                         },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
@@ -1072,60 +1075,6 @@ fun BgModal(
         }
     }
 }
-
-@Composable
-fun FontModal(
-    tempSize: String,
-    onChange: (String) -> Unit,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                "Font Size",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column {
-                Text(
-                    "Enter font size ($MIN_FONT_SIZE-$MAX_FONT_SIZE):",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = tempSize,
-                    onValueChange = { newValue ->
-                        if (newValue.all { it.isDigit() } || newValue.isEmpty()) {
-                            onChange(newValue)
-                        }
-                    },
-                    keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Enter font size") }
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = onConfirm,
-                enabled = tempSize.toIntOrNull()?.let { it in MIN_FONT_SIZE..MAX_FONT_SIZE } ?: false
-            ) {
-                Text("Apply")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
-}
-
-// NEW: About dialog implementation
 @Composable
 fun AboutDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current

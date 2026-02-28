@@ -148,12 +148,12 @@ fun ReaderScreen(
     LaunchedEffect(databaseHelper) {
         primaryLoadedVerses.clear()
     }
-    val context = LocalContext.current
+    val contextFont = LocalContext.current
     var secondaryDatabaseHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     LaunchedEffect(viewModel.multiVersion, viewModel.secondaryDbName) {
         secondaryDatabaseHelper?.close()
         secondaryDatabaseHelper = if (viewModel.multiVersion && viewModel.secondaryDbName.isNotEmpty()) {
-            DatabaseHelper(context as MainActivity, viewModel.secondaryDbName)
+            DatabaseHelper(contextFont as MainActivity, viewModel.secondaryDbName)
         } else {
             null
         }
@@ -163,23 +163,22 @@ fun ReaderScreen(
     }
     val multi = viewModel.multiVersion
     val synced = viewModel.scrollSync && multi && secondaryDatabaseHelper != null
-    val contextFont = LocalContext.current
     val systemFont = FontFamily.Default
     val oswaldFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/Oswald.ttf")) }
     val poppinsFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/Poppins.ttf")) }
     val rubikGlitchFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/RubikGlitch.ttf")) }
-    val rubikLinesFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/RubikLines.ttf")) }
+    val rubikLinesFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/RubikLines.ttf")) }
     val cookieFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/Cookie.ttf")) }
-    val emilysCandyFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/EmilysCandy.ttf")) }
-    val googleSansCodeFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/GoogleSansCode.ttf")) }
-    val pirataOneFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/PirataOne.ttf")) }
-    val quintessentialFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Quintessential.ttf")) }
-    val rougeScriptFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/RougeScript.ttf")) }
-    val sairaStencilOneFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/SairaStencilOne.ttf")) }
-    val shadowsIntoLightFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/ShadowsIntoLight.ttf")) }
-    val smoochSansFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/SmoochSans.ttf")) }
-    val truculentaFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Truculenta.ttf")) }
-    val honkFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/HonkVariable.ttf")) }
+    val emilysCandyFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/EmilysCandy.ttf")) }
+    val googleSansCodeFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/GoogleSansCode.ttf")) }
+    val pirataOneFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/PirataOne.ttf")) }
+    val quintessentialFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/Quintessential.ttf")) }
+    val rougeScriptFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/RougeScript.ttf")) }
+    val sairaStencilOneFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/SairaStencilOne.ttf")) }
+    val shadowsIntoLightFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/ShadowsIntoLight.ttf")) }
+    val smoochSansFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/SmoochSans.ttf")) }
+    val truculentaFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/Truculenta.ttf")) }
+    val honkFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/HonkVariable.ttf")) }
 
     val currentFontFamily = when (viewModel.selectedFontFamily) {
         "system" -> systemFont
@@ -231,13 +230,13 @@ fun ReaderScreen(
     var commentaryBibleDb by remember { mutableStateOf<DatabaseHelper?>(null) }
     LaunchedEffect(viewModel.selectedDictionary, databaseHelper?.databaseName) {
         dictionaryDbHelper?.close()
-        dictionaryDbHelper = DatabaseHelper(context, "${viewModel.selectedDictionary}.dictionary.sqlite3")
+        dictionaryDbHelper = DatabaseHelper(contextFont, "${viewModel.selectedDictionary}.dictionary.sqlite3")
         strongDbHelper?.close()
-        strongDbHelper = DatabaseHelper(context, "secedictionary.sqlite3")
+        strongDbHelper = DatabaseHelper(contextFont, "secedictionary.sqlite3")
         commentaryDbHelper?.close()
         val name = databaseHelper?.databaseName ?: return@LaunchedEffect
         val comName = name.replace(".sqlite3", "com.sqlite3")
-        commentaryDbHelper = if (comName.isNotEmpty()) DatabaseHelper(context, comName) else null
+        commentaryDbHelper = if (comName.isNotEmpty()) DatabaseHelper(contextFont, comName) else null
         if (showWordModal && currentWord.isNotEmpty()) {
             wordDefinition = dictionaryDbHelper?.getWordDefinition(currentWord) ?: "Definition not found."
         }
@@ -246,7 +245,7 @@ fun ReaderScreen(
         secondaryCommentaryDbHelper?.close()
         val name = secondaryDatabaseHelper?.databaseName ?: return@LaunchedEffect
         val comName = name.replace(".sqlite3", "com.sqlite3")
-        secondaryCommentaryDbHelper = if (viewModel.multiVersion && comName.isNotEmpty()) DatabaseHelper(context, comName) else null
+        secondaryCommentaryDbHelper = if (viewModel.multiVersion && comName.isNotEmpty()) DatabaseHelper(contextFont, comName) else null
     }
     val onWordPress: (String, Boolean) -> Unit = { word, isPrimary ->
         currentModalIsOldTestament = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
@@ -302,7 +301,7 @@ fun ReaderScreen(
         showVerseOptions = true
     }
     var refreshKey by remember { mutableIntStateOf(0) }
-    val subheadingsDbHelper = remember { DatabaseHelper(context, "kjvsubheadings.sqlite3") }
+    val subheadingsDbHelper = remember { DatabaseHelper(contextFont, "kjvsubheadings.sqlite3") }
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
@@ -500,7 +499,7 @@ fun ReaderScreen(
                         putExtra(Intent.EXTRA_TEXT, "${selPassage.bookName} ${selPassage.chapter}:${selVerse.verseNumber} ${selVerse.text}")
                         type = "text/plain"
                     }
-                    context.startActivity(Intent.createChooser(shareIntent, "Share verse"))
+                    contextFont.startActivity(Intent.createChooser(shareIntent, "Share verse"))
                 },
                 isBookmarked = db?.isBookmarked(fullVerse) ?: false,
                 isHighlighted = db?.isHighlighted(fullVerse) ?: false
@@ -1359,7 +1358,7 @@ fun ChapterView(
     refreshKey: Int = 0
 ) {
     val processor = remember(content) { VerseTextProcessor() }
-    val processedVerses = remember(content, themeColors, isKjvPlus, versionAbbr, refreshKey) {
+    val processedVerses = remember(content, themeColors, isKjvPlus, versionAbbr, refreshKey, viewModel.fontSize) {  // Add viewModel.fontSize here
         val result = mutableMapOf<Int, ProcessedVerse>()
         content.forEach { item ->
             if (item is VerseContent.VerseVal) {
@@ -1465,13 +1464,14 @@ fun ChapterView(
                                 overflow = TextOverflow.Ellipsis,
                                 maxLines = 1,
                                 color = MaterialTheme.colorScheme.primary,
-                                textAlign = TextAlign.Start
+                                textAlign = TextAlign.Start,
+                                modifier = Modifier.weight(0.5f)
                             )
                             Text(
                                 text = passage.chapter.let { " $it" },
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp,
-                                color = MaterialTheme.colorScheme.primary
+                                color = MaterialTheme.colorScheme.primary,
                             )
                         }
                     }

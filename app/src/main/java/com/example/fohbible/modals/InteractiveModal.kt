@@ -9,14 +9,20 @@ import android.text.style.URLSpan
 import android.view.Gravity
 import android.view.View
 import android.widget.TextView
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -49,6 +55,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.text.HtmlCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.fohbible.ColorWheelDialog
 import com.example.fohbible.data.BibleData
 import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.PassageSelection
@@ -261,18 +268,40 @@ fun InteractiveModal(
     val oswaldFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Oswald.ttf")) }
     val poppinsFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Poppins.ttf")) }
     val rubikGlitchFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/RubikGlitch.ttf")) }
+    val rubikLinesFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/RubikLines.ttf")) }
+    val cookieFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Cookie.ttf")) }
+    val emilysCandyFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/EmilysCandy.ttf")) }
+    val googleSansCodeFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/GoogleSansCode.ttf")) }
+    val pirataOneFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/PirataOne.ttf")) }
+    val quintessentialFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Quintessential.ttf")) }
+    val rougeScriptFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/RougeScript.ttf")) }
+    val sairaStencilOneFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/SairaStencilOne.ttf")) }
+    val shadowsIntoLightFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/ShadowsIntoLight.ttf")) }
+    val smoochSansFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/SmoochSans.ttf")) }
+    val truculentaFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Truculenta.ttf")) }
+    val honkFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/HonkVariable.ttf")) }
     val currentFontFamily = when (viewModel.selectedFontFamily) {
         "system" -> systemFont
         "oswald" -> oswaldFont
-        "rubik-glitch" -> rubikGlitchFont
+        "rubikglitch" -> rubikGlitchFont
+        "rubiklines" -> rubikLinesFont
         "poppins" -> poppinsFont
+        "cookie" -> cookieFont
+        "emilyscandy" -> emilysCandyFont
+        "googlesanscode" -> googleSansCodeFont
+        "pirataone" -> pirataOneFont
+        "quintessential" -> quintessentialFont
+        "rougescript" -> rougeScriptFont
+        "sairastencilone" -> sairaStencilOneFont
+        "shadowsintolight" -> shadowsIntoLightFont
+        "smoochsans" -> smoochSansFont
+        "truculenta" -> truculentaFont
+        "honk" -> honkFont
         else -> systemFont
     }
-
     var dictionaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var strongDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var commentaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
-
     LaunchedEffect(viewModel.selectedDictionary, databaseHelper?.databaseName) {
         dictionaryDbHelper?.close()
         dictionaryDbHelper = DatabaseHelper(context, "${viewModel.selectedDictionary}.dictionary.sqlite3")
@@ -283,7 +312,6 @@ fun InteractiveModal(
         val comName = name.replace(".sqlite3", "com.sqlite3")
         commentaryDbHelper = if (comName.isNotEmpty()) DatabaseHelper(context, comName) else null
     }
-
     val stack = remember { mutableStateListOf<ModalPage>() }
     val dictionaries = listOf("noah", "cbtel", "isbe", "atsbd")
     val dictionaryDisplayNames = mapOf(
@@ -292,7 +320,6 @@ fun InteractiveModal(
         "isbe" to "International Standard Bible Encyclopedia",
         "atsbd" to "American Tract Society Bible Dictionary"
     )
-
     LaunchedEffect(show) {
         if (show) {
             stack.clear()
@@ -316,9 +343,7 @@ fun InteractiveModal(
             }
         }
     }
-
     val scope = rememberCoroutineScope()
-
     val onWordPress: (String) -> Unit = Unit@{ w ->
         val trimmed = w.trim()
         if (trimmed.isEmpty() || trimmed.matches(Regex(".*\\d.*"))) {
@@ -353,7 +378,6 @@ fun InteractiveModal(
             }
         }
     }
-
     val onStrongsPress: (String, Int) -> Unit = Unit@{ strongNumber, _ ->
         val trimmed = strongNumber.trim()
         if (trimmed.isEmpty()) return@Unit
@@ -380,7 +404,6 @@ fun InteractiveModal(
             }
         }
     }
-
     val onTagPress: (String, PassageSelection) -> Unit = Unit@{ marker, passage ->
         val bookNumber = passage.bookNumber
         val chapter = passage.chapter
@@ -412,32 +435,57 @@ fun InteractiveModal(
             }
         }
     }
-
+    val modalBackgroundColor = if (isDark) {
+        if (viewModel.darkModalBackgroundColor != androidx.compose.ui.graphics.Color.Unspecified) {
+            viewModel.darkModalBackgroundColor
+        } else {
+            MaterialTheme.colorScheme.surface
+        }
+    } else {
+        if (viewModel.lightModalBackgroundColor != androidx.compose.ui.graphics.Color.Unspecified) {
+            viewModel.lightModalBackgroundColor
+        } else {
+            MaterialTheme.colorScheme.surface
+        }
+    }
     if (show) {
         if (stack.isEmpty()) return
         val currentPage = stack.last()
         val textColor = MaterialTheme.colorScheme.onBackground
         val linkColor = MaterialTheme.colorScheme.primary
+        var showModalColorWheel by remember { mutableStateOf(false) }
         AlertDialog(
             onDismissRequest = onDismiss,
             title = {
-                Column {
-                    Text(
-                        text = currentPage.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    currentPage.description?.let { description ->
-                        if (description.isNotBlank()) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = description,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = 2.dp)
-                            )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = currentPage.title,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        currentPage.description?.let { description ->
+                            if (description.isNotBlank()) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = description,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(top = 2.dp)
+                                )
+                            }
                         }
                     }
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .background(modalBackgroundColor, shape = CircleShape)
+                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                            .clickable { showModalColorWheel = true }
+                    )
                 }
             },
             text = {
@@ -578,8 +626,20 @@ fun InteractiveModal(
                                     typeface = when (viewModel.selectedFontFamily) {
                                         "system" -> Typeface.DEFAULT
                                         "oswald" -> Typeface.createFromAsset(ctx.assets, "fonts/Oswald.ttf")
-                                        "rubik-glitch" -> Typeface.createFromAsset(ctx.assets, "fonts/RubikGlitch.ttf")
+                                        "rubikglitch" -> Typeface.createFromAsset(ctx.assets, "fonts/RubikGlitch.ttf")
+                                        "rubiklines" -> Typeface.createFromAsset(ctx.assets, "fonts/RubikLines.ttf")
                                         "poppins" -> Typeface.createFromAsset(ctx.assets, "fonts/Poppins.ttf")
+                                        "cookie" -> Typeface.createFromAsset(ctx.assets, "fonts/Cookie.ttf")
+                                        "emilyscandy" -> Typeface.createFromAsset(ctx.assets, "fonts/EmilysCandy.ttf")
+                                        "googlesanscode" -> Typeface.createFromAsset(ctx.assets, "fonts/GoogleSansCode.ttf")
+                                        "pirataone" -> Typeface.createFromAsset(ctx.assets, "fonts/PirataOne.ttf")
+                                        "quintessential" -> Typeface.createFromAsset(ctx.assets, "fonts/Quintessential.ttf")
+                                        "rougescript" -> Typeface.createFromAsset(ctx.assets, "fonts/RougeScript.ttf")
+                                        "sairastencilone" -> Typeface.createFromAsset(ctx.assets, "fonts/SairaStencilOne.ttf")
+                                        "shadowsintolight" -> Typeface.createFromAsset(ctx.assets, "fonts/ShadowsIntoLight.ttf")
+                                        "smoochsans" -> Typeface.createFromAsset(ctx.assets, "fonts/SmoochSans.ttf")
+                                        "truculenta" -> Typeface.createFromAsset(ctx.assets, "fonts/Truculenta.ttf")
+                                        "honk" -> Typeface.createFromAsset(ctx.assets, "fonts/HonkVariable.ttf")
                                         else -> Typeface.DEFAULT
                                     }
                                     textDirection = View.TEXT_DIRECTION_LTR
@@ -848,7 +908,22 @@ fun InteractiveModal(
                         Text("Switch to ${nextDictionary.uppercase()}")
                     }
                 }
-            } else null
+            } else null,
+            containerColor = modalBackgroundColor
         )
+        if (showModalColorWheel) {
+            ColorWheelDialog(
+                onDismissRequest = { showModalColorWheel = false },
+                onColorSelected = { selectedColor ->
+                    if (isDark) {
+                        viewModel.darkModalBackgroundColor = selectedColor
+                    } else {
+                        viewModel.lightModalBackgroundColor = selectedColor
+                    }
+                    showModalColorWheel = false
+                },
+                initialColor = modalBackgroundColor
+            )
+        }
     }
 }

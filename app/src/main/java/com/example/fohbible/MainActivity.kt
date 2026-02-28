@@ -107,6 +107,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.fohbible.data.DatabaseHelper
 import com.example.fohbible.data.PassageSelection
+import com.example.fohbible.modals.FontModal
 import com.example.fohbible.modals.NavigationModal
 import com.example.fohbible.models.AppViewModel
 import com.example.fohbible.screens.BgModal
@@ -399,7 +400,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                     BackHandler(enabled = viewModel.navigationStack.size > 1) {
                         viewModel.goBack()
                     }
-
                     when (currentScreen) {
                         Screen.Home -> {
                             HomeScreen(
@@ -559,6 +559,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             onRemoveCustom = { viewModel.customTextureUri = null }
                         )
                     }
+
                     if (viewModel.showReaderOverlayColorWheel) {
                         ColorWheelDialog(
                             onDismissRequest = { viewModel.showReaderOverlayColorWheel = false },
@@ -1090,6 +1091,8 @@ fun ReaderAppBar(
     val viewModel: AppViewModel = viewModel()
     var showNavigationDropdown by remember { mutableStateOf(false) }
     var showMultiDropdown by remember { mutableStateOf(false) }
+    var showFontSizeDialog by remember { mutableStateOf(false) }
+    var tempFontSize by remember { mutableStateOf(viewModel.fontSize.toString()) }
     val rotation by animateFloatAsState(
         targetValue = if (showNavigationDropdown) 180f else 0f,
         animationSpec = tween(durationMillis = 300),
@@ -1124,12 +1127,14 @@ fun ReaderAppBar(
         animationSpec = tween(durationMillis = 300),
         label = "syncRotation"
     )
+    val minFontSize = 8
+    val maxFontSize = 50
 
     TopAppBar(
         title = {
             if (!viewModel.multiVersion) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(end = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Button(
@@ -1142,7 +1147,7 @@ fun ReaderAppBar(
                         modifier = Modifier
                             .height(30.dp)
                             .weight(0.7f)
-                            .padding(end = 8.dp)
+                            .padding(end = 4.dp)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -1154,13 +1159,14 @@ fun ReaderAppBar(
                                 fontSize = 16.sp,
                                 overflow = TextOverflow.Ellipsis,
                                 maxLines = 1,
-                                color = MaterialTheme.colorScheme.primary
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.weight(0.5f)
                             )
                             Text(
                                 text = currentScreen.passage?.chapter?.let { " $it" } ?: "",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp,
-                                color = MaterialTheme.colorScheme.primary
+                                color = MaterialTheme.colorScheme.primary,
                             )
                         }
                     }
@@ -1231,7 +1237,7 @@ fun ReaderAppBar(
                     themeTargetRotation += 180f
                     onThemeToggle()
                 },
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(40.dp).padding(start = 4.dp)
             ) {
                 Icon(
                     if (viewModel.darkTheme) Icons.Filled.Brightness6 else Icons.Filled.Brightness2,
@@ -1304,14 +1310,12 @@ fun ReaderAppBar(
                 )
                 HorizontalDivider()
                 val current = if (!viewModel.multiVersion) "single" else viewModel.multiViewLayout
-
                 @Composable
                 fun createItem(title: String, onClick: () -> Unit) {
                     val isActive = title.lowercase() == current
                     val textColor by animateColorAsState(
                         targetValue = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                     )
-
                     val leadingIcon: (@Composable () -> Unit) = {
                         when (title.lowercase()) {
                             "single" -> Icon(
@@ -1337,7 +1341,6 @@ fun ReaderAppBar(
                             )
                         }
                     }
-
                     DropdownMenuItem(
                         text = {
                             Text(
@@ -1356,8 +1359,9 @@ fun ReaderAppBar(
                             .fillMaxWidth()
                     )
                 }
-
-                createItem("Single") { viewModel.multiVersion = false }
+                createItem("Single") {
+                    viewModel.multiVersion = false
+                }
                 createItem("Horizontal") {
                     viewModel.multiVersion = true
                     viewModel.multiViewLayout = "horizontal"
@@ -1455,10 +1459,12 @@ fun ReaderAppBar(
                 }
                 HorizontalDivider()
                 DropdownMenuItem(
-                    text = { Text(
-                        text = "Background Texture",
-                        modifier = Modifier.fillMaxWidth()
-                    ) },
+                    text = {
+                        Text(
+                            text = "Background Texture",
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    },
                     leadingIcon = {
                         Icon(
                             Icons.Outlined.Texture,
@@ -1538,10 +1544,12 @@ fun ReaderAppBar(
                 }
                 HorizontalDivider()
                 DropdownMenuItem(
-                    text = { Text(
-                        text = if (viewModel.darkTheme) "Dark Overlay Color" else "Light Overlay Color",
-                        modifier = Modifier.fillMaxWidth()
-                    ) },
+                    text = {
+                        Text(
+                            text = if (viewModel.darkTheme) "Dark Overlay Color" else "Light Overlay Color",
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    },
                     leadingIcon = {
                         Box(
                             modifier = Modifier
@@ -1557,9 +1565,73 @@ fun ReaderAppBar(
                     },
                     modifier = Modifier.fillMaxWidth()
                 )
+                HorizontalDivider()
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Font Size",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = 14.sp
+                        )
+                        Text(
+                            text = "8-50",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = { viewModel.fontSize = maxOf(minFontSize, viewModel.fontSize - 1) },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Text("A-", fontWeight = FontWeight.Bold)
+                        }
+                        Text(
+                            "${viewModel.fontSize}",
+                            modifier = Modifier.padding(horizontal = 16.dp).clickable { showFontSizeDialog = true },
+                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        IconButton(
+                            onClick = { viewModel.fontSize = minOf(maxFontSize, viewModel.fontSize + 1) },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Text("A+", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
             }
         }
     )
+
+    if (showFontSizeDialog) {
+        FontModal(
+            tempSize = tempFontSize,
+            onChange = { tempFontSize = it },
+            onConfirm = {
+                val newSize = tempFontSize.toIntOrNull()?.coerceIn(minFontSize, maxFontSize) ?: viewModel.fontSize
+                viewModel.fontSize = newSize
+                showFontSizeDialog = false
+            },
+            onDismiss = { showFontSizeDialog = false }
+        )
+    }
 }
 
 sealed class Screen {
