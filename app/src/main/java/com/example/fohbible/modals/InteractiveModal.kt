@@ -41,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
@@ -92,7 +93,7 @@ fun sanitizeHtmlContent(content: String?): String {
     sanitized = sanitized.replace(Regex("<script[\\s\\S]*?</script>", RegexOption.DOT_MATCHES_ALL), "")
     sanitized = sanitized.replace(Regex("\\s+on\\w+\\s*=\\s*\"[^\"]*\""), "")
     sanitized = sanitized.replace(Regex("\\s+on\\w+\\s*=\\s*'[^']*'"), "")
-    sanitized = sanitized.replace(Regex("\\s+on\\w+\\s*=\\s*[^\\s>]+"), "")
+    sanitized = sanitized.replace(Regex("\\s+on\\w+\\s*=[^\\s>]+"), "")
     sanitized = sanitized.replace(Regex("javascript:[^\"'>]+"), "#")
     sanitized = sanitized.replace(Regex("<!--.*?-->", RegexOption.DOT_MATCHES_ALL), "")
     sanitized = sanitized.replace(Regex("<style[^>]*>.*?</style>", RegexOption.DOT_MATCHES_ALL), "")
@@ -105,9 +106,35 @@ fun prepareStrongContent(rawDefinition: String): String {
     val searchTerm = "Derivation"
     val index = sanitized.indexOf(searchTerm, ignoreCase = true)
     if (index != -1) {
-        return sanitized.take(index) + "<br><br>" + sanitized.substring(index)
+        return sanitized.take(index) + " " + sanitized.substring(index)
     }
     return sanitized
+}
+
+fun cleanDefinition(topic: String, rawDef: String): String {
+    val sanitized = sanitizeHtmlContent(rawDef)
+    val upperTopic = topic.uppercase(Locale.ROOT)
+    val capTopic = topic.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
+    val possibleStarts = listOf(upperTopic, capTopic)
+    var cleaned = sanitized
+    for (start in possibleStarts) {
+        if (cleaned.startsWith(start, ignoreCase = true)) {
+            cleaned = cleaned.substring(start.length).replace(Regex("^[,.:;-]+"), "").trim()
+            break
+        }
+    }
+    // Handle tagged leading word
+    if (cleaned.startsWith("<")) {
+        val tagPattern = Regex("^<(\\w+)>(\\s*([\\w ]+)\\s*)</\\1>", RegexOption.IGNORE_CASE)
+        val match = tagPattern.find(cleaned)
+        if (match != null) {
+            val content = match.groups[2]?.value?.trim() ?: ""
+            if (possibleStarts.any { content.equals(it, ignoreCase = true) }) {
+                cleaned = cleaned.substring(match.value.length).replace(Regex("^[,.:;-]+"), "").trim()
+            }
+        }
+    }
+    return cleaned
 }
 
 fun parseVerseLink(href: String, linkText: String): PassageSelection? {
@@ -195,44 +222,70 @@ fun levenshteinDistance(s1: String, s2: String): Int {
     return cost[len1][len2]
 }
 
-suspend fun getDefinitionOrClosest(dbHelper: DatabaseHelper?, originalWord: String): Pair<String, String>? {
+fun customDistance(word: String, topic: String): Int {
+    if (topic == word) return 0
+    val words = topic.split(Regex("\\s+"))
+    if (words.contains(word)) {
+        return 10 + words.size
+    }
+    val prefixLen = if (topic.startsWith(word)) topic.length - word.length else Int.MAX_VALUE / 2
+    val suffixLen = if (topic.endsWith(word)) topic.length - word.length else Int.MAX_VALUE / 2
+    val minAffix = minOf(prefixLen, suffixLen)
+    if (minAffix < Int.MAX_VALUE / 2) {
+        return 20 + minAffix
+    }
+    if (topic.contains(word)) {
+        return 30 + (topic.length - word.length)
+    }
+    return 100 + levenshteinDistance(word, topic)
+}
+
+suspend fun getDefinitionOrClosest(dbHelper: DatabaseHelper?, originalWord: String): List<Pair<String, String>>? {
     return withContext(Dispatchers.IO) {
         if (dbHelper == null) return@withContext null
         val db = dbHelper.database ?: return@withContext null
         val lowerWord = originalWord.trim().lowercase(Locale.ROOT)
+        val result = mutableListOf<Pair<String, String>>()
         var cursor = db.query("dictionary", arrayOf("topic", "definition"), "LOWER(topic) = ?", arrayOf(lowerWord), null, null, null)
         if (cursor.moveToFirst()) {
-            val exactWord = cursor.getString(0)
+            val topic = cursor.getString(0)
             val def = cursor.getString(1)
+            result.add(Pair(topic, def))
             cursor.close()
-            return@withContext Pair(exactWord, def)
+            return@withContext result
         }
         cursor.close()
-        cursor = db.query("dictionary", arrayOf("topic", "definition"), "LOWER(topic) > ?", arrayOf(lowerWord), null, null, "LOWER(topic) ASC", "1")
-        var nextPair: Pair<String, String>? = null
-        if (cursor.moveToFirst()) {
-            val word = cursor.getString(0)
+        // Try fuzzy matches with LIKE
+        val likeParam = "%$lowerWord%"
+        cursor = db.query("dictionary", arrayOf("topic", "definition"), "LOWER(topic) LIKE ?", arrayOf(likeParam), null, null, "LENGTH(topic) ASC LIMIT 50")
+        val candidates = mutableListOf<Pair<String, String>>()
+        while (cursor.moveToNext()) {
+            val topic = cursor.getString(0)
             val def = cursor.getString(1)
-            nextPair = Pair(word, def)
+            candidates.add(Pair(topic, def))
+        }
+        cursor.close()
+        if (candidates.isNotEmpty()) {
+            val sorted = candidates.sortedBy { customDistance(lowerWord, it.first.lowercase(Locale.ROOT)) * 1000 + levenshteinDistance(lowerWord, it.first.lowercase(Locale.ROOT)) }
+            return@withContext sorted.take(5)
+        }
+        // Fallback to alphabetical prev/next if no fuzzy matches
+        cursor = db.query("dictionary", arrayOf("topic", "definition"), "LOWER(topic) > ?", arrayOf(lowerWord), null, null, "LOWER(topic) ASC", "1")
+        if (cursor.moveToFirst()) {
+            val topic = cursor.getString(0)
+            val def = cursor.getString(1)
+            result.add(Pair(topic, def))
         }
         cursor.close()
         cursor = db.query("dictionary", arrayOf("topic", "definition"), "LOWER(topic) < ?", arrayOf(lowerWord), null, null, "LOWER(topic) DESC", "1")
-        var prevPair: Pair<String, String>? = null
         if (cursor.moveToFirst()) {
-            val word = cursor.getString(0)
+            val topic = cursor.getString(0)
             val def = cursor.getString(1)
-            prevPair = Pair(word, def)
+            result.add(Pair(topic, def))
         }
         cursor.close()
-        if (nextPair == null && prevPair == null) return@withContext null
-        val distNext = if (nextPair != null) levenshteinDistance(lowerWord, nextPair.first.lowercase(Locale.ROOT)) else Int.MAX_VALUE
-        val distPrev = if (prevPair != null) levenshteinDistance(lowerWord, prevPair.first.lowercase(Locale.ROOT)) else Int.MAX_VALUE
-        return@withContext when {
-            distNext < distPrev -> nextPair
-            distPrev < distNext -> prevPair
-            nextPair != null -> nextPair
-            else -> prevPair
-        }
+        if (result.isEmpty()) return@withContext null
+        result.sortedBy { levenshteinDistance(lowerWord, it.first.lowercase(Locale.ROOT)) }
     }
 }
 
@@ -328,17 +381,47 @@ fun InteractiveModal(
                     val sanitizedContent = sanitizeHtmlContent(initialContent)
                     stack.add(ModalPage(initialTitle, "commentary", sanitizedContent, description = initialDescription, isOldTestament = isOldTestament))
                 }
-                "definition" -> {
-                    val dbDisplayName = dictionaryDisplayNames[viewModel.selectedDictionary] ?: viewModel.selectedDictionary
-                    val capitalizedWord = word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
-                    val title = "Definition of $capitalizedWord"
-                    val sanitizedDefinition = sanitizeHtmlContent(definition)
-                    stack.add(ModalPage(title, "definition", sanitizedDefinition, word = word, description = dbDisplayName, isOldTestament = isOldTestament))
-                }
                 "strong" -> {
                     val title = "Strong's Definition for $strongNumber"
                     val preparedDefinition = prepareStrongContent(strongDefinition)
                     stack.add(ModalPage(title, "strong", preparedDefinition, strongNumber = strongNumber, description = initialDescription, isOldTestament = isOldTestament))
+                }
+                "definition" -> {
+                    val dbDisplayName = dictionaryDisplayNames[viewModel.selectedDictionary] ?: viewModel.selectedDictionary
+                    val capitalizedWord = word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
+
+                    // If we already have a definition passed in, check if it's "not found"
+                    if (definition.isNotBlank() && !definition.contains("not found", ignoreCase = true)) {
+                        val title = "Definition of $capitalizedWord"
+                        val sanitizedDefinition = sanitizeHtmlContent(definition)
+                        stack.add(ModalPage(title, "definition", sanitizedDefinition, word = word, description = dbDisplayName, isOldTestament = isOldTestament))
+                    } else {
+                        // Start with a loading state and trigger the fuzzy search immediately
+                        val loadingPage = ModalPage("Searching for $capitalizedWord...", "definition", "Loading...", word = word, description = dbDisplayName, isOldTestament = isOldTestament)
+                        stack.add(loadingPage)
+
+                        val pairs = getDefinitionOrClosest(dictionaryDbHelper, word) ?: emptyList()
+                        if (pairs.isNotEmpty()) {
+                            val isExact = pairs.size == 1 && pairs[0].first.equals(word, ignoreCase = true)
+                            val newTitle = if (isExact) {
+                                "Definition of ${pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }}"
+                            } else if (pairs.size == 1) {
+                                "No exact match. Closest: ${pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }}"
+                            } else {
+                                "Possible matches for \"$capitalizedWord\""
+                            }
+
+                            val newContent = if (isExact) {
+                                sanitizeHtmlContent(pairs[0].second)
+                            } else {
+                                pairs.joinToString("<br><hr><br>") { sanitizeHtmlContent(it.second) }
+                            }
+
+                            stack[0] = loadingPage.copy(title = newTitle, content = newContent)
+                        } else {
+                            stack[0] = loadingPage.copy(title = "Definition not found", content = "No results for \"$word\".")
+                        }
+                    }
                 }
             }
         }
@@ -356,18 +439,28 @@ fun InteractiveModal(
         val loadingPage = ModalPage(loadingTitle, "definition", "Loading...", word = trimmed, description = dbDisplayName, isOldTestament = currentIsOld)
         stack.add(loadingPage)
         scope.launch {
-            val pair = getDefinitionOrClosest(dictionaryDbHelper, trimmed)
+            val pairs: List<Pair<String, String>> = getDefinitionOrClosest(dictionaryDbHelper, trimmed) ?: emptyList()
             val newContent: String
             val newTitle: String
-            if (pair != null) {
-                val (usedWord, def) = pair
-                val capitalizedUsed = usedWord.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
-                newTitle = if (usedWord.equals(trimmed, ignoreCase = true)) {
-                    "Definition of $capitalizedUsed"
+            if (pairs.isNotEmpty()) {
+                val isExact = pairs.size == 1 && pairs[0].first.equals(trimmed, ignoreCase = true)
+                newTitle = if (isExact) {
+                    "Definition of ${pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }}"
+                } else if (pairs.size == 1) {
+                    val cap = pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }
+                    "No exact match for \"$capitalizedWord\". Closest match: $cap"
                 } else {
-                    "No exact match for \"$capitalizedWord\". Closest match: $capitalizedUsed"
+                    "Possible matches for \"$capitalizedWord\""
                 }
-                newContent = sanitizeHtmlContent(def)
+                newContent = if (isExact) {
+                    sanitizeHtmlContent(pairs[0].second)
+                } else if (pairs.size == 1) {
+                    cleanDefinition(pairs[0].first, pairs[0].second)
+                } else {
+                    pairs.joinToString("<br><hr><br>") { p ->
+                        sanitizeHtmlContent(p.second)
+                    }
+                }
             } else {
                 newTitle = "Definition of $capitalizedWord not found"
                 newContent = "No definition found."
@@ -435,18 +528,20 @@ fun InteractiveModal(
             }
         }
     }
-    val modalBackgroundColor = if (isDark) {
-        if (viewModel.darkModalBackgroundColor != androidx.compose.ui.graphics.Color.Unspecified) {
-            viewModel.darkModalBackgroundColor
-        } else {
-            MaterialTheme.colorScheme.surface
-        }
+    val lightModalColor = if (viewModel.lightModalBackgroundColor != androidx.compose.ui.graphics.Color.Unspecified) {
+        viewModel.lightModalBackgroundColor
     } else {
-        if (viewModel.lightModalBackgroundColor != androidx.compose.ui.graphics.Color.Unspecified) {
-            viewModel.lightModalBackgroundColor
-        } else {
-            MaterialTheme.colorScheme.surface
-        }
+        MaterialTheme.colorScheme.surface
+    }
+    val darkModalColor = if (viewModel.darkModalBackgroundColor != androidx.compose.ui.graphics.Color.Unspecified) {
+        viewModel.darkModalBackgroundColor
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
+    val modalBackgroundColor = if (isDark) {
+        darkModalColor
+    } else {
+        lightModalColor
     }
     if (show) {
         if (stack.isEmpty()) return
@@ -454,7 +549,6 @@ fun InteractiveModal(
         val textColor = MaterialTheme.colorScheme.onBackground
         val linkColor = MaterialTheme.colorScheme.primary
         var showModalColorWheel by remember { mutableStateOf(false) }
-        val buttonTextColor = if (modalBackgroundColor.luminance() < 0.5f) androidx.compose.ui.graphics.Color.White else androidx.compose.ui.graphics.Color.Black
         AlertDialog(
             onDismissRequest = onDismiss,
             title = {
@@ -473,19 +567,16 @@ fun InteractiveModal(
                         )
                         Box(
                             modifier = Modifier
-                                .size(32.dp)
-                                .background(modalBackgroundColor, shape = CircleShape)
-                                .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                                .size(20.dp)
+                                .background(
+                                    brush = Brush.horizontalGradient(
+                                        colors = listOf(lightModalColor, darkModalColor)
+                                    ),
+                                    shape = CircleShape
+                                )
+                                .border(0.2.dp, MaterialTheme.colorScheme.outline, CircleShape)
                                 .clickable { showModalColorWheel = true }
-                        ) {
-                            Text(
-                                text = "BG",
-                                color = buttonTextColor,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.align(Alignment.Center)
-                            )
-                        }
+                        )
                     }
                     currentPage.description?.let { description ->
                         if (description.isNotBlank()) {
@@ -688,11 +779,11 @@ fun InteractiveModal(
                                                     }
                                                     val verses = fetchVerses(passage, databaseHelper)
                                                     val rangeStr = if (passage.chapterEnd != null) {
-                                                        "${passage.verse}-Ch${passage.chapterEnd}"
+                                                        " ${passage.verse}-Ch ${passage.chapterEnd}"
                                                     } else {
-                                                        "${passage.verse}" + (passage.verseEnd?.let { "-$it" } ?: "")
+                                                        " ${passage.verse}" + (passage.verseEnd?.let { "-$it" } ?: "")
                                                     }
-                                                    val newTitle = "${passage.bookName} ${passage.chapter}:$rangeStr"
+                                                    val newTitle = " ${passage.bookName} ${passage.chapter}:$rangeStr"
                                                     stack.add(ModalPage(newTitle, "verses", verses = verses, passage = passage, isOldTestament = isOld))
                                                 }
                                             }
@@ -721,11 +812,11 @@ fun InteractiveModal(
                                                             }
                                                             val verses = fetchVerses(passage, databaseHelper)
                                                             val rangeStr = if (passage.chapterEnd != null) {
-                                                                "${passage.verse}-Ch${passage.chapterEnd}"
+                                                                " ${passage.verse}-Ch ${passage.chapterEnd}"
                                                             } else {
-                                                                "${passage.verse}" + (passage.verseEnd?.let { "-$it" } ?: "")
+                                                                " ${passage.verse}" + (passage.verseEnd?.let { "-$it" } ?: "")
                                                             }
-                                                            val newTitle = "${passage.bookName} ${passage.chapter}:$rangeStr"
+                                                            val newTitle = " ${passage.bookName} ${passage.chapter}:$rangeStr"
                                                             stack.add(ModalPage(newTitle, "verses", verses = verses, passage = passage, isOldTestament = isOld))
                                                         }
                                                     }
@@ -812,25 +903,35 @@ fun InteractiveModal(
                                                         val loadingPage = ModalPage(loadingTitle, "definition", "Loading...", word = wordToFetch, description = dbDisplayName, isOldTestament = stack.last().isOldTestament)
                                                         stack.add(loadingPage)
                                                         scope.launch {
-                                                            val pair = getDefinitionOrClosest(dictionaryDbHelper, wordToFetch)
-                                                            val newContent: String
-                                                            val newTitle: String
-                                                            if (pair != null) {
-                                                                val (usedWord, definition) = pair
-                                                                val capitalizedUsed = usedWord.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
-                                                                newTitle = if (usedWord.equals(wordToFetch, ignoreCase = true)) {
-                                                                    "Definition of $capitalizedUsed"
+                                                            val pairs: List<Pair<String, String>> = getDefinitionOrClosest(dictionaryDbHelper, wordToFetch) ?: emptyList()
+                                                            val newContentInner: String
+                                                            val newTitleInner: String
+                                                            if (pairs.isNotEmpty()) {
+                                                                val isExact = pairs.size == 1 && pairs[0].first.equals(wordToFetch, ignoreCase = true)
+                                                                newTitleInner = if (isExact) {
+                                                                    "Definition of ${pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }}"
+                                                                } else if (pairs.size == 1) {
+                                                                    val cap = pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }
+                                                                    "No exact match for \"$capitalizedWordToFetch\". Closest match: $cap"
                                                                 } else {
-                                                                    "No exact match for \"$capitalizedWordToFetch\". Closest match: $capitalizedUsed"
+                                                                    "Possible matches for \"$capitalizedWordToFetch\""
                                                                 }
-                                                                newContent = sanitizeHtmlContent(definition)
+                                                                newContentInner = if (isExact) {
+                                                                    sanitizeHtmlContent(pairs[0].second)
+                                                                } else if (pairs.size == 1) {
+                                                                    cleanDefinition(pairs[0].first, pairs[0].second)
+                                                                } else {
+                                                                    pairs.joinToString("<br><hr><br>") { p ->
+                                                                        sanitizeHtmlContent(p.second)
+                                                                    }
+                                                                }
                                                             } else {
-                                                                newTitle = "Definition of $capitalizedWordToFetch not found"
-                                                                newContent = "No definition found."
+                                                                newTitleInner = "Definition of $capitalizedWordToFetch not found"
+                                                                newContentInner = "No definition found."
                                                             }
                                                             val index = stack.indexOf(loadingPage)
                                                             if (index != -1) {
-                                                                stack[index] = loadingPage.copy(title = newTitle, content = newContent)
+                                                                stack[index] = loadingPage.copy(title = newTitleInner, content = newContentInner)
                                                             }
                                                         }
                                                     }
@@ -890,19 +991,29 @@ fun InteractiveModal(
                             val tempDbHelper = withContext(Dispatchers.IO) {
                                 DatabaseHelper(context, "${nextDictionary}.dictionary.sqlite3")
                             }
-                            val pair = getDefinitionOrClosest(tempDbHelper, currentWord)
+                            val pairs: List<Pair<String, String>> = getDefinitionOrClosest(tempDbHelper, currentWord) ?: emptyList()
                             val capitalizedWord = currentWord.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
                             val newContent: String
                             val newTitle: String
-                            if (pair != null) {
-                                val (usedWord, newDef) = pair
-                                val capitalizedUsed = usedWord.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
-                                newTitle = if (usedWord.equals(currentWord, ignoreCase = true)) {
-                                    "Definition of $capitalizedUsed"
+                            if (pairs.isNotEmpty()) {
+                                val isExact = pairs.size == 1 && pairs[0].first.equals(currentWord, ignoreCase = true)
+                                newTitle = if (isExact) {
+                                    "Definition of ${pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }}"
+                                } else if (pairs.size == 1) {
+                                    val cap = pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }
+                                    "No exact match for \"$capitalizedWord\". Closest match: $cap"
                                 } else {
-                                    "No exact match for \"$capitalizedWord\". Closest match: $capitalizedUsed"
+                                    "Possible matches for \"$capitalizedWord\""
                                 }
-                                newContent = sanitizeHtmlContent(newDef)
+                                newContent = if (isExact) {
+                                    sanitizeHtmlContent(pairs[0].second)
+                                } else if (pairs.size == 1) {
+                                    cleanDefinition(pairs[0].first, pairs[0].second)
+                                } else {
+                                    pairs.joinToString("<br><hr><br>") { p ->
+                                        sanitizeHtmlContent(p.second)
+                                    }
+                                }
                             } else {
                                 newTitle = "Definition of $capitalizedWord not found"
                                 newContent = "No definition found."
