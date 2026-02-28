@@ -122,6 +122,8 @@ fun SettingsScreen() {
     var isUsingCustomColor by remember { mutableStateOf(viewModel.isCustomColor) }
     var showLightOverlayColorWheel by remember { mutableStateOf(false) }
     var showDarkOverlayColorWheel by remember { mutableStateOf(false) }
+    var showLightModalColorWheel by remember { mutableStateOf(false) }
+    var showDarkModalColorWheel by remember { mutableStateOf(false) }
     var showRefreshConfirmDialog by remember { mutableStateOf(false) }
     var showRefreshResultDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
@@ -399,6 +401,34 @@ fun SettingsScreen() {
                             .clickable { showDarkOverlayColorWheel = true }
                     )
                 }
+
+                SettingsItem(
+                    title = "Light Modal Background Color",
+                    subtitle = "Modal background color for light theme"
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(viewModel.lightModalBackgroundColor)
+                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                            .clickable { showLightModalColorWheel = true }
+                    )
+                }
+
+                SettingsItem(
+                    title = "Dark Modal Background Color",
+                    subtitle = "Modal background color for dark theme"
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(viewModel.darkModalBackgroundColor)
+                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                            .clickable { showDarkModalColorWheel = true }
+                    )
+                }
             }
         }
 
@@ -436,7 +466,6 @@ fun SettingsScreen() {
                     title = "Data & Storage",
                     subtitle = "Manage app data and cache",
                     onClick = {
-                        // Implemented: Open system app info screen (user can clear cache/data from there)
                         val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                             data = Uri.fromParts("package", context.packageName, null)
                         }
@@ -451,7 +480,7 @@ fun SettingsScreen() {
                 SettingsItem(
                     title = "About",
                     subtitle = "App version and information",
-                    onClick = { showAboutDialog = true }   // Implemented: Show about dialog
+                    onClick = { showAboutDialog = true }
                 ) {
                     Icon(Icons.Default.ChevronRight, contentDescription = null)
                 }
@@ -516,8 +545,6 @@ fun SettingsScreen() {
             }
         }
     }
-
-    // Dialogs (moved outside LazyColumn for correct lifecycle)
     if (showVersionInfoDialog && selectedVersionInfo != null) {
         VersionInfoDialog(
             versionName = selectedVersionInfo!!.first,
@@ -587,6 +614,28 @@ fun SettingsScreen() {
                 showDarkOverlayColorWheel = false
             },
             initialColor = viewModel.darkOverlayColor
+        )
+    }
+
+    if (showLightModalColorWheel) {
+        ColorWheelDialog(
+            onDismissRequest = { showLightModalColorWheel = false },
+            onColorSelected = { color ->
+                viewModel.lightModalBackgroundColor = color
+                showLightModalColorWheel = false
+            },
+            initialColor = viewModel.lightModalBackgroundColor
+        )
+    }
+
+    if (showDarkModalColorWheel) {
+        ColorWheelDialog(
+            onDismissRequest = { showDarkModalColorWheel = false },
+            onColorSelected = { color ->
+                viewModel.darkModalBackgroundColor = color
+                showDarkModalColorWheel = false
+            },
+            initialColor = viewModel.darkModalBackgroundColor
         )
     }
 
