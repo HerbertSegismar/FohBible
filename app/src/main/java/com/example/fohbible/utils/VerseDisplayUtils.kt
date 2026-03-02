@@ -463,7 +463,6 @@ class VerseTextProcessor(
                                 baselineShift = BaselineShift.None
                             )
                         ) {
-                            builder.append(" ")
                         }
 
                         builder.pop()

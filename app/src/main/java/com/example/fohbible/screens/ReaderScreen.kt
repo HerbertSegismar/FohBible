@@ -1401,7 +1401,7 @@ fun ChapterView(
                 )
             ) {
                 Icon(
-                    imageVector = Icons.Default.Bookmark, // Or Icons.Outlined.Bookmark for outlined version
+                    imageVector = Icons.Default.Bookmark,
                     contentDescription = "Bookmarked",
                     tint = themeColors.verseNumber,
                     modifier = Modifier.fillMaxSize()
@@ -1447,11 +1447,11 @@ fun ChapterView(
                             containerColor = Color.White
                         ),
                         shape = RoundedCornerShape(4.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                         modifier = Modifier
-                            .height(36.dp)
+                            .height(30.dp)
                             .weight(0.7f)
-                            .padding(end = 8.dp)
+                            .padding(end = 4.dp)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -1487,14 +1487,15 @@ fun ChapterView(
                             containerColor = Color.White
                         ),
                         shape = RoundedCornerShape(4.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
-                        modifier = Modifier.height(36.dp).weight(0.3f)
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier.height(30.dp).weight(0.5f)
                     ) {
                         Text(
                             text = versionAbbr,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1
                         )
                     }
                 }

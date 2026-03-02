@@ -1179,14 +1179,15 @@ fun ReaderAppBar(
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                         modifier = Modifier
                             .height(30.dp)
-                            .weight(0.3f)
-                            .padding(end = if (viewModel.multiVersion) 8.dp else 0.dp)
+                            .weight(0.5f)
+                            .padding(end = if (onBack == null) 8.dp else 2.dp)
                     ) {
                         Text(
                             text = currentVersionAbbr,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1
                         )
                     }
                     if (viewModel.multiVersion) {
