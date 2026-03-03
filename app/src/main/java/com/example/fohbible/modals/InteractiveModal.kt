@@ -504,7 +504,7 @@ fun InteractiveModal(
         val start = passage.verse ?: return@Unit
         val end = passage.verseEnd ?: start
         val rangeStr = if (end != start) "$start-$end" else "$start"
-        val newTitle = "Notes on $bookName $chapter:$rangeStr – [$marker]"
+        val newTitle = "$bookName $chapter:$rangeStr$marker Notes"
         val loadingPage = ModalPage(newTitle, "commentary", "Loading...", isOldTestament = stack.last().isOldTestament)
         stack.add(loadingPage)
         scope.launch {
