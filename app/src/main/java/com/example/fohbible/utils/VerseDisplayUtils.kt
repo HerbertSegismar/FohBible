@@ -389,12 +389,6 @@ class VerseTextProcessor(
         }
     }
 
-    private fun normalizeSpacing(text: String): String {
-        return text.replace(Regex("""([.,])(\p{L})""")) { match ->
-            match.groupValues[1] + " " + match.groupValues[2]
-        }
-    }
-
     private fun processTextNode(
         node: TreeNode.Text,
         builder: AnnotatedString.Builder,
@@ -416,11 +410,9 @@ class VerseTextProcessor(
         val rawText = if (options.preserveWhitespace) node.content else node.content.trim()
         if (rawText.isEmpty()) return
 
-        val normalizedText = normalizeSpacing(rawText)
-
         when (context.currentTag) {
             "S" -> if (options.enableStrongsClick && onStrongsPress != null) {
-                val trimmed = normalizedText.trim()
+                val trimmed = rawText.trim()
                 if (trimmed.isNotEmpty() && isValidStrongsNumber(trimmed)) {
                     val prefixed = formatStrongsNumber(trimmed, context.isOldTestament)
                     builder.pushStringAnnotation("strong", prefixed)
@@ -431,18 +423,18 @@ class VerseTextProcessor(
                             baselineShift = textContext.baselineShift ?: BaselineShift.None
                         )
                     ) {
-                        builder.append(normalizedText)
+                        builder.append(rawText)
                     }
                     builder.pop()
                 } else {
-                    processNormalText(normalizedText, builder, textContext, highlight, themeColors, onWordPress, options)
+                    processNormalText(rawText, builder, textContext, highlight, themeColors, onWordPress, options)
                 }
             } else {
-                processNormalText(normalizedText, builder, textContext, highlight, themeColors, onWordPress, options)
+                processNormalText(rawText, builder, textContext, highlight, themeColors, onWordPress, options)
             }
 
             "f" -> {
-                val trimmed = normalizedText.trim()
+                val trimmed = rawText.trim()
                 val visibleStyle = SpanStyle(
                     color = textContext.textColor,
                     fontSize = textContext.baseFontSize * textContext.fontSizeMultiplier,
@@ -454,7 +446,7 @@ class VerseTextProcessor(
                         builder.pushStringAnnotation("tag", trimmed)
 
                         builder.withStyle(visibleStyle) {
-                            builder.append(normalizedText)
+                            builder.append(rawText)
                         }
                         builder.withStyle(
                             SpanStyle(
@@ -470,21 +462,21 @@ class VerseTextProcessor(
                     } else if (trimmed.isNotEmpty()) {
                         builder.pushStringAnnotation("tag", trimmed)
                         builder.withStyle(visibleStyle) {
-                            builder.append(normalizedText)
+                            builder.append(rawText)
                         }
                         builder.pop()
                     } else {
                         builder.withStyle(visibleStyle) {
-                            builder.append(normalizedText)
+                            builder.append(rawText)
                         }
                     }
                 } else {
-                    processNormalText(normalizedText, builder, textContext, highlight, themeColors, onWordPress, options)
+                    processNormalText(rawText, builder, textContext, highlight, themeColors, onWordPress, options)
                 }
             }
 
             else -> {
-                processNormalText(normalizedText, builder, textContext, highlight, themeColors, onWordPress, options)
+                processNormalText(rawText, builder, textContext, highlight, themeColors, onWordPress, options)
             }
         }
     }
