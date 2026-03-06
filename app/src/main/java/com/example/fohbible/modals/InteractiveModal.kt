@@ -123,7 +123,6 @@ fun cleanDefinition(topic: String, rawDef: String): String {
             break
         }
     }
-    // Handle tagged leading word
     if (cleaned.startsWith("<")) {
         val tagPattern = Regex("^<(\\w+)>(\\s*([\\w ]+)\\s*)</\\1>", RegexOption.IGNORE_CASE)
         val match = tagPattern.find(cleaned)
@@ -390,13 +389,11 @@ fun InteractiveModal(
                     val dbDisplayName = dictionaryDisplayNames[viewModel.selectedDictionary] ?: viewModel.selectedDictionary
                     val capitalizedWord = word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
 
-                    // If we already have a definition passed in, check if it's "not found"
                     if (definition.isNotBlank() && !definition.contains("not found", ignoreCase = true)) {
                         val title = "Definition of $capitalizedWord"
                         val sanitizedDefinition = sanitizeHtmlContent(definition)
                         stack.add(ModalPage(title, "definition", sanitizedDefinition, word = word, description = dbDisplayName, isOldTestament = isOldTestament))
                     } else {
-                        // Start with a loading state and trigger the fuzzy search immediately
                         val loadingPage = ModalPage("Searching for $capitalizedWord...", "definition", "Loading...", word = word, description = dbDisplayName, isOldTestament = isOldTestament)
                         stack.add(loadingPage)
 
@@ -504,7 +501,7 @@ fun InteractiveModal(
         val start = passage.verse ?: return@Unit
         val end = passage.verseEnd ?: start
         val rangeStr = if (end != start) "$start-$end" else "$start"
-        val newTitle = "$bookName $chapter:$rangeStr$marker Notes"
+        val newTitle = "Notes on $bookName $chapter:$rangeStr$marker"
         val loadingPage = ModalPage(newTitle, "commentary", "Loading...", isOldTestament = stack.last().isOldTestament)
         stack.add(loadingPage)
         scope.launch {

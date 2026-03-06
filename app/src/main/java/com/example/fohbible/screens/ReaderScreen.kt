@@ -275,7 +275,7 @@ fun ReaderScreen(
         currentModalIsOldTestament = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
         val dbHelper = if (isPrimary) commentaryDbHelper else secondaryCommentaryDbHelper
         val text = dbHelper?.getCommentary(bookNumber, chapter, verseNumber, marker) ?: "No commentary found."
-        commentaryTitle = "${BibleData.getBookByCustomNumber(bookNumber)?.name ?: ""} $chapter:$verseNumber$marker Notes"
+        commentaryTitle = "Notes on ${BibleData.getBookByCustomNumber(bookNumber)?.name ?: ""} $chapter:$verseNumber$marker"
         commentaryContent = text
         commentaryBibleDb = if (isPrimary) databaseHelper else secondaryDatabaseHelper
         showCommentaryModal = true

@@ -1,5 +1,4 @@
 @file:OptIn(ExperimentalMaterial3Api::class)
-
 package com.example.fohbible
 
 import android.net.Uri
@@ -129,6 +128,17 @@ import com.example.fohbible.utils.BibleVersionUtils.descriptionMap
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 
+// ====================== DATASTORE KEYS ======================
+private val PRIMARY_BOOK_NUMBER_KEY = intPreferencesKey("primary_book_number")
+private val PRIMARY_BOOK_NAME_KEY = stringPreferencesKey("primary_book_name")
+private val PRIMARY_CHAPTER_KEY = intPreferencesKey("primary_chapter")
+private val PRIMARY_VERSE_KEY = intPreferencesKey("primary_verse")
+
+private val SECONDARY_BOOK_NUMBER_KEY = intPreferencesKey("secondary_book_number")
+private val SECONDARY_BOOK_NAME_KEY = stringPreferencesKey("secondary_book_name")
+private val SECONDARY_CHAPTER_KEY = intPreferencesKey("secondary_chapter")
+private val SECONDARY_VERSE_KEY = intPreferencesKey("secondary_verse")
+
 private val FONT_SIZE_KEY = intPreferencesKey("font_size")
 private val DARK_THEME_KEY = booleanPreferencesKey("dark_theme")
 private val SELECTED_COLOR_KEY = intPreferencesKey("selected_color")
@@ -164,12 +174,16 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     val currentScreen = viewModel.navigationStack.last()
+
     var isUsingCustomColor by remember { mutableStateOf(viewModel.isCustomColor) }
     var customColor by remember { mutableStateOf(viewModel.customColor) }
+
     val dataStore = remember { activity.appDataStore }
 
+    // ==================== LOAD ALL PREFERENCES (including passages) ====================
     LaunchedEffect(Unit) {
         val prefs = dataStore.data.first()
+
         viewModel.fontSize = prefs[FONT_SIZE_KEY] ?: 18
         viewModel.darkTheme = prefs[DARK_THEME_KEY] ?: false
         viewModel.selectedColor = Color(prefs[SELECTED_COLOR_KEY] ?: DefaultPrimaryColor.toArgb())
@@ -188,102 +202,63 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
         viewModel.overlayOpacity = prefs[OVERLAY_OPACITY_KEY] ?: 0.15f
         viewModel.lightOverlayColor = Color(prefs[LIGHT_OVERLAY_COLOR_KEY] ?: Color(0xFFF5F5DC).toArgb())
         viewModel.darkOverlayColor = Color(prefs[DARK_OVERLAY_COLOR_KEY] ?: Color(0xFF100F21).toArgb())
+
+        // === LOAD SAVED PASSAGES ===
+        viewModel.primaryPassage = PassageSelection(
+            bookNumber = prefs[PRIMARY_BOOK_NUMBER_KEY] ?: 10,
+            bookName = prefs[PRIMARY_BOOK_NAME_KEY] ?: "Genesis",
+            chapter = prefs[PRIMARY_CHAPTER_KEY] ?: 1,
+            verse = prefs[PRIMARY_VERSE_KEY] ?: 1
+        )
+        viewModel.secondaryPassage = PassageSelection(
+            bookNumber = prefs[SECONDARY_BOOK_NUMBER_KEY] ?: 10,
+            bookName = prefs[SECONDARY_BOOK_NAME_KEY] ?: "Genesis",
+            chapter = prefs[SECONDARY_CHAPTER_KEY] ?: 1,
+            verse = prefs[SECONDARY_VERSE_KEY] ?: 1
+        )
     }
 
+    // ==================== SAVE ALL PREFERENCES ====================
+    LaunchedEffect(Unit) { snapshotFlow { viewModel.fontSize }.collectLatest { dataStore.edit { prefs -> prefs[FONT_SIZE_KEY] = it } } }
+    LaunchedEffect(Unit) { snapshotFlow { viewModel.darkTheme }.collectLatest { dataStore.edit { prefs -> prefs[DARK_THEME_KEY] = it } } }
+    LaunchedEffect(Unit) { snapshotFlow { viewModel.selectedColor }.collectLatest { dataStore.edit { prefs -> prefs[SELECTED_COLOR_KEY] = it?.toArgb() ?: DefaultPrimaryColor.toArgb() } } }
+    LaunchedEffect(Unit) { snapshotFlow { viewModel.isCustomColor }.collectLatest { dataStore.edit { prefs -> prefs[IS_CUSTOM_COLOR_KEY] = it } } }
+    LaunchedEffect(Unit) { snapshotFlow { viewModel.customColor }.collectLatest { dataStore.edit { prefs -> prefs[CUSTOM_COLOR_KEY] = it?.toArgb() ?: DefaultPrimaryColor.toArgb() } } }
+    LaunchedEffect(Unit) { snapshotFlow { viewModel.selectedFontFamily }.collectLatest { dataStore.edit { prefs -> prefs[FONT_FAMILY_KEY] = it } } }
+    LaunchedEffect(Unit) { snapshotFlow { viewModel.currentDbName }.collectLatest { dataStore.edit { prefs -> prefs[PRIMARY_DB_KEY] = it } } }
+    LaunchedEffect(Unit) { snapshotFlow { viewModel.currentVersionAbbr }.collectLatest { dataStore.edit { prefs -> prefs[PRIMARY_ABBR_KEY] = it } } }
+    LaunchedEffect(Unit) { snapshotFlow { viewModel.multiVersion }.collectLatest { dataStore.edit { prefs -> prefs[MULTI_VERSION_KEY] = it } } }
+    LaunchedEffect(Unit) { snapshotFlow { viewModel.secondaryDbName }.collectLatest { dataStore.edit { prefs -> prefs[SECONDARY_DB_KEY] = it } } }
+    LaunchedEffect(Unit) { snapshotFlow { viewModel.secondaryVersionAbbr }.collectLatest { dataStore.edit { prefs -> prefs[SECONDARY_ABBR_KEY] = it } } }
+    LaunchedEffect(Unit) { snapshotFlow { viewModel.multiViewLayout }.collectLatest { dataStore.edit { prefs -> prefs[MULTI_LAYOUT_KEY] = it } } }
+    LaunchedEffect(Unit) { snapshotFlow { viewModel.scrollSync }.collectLatest { dataStore.edit { prefs -> prefs[SCROLL_SYNC_KEY] = it } } }
+    LaunchedEffect(Unit) { snapshotFlow { viewModel.bgImageIndex }.collectLatest { dataStore.edit { prefs -> prefs[BG_INDEX_KEY] = it } } }
+    LaunchedEffect(Unit) { snapshotFlow { viewModel.customTextureUri }.collectLatest { uri ->
+        dataStore.edit { prefs -> if (uri != null) { prefs[CUSTOM_TEXTURE_KEY] = uri } else { prefs.remove(CUSTOM_TEXTURE_KEY) } }
+    } }
+    LaunchedEffect(Unit) { snapshotFlow { viewModel.overlayOpacity }.collectLatest { dataStore.edit { prefs -> prefs[OVERLAY_OPACITY_KEY] = it } } }
+    LaunchedEffect(Unit) { snapshotFlow { viewModel.lightOverlayColor.toArgb() }.collectLatest { dataStore.edit { prefs -> prefs[LIGHT_OVERLAY_COLOR_KEY] = it } } }
+    LaunchedEffect(Unit) { snapshotFlow { viewModel.darkOverlayColor.toArgb() }.collectLatest { dataStore.edit { prefs -> prefs[DARK_OVERLAY_COLOR_KEY] = it } } }
+
+    // ==================== SAVE PASSAGES (this was missing) ====================
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.fontSize }.collectLatest {
-            dataStore.edit { prefs -> prefs[FONT_SIZE_KEY] = it }
-        }
-    }
-    LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.darkTheme }.collectLatest {
-            dataStore.edit { prefs -> prefs[DARK_THEME_KEY] = it }
-        }
-    }
-    LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.selectedColor }.collectLatest {
-            dataStore.edit { prefs -> prefs[SELECTED_COLOR_KEY] = it?.toArgb() ?: DefaultPrimaryColor.toArgb() }
-        }
-    }
-    LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.isCustomColor }.collectLatest {
-            dataStore.edit { prefs -> prefs[IS_CUSTOM_COLOR_KEY] = it }
-        }
-    }
-    LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.customColor }.collectLatest {
-            dataStore.edit { prefs -> prefs[CUSTOM_COLOR_KEY] = it?.toArgb() ?: DefaultPrimaryColor.toArgb() }
-        }
-    }
-    LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.selectedFontFamily }.collectLatest {
-            dataStore.edit { prefs -> prefs[FONT_FAMILY_KEY] = it }
-        }
-    }
-    LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.currentDbName }.collectLatest {
-            dataStore.edit { prefs -> prefs[PRIMARY_DB_KEY] = it }
-        }
-    }
-    LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.currentVersionAbbr }.collectLatest {
-            dataStore.edit { prefs -> prefs[PRIMARY_ABBR_KEY] = it }
-        }
-    }
-    LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.multiVersion }.collectLatest {
-            dataStore.edit { prefs -> prefs[MULTI_VERSION_KEY] = it }
-        }
-    }
-    LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.secondaryDbName }.collectLatest {
-            dataStore.edit { prefs -> prefs[SECONDARY_DB_KEY] = it }
-        }
-    }
-    LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.secondaryVersionAbbr }.collectLatest {
-            dataStore.edit { prefs -> prefs[SECONDARY_ABBR_KEY] = it }
-        }
-    }
-    LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.multiViewLayout }.collectLatest {
-            dataStore.edit { prefs -> prefs[MULTI_LAYOUT_KEY] = it }
-        }
-    }
-    LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.scrollSync }.collectLatest {
-            dataStore.edit { prefs -> prefs[SCROLL_SYNC_KEY] = it }
-        }
-    }
-    LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.bgImageIndex }.collectLatest {
-            dataStore.edit { prefs -> prefs[BG_INDEX_KEY] = it }
-        }
-    }
-    LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.customTextureUri }.collectLatest { uri ->
+        snapshotFlow { viewModel.primaryPassage }.collectLatest { passage ->
             dataStore.edit { prefs ->
-                if (uri != null) {
-                    prefs[CUSTOM_TEXTURE_KEY] = uri
-                } else {
-                    prefs.remove(CUSTOM_TEXTURE_KEY)
-                }
+                prefs[PRIMARY_BOOK_NUMBER_KEY] = passage.bookNumber
+                prefs[PRIMARY_BOOK_NAME_KEY] = passage.bookName
+                prefs[PRIMARY_CHAPTER_KEY] = passage.chapter
+                prefs[PRIMARY_VERSE_KEY] = passage.verse as Int
             }
         }
     }
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.overlayOpacity }.collectLatest {
-            dataStore.edit { prefs -> prefs[OVERLAY_OPACITY_KEY] = it }
-        }
-    }
-    LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.lightOverlayColor.toArgb() }.collectLatest {
-            dataStore.edit { prefs -> prefs[LIGHT_OVERLAY_COLOR_KEY] = it }
-        }
-    }
-    LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.darkOverlayColor.toArgb() }.collectLatest {
-            dataStore.edit { prefs -> prefs[DARK_OVERLAY_COLOR_KEY] = it }
+        snapshotFlow { viewModel.secondaryPassage }.collectLatest { passage ->
+            dataStore.edit { prefs ->
+                prefs[SECONDARY_BOOK_NUMBER_KEY] = passage.bookNumber
+                prefs[SECONDARY_BOOK_NAME_KEY] = passage.bookName
+                prefs[SECONDARY_CHAPTER_KEY] = passage.chapter
+                prefs[SECONDARY_VERSE_KEY] = passage.verse as Int
+            }
         }
     }
 
@@ -304,16 +279,12 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     )
 
     var dbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
-
     LaunchedEffect(viewModel.currentDbName) {
         dbHelper?.close()
         dbHelper = DatabaseHelper(activity, viewModel.currentDbName)
     }
-
     DisposableEffect(Unit) {
-        onDispose {
-            dbHelper?.close()
-        }
+        onDispose { dbHelper?.close() }
     }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -340,21 +311,12 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 onColorLensClick = { viewModel.showColorThemeDialog = true },
                                 onScreenChange = { screen ->
                                     val targetScreen = when (screen) {
-                                        is Screen.Reader -> Screen.Reader(
-                                            PassageSelection(
-                                                bookNumber = 10,
-                                                bookName = "Genesis",
-                                                chapter = 1,
-                                                verse = 1,
-                                            )
-                                        )
+                                        is Screen.Reader -> Screen.Reader(viewModel.primaryPassage)
                                         else -> screen
                                     }
                                     viewModel.navigateTo(targetScreen)
                                 },
-                                onBack = if (viewModel.navigationStack.size > 1) {
-                                    { viewModel.goBack() }
-                                } else null
+                                onBack = if (viewModel.navigationStack.size > 1) { { viewModel.goBack() } } else null
                             )
                         } else {
                             HomeAppBar(
@@ -364,21 +326,12 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 onColorLensClick = { viewModel.showColorThemeDialog = true },
                                 onScreenChange = { screen ->
                                     val targetScreen = when (screen) {
-                                        is Screen.Reader -> Screen.Reader(
-                                            PassageSelection(
-                                                bookNumber = 10,
-                                                bookName = "Genesis",
-                                                chapter = 1,
-                                                verse = 1,
-                                            )
-                                        )
+                                        is Screen.Reader -> Screen.Reader(viewModel.primaryPassage)
                                         else -> screen
                                     }
                                     viewModel.navigateTo(targetScreen)
                                 },
-                                onBack = if (viewModel.navigationStack.size > 1) {
-                                    { viewModel.goBack() }
-                                } else null
+                                onBack = if (viewModel.navigationStack.size > 1) { { viewModel.goBack() } } else null
                             )
                         }
                     }
@@ -400,6 +353,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                     BackHandler(enabled = viewModel.navigationStack.size > 1) {
                         viewModel.goBack()
                     }
+
                     when (currentScreen) {
                         Screen.Home -> {
                             HomeScreen(
@@ -416,22 +370,24 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             )
                         }
                         is Screen.Reader -> {
-                            val passage = currentScreen.passage ?: PassageSelection(
-                                bookNumber = 10,
-                                bookName = "Genesis",
-                                chapter = 1,
-                                verse = 1
-                            )
                             ReaderScreen(
-                                passage = passage,
+                                passage = viewModel.primaryPassage,
                                 databaseHelper = dbHelper,
                                 onPassageChange = { newPassage ->
+                                    viewModel.primaryPassage = newPassage
+                                    if (viewModel.scrollSync) {
+                                        viewModel.secondaryPassage = newPassage
+                                    }
                                     viewModel.updateCurrentScreen(Screen.Reader(newPassage))
                                 }
                             )
                         }
                         Screen.Bookmarks -> BookmarksScreen(
                             onNavigateToReader = { passage ->
+                                viewModel.primaryPassage = passage
+                                if (viewModel.scrollSync) {
+                                    viewModel.secondaryPassage = passage
+                                }
                                 viewModel.navigateTo(Screen.Reader(passage))
                             },
                         )
@@ -471,7 +427,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             databaseHelper = dbHelper
                         )
                     }
-
                     if (viewModel.showSecondaryNavigationModal) {
                         NavigationModal(
                             showNavigationModal = true,
@@ -483,7 +438,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             databaseHelper = dbHelper
                         )
                     }
-
                     if (viewModel.showPrimaryVersionDropdown) {
                         Dialog(onDismissRequest = { viewModel.showPrimaryVersionDropdown = false }) {
                             VersionSelectionDialog(
@@ -498,7 +452,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             )
                         }
                     }
-
                     if (viewModel.showSecondaryVersionDropdown) {
                         Dialog(onDismissRequest = { viewModel.showSecondaryVersionDropdown = false }) {
                             VersionSelectionDialog(
@@ -513,7 +466,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             )
                         }
                     }
-
                     if (viewModel.showColorThemeDialog) {
                         Dialog(
                             onDismissRequest = { viewModel.showColorThemeDialog = false }
@@ -532,7 +484,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             )
                         }
                     }
-
                     if (viewModel.showColorWheelDialog) {
                         ColorWheelDialog(
                             onDismissRequest = { viewModel.showColorWheelDialog = false },
@@ -545,7 +496,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             initialColor = if (viewModel.isCustomColor && viewModel.customColor != null) viewModel.customColor!! else viewModel.selectedColor ?: ThemeManager.primaryColor
                         )
                     }
-
                     if (viewModel.showBgModal) {
                         BgModal(
                             currentIndex = viewModel.bgImageIndex,
@@ -559,7 +509,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             onRemoveCustom = { viewModel.customTextureUri = null }
                         )
                     }
-
                     if (viewModel.showReaderOverlayColorWheel) {
                         ColorWheelDialog(
                             onDismissRequest = { viewModel.showReaderOverlayColorWheel = false },
@@ -917,7 +866,6 @@ fun HomeAppBar(
         animationSpec = tween(durationMillis = 300),
         label = "backRotation"
     )
-
     val screenTitle = when (currentScreen) {
         is Screen.Home -> "Home"
         is Screen.Reader -> "Reader"
@@ -925,7 +873,6 @@ fun HomeAppBar(
         is Screen.Settings -> "Settings"
         is Screen.Search -> "Search"
     }
-
     TopAppBar(
         title = {
             Text(
@@ -1045,13 +992,11 @@ fun HomeAppBar(
                         }
                     )
                 }
-
                 val isHomeActive = currentScreen is Screen.Home
                 val isReaderActive = currentScreen is Screen.Reader
                 val isBookmarksActive = currentScreen == Screen.Bookmarks
                 val isSearchActive = currentScreen == Screen.Search
                 val isSettingsActive = currentScreen == Screen.Settings
-
                 createDropdownItem("Home", Icons.Filled.Home, isHomeActive) {
                     onScreenChange(Screen.Home)
                     showNavigationDropdown = false
@@ -1129,7 +1074,6 @@ fun ReaderAppBar(
     )
     val minFontSize = 8
     val maxFontSize = 50
-
     TopAppBar(
         title = {
             if (!viewModel.multiVersion) {
@@ -1360,9 +1304,7 @@ fun ReaderAppBar(
                             .fillMaxWidth()
                     )
                 }
-                createItem("Single") {
-                    viewModel.multiVersion = false
-                }
+                createItem("Single") { viewModel.multiVersion = false }
                 createItem("Horizontal") {
                     viewModel.multiVersion = true
                     viewModel.multiViewLayout = "horizontal"
@@ -1431,13 +1373,11 @@ fun ReaderAppBar(
                         }
                     )
                 }
-
                 val isHomeActive = false
                 val isReaderActive = true
                 val isBookmarksActive = false
                 val isSearchActive = false
                 val isSettingsActive = false
-
                 createDropdownItem("Home", Icons.Filled.Home, isHomeActive) {
                     onScreenChange(Screen.Home)
                     showNavigationDropdown = false
@@ -1620,7 +1560,6 @@ fun ReaderAppBar(
             }
         }
     )
-
     if (showFontSizeDialog) {
         FontModal(
             tempSize = tempFontSize,
