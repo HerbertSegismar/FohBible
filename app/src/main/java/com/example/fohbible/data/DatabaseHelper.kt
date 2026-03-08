@@ -115,6 +115,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             val assetPath = when {
                 databaseName.endsWith("dictionary.sqlite3") -> "dictionaries/$databaseName"
                 databaseName.endsWith("kjvsubheadings.sqlite3") -> "subheadings/$databaseName"
+                databaseName.endsWith("crossreferences.sqlite3") -> "cross-references/$databaseName"
                 else -> "databases/$databaseName"
             }
             context.assets.open(assetPath).use { inputStream ->
@@ -125,6 +126,57 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
+
+    fun getCrossReferenceCountsForChapter(book: Int, chapter: Int): Map<Int, Int> {
+        val map = mutableMapOf<Int, Int>()
+        try {
+            database?.rawQuery(
+                "SELECT verse, COUNT(*) FROM cross_references WHERE book = ? AND chapter = ? GROUP BY verse",
+                arrayOf(book.toString(), chapter.toString())
+            )?.use { cursor ->
+                while (cursor.moveToNext()) {
+                    val verse = cursor.getInt(0)
+                    val count = cursor.getInt(1)
+                    map[verse] = count
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return map
+    }
+
+    fun getCrossReferences(book: Int, chapter: Int, verse: Int): List<CrossReference> {
+        val refs = mutableListOf<CrossReference>()
+        try {
+            database?.query(
+                "cross_references",
+                arrayOf("book_to", "chapter_to", "verse_to_start", "verse_to_end"),
+                "book = ? AND chapter = ? AND verse = ?",
+                arrayOf(book.toString(), chapter.toString(), verse.toString()),
+                null, null, null
+            )?.use { cursor ->
+                while (cursor.moveToNext()) {
+                    val verseToStart = cursor.getInt(cursor.getColumnIndexOrThrow("verse_to_start"))
+                    var verseToEnd = cursor.getInt(cursor.getColumnIndexOrThrow("verse_to_end"))
+                    if (verseToEnd == 0) {
+                        verseToEnd = verseToStart
+                    }
+                    refs.add(
+                        CrossReference(
+                            bookTo = cursor.getInt(cursor.getColumnIndexOrThrow("book_to")),
+                            chapterTo = cursor.getInt(cursor.getColumnIndexOrThrow("chapter_to")),
+                            verseToStart = verseToStart,
+                            verseToEnd = verseToEnd
+                        )
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return refs
     }
 
     fun getVerseCount(bookNumber: Int, chapter: Int): Int {

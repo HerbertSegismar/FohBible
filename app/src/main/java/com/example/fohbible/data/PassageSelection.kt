@@ -16,3 +16,10 @@ data class Verse(
     val chapter: Int? = null,
     val bookNumber: Int? = null
 )
+
+data class CrossReference(
+    val bookTo: Int,
+    val chapterTo: Int,
+    val verseToStart: Int,
+    val verseToEnd: Int
+)
