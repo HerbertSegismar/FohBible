@@ -180,7 +180,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
 
     val dataStore = remember { activity.appDataStore }
 
-    // ==================== LOAD ALL PREFERENCES (including passages) ====================
     LaunchedEffect(Unit) {
         val prefs = dataStore.data.first()
 
@@ -203,7 +202,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
         viewModel.lightOverlayColor = Color(prefs[LIGHT_OVERLAY_COLOR_KEY] ?: Color(0xFFF5F5DC).toArgb())
         viewModel.darkOverlayColor = Color(prefs[DARK_OVERLAY_COLOR_KEY] ?: Color(0xFF100F21).toArgb())
 
-        // === LOAD SAVED PASSAGES ===
         viewModel.primaryPassage = PassageSelection(
             bookNumber = prefs[PRIMARY_BOOK_NUMBER_KEY] ?: 10,
             bookName = prefs[PRIMARY_BOOK_NAME_KEY] ?: "Genesis",
@@ -240,14 +238,13 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     LaunchedEffect(Unit) { snapshotFlow { viewModel.lightOverlayColor.toArgb() }.collectLatest { dataStore.edit { prefs -> prefs[LIGHT_OVERLAY_COLOR_KEY] = it } } }
     LaunchedEffect(Unit) { snapshotFlow { viewModel.darkOverlayColor.toArgb() }.collectLatest { dataStore.edit { prefs -> prefs[DARK_OVERLAY_COLOR_KEY] = it } } }
 
-    // ==================== SAVE PASSAGES (this was missing) ====================
     LaunchedEffect(Unit) {
         snapshotFlow { viewModel.primaryPassage }.collectLatest { passage ->
             dataStore.edit { prefs ->
                 prefs[PRIMARY_BOOK_NUMBER_KEY] = passage.bookNumber
                 prefs[PRIMARY_BOOK_NAME_KEY] = passage.bookName
                 prefs[PRIMARY_CHAPTER_KEY] = passage.chapter
-                prefs[PRIMARY_VERSE_KEY] = passage.verse as Int
+                prefs[PRIMARY_VERSE_KEY] = passage.verse ?: 1
             }
         }
     }
@@ -257,7 +254,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                 prefs[SECONDARY_BOOK_NUMBER_KEY] = passage.bookNumber
                 prefs[SECONDARY_BOOK_NAME_KEY] = passage.bookName
                 prefs[SECONDARY_CHAPTER_KEY] = passage.chapter
-                prefs[SECONDARY_VERSE_KEY] = passage.verse as Int
+                prefs[SECONDARY_VERSE_KEY] = passage.verse ?: 1
             }
         }
     }

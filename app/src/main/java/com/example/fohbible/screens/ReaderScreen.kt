@@ -1,5 +1,6 @@
 package com.example.fohbible.screens
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.Typeface
 import android.net.Uri
@@ -98,6 +99,23 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
+
+private fun createCommentaryHelperIfExists(
+    context: Context,
+    baseDbName: String?
+): DatabaseHelper? {
+    if (baseDbName.isNullOrEmpty()) return null
+
+    val comName = baseDbName.replace(".sqlite3", "com.sqlite3")
+    val assetPath = "databases/$comName"
+
+    return try {
+        context.assets.open(assetPath).use { }
+        DatabaseHelper(context, comName)
+    } catch (_: Exception) {
+        null
+    }
+}
 
 @Composable
 fun ReaderScreen(
@@ -228,24 +246,23 @@ fun ReaderScreen(
     var commentaryTitle by remember { mutableStateOf("") }
     var commentaryContent by remember { mutableStateOf("") }
     var commentaryBibleDb by remember { mutableStateOf<DatabaseHelper?>(null) }
+
     LaunchedEffect(viewModel.selectedDictionary, databaseHelper?.databaseName) {
         dictionaryDbHelper?.close()
         dictionaryDbHelper = DatabaseHelper(contextFont, "${viewModel.selectedDictionary}.dictionary.sqlite3")
+
         strongDbHelper?.close()
         strongDbHelper = DatabaseHelper(contextFont, "secedictionary.sqlite3")
+
         commentaryDbHelper?.close()
-        val name = databaseHelper?.databaseName ?: return@LaunchedEffect
-        val comName = name.replace(".sqlite3", "com.sqlite3")
-        commentaryDbHelper = if (comName.isNotEmpty()) DatabaseHelper(contextFont, comName) else null
-        if (showWordModal && currentWord.isNotEmpty()) {
-            wordDefinition = dictionaryDbHelper?.getWordDefinition(currentWord) ?: "Definition not found."
-        }
+        commentaryDbHelper = createCommentaryHelperIfExists(contextFont, databaseHelper?.databaseName)
     }
     LaunchedEffect(viewModel.multiVersion, viewModel.secondaryDbName, secondaryDatabaseHelper?.databaseName) {
         secondaryCommentaryDbHelper?.close()
-        val name = secondaryDatabaseHelper?.databaseName ?: return@LaunchedEffect
-        val comName = name.replace(".sqlite3", "com.sqlite3")
-        secondaryCommentaryDbHelper = if (viewModel.multiVersion && comName.isNotEmpty()) DatabaseHelper(contextFont, comName) else null
+        secondaryCommentaryDbHelper = createCommentaryHelperIfExists(
+            contextFont,
+            secondaryDatabaseHelper?.databaseName
+        )
     }
     val onWordPress: (String, Boolean) -> Unit = { word, isPrimary ->
         currentModalIsOldTestament = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament

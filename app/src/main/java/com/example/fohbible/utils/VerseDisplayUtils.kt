@@ -552,7 +552,7 @@ class VerseTextProcessor(
                     }
                 }
                 val trimmedWord = word.trim()
-                addSpaceAfterPunct = (trimmedWord == "." || trimmedWord == "," || trimmedWord == ":" || trimmedWord == ";")
+                addSpaceAfterPunct = (trimmedWord == "." || trimmedWord == "," || trimmedWord == ":" || trimmedWord == ";" || trimmedWord == "?" || trimmedWord == "!")
             }
         } else {
             processTextWithoutWordClick(text, builder, context, highlight, themeColors)

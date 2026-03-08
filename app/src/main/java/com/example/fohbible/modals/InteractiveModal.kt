@@ -254,7 +254,6 @@ suspend fun getDefinitionOrClosest(dbHelper: DatabaseHelper?, originalWord: Stri
             return@withContext result
         }
         cursor.close()
-        // Try fuzzy matches with LIKE
         val likeParam = "%$lowerWord%"
         cursor = db.query("dictionary", arrayOf("topic", "definition"), "LOWER(topic) LIKE ?", arrayOf(likeParam), null, null, "LENGTH(topic) ASC LIMIT 50")
         val candidates = mutableListOf<Pair<String, String>>()
@@ -268,7 +267,6 @@ suspend fun getDefinitionOrClosest(dbHelper: DatabaseHelper?, originalWord: Stri
             val sorted = candidates.sortedBy { customDistance(lowerWord, it.first.lowercase(Locale.ROOT)) * 1000 + levenshteinDistance(lowerWord, it.first.lowercase(Locale.ROOT)) }
             return@withContext sorted.take(5)
         }
-        // Fallback to alphabetical prev/next if no fuzzy matches
         cursor = db.query("dictionary", arrayOf("topic", "definition"), "LOWER(topic) > ?", arrayOf(lowerWord), null, null, "LOWER(topic) ASC", "1")
         if (cursor.moveToFirst()) {
             val topic = cursor.getString(0)
