@@ -334,7 +334,7 @@ fun ReaderScreen(
         val dbForVerses = if (isPrimary) databaseHelper else secondaryDatabaseHelper
         val refs = crossRefHelper.getCrossReferences(book, chapter, verse)
         val bookName = BibleData.getBookByCustomNumber(book)?.name ?: book.toString()
-        crossRefSource = "$bookName $chapter:$verse Cross Reference"
+        crossRefSource = "References for $bookName $chapter:$verse"
         val htmlItems = refs.joinToString("<br>") { ref ->
             val toBook = BibleData.getBookByCustomNumber(ref.bookTo)?.name ?: ref.bookTo.toString()
             val verseRange = if (ref.verseToStart == ref.verseToEnd) {
@@ -1480,9 +1480,7 @@ fun ChapterView(
 
     var highlightedVerse by remember { mutableStateOf<Int?>(null) }
     val offsets = remember { mutableStateMapOf<Int, Float>() }
-    val bookmarkIconSize = (viewModel.fontSize * 0.85f)
-
-    // Constant inline content for the bookmark
+    val bookmarkIconSize = (viewModel.fontSize)
     val bookmarkInlineContent = InlineTextContent(
         Placeholder(
             width = bookmarkIconSize.sp,
@@ -1506,7 +1504,6 @@ fun ChapterView(
     }
 
     Box(modifier = modifier) {
-        // Background texture and overlay
         val texture = if (viewModel.bgImageIndex == 0) null else if (viewModel.bgImageIndex == 34 && viewModel.customTextureUri != null) viewModel.customTextureUri else "file:///android_asset/textures/${viewModel.bgImageIndex}.jpg"
         if (texture != null) {
             AsyncImage(
@@ -1524,7 +1521,6 @@ fun ChapterView(
         }
 
         Column {
-            // Version header (only in multi‑version mode)
             if (viewModel.multiVersion) {
                 Row(
                     modifier = Modifier
@@ -1721,7 +1717,6 @@ fun ChapterView(
                                                                     "word" -> onWordPress?.invoke(annotation.item, isPrimary)
                                                                     "strong" -> onStrongsPress?.invoke(annotation.item, passage.bookNumber, isPrimary)
                                                                     "tag" -> onTagPress?.invoke(annotation.item, passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary)
-                                                                    // cross‑reference clicks are handled by the clickable Box, not by annotation
                                                                 }
                                                             }
                                                         }
