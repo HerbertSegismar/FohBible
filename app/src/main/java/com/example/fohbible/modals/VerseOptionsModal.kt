@@ -24,18 +24,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.automirrored.filled.Note
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.outlined.BookmarkAdded
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.StarBorder
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -53,7 +49,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -217,27 +212,6 @@ fun VerseOptionsModal(
                             }
                         )
                     }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        QuickActionChip(
-                            text = "Copy",
-                            icon = Icons.Default.ContentCopy,
-                            onClick = {
-                                onDismiss()
-                            }
-                        )
-                        QuickActionChip(
-                            text = "Compare",
-                            icon = Icons.AutoMirrored.Filled.CompareArrows,
-                            onClick = {
-                                onDismiss()
-                            }
-                        )
-                    }
                     TextButton(
                         onClick = onDismiss,
                         modifier = Modifier
@@ -281,8 +255,7 @@ private fun ActionButton(
                 MaterialTheme.colorScheme.onPrimaryContainer
             else
                 MaterialTheme.colorScheme.onSurfaceVariant
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        )
     ) {
         Row(
             modifier = Modifier
@@ -324,62 +297,6 @@ private fun ActionButton(
                 contentDescription = "Open",
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-            )
-        }
-    }
-}
-
-@Composable
-private fun QuickActionChip(
-    text: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    onClick: () -> Unit
-) {
-    AssistChip(
-        onClick = onClick,
-        label = {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Medium
-            )
-        },
-        leadingIcon = {
-            Icon(
-                imageVector = icon,
-                contentDescription = text,
-                modifier = Modifier.size(16.dp)
-            )
-        },
-        colors = AssistChipDefaults.assistChipColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            labelColor = MaterialTheme.colorScheme.onSecondaryContainer,
-            leadingIconContentColor = MaterialTheme.colorScheme.onSecondaryContainer
-        ),
-        border = null,
-        shape = RoundedCornerShape(12.dp)
-    )
-}
-@Preview(showBackground = true, backgroundColor = 0xFFF5F5F5)
-@Composable
-private fun VerseOptionsModalPreview() {
-    MaterialTheme {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background),
-            contentAlignment = Alignment.Center
-        ) {
-            VerseOptionsModal(
-                show = true,
-                onDismiss = {},
-                passage = PassageSelection(10, "Genesis", 1),
-                verse = Verse(1, "In the beginning God created the heavens and the earth."),
-                onAddBookmark = {},
-                onAddHighlight = {},
-                onShare = {},
-                isBookmarked = true,
-                isHighlighted = false
             )
         }
     }
