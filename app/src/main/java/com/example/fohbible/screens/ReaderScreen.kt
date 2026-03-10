@@ -91,6 +91,7 @@ import com.example.fohbible.modals.InteractiveModal
 import com.example.fohbible.modals.VerseOptionsModal
 import com.example.fohbible.models.AppViewModel
 import com.example.fohbible.utils.ProcessedVerse
+import com.example.fohbible.utils.SimpleVerseProcessor
 import com.example.fohbible.utils.ThemeColors
 import com.example.fohbible.utils.VerseTextProcessor
 import kotlinx.coroutines.delay
@@ -534,38 +535,41 @@ fun ReaderScreen(
         val selIsPrimary = selectedIsPrimary
         if (showVerseOptions && selVerse != null && selPassage != null) {
             val db = if (selIsPrimary) databaseHelper else secondaryDatabaseHelper
-            val fullVerse = selVerse.copy(bookName = selPassage.bookName, chapter = selPassage.chapter)
+            val loadedVerses = if (selIsPrimary) primaryLoadedVerses else secondaryLoadedVerses
+            val key = selPassage.bookNumber to selPassage.chapter
+            val content = loadedVerses[key] ?: emptyList()
+            val chapterVerses = content.filterIsInstance<VerseContent.VerseVal>().map { it.verse }
             VerseOptionsModal(
                 show = true,
                 onDismiss = { showVerseOptions = false },
                 passage = selPassage,
                 verse = selVerse,
-                onAddBookmark = {
-                    if (db?.isBookmarked(fullVerse) == true) {
-                        db.removeBookmark(fullVerse)
-                    } else {
-                        db?.addBookmark(fullVerse)
-                    }
-                    refreshKey++
-                },
-                onAddHighlight = {
-                    if (db?.isHighlighted(fullVerse) == true) {
-                        db.removeHighlight(fullVerse)
-                    } else {
-                        db?.addHighlight(fullVerse)
-                    }
-                    refreshKey++
-                },
-                onShare = {
+                chapterVerses = chapterVerses,
+                databaseHelper = db,
+                onAddBookmark = { refreshKey++ },
+                onAddHighlight = { refreshKey++ },
+                onShare = { selectedVerses ->
+                    val verseNumbers = selectedVerses.map { it.verseNumber }
+                    val minV = verseNumbers.minOrNull() ?: selVerse.verseNumber
+                    val maxV = verseNumbers.maxOrNull() ?: selVerse.verseNumber
+                    val rangeString = if (minV == maxV) "$minV" else "$minV-$maxV"
+                    val contextLine = "${selPassage.bookName} ${selPassage.chapter}:$rangeString"
+
+                    val shareText = buildString {
+                        appendLine(contextLine)
+                        selectedVerses.forEach {
+                            appendLine("${it.verseNumber} ${SimpleVerseProcessor.stripXmlTags(it.text)}")
+                        }
+                    }.trimEnd()
+
                     val shareIntent = Intent().apply {
                         action = Intent.ACTION_SEND
-                        putExtra(Intent.EXTRA_TEXT, "${selPassage.bookName} ${selPassage.chapter}:${selVerse.verseNumber} ${selVerse.text}")
+                        putExtra(Intent.EXTRA_TEXT, shareText)
                         type = "text/plain"
                     }
-                    contextFont.startActivity(Intent.createChooser(shareIntent, "Share verse"))
-                },
-                isBookmarked = db?.isBookmarked(fullVerse) ?: false,
-                isHighlighted = db?.isHighlighted(fullVerse) ?: false
+                    val chooserTitle = if (selectedVerses.size == 1) "Share verse" else "Share verses"
+                    contextFont.startActivity(Intent.createChooser(shareIntent, chooserTitle))
+                }
             )
         }
     }
