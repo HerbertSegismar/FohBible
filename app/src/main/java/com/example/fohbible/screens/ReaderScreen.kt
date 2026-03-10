@@ -375,7 +375,7 @@ fun ReaderScreen(
                 onStrongsPress = onStrongsPress,
                 onTagPress = onTagPress,
                 onVerseLongPress = onVerseLongPress,
-                onCrossRefClick = { book, chap, verse -> onCrossRefClick(book, chap, verse, true) },
+                onCrossRefClick = onCrossRefClick,
                 crossRefHelper = crossRefHelper,
                 refreshKey = refreshKey
             )
@@ -403,7 +403,7 @@ fun ReaderScreen(
                 onStrongsPress = onStrongsPress,
                 onTagPress = onTagPress,
                 onVerseLongPress = onVerseLongPress,
-                onCrossRefClick = { book, chap, verse -> onCrossRefClick(book, chap, verse, true) },
+                onCrossRefClick = onCrossRefClick,
                 crossRefHelper = crossRefHelper,
                 refreshKey = refreshKey
             )
@@ -436,7 +436,7 @@ fun ReaderScreen(
                 onStrongsPress = onStrongsPress,
                 onTagPress = onTagPress,
                 onVerseLongPress = onVerseLongPress,
-                onCrossRefClick = { book, chap, verse -> onCrossRefClick(book, chap, verse, false) },
+                onCrossRefClick = onCrossRefClick,
                 crossRefHelper = crossRefHelper,
                 refreshKey = refreshKey
             )
@@ -591,7 +591,7 @@ private fun SingleVersionReader(
     onStrongsPress: (String, Int, Boolean) -> Unit,
     onTagPress: (String, Int, Int, Int, Boolean) -> Unit,
     onVerseLongPress: (Verse, PassageSelection, Boolean) -> Unit,
-    onCrossRefClick: (Int, Int, Int) -> Unit,
+    onCrossRefClick: (Int, Int, Int, Boolean) -> Unit,
     crossRefHelper: DatabaseHelper,
     refreshKey: Int
 ) {
@@ -745,7 +745,7 @@ private fun SyncedMultiVersionReader(
     onStrongsPress: (String, Int, Boolean) -> Unit,
     onTagPress: (String, Int, Int, Int, Boolean) -> Unit,
     onVerseLongPress: (Verse, PassageSelection, Boolean) -> Unit,
-    onCrossRefClick: (Int, Int, Int) -> Unit,
+    onCrossRefClick: (Int, Int, Int, Boolean) -> Unit,
     crossRefHelper: DatabaseHelper,
     refreshKey: Int
 ) {
@@ -1062,7 +1062,7 @@ private fun IndependentMultiVersionReader(
     onStrongsPress: (String, Int, Boolean) -> Unit,
     onTagPress: (String, Int, Int, Int, Boolean) -> Unit,
     onVerseLongPress: (Verse, PassageSelection, Boolean) -> Unit,
-    onCrossRefClick: (Int, Int, Int) -> Unit,
+    onCrossRefClick: (Int, Int, Int, Boolean) -> Unit,
     crossRefHelper: DatabaseHelper,
     refreshKey: Int
 ) {
@@ -1448,7 +1448,7 @@ fun ChapterView(
     onVerseLongPress: ((Verse, PassageSelection) -> Unit)? = null,
     databaseHelper: DatabaseHelper? = null,
     crossRefHelper: DatabaseHelper? = null,
-    onCrossRefClick: ((Int, Int, Int) -> Unit)? = null,
+    onCrossRefClick: ((Int, Int, Int, Boolean) -> Unit)? = null,
     refreshKey: Int = 0
 ) {
     val processor = remember(content) { VerseTextProcessor() }
@@ -1661,7 +1661,7 @@ fun ChapterView(
                                             SpanStyle(
                                                 fontWeight = FontWeight.Bold,
                                                 color = themeColors.verseNumber,
-                                                fontSize = bookmarkIconSize.sp
+                                                fontSize = bookmarkIconSize.sp * 0.8
                                             )
                                         ) {
                                             append("${verse.verseNumber} ")
@@ -1688,7 +1688,7 @@ fun ChapterView(
                                                 ) {
                                                     Box(
                                                         modifier = Modifier
-                                                            .clickable { onCrossRefClick(passage.bookNumber, passage.chapter, verse.verseNumber) }
+                                                            .clickable { onCrossRefClick(passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary) }
                                                             .background(themeColors.primary.copy(alpha = 0.15f), RoundedCornerShape(2.dp))
                                                             .fillMaxSize(),
                                                         contentAlignment = Alignment.Center
@@ -1779,7 +1779,7 @@ fun ChapterView(
                                                 ) {
                                                     Box(
                                                         modifier = Modifier
-                                                            .clickable { onCrossRefClick(passage.bookNumber, passage.chapter, verse.verseNumber) }
+                                                            .clickable { onCrossRefClick(passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary) }
                                                             .background(themeColors.primary.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
                                                             .padding(horizontal = 4.dp, vertical = 1.dp)
                                                     ) {
