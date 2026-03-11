@@ -31,6 +31,7 @@ import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Note
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
@@ -59,6 +60,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -88,6 +90,7 @@ import com.example.fohbible.data.Verse
 import com.example.fohbible.data.VerseContent
 import com.example.fohbible.data.getVersesWithSubheadings
 import com.example.fohbible.modals.InteractiveModal
+import com.example.fohbible.modals.NotesModal
 import com.example.fohbible.modals.VerseOptionsModal
 import com.example.fohbible.models.AppViewModel
 import com.example.fohbible.utils.ProcessedVerse
@@ -138,6 +141,9 @@ fun ReaderScreen(
     var targetVerse by remember { mutableStateOf(passage.verse) }
     var secondaryTargetVerse by remember { mutableStateOf(viewModel.secondaryPassage.verse) }
     var currentModalIsOldTestament by remember { mutableStateOf(false) }
+    var showNotesModal by remember { mutableStateOf(false) }
+    var selectedVersesForNote by remember { mutableStateOf(emptyList<Verse>()) }
+
     LaunchedEffect(passage.bookNumber, passage.chapter, passage.verse) {
         if (passage.bookNumber != primaryCurrent.bookNumber || passage.chapter != primaryCurrent.chapter) {
             primaryCurrent = passage.copy(verse = 1)
@@ -540,7 +546,7 @@ fun ReaderScreen(
             val content = loadedVerses[key] ?: emptyList()
             val chapterVerses = content.filterIsInstance<VerseContent.VerseVal>().map { it.verse }
             VerseOptionsModal(
-                show = true,
+                show = showVerseOptions,
                 onDismiss = { showVerseOptions = false },
                 passage = selPassage,
                 verse = selVerse,
@@ -569,9 +575,22 @@ fun ReaderScreen(
                     }
                     val chooserTitle = if (selectedVerses.size == 1) "Share verse" else "Share verses"
                     contextFont.startActivity(Intent.createChooser(shareIntent, chooserTitle))
+                },
+                onAddNote = { verses ->
+                    selectedVersesForNote = verses
+                    showNotesModal = true
+                    showVerseOptions = false
                 }
             )
         }
+        NotesModal(
+            show = showNotesModal,
+            onDismiss = { showNotesModal = false },
+            verses = selectedVersesForNote,
+            passage = passage,
+            databaseHelper = databaseHelper,
+            onSave = { refreshKey++ }
+        )
     }
 }
 
@@ -1500,6 +1519,22 @@ fun ChapterView(
         )
     }
 
+    // NEW: note icon inline content
+    val noteInlineContent = InlineTextContent(
+        Placeholder(
+            width = bookmarkIconSize.sp,
+            height = bookmarkIconSize.sp,
+            placeholderVerticalAlign = PlaceholderVerticalAlign.TextCenter
+        )
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.Note,
+            contentDescription = "Has Note",
+            tint = themeColors.verseNumber,
+            modifier = Modifier.fillMaxSize().rotate(90f)
+        )
+    }
+
     val crossRefCounts = remember { mutableStateMapOf<Int, Int>() }
     LaunchedEffect(passage.bookNumber, passage.chapter, crossRefHelper) {
         val counts = crossRefHelper?.getCrossReferenceCountsForChapter(passage.bookNumber, passage.chapter) ?: emptyMap()
@@ -1632,6 +1667,7 @@ fun ChapterView(
                             val isPersistentHighlighted = databaseHelper?.isHighlighted(fullVerse) ?: false
                             val isAnyHighlighted = isTemporaryHighlighted || isPersistentHighlighted
                             val isBookmarked = databaseHelper?.isBookmarked(fullVerse) ?: false
+                            val isNote = databaseHelper?.hasNote(fullVerse) ?: false  // NEW: check for note
                             val refCount = crossRefCounts[verse.verseNumber] ?: 0
 
                             if (processedVerse != null) {
@@ -1669,15 +1705,21 @@ fun ChapterView(
                                         if (isBookmarked) {
                                             appendInlineContent("bookmark", "[bookmark]")
                                         }
+                                        if (isNote) {                                        // NEW: append note icon
+                                            appendInlineContent("note", "[note]")
+                                        }
                                         append(processedVerse.body)
                                         if (refCount > 0 && onCrossRefClick != null) {
                                             append(" ")
                                             appendInlineContent("crossref_${verse.verseNumber}", "[$refCount]")
                                         }
                                     }
-                                    val inlineContentMap = remember(verse.verseNumber, refCount, viewModel.fontSize) {
+                                    val inlineContentMap = remember(verse.verseNumber, refCount, isNote, viewModel.fontSize) {
                                         buildMap {
                                             put("bookmark", bookmarkInlineContent)
+                                            if (isNote) {
+                                                put("note", noteInlineContent)               // NEW: include note content
+                                            }
                                             if (refCount > 0 && onCrossRefClick != null) {
                                                 put("crossref_${verse.verseNumber}", InlineTextContent(
                                                     Placeholder(
@@ -1760,15 +1802,21 @@ fun ChapterView(
                                         if (isBookmarked) {
                                             appendInlineContent("bookmark", "[bookmark]")
                                         }
+                                        if (isNote) {                                        // NEW: append note icon
+                                            appendInlineContent("note", "[note]")
+                                        }
                                         append(verse.text)
                                         if (refCount > 0 && onCrossRefClick != null) {
                                             append(" ")
                                             appendInlineContent("crossref_${verse.verseNumber}", "[$refCount]")
                                         }
                                     }
-                                    val inlineContentMap = remember(verse.verseNumber, refCount) {
+                                    val inlineContentMap = remember(verse.verseNumber, refCount, isNote) {
                                         buildMap {
                                             put("bookmark", bookmarkInlineContent)
+                                            if (isNote) {
+                                                put("note", noteInlineContent)               // NEW: include note content
+                                            }
                                             if (refCount > 0 && onCrossRefClick != null) {
                                                 put("crossref_${verse.verseNumber}", InlineTextContent(
                                                     Placeholder(

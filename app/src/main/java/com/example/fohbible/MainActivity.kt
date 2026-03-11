@@ -35,6 +35,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Label
+import androidx.compose.material.icons.automirrored.filled.Note
 import androidx.compose.material.icons.filled.AutoAwesomeMosaic
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Bookmark
@@ -112,6 +113,7 @@ import com.example.fohbible.models.AppViewModel
 import com.example.fohbible.screens.BgModal
 import com.example.fohbible.screens.BookmarksScreen
 import com.example.fohbible.screens.HomeScreen
+import com.example.fohbible.screens.NotesScreen
 import com.example.fohbible.screens.ReaderScreen
 import com.example.fohbible.screens.SearchScreen
 import com.example.fohbible.screens.SettingsScreen
@@ -355,13 +357,20 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                         Screen.Home -> {
                             HomeScreen(
                                 modifier = Modifier.fillMaxSize(),
-                                onBibleClick = { viewModel.showNavigationModal = true },
                                 onNavigateToReader = { passage ->
                                     viewModel.primaryPassage = passage
                                     if (viewModel.scrollSync) {
                                         viewModel.secondaryPassage = passage
                                     }
                                     viewModel.navigateTo(Screen.Reader(passage))
+                                },
+                                onNavigateToScreen = { screen ->
+                                    when (screen) {
+                                        is Screen.Reader -> {
+                                            viewModel.navigateTo(Screen.Reader(viewModel.primaryPassage))
+                                        }
+                                        else -> viewModel.navigateTo(screen)
+                                    }
                                 },
                                 databaseHelper = dbHelper
                             )
@@ -387,6 +396,15 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 }
                                 viewModel.navigateTo(Screen.Reader(passage))
                             },
+                        )
+                        Screen.Notes -> NotesScreen(
+                            onNavigateToReader = { passage ->
+                                viewModel.primaryPassage = passage
+                                if (viewModel.scrollSync) {
+                                    viewModel.secondaryPassage = passage
+                                }
+                                viewModel.navigateTo(Screen.Reader(passage))
+                            }
                         )
                         Screen.Settings -> SettingsScreen()
                         Screen.Search -> {
@@ -867,6 +885,7 @@ fun HomeAppBar(
         is Screen.Home -> "Home"
         is Screen.Reader -> "Reader"
         is Screen.Bookmarks -> "Bookmarks"
+        is Screen.Notes -> "Notes"
         is Screen.Settings -> "Settings"
         is Screen.Search -> "Search"
     }
@@ -981,10 +1000,12 @@ fun HomeAppBar(
                         onClick = onClick,
                         modifier = Modifier.background(backgroundColor),
                         leadingIcon = {
+                            val modifier = if (title == "Notes") Modifier.rotate(90f) else Modifier
                             Icon(
                                 icon,
                                 contentDescription = title,
-                                tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = modifier
                             )
                         }
                     )
@@ -992,6 +1013,7 @@ fun HomeAppBar(
                 val isHomeActive = currentScreen is Screen.Home
                 val isReaderActive = currentScreen is Screen.Reader
                 val isBookmarksActive = currentScreen == Screen.Bookmarks
+                val isNotesActive = currentScreen == Screen.Notes
                 val isSearchActive = currentScreen == Screen.Search
                 val isSettingsActive = currentScreen == Screen.Settings
                 createDropdownItem("Home", Icons.Filled.Home, isHomeActive) {
@@ -1004,6 +1026,10 @@ fun HomeAppBar(
                 }
                 createDropdownItem("Bookmarks", Icons.Filled.Bookmark, isBookmarksActive) {
                     onScreenChange(Screen.Bookmarks)
+                    showNavigationDropdown = false
+                }
+                createDropdownItem("Notes", Icons.AutoMirrored.Filled.Note, isNotesActive) {
+                    onScreenChange(Screen.Notes)
                     showNavigationDropdown = false
                 }
                 createDropdownItem("Search", Icons.Filled.Search, isSearchActive) {
@@ -1362,10 +1388,12 @@ fun ReaderAppBar(
                         onClick = onClick,
                         modifier = Modifier.background(backgroundColor),
                         leadingIcon = {
+                            val modifier = if (title == "Notes") Modifier.rotate(90f) else Modifier
                             Icon(
                                 icon,
                                 contentDescription = title,
-                                tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = modifier
                             )
                         }
                     )
@@ -1373,6 +1401,7 @@ fun ReaderAppBar(
                 val isHomeActive = false
                 val isReaderActive = true
                 val isBookmarksActive = false
+                val isNotesActive = false
                 val isSearchActive = false
                 val isSettingsActive = false
                 createDropdownItem("Home", Icons.Filled.Home, isHomeActive) {
@@ -1385,6 +1414,10 @@ fun ReaderAppBar(
                 }
                 createDropdownItem("Bookmarks", Icons.Filled.Bookmark, isBookmarksActive) {
                     onScreenChange(Screen.Bookmarks)
+                    showNavigationDropdown = false
+                }
+                createDropdownItem("Notes", Icons.AutoMirrored.Filled.Note, isNotesActive) {
+                    onScreenChange(Screen.Notes)
                     showNavigationDropdown = false
                 }
                 createDropdownItem("Search", Icons.Filled.Search, isSearchActive) {
@@ -1575,6 +1608,7 @@ sealed class Screen {
     object Home : Screen()
     data class Reader(val passage: PassageSelection? = null) : Screen()
     object Bookmarks : Screen()
+    object Notes : Screen()
     object Settings : Screen()
     object Search : Screen()
 }

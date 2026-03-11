@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
-
 package com.example.fohbible.screens
 
 import android.content.Context
@@ -29,14 +27,15 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Note
 import androidx.compose.material.icons.automirrored.filled.Sort
-import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Card
@@ -67,14 +66,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -82,31 +79,37 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.fohbible.MainActivity
 import com.example.fohbible.data.BibleData
 import com.example.fohbible.data.DatabaseHelper
+import com.example.fohbible.data.Note
 import com.example.fohbible.data.PassageSelection
 import com.example.fohbible.data.Verse
+import com.example.fohbible.modals.NotesModal
 import com.example.fohbible.models.AppViewModel
 import com.example.fohbible.utils.BibleVersionUtils
-import com.example.fohbible.utils.SimpleVerseProcessor
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BookmarksScreen(
-    databaseHelper: DatabaseHelper? = null,
+fun NotesScreen(
     onNavigateToReader: (PassageSelection) -> Unit
 ) {
     val context = LocalContext.current
     val appViewModel: AppViewModel = viewModel()
-    var bookmarkedVerses by remember { mutableStateOf<List<Verse>>(emptyList()) }
+    var notes by remember { mutableStateOf<List<Note>>(emptyList()) }
     var selectedDbName by remember { mutableStateOf(appViewModel.currentDbName) }
     var selectedVersionAbbr by remember { mutableStateOf(appViewModel.currentVersionAbbr) }
     var multiSelectMode by remember { mutableStateOf(false) }
-    val selectedVerses = remember { mutableStateListOf<Verse>() }
+    val selectedNotes = remember { mutableStateListOf<Note>() }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var searchActive by remember { mutableStateOf(false) }
     var showSortOptions by remember { mutableStateOf(false) }
-    var sortOrder by remember { mutableStateOf(SortOrder.DATE_ADDED) }
+    var sortOrder by remember { mutableStateOf(NoteSortOrder.DATE_NEWEST) }
     var showFilterOptions by remember { mutableStateOf(false) }
+    var showNotesModal by remember { mutableStateOf(false) }
+    var selectedNoteForEdit by remember { mutableStateOf<Note?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -115,26 +118,28 @@ fun BookmarksScreen(
 
     LaunchedEffect(selectedDbName, multiSelectMode) {
         if (!multiSelectMode) {
-            loadBookmarks(context, databaseHelper, selectedDbName) { verses ->
-                bookmarkedVerses = sortVerses(verses, sortOrder)
+            loadNotes(dbHelper) { loadedNotes ->
+                notes = sortNotes(loadedNotes, sortOrder)
             }
         }
     }
 
     LaunchedEffect(sortOrder) {
         if (!multiSelectMode) {
-            bookmarkedVerses = sortVerses(bookmarkedVerses, sortOrder)
+            notes = sortNotes(notes, sortOrder)
         }
     }
-    val filteredVerses = remember(bookmarkedVerses, searchQuery) {
+
+    val filteredNotes = remember(notes, searchQuery) {
         if (searchQuery.isEmpty()) {
-            bookmarkedVerses
+            notes
         } else {
-            bookmarkedVerses.filter { verse ->
-                verse.text.contains(searchQuery, ignoreCase = true) ||
-                        verse.bookName?.contains(searchQuery, ignoreCase = true) == true ||
-                        verse.verseNumber.toString().contains(searchQuery) ||
-                        verse.chapter?.toString()?.contains(searchQuery) == true
+            notes.filter { note ->
+                note.note.contains(searchQuery, ignoreCase = true) ||
+                        note.bookName.contains(searchQuery, ignoreCase = true) ||
+                        note.chapter.toString().contains(searchQuery) ||
+                        note.startVerse.toString().contains(searchQuery) ||
+                        note.endVerse.toString().contains(searchQuery)
             }
         }
     }
@@ -144,20 +149,21 @@ fun BookmarksScreen(
         topBar = {
             if (multiSelectMode) {
                 MultiSelectTopBar(
-                    selectedCount = selectedVerses.size,
+                    selectedCount = selectedNotes.size,
                     onCancel = {
                         multiSelectMode = false
-                        selectedVerses.clear()
+                        selectedNotes.clear()
                     },
                     onDelete = { showDeleteConfirmation = true },
-                    onShare = { shareVerses(context, selectedVerses) }
+                    onShare = { shareNotes(context, selectedNotes) }
                 )
             } else {
                 NormalTopBar(
-                    bookmarksCount = bookmarkedVerses.size,
+                    title = "Notes",
+                    count = notes.size,
                     onSearch = { searchActive = true },
                     onSort = { showSortOptions = true },
-                    showSortBadge = sortOrder != SortOrder.DATE_ADDED,
+                    showSortBadge = sortOrder != NoteSortOrder.DATE_NEWEST,
                     onFilter = { showFilterOptions = true },
                     onMore = { multiSelectMode = true }
                 )
@@ -165,7 +171,7 @@ fun BookmarksScreen(
         },
         floatingActionButton = {
             AnimatedVisibility(
-                visible = selectedVerses.isNotEmpty() && multiSelectMode,
+                visible = selectedNotes.isNotEmpty() && multiSelectMode,
                 enter = expandVertically(animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)),
                 exit = shrinkVertically(animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy))
             ) {
@@ -197,7 +203,7 @@ fun BookmarksScreen(
                             onSearch = { searchActive = false },
                             expanded = searchActive,
                             onExpandedChange = { searchActive = it },
-                            placeholder = { Text("Search in bookmarks...") },
+                            placeholder = { Text("Search in notes...") },
                             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                             trailingIcon = {
                                 if (searchQuery.isNotEmpty()) {
@@ -213,9 +219,9 @@ fun BookmarksScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                }
+                ) { }
             }
+
             if (!searchActive) {
                 Column(modifier = Modifier.fillMaxWidth().padding(18.dp)) {
                     BibleVersionSelector(
@@ -232,8 +238,8 @@ fun BookmarksScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            if (filteredVerses.isEmpty()) {
-                EmptyBookmarksScreen(searchQuery.isNotEmpty())
+            if (filteredNotes.isEmpty()) {
+                EmptyNotesScreen(isSearching = searchQuery.isNotEmpty())
             } else {
                 LazyColumn(
                     state = lazyListState,
@@ -242,46 +248,51 @@ fun BookmarksScreen(
                         .padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(filteredVerses, key = { verse -> "${verse.bookName}-${verse.chapter}-${verse.verseNumber}" }) { verse ->
-                        SwipeToDeleteBookmarkItem(
-                            verse = verse,
-                            isSelected = selectedVerses.contains(verse),
+                    items(filteredNotes, key = { note -> "${note.bookName}-${note.chapter}-${note.startVerse}-${note.endVerse}" }) { note ->
+                        NoteItem(
+                            note = note,
+                            isSelected = selectedNotes.contains(note),
                             multiSelectMode = multiSelectMode,
                             onToggleSelect = {
                                 if (multiSelectMode) {
-                                    if (selectedVerses.contains(verse)) {
-                                        selectedVerses.remove(verse)
+                                    if (selectedNotes.contains(note)) {
+                                        selectedNotes.remove(note)
                                     } else {
-                                        selectedVerses.add(verse)
+                                        selectedNotes.add(note)
                                     }
                                 }
                             },
                             onRemove = {
                                 scope.launch {
-                                    removeBookmark(verse, dbHelper)
-                                    bookmarkedVerses = bookmarkedVerses.filter { it != verse }
+                                    removeNote(note, dbHelper)
+                                    notes = notes.filter { it != note }
                                     snackbarHostState.showSnackbar(
-                                        "Bookmark removed",
+                                        "Note removed",
                                         actionLabel = "Undo",
                                         duration = androidx.compose.material3.SnackbarDuration.Short
                                     ).also { action ->
                                         if (action == androidx.compose.material3.SnackbarResult.ActionPerformed) {
-                                            dbHelper.addBookmark(verse)
-                                            bookmarkedVerses = bookmarkedVerses + verse
+                                            dbHelper.addOrUpdateNote(note.bookName, note.chapter, note.startVerse, note.endVerse, note.note)
+                                            notes = notes + note
                                         }
                                     }
                                 }
                             },
+                            onEdit = {
+                                if (!multiSelectMode) {
+                                    selectedNoteForEdit = note
+                                    showNotesModal = true
+                                }
+                            },
                             onNavigate = {
                                 if (!multiSelectMode) {
-                                    appViewModel.currentDbName = selectedDbName
-                                    appViewModel.currentVersionAbbr = selectedVersionAbbr
-                                    val bookNumber = BibleData.getBookByName(verse.bookName ?: "")?.customNumber ?: 1
+                                    // Navigate to reader at the passage (first verse of the range)
+                                    val bookNumber = BibleData.getBookByName(note.bookName)?.customNumber ?: 1
                                     val passage = PassageSelection(
                                         bookNumber = bookNumber,
-                                        bookName = verse.bookName ?: "Genesis",
-                                        chapter = verse.chapter ?: 1,
-                                        verse = verse.verseNumber
+                                        bookName = note.bookName,
+                                        chapter = note.chapter,
+                                        verse = note.startVerse
                                     )
                                     onNavigateToReader(passage)
                                 }
@@ -291,8 +302,9 @@ fun BookmarksScreen(
                 }
             }
         }
+
         if (showSortOptions) {
-            SortOptionsDialog(
+            NoteSortOptionsDialog(
                 currentSortOrder = sortOrder,
                 onSortOrderSelected = {
                     sortOrder = it
@@ -301,33 +313,35 @@ fun BookmarksScreen(
                 onDismiss = { showSortOptions = false }
             )
         }
+
         if (showFilterOptions) {
-            FilterOptionsDialog(
+            NoteFilterOptionsDialog(
                 onDismiss = { showFilterOptions = false }
             )
         }
+
         if (showDeleteConfirmation) {
-            DeleteConfirmationDialog(
-                count = selectedVerses.size,
+            NoteDeleteConfirmationDialog(
+                count = selectedNotes.size,
                 onConfirm = {
-                    selectedVerses.forEach { verse ->
-                        removeBookmark(verse, dbHelper)
+                    selectedNotes.forEach { note ->
+                        removeNote(note, dbHelper)
                     }
-                    bookmarkedVerses = bookmarkedVerses.filter { it !in selectedVerses }
-                    selectedVerses.clear()
+                    notes = notes.filter { it !in selectedNotes }
+                    selectedNotes.clear()
                     multiSelectMode = false
                     showDeleteConfirmation = false
                     scope.launch {
                         snackbarHostState.showSnackbar(
-                            "${selectedVerses.size} bookmarks removed",
+                            "${selectedNotes.size} notes removed",
                             actionLabel = "Undo",
                             duration = androidx.compose.material3.SnackbarDuration.Short
                         ).also { action ->
                             if (action == androidx.compose.material3.SnackbarResult.ActionPerformed) {
-                                selectedVerses.forEach { verse ->
-                                    dbHelper.addBookmark(verse)
+                                selectedNotes.forEach { note ->
+                                    dbHelper.addOrUpdateNote(note.bookName, note.chapter, note.startVerse, note.endVerse, note.note)
                                 }
-                                bookmarkedVerses = bookmarkedVerses + selectedVerses
+                                notes = notes + selectedNotes
                             }
                         }
                     }
@@ -335,12 +349,43 @@ fun BookmarksScreen(
                 onDismiss = { showDeleteConfirmation = false }
             )
         }
+        selectedNoteForEdit?.let { note ->
+            NotesModal(
+                show = showNotesModal,
+                onDismiss = {
+                    showNotesModal = false
+                    selectedNoteForEdit = null
+                },
+                verses = listOf(
+                    Verse(
+                        verseNumber = note.startVerse,
+                        text = "",
+                        bookName = note.bookName,
+                        chapter = note.chapter
+                    )
+                ),
+                passage = PassageSelection(
+                    bookNumber = BibleData.getBookByName(note.bookName)?.customNumber ?: 1,
+                    bookName = note.bookName,
+                    chapter = note.chapter,
+                    verse = note.startVerse
+                ),
+                databaseHelper = dbHelper,
+                onSave = {
+                    // Refresh notes
+                    loadNotes(dbHelper) { loadedNotes ->
+                        notes = sortNotes(loadedNotes, sortOrder)
+                    }
+                }
+            )
+        }
     }
 }
 
 @Composable
 fun NormalTopBar(
-    bookmarksCount: Int,
+    title: String,
+    count: Int,
     onSearch: () -> Unit,
     onSort: () -> Unit,
     showSortBadge: Boolean,
@@ -362,7 +407,7 @@ fun NormalTopBar(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = "Bookmarks ($bookmarksCount)",
+                text = "$title ($count)",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -416,14 +461,21 @@ fun NormalTopBar(
 }
 
 @Composable
-fun SwipeToDeleteBookmarkItem(
-    verse: Verse,
+fun NoteItem(
+    note: Note,
     isSelected: Boolean,
     multiSelectMode: Boolean,
     onToggleSelect: () -> Unit,
     onRemove: () -> Unit,
+    onEdit: () -> Unit,
     onNavigate: () -> Unit
 ) {
+    val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
+    val timeFormat = remember { SimpleDateFormat("hh:mm a", Locale.getDefault()) }
+    val formattedDate = dateFormat.format(Date(note.timestamp * 1000))
+    val formattedTime = timeFormat.format(Date(note.timestamp * 1000))
+    val rangeString = if (note.startVerse == note.endVerse) "${note.startVerse}" else "${note.startVerse}-${note.endVerse}"
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -471,7 +523,7 @@ fun SwipeToDeleteBookmarkItem(
                         )
                     }
                     Text(
-                        text = "${verse.bookName} ${verse.chapter}:${verse.verseNumber}",
+                        text = "${note.bookName} ${note.chapter}:$rangeString",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
@@ -482,12 +534,23 @@ fun SwipeToDeleteBookmarkItem(
                 if (!multiSelectMode) {
                     Row {
                         IconButton(
+                            onClick = { onEdit() },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.Note,
+                                contentDescription = "Edit Note",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp).rotate(90f)
+                            )
+                        }
+                        IconButton(
                             onClick = { onRemove() },
                             modifier = Modifier.size(32.dp)
                         ) {
                             Icon(
                                 Icons.Default.Delete,
-                                contentDescription = "Delete Bookmark",
+                                contentDescription = "Delete Note",
                                 tint = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -496,29 +559,17 @@ fun SwipeToDeleteBookmarkItem(
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
-            val annotatedText = buildAnnotatedString {
-                withStyle(
-                    style = SpanStyle(
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
-                    )
-                ) {
-                    append("${verse.verseNumber} ")
-                }
-                append(SimpleVerseProcessor.stripXmlTags(verse.text))
-            }
             Text(
-                text = annotatedText,
+                text = note.note,
                 style = MaterialTheme.typography.bodyMedium,
                 lineHeight = 20.sp,
-                textAlign = TextAlign.Justify,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis
             )
             Row(
                 modifier = Modifier.padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
                     shape = CircleShape,
@@ -528,7 +579,7 @@ fun SwipeToDeleteBookmarkItem(
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = verse.bookName?.take(3) ?: "GEN",
+                        text = note.bookName.take(3).uppercase(),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(horizontal = 4.dp)
@@ -542,10 +593,72 @@ fun SwipeToDeleteBookmarkItem(
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = "Ch ${verse.chapter}",
+                        text = "Ch ${note.chapter}",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+                }
+                Text(
+                    text = "$formattedDate at $formattedTime",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun MultiSelectTopBar(
+    selectedCount: Int,
+    onCancel: () -> Unit,
+    onDelete: () -> Unit,
+    onShare: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(4.dp)
+            .height(64.dp),
+        color = MaterialTheme.colorScheme.primaryContainer
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextButton(onClick = onCancel) {
+                Text("Cancel", color = MaterialTheme.colorScheme.onPrimaryContainer)
+            }
+            Text(
+                text = "$selectedCount selected",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Row {
+                IconButton(
+                    onClick = onShare,
+                    enabled = selectedCount > 0
+                ) {
+                    Icon(
+                        Icons.Default.Share,
+                        contentDescription = "Share",
+                        tint = if (selectedCount > 0) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    )
+                }
+                IconButton(
+                    onClick = onDelete,
+                    enabled = selectedCount > 0
+                ) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = if (selectedCount > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.error.copy(alpha = 0.38f)
                     )
                 }
             }
@@ -554,9 +667,9 @@ fun SwipeToDeleteBookmarkItem(
 }
 
 @Composable
-fun SortOptionsDialog(
-    currentSortOrder: SortOrder,
-    onSortOrderSelected: (SortOrder) -> Unit,
+fun NoteSortOptionsDialog(
+    currentSortOrder: NoteSortOrder,
+    onSortOrderSelected: (NoteSortOrder) -> Unit,
     onDismiss: () -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
@@ -570,12 +683,12 @@ fun SortOptionsDialog(
                 modifier = Modifier.padding(16.dp)
             ) {
                 Text(
-                    text = "Sort Bookmarks",
+                    text = "Sort Notes",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
-                SortOrder.entries.forEach { order ->
+                NoteSortOrder.entries.forEach { order ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -607,7 +720,7 @@ fun SortOptionsDialog(
 }
 
 @Composable
-fun DeleteConfirmationDialog(
+fun NoteDeleteConfirmationDialog(
     count: Int,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
@@ -631,14 +744,14 @@ fun DeleteConfirmationDialog(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = if (count == 1) "Delete Bookmark?" else "Delete $count Bookmarks?",
+                    text = if (count == 1) "Delete Note?" else "Delete $count Notes?",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = if (count == 1) "This bookmark will be permanently removed." else "These bookmarks will be permanently removed.",
+                    text = if (count == 1) "This note will be permanently removed." else "These notes will be permanently removed.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     textAlign = TextAlign.Center
@@ -672,7 +785,7 @@ fun DeleteConfirmationDialog(
 }
 
 @Composable
-fun EmptyBookmarksScreen(isSearching: Boolean) {
+fun EmptyNotesScreen(isSearching: Boolean) {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -682,21 +795,21 @@ fun EmptyBookmarksScreen(isSearching: Boolean) {
             verticalArrangement = Arrangement.Center
         ) {
             Icon(
-                Icons.Default.Bookmark,
+                Icons.AutoMirrored.Filled.Note,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                modifier = Modifier.size(120.dp)
+                modifier = Modifier.size(120.dp).rotate(90f)
             )
             Spacer(modifier = Modifier.height(24.dp))
             Text(
-                text = if (isSearching) "No matching bookmarks" else "No bookmarks yet",
+                text = if (isSearching) "No matching notes" else "No notes yet",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = if (isSearching) "Try a different search term" else "Bookmark verses to see them here",
+                text = if (isSearching) "Try a different search term" else "Add notes to verses to see them here",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                 textAlign = TextAlign.Center
@@ -706,30 +819,37 @@ fun EmptyBookmarksScreen(isSearching: Boolean) {
 }
 
 @Composable
-fun FilterOptionsDialog(
+fun NoteFilterOptionsDialog(
     onDismiss: () -> Unit
 ) {
+    // Placeholder for future filtering options (e.g., by book)
     Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(400.dp)
+                .height(200.dp)
                 .padding(16.dp),
             shape = RoundedCornerShape(16.dp)
         ) {
             Column(
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize().padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                // Implement book filtering options here
-                // This would require storing book information with bookmarks
+                Text("Filter options coming soon")
+                Spacer(modifier = Modifier.height(16.dp))
+                TextButton(onClick = onDismiss) {
+                    Text("Close")
+                }
             }
         }
     }
 }
 
-private fun shareVerses(context: Context, verses: List<Verse>) {
-    val text = verses.joinToString("\n\n") { verse ->
-        "${verse.bookName} ${verse.chapter}:${verse.verseNumber}\n${SimpleVerseProcessor.stripXmlTags(verse.text)}"
+private fun shareNotes(context: Context, notes: List<Note>) {
+    val text = notes.joinToString("\n\n") { note ->
+        val range = if (note.startVerse == note.endVerse) "${note.startVerse}" else "${note.startVerse}-${note.endVerse}"
+        "${note.bookName} ${note.chapter}:$range\n${note.note}"
     }
     val sendIntent = android.content.Intent().apply {
         action = android.content.Intent.ACTION_SEND
@@ -740,57 +860,42 @@ private fun shareVerses(context: Context, verses: List<Verse>) {
     context.startActivity(shareIntent)
 }
 
-private fun sortVerses(verses: List<Verse>, sortOrder: SortOrder): List<Verse> {
-    return when (sortOrder) {
-        SortOrder.BOOK -> verses.sortedWith(
-            compareBy<Verse> { BibleData.getBookByName(it.bookName ?: "")?.customNumber ?: 0 }
-                .thenBy { it.chapter ?: 0 }
-                .thenBy { it.verseNumber }
-        )
-        SortOrder.CHAPTER -> verses.sortedWith(
-            compareBy<Verse> { it.chapter ?: 0 }
-                .thenBy { BibleData.getBookByName(it.bookName ?: "")?.customNumber ?: 0 }
-                .thenBy { it.verseNumber }
-        )
-        SortOrder.DATE_ADDED -> verses
-    }
-}
-
-enum class SortOrder(val displayName: String) {
-    BOOK("By Book"),
-    CHAPTER("By Chapter"),
-    DATE_ADDED("Recently Added")
-}
-private fun loadBookmarks(
-    context: Context,
-    databaseHelper: DatabaseHelper?,
-    currentDbName: String,
-    onComplete: (List<Verse>) -> Unit
-) {
-    if (databaseHelper != null) {
-        Thread {
-            val verses = databaseHelper.getBookmarks()
-            Handler(Looper.getMainLooper()).post {
-                onComplete(verses)
-            }
-        }.start()
-    } else {
-        Thread {
-            val dbHelper = DatabaseHelper(
-                context as MainActivity,
-                databaseName = currentDbName
-            )
-            val verses = dbHelper.getBookmarks()
-            dbHelper.close()
-            Handler(Looper.getMainLooper()).post {
-                onComplete(verses)
-            }
-        }.start()
-    }
-}
-
-private fun removeBookmark(verse: Verse, databaseHelper: DatabaseHelper) {
+private fun loadNotes(dbHelper: DatabaseHelper, onComplete: (List<Note>) -> Unit) {
     Thread {
-        databaseHelper.removeBookmark(verse)
+        val notes = dbHelper.getAllNotes()
+        Handler(Looper.getMainLooper()).post {
+            onComplete(notes)
+        }
     }.start()
 }
+
+private fun removeNote(note: Note, dbHelper: DatabaseHelper) {
+    Thread {
+        dbHelper.deleteNote(note.bookName, note.chapter, note.startVerse, note.endVerse)
+    }.start()
+}
+
+private fun sortNotes(notes: List<Note>, sortOrder: NoteSortOrder): List<Note> {
+    return when (sortOrder) {
+        NoteSortOrder.DATE_NEWEST -> notes.sortedByDescending { it.timestamp }
+        NoteSortOrder.DATE_OLDEST -> notes.sortedBy { it.timestamp }
+        NoteSortOrder.BOOK -> notes.sortedWith(
+            compareBy<Note> { BibleData.getBookByName(it.bookName)?.customNumber ?: 0 }
+                .thenBy { it.chapter }
+                .thenBy { it.startVerse }
+        )
+        NoteSortOrder.CHAPTER -> notes.sortedWith(
+            compareBy<Note> { it.chapter }
+                .thenBy { BibleData.getBookByName(it.bookName)?.customNumber ?: 0 }
+                .thenBy { it.startVerse }
+        )
+    }
+}
+
+enum class NoteSortOrder(val displayName: String) {
+    DATE_NEWEST("Newest First"),
+    DATE_OLDEST("Oldest First"),
+    BOOK("By Book"),
+    CHAPTER("By Chapter")
+}
+

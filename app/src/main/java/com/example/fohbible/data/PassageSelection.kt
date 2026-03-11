@@ -23,3 +23,12 @@ data class CrossReference(
     val verseToStart: Int,
     val verseToEnd: Int
 )
+
+data class Note(
+    val bookName: String,
+    val chapter: Int,
+    val startVerse: Int,
+    val endVerse: Int,
+    val note: String,
+    val timestamp: Long
+)

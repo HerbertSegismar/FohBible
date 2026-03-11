@@ -127,7 +127,7 @@ fun VerseOptionsModal(
                         shape = RoundedCornerShape(10.dp),
                         clip = true
                     ),
-                shape = RoundedCornerShape(28.dp),
+                shape = RoundedCornerShape(10.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 )
@@ -137,7 +137,6 @@ fun VerseOptionsModal(
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
                 ) {
-                    // Header
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -175,9 +174,7 @@ fun VerseOptionsModal(
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
                                 .offset(x = 8.dp, y = (-8).dp)
-                                .size(30.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)),
+                                .size(30.dp),
                             colors = IconButtonDefaults.iconButtonColors(
                                 contentColor = MaterialTheme.colorScheme.onSurface
                             )
@@ -216,11 +213,11 @@ fun VerseOptionsModal(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp, vertical = 16.dp)
-                            .clip(RoundedCornerShape(16.dp))
+                            .clip(RoundedCornerShape(10.dp))
                             .border(
                                 width = 1.dp,
                                 color = MaterialTheme.colorScheme.outlineVariant,
-                                shape = RoundedCornerShape(16.dp)
+                                shape = RoundedCornerShape(10.dp)
                             )
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
                             .padding(16.dp)

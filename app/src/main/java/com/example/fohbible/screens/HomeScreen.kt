@@ -19,16 +19,20 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.automirrored.filled.Note
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -47,6 +51,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -73,12 +78,14 @@ import com.example.fohbible.data.Verse
 import com.example.fohbible.models.AppViewModel
 import com.example.fohbible.utils.SimpleVerseProcessor
 import com.example.fohbible.MatrixNative
+import com.example.fohbible.Screen
 import kotlin.random.Random
 
 data class QuickAction(
     val title: String,
     val icon: ImageVector,
-    val color: Color
+    val color: Color,
+    val onClick: () -> Unit
 )
 
 data class PopularDevotional(
@@ -92,8 +99,8 @@ data class PopularDevotional(
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
-    onBibleClick: () -> Unit,
     onNavigateToReader: (PassageSelection) -> Unit,
+    onNavigateToScreen: (Screen) -> Unit,
     databaseHelper: DatabaseHelper? = null
 ) {
     val context = LocalContext.current
@@ -116,11 +123,38 @@ fun HomeScreen(
     }
 
     val quickActions = listOf(
-        QuickAction("Read Bible", Icons.Filled.Book, color = MaterialTheme.colorScheme.primary),
-        QuickAction("Audio Bible", Icons.AutoMirrored.Filled.VolumeUp, color = MaterialTheme.colorScheme.primary),
-        QuickAction("Reading Plan", Icons.Filled.History, color = MaterialTheme.colorScheme.primary),
-        QuickAction("Bookmarks", Icons.Filled.Bookmark, color = MaterialTheme.colorScheme.primary)
+        QuickAction(
+            title = "Reader",
+            icon = Icons.Filled.Book,
+            color = MaterialTheme.colorScheme.primary,
+            onClick = { onNavigateToScreen(Screen.Reader()) }
+        ),
+        QuickAction(
+            title = "Bookmarks",
+            icon = Icons.Filled.Bookmark,
+            color = MaterialTheme.colorScheme.primary,
+            onClick = { onNavigateToScreen(Screen.Bookmarks) }
+        ),
+        QuickAction(
+            title = "Notes",
+            icon = Icons.AutoMirrored.Filled.Note,
+            color = MaterialTheme.colorScheme.primary,
+            onClick = { onNavigateToScreen(Screen.Notes) }
+        ),
+        QuickAction(
+            title = "Search",
+            icon = Icons.Filled.Search,
+            color = MaterialTheme.colorScheme.primary,
+            onClick = { onNavigateToScreen(Screen.Search) }
+        ),
+        QuickAction(
+            title = "Settings",
+            icon = Icons.Filled.Settings,
+            color = MaterialTheme.colorScheme.primary,
+            onClick = { onNavigateToScreen(Screen.Settings) }
+        )
     )
+
 
     LazyColumn(
         modifier = modifier,
@@ -210,7 +244,8 @@ fun HomeScreen(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
-            QuickActionsGrid(actions = quickActions, onBibleClick = onBibleClick)
+            // Replace static grid with carousel
+            QuickAccessCarousel(actions = quickActions)
         }
 
         item {
@@ -241,6 +276,56 @@ fun HomeScreen(
     }
 }
 
+@Composable
+fun QuickAccessCarousel(actions: List<QuickAction>) {
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(actions) { action ->
+            QuickActionCarouselItem(action = action)
+        }
+    }
+}
+
+@Composable
+fun QuickActionCarouselItem(action: QuickAction) {
+    Card(
+        modifier = Modifier
+            .width(140.dp)
+            .height(120.dp)
+            .clickable(onClick = action.onClick), // Wire the click directly
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = action.color.copy(alpha = 0.1f)
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = action.icon,
+                contentDescription = action.title,
+                tint = action.color,
+                modifier = Modifier.size(32.dp).then(if (action.title == "Notes") Modifier.rotate(90f) else Modifier)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = action.title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
 @Composable
 fun DailyVerseCard(
     verses: List<Verse>? = null,
@@ -461,63 +546,6 @@ fun DailyVerseCard(
                         }
                 )
             }
-        }
-    }
-}
-
-@Composable
-fun QuickActionsGrid(
-    actions: List<QuickAction>,
-    onBibleClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        actions.forEach { action ->
-            QuickActionItem(action = action, onClick = {
-                if (action.title == "Read Bible") onBibleClick()
-            })
-        }
-    }
-}
-
-@Composable
-fun QuickActionItem(action: QuickAction, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(120.dp)
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = action.color.copy(alpha = 0.1f)
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = action.icon,
-                contentDescription = action.title,
-                tint = action.color,
-                modifier = Modifier.size(32.dp)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = action.title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
         }
     }
 }

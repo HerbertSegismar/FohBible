@@ -30,8 +30,13 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
         private const val COLUMN_VERSE = "verse"
         const val BOOKMARKS_TABLE = "bookmarks"
         const val HIGHLIGHTS_TABLE = "highlights"
+        const val NOTES_TABLE = "notes"
         const val COLUMN_BOOK_NAME = "book_name"
         const val COLUMN_VERSE_NUMBER = "verse_number"
+        const val COLUMN_START_VERSE = "start_verse"
+        const val COLUMN_END_VERSE = "end_verse"
+        const val COLUMN_NOTE = "note"
+        const val COLUMN_TIMESTAMP = "timestamp"
     }
 
     init {
@@ -51,6 +56,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             )
             createBookmarksTable()
             createHighlightsTable()
+            createNotesTable()
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -72,6 +78,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             )
             createBookmarksTable()
             createHighlightsTable()
+            createNotesTable()
             Log.d(tag, "Database $databaseName refreshed successfully")
             true
         } catch (e: Exception) {
@@ -104,6 +111,21 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                 $COLUMN_VERSE_NUMBER INTEGER,
                 $COLUMN_TEXT TEXT,
                 PRIMARY KEY ($COLUMN_BOOK_NAME, $COLUMN_CHAPTER, $COLUMN_VERSE_NUMBER)
+            )
+            """.trimIndent()
+        )
+    }
+    private fun createNotesTable() {
+        database?.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS $NOTES_TABLE (
+                $COLUMN_BOOK_NAME TEXT,
+                $COLUMN_CHAPTER INTEGER,
+                $COLUMN_START_VERSE INTEGER,
+                $COLUMN_END_VERSE INTEGER,
+                $COLUMN_NOTE TEXT,
+                $COLUMN_TIMESTAMP INTEGER DEFAULT (strftime('%s','now')),
+                PRIMARY KEY ($COLUMN_BOOK_NAME, $COLUMN_CHAPTER, $COLUMN_START_VERSE, $COLUMN_END_VERSE)
             )
             """.trimIndent()
         )
@@ -402,6 +424,105 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                 arrayOf(COLUMN_VERSE_NUMBER),
                 "$COLUMN_BOOK_NAME = ? AND $COLUMN_CHAPTER = ? AND $COLUMN_VERSE_NUMBER = ?",
                 arrayOf(verse.bookName, verse.chapter.toString(), verse.verseNumber.toString()),
+                null,
+                null,
+                null
+            )
+            cursor?.use {
+                exists = it.count > 0
+            }
+        } catch (_: Exception) {
+        }
+        return exists
+    }
+    fun addOrUpdateNote(book: String, chapter: Int, startVerse: Int, endVerse: Int, note: String) {
+        try {
+            val values = ContentValues().apply {
+                put(COLUMN_BOOK_NAME, book)
+                put(COLUMN_CHAPTER, chapter)
+                put(COLUMN_START_VERSE, startVerse)
+                put(COLUMN_END_VERSE, endVerse)
+                put(COLUMN_NOTE, note)
+                put(COLUMN_TIMESTAMP, System.currentTimeMillis() / 1000) // current epoch seconds
+            }
+            database?.insertWithOnConflict(
+                NOTES_TABLE,
+                null,
+                values,
+                SQLiteDatabase.CONFLICT_REPLACE
+            )
+        } catch (_: Exception) {
+        }
+    }
+
+    fun getNote(book: String, chapter: Int, startVerse: Int, endVerse: Int): String? {
+        var note: String? = null
+        try {
+            val cursor = database?.query(
+                NOTES_TABLE,
+                arrayOf(COLUMN_NOTE),
+                "$COLUMN_BOOK_NAME = ? AND $COLUMN_CHAPTER = ? AND $COLUMN_START_VERSE = ? AND $COLUMN_END_VERSE = ?",
+                arrayOf(book, chapter.toString(), startVerse.toString(), endVerse.toString()),
+                null,
+                null,
+                null
+            )
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    note = it.getString(it.getColumnIndexOrThrow(COLUMN_NOTE))
+                }
+            }
+        } catch (_: Exception) {
+        }
+        return note
+    }
+
+    fun deleteNote(book: String, chapter: Int, startVerse: Int, endVerse: Int) {
+        try {
+            database?.delete(
+                NOTES_TABLE,
+                "$COLUMN_BOOK_NAME = ? AND $COLUMN_CHAPTER = ? AND $COLUMN_START_VERSE = ? AND $COLUMN_END_VERSE = ?",
+                arrayOf(book, chapter.toString(), startVerse.toString(), endVerse.toString())
+            )
+        } catch (_: Exception) {
+        }
+    }
+
+    fun getAllNotes(): List<Note> {
+        val notes = mutableListOf<Note>()
+        try {
+            database?.query(
+                NOTES_TABLE,
+                arrayOf(COLUMN_BOOK_NAME, COLUMN_CHAPTER, COLUMN_START_VERSE, COLUMN_END_VERSE, COLUMN_NOTE, COLUMN_TIMESTAMP),
+                null, null, null, null, "$COLUMN_TIMESTAMP DESC"
+            )?.use { cursor ->
+                while (cursor.moveToNext()) {
+                    val bookName = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_BOOK_NAME))
+                    val chapter = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_CHAPTER))
+                    val startVerse = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_START_VERSE))
+                    val endVerse = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_END_VERSE))
+                    val note = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_NOTE))
+                    val timestamp = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_TIMESTAMP))
+                    notes.add(Note(bookName, chapter, startVerse, endVerse, note, timestamp))
+                }
+            }
+        } catch (_: Exception) {
+        }
+        return notes
+    }
+    fun hasNote(verse: Verse): Boolean {
+        var exists = false
+        try {
+            val cursor = database?.query(
+                NOTES_TABLE,
+                arrayOf(COLUMN_NOTE),
+                "$COLUMN_BOOK_NAME = ? AND $COLUMN_CHAPTER = ? AND $COLUMN_START_VERSE <= ? AND $COLUMN_END_VERSE >= ?",
+                arrayOf(
+                    verse.bookName,
+                    verse.chapter.toString(),
+                    verse.verseNumber.toString(),
+                    verse.verseNumber.toString()
+                ),
                 null,
                 null,
                 null
