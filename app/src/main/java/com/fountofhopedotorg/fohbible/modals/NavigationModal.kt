@@ -398,12 +398,11 @@ fun NavigationModal(
                         ) {
                             LazyColumn(
                                 modifier = Modifier
-                                    .weight(1.5f)
+                                    .weight(2f)
                                     .fillMaxHeight()
                                     .padding(horizontal = 10.dp),
                                 contentPadding = PaddingValues(vertical = 8.dp)
                             ) {
-                                item { Spacer(modifier = Modifier.height(8.dp)) }
                                 item {
                                     TestamentSection(
                                         title = "Old Testament",
@@ -438,7 +437,7 @@ fun NavigationModal(
                             }
                             Box(
                                 modifier = Modifier
-                                    .weight(0.85f)
+                                    .weight(1f)
                                     .fillMaxHeight()
                                     .padding(10.dp)
                                     .verticalScroll(rememberScrollState())
@@ -875,7 +874,7 @@ fun TestamentSection(
 ) {
     Column(modifier = Modifier.padding(bottom = 2.dp)) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(6.dp, 0.dp),
+            modifier = Modifier.fillMaxWidth().padding(start = 5.dp, end = 25.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -892,7 +891,6 @@ fun TestamentSection(
         }
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             books.forEach { book ->
                 BookCard(
@@ -922,7 +920,7 @@ fun BookCard(
     Card(
         onClick = onClick,
         modifier = Modifier
-            .width(45.dp)
+            .width(47.dp)
             .height(40.dp)
             .then(borderModifier)
             .padding(1.dp),
