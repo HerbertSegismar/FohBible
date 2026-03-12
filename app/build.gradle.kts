@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.fohbible"
+    namespace = "com.fountofhopedotorg.fohbible"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.fohbible"
+        applicationId = "com.fountofhopedotorg.fohbible"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
