@@ -377,14 +377,14 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                         }
                         is Screen.Reader -> {
                             ReaderScreen(
-                                passage = viewModel.primaryPassage,
+                                passage = currentScreen.passage ?: viewModel.primaryPassage,
                                 databaseHelper = dbHelper,
                                 onPassageChange = { newPassage ->
+                                    viewModel.navigationStack[viewModel.navigationStack.lastIndex] = Screen.Reader(newPassage)
                                     viewModel.primaryPassage = newPassage
                                     if (viewModel.scrollSync) {
                                         viewModel.secondaryPassage = newPassage
                                     }
-                                    viewModel.updateCurrentScreen(Screen.Reader(newPassage))
                                 }
                             )
                         }

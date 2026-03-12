@@ -82,6 +82,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.fohbible.MainActivity
+import com.example.fohbible.Screen
 import com.example.fohbible.data.BibleBook
 import com.example.fohbible.data.BibleData
 import com.example.fohbible.data.DatabaseHelper
@@ -503,6 +504,10 @@ fun ReaderScreen(
         InteractiveModal(
             show = showWordModal,
             onDismiss = { showWordModal = false },
+            onNavigateToReader = { passage ->
+                viewModel.primaryPassage = passage
+                viewModel.navigateTo(Screen.Reader(passage))
+            },
             databaseHelper = wordDb,
             initialType = "definition",
             word = currentWord,
@@ -512,6 +517,10 @@ fun ReaderScreen(
         InteractiveModal(
             show = showStrongsModal,
             onDismiss = { showStrongsModal = false },
+            onNavigateToReader = { passage ->
+                viewModel.primaryPassage = passage
+                viewModel.navigateTo(Screen.Reader(passage))
+            },
             databaseHelper = strongDb,
             initialType = "strong",
             strongNumber = currentStrongNumber,
@@ -521,6 +530,10 @@ fun ReaderScreen(
         InteractiveModal(
             show = showCommentaryModal,
             onDismiss = { showCommentaryModal = false },
+            onNavigateToReader = { passage ->
+                viewModel.primaryPassage = passage
+                viewModel.navigateTo(Screen.Reader(passage))
+            },
             databaseHelper = commentaryBibleDb,
             initialType = "commentary",
             initialTitle = commentaryTitle,
@@ -530,6 +543,10 @@ fun ReaderScreen(
         InteractiveModal(
             show = showCrossRefModal,
             onDismiss = { showCrossRefModal = false },
+            onNavigateToReader = { passage ->
+                viewModel.primaryPassage = passage
+                viewModel.navigateTo(Screen.Reader(passage))
+            },
             databaseHelper = crossRefBibleDb,
             initialType = "commentary",
             initialTitle = crossRefSource,
@@ -1518,8 +1535,6 @@ fun ChapterView(
             modifier = Modifier.fillMaxSize()
         )
     }
-
-    // NEW: note icon inline content
     val noteInlineContent = InlineTextContent(
         Placeholder(
             width = bookmarkIconSize.sp,

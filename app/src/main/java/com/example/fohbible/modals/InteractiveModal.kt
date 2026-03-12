@@ -24,8 +24,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -290,6 +294,7 @@ suspend fun getDefinitionOrClosest(dbHelper: DatabaseHelper?, originalWord: Stri
 fun InteractiveModal(
     show: Boolean,
     onDismiss: () -> Unit,
+    onNavigateToReader: (PassageSelection) -> Unit,
     databaseHelper: DatabaseHelper?,
     initialType: String,
     initialTitle: String = "",
@@ -558,8 +563,27 @@ fun InteractiveModal(
                             text = currentPage.title,
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.weight(1f)
                         )
+                        if (currentPage.type == "verses" && currentPage.passage != null) {
+                            IconButton(
+                                onClick = {
+                                    val firstVersePassage = currentPage.passage.copy(
+                                        verseEnd = null,
+                                        chapterEnd = null
+                                    )
+                                    onNavigateToReader(firstVersePassage)
+                                    onDismiss()
+                                },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    Icons.Filled.ChevronRight,
+                                    contentDescription = "Read in Reader",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.weight(1f))
                         Box(
                             modifier = Modifier
                                 .size(20.dp)
