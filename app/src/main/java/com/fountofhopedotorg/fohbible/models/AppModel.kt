@@ -48,7 +48,7 @@ class AppViewModel : ViewModel() {
     var showColorWheelDialog by mutableStateOf(false)
     var showBgModal by mutableStateOf(false)
     var primaryPassage by mutableStateOf(PassageSelection(10, "Genesis", 1, 1))
-    var secondaryPassage by mutableStateOf(PassageSelection(10, "Genesis", 1, 1))
+    var secondaryPassage by mutableStateOf(PassageSelection(500, "John", 1, 1))
     var bgImageIndex by mutableIntStateOf(0)
     var customTextureUri by mutableStateOf<String?>(null)
     var overlayOpacity by mutableFloatStateOf(0.15f)

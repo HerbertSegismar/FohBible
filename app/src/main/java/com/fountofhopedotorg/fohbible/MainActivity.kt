@@ -1101,8 +1101,8 @@ fun ReaderAppBar(
         animationSpec = tween(durationMillis = 300),
         label = "syncRotation"
     )
-    val minFontSize = 8
-    val maxFontSize = 50
+    val minFontSize = 1
+    val maxFontSize = 100
     TopAppBar(
         title = {
             if (!viewModel.multiVersion) {
@@ -1560,7 +1560,7 @@ fun ReaderAppBar(
                             fontSize = 14.sp
                         )
                         Text(
-                            text = "8-50",
+                            text = "1-100",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Medium

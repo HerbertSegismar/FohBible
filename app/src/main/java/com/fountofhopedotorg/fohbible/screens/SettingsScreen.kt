@@ -78,8 +78,8 @@ import com.fountofhopedotorg.fohbible.ui.theme.PredefinedColorThemes
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
 import java.util.Locale
 
-const val MAX_FONT_SIZE = 50
-const val MIN_FONT_SIZE = 8
+const val MAX_FONT_SIZE = 100
+const val MIN_FONT_SIZE = 1
 
 val availableFontFamilies = listOf("system", "oswald", "rubikglitch", "rubiklines", "poppins", "cookie", "emilyscandy", "googlesanscode", "pirataone", "quintessential", "rougescript", "sairastencilone", "shadowsintolight", "smoochsans", "truculenta", "honk" )
 
