@@ -32,7 +32,6 @@ import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
-import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
@@ -107,7 +106,6 @@ fun NotesScreen(
     var searchActive by remember { mutableStateOf(false) }
     var showSortOptions by remember { mutableStateOf(false) }
     var sortOrder by remember { mutableStateOf(NoteSortOrder.DATE_NEWEST) }
-    var showFilterOptions by remember { mutableStateOf(false) }
     var showNotesModal by remember { mutableStateOf(false) }
     var selectedNoteForEdit by remember { mutableStateOf<Note?>(null) }
 
@@ -164,7 +162,6 @@ fun NotesScreen(
                     onSearch = { searchActive = true },
                     onSort = { showSortOptions = true },
                     showSortBadge = sortOrder != NoteSortOrder.DATE_NEWEST,
-                    onFilter = { showFilterOptions = true },
                     onMore = { multiSelectMode = true }
                 )
             }
@@ -314,12 +311,6 @@ fun NotesScreen(
             )
         }
 
-        if (showFilterOptions) {
-            NoteFilterOptionsDialog(
-                onDismiss = { showFilterOptions = false }
-            )
-        }
-
         if (showDeleteConfirmation) {
             NoteDeleteConfirmationDialog(
                 count = selectedNotes.size,
@@ -389,7 +380,6 @@ fun NormalTopBar(
     onSearch: () -> Unit,
     onSort: () -> Unit,
     showSortBadge: Boolean,
-    onFilter: () -> Unit,
     onMore: () -> Unit
 ) {
     Surface(
@@ -440,13 +430,6 @@ fun NormalTopBar(
                             )
                         }
                     }
-                }
-                IconButton(onClick = onFilter) {
-                    Icon(
-                        Icons.Default.FilterList,
-                        contentDescription = "Filter",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
                 }
                 IconButton(onClick = onMore) {
                     Icon(
@@ -814,34 +797,6 @@ fun EmptyNotesScreen(isSearching: Boolean) {
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                 textAlign = TextAlign.Center
             )
-        }
-    }
-}
-
-@Composable
-fun NoteFilterOptionsDialog(
-    onDismiss: () -> Unit
-) {
-    // Placeholder for future filtering options (e.g., by book)
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp)
-                .padding(16.dp),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column(
-                modifier = Modifier.fillMaxSize().padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text("Filter options coming soon")
-                Spacer(modifier = Modifier.height(16.dp))
-                TextButton(onClick = onDismiss) {
-                    Text("Close")
-                }
-            }
         }
     }
 }

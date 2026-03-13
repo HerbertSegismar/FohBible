@@ -27,7 +27,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -54,7 +53,6 @@ import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.data.Verse
 import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotesModal(
     show: Boolean,
@@ -137,7 +135,6 @@ fun NotesModal(
                         .verticalScroll(rememberScrollState())
                         .padding(bottom = 20.dp)
                 ) {
-                    // Header
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -179,7 +176,6 @@ fun NotesModal(
                         }
                     }
 
-                    // Verse context
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -198,8 +194,6 @@ fun NotesModal(
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
-
-                    // Note editor
                     OutlinedTextField(
                         value = noteText,
                         onValueChange = { noteText = it },
@@ -217,14 +211,12 @@ fun NotesModal(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Action buttons
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // Delete button (only if there is existing note)
                         if (noteText.isNotBlank()) {
                             TextButton(
                                 onClick = { deleteNote() },
@@ -251,8 +243,6 @@ fun NotesModal(
                             Text("Save")
                         }
                     }
-
-                    // Cancel button
                     TextButton(
                         onClick = onDismiss,
                         modifier = Modifier

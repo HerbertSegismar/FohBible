@@ -34,7 +34,6 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
-import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Badge
@@ -106,7 +105,6 @@ fun BookmarksScreen(
     var searchActive by remember { mutableStateOf(false) }
     var showSortOptions by remember { mutableStateOf(false) }
     var sortOrder by remember { mutableStateOf(SortOrder.DATE_ADDED) }
-    var showFilterOptions by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -158,7 +156,6 @@ fun BookmarksScreen(
                     onSearch = { searchActive = true },
                     onSort = { showSortOptions = true },
                     showSortBadge = sortOrder != SortOrder.DATE_ADDED,
-                    onFilter = { showFilterOptions = true },
                     onMore = { multiSelectMode = true }
                 )
             }
@@ -301,11 +298,7 @@ fun BookmarksScreen(
                 onDismiss = { showSortOptions = false }
             )
         }
-        if (showFilterOptions) {
-            FilterOptionsDialog(
-                onDismiss = { showFilterOptions = false }
-            )
-        }
+
         if (showDeleteConfirmation) {
             DeleteConfirmationDialog(
                 count = selectedVerses.size,
@@ -344,7 +337,6 @@ fun NormalTopBar(
     onSearch: () -> Unit,
     onSort: () -> Unit,
     showSortBadge: Boolean,
-    onFilter: () -> Unit,
     onMore: () -> Unit
 ) {
     Surface(
@@ -395,13 +387,6 @@ fun NormalTopBar(
                             )
                         }
                     }
-                }
-                IconButton(onClick = onFilter) {
-                    Icon(
-                        Icons.Default.FilterList,
-                        contentDescription = "Filter",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
                 }
                 IconButton(onClick = onMore) {
                     Icon(
@@ -701,28 +686,6 @@ fun EmptyBookmarksScreen(isSearching: Boolean) {
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                 textAlign = TextAlign.Center
             )
-        }
-    }
-}
-
-@Composable
-fun FilterOptionsDialog(
-    onDismiss: () -> Unit
-) {
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(400.dp)
-                .padding(16.dp),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                // Implement book filtering options here
-                // This would require storing book information with bookmarks
-            }
         }
     }
 }

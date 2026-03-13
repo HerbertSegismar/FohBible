@@ -82,7 +82,6 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             Log.d(tag, "Database $databaseName refreshed successfully")
             true
         } catch (e: Exception) {
-            Log.e(tag, "Error refreshing database $databaseName: ${e.message}")
             e.printStackTrace()
             false
         }

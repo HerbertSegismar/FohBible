@@ -731,7 +731,7 @@ fun NumPad(
                 onClick = onClear,
                 containerColor = Color(0xFFF44336),
                 contentColor = Color.White,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(0.33f)
             )
             ActionButton(
                 icon = null,
@@ -745,7 +745,7 @@ fun NumPad(
                 onClick = onConfirm,
                 containerColor = if (isEnabled) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f),
                 contentColor = if (isEnabled) Color.White else Color.White.copy(alpha = 0.5f),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(0.675f)
             )
         }
     }

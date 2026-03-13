@@ -244,7 +244,6 @@ fun HomeScreen(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
-            // Replace static grid with carousel
             QuickAccessCarousel(actions = quickActions)
         }
 
@@ -295,7 +294,7 @@ fun QuickActionCarouselItem(action: QuickAction) {
         modifier = Modifier
             .width(140.dp)
             .height(120.dp)
-            .clickable(onClick = action.onClick), // Wire the click directly
+            .clickable(onClick = action.onClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = action.color.copy(alpha = 0.1f)
@@ -403,7 +402,7 @@ fun DailyVerseCard(
             ) {
                 Text(
                     text = "Fresh Revelations",
-                    style = MaterialTheme.typography.titleLarge,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
                     fontFamily = currentFontFamily
@@ -445,7 +444,7 @@ fun DailyVerseCard(
                         val reference = SimpleVerseProcessor.extractVerseReference(verses)
                         Text(
                             text = reference,
-                            style = MaterialTheme.typography.titleMedium,
+                            fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
                             fontFamily = currentFontFamily
@@ -459,7 +458,7 @@ fun DailyVerseCard(
                                     style = SpanStyle(
                                         color = MaterialTheme.colorScheme.primary,
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp
+                                        fontSize = 15.sp
                                     )
                                 ) {
                                     append("${verse.verseNumber} ")
@@ -469,8 +468,8 @@ fun DailyVerseCard(
 
                             Text(
                                 text = annotatedText,
-                                style = MaterialTheme.typography.bodyLarge,
-                                lineHeight = 24.sp,
+                                fontSize = 18.sp,
+                                lineHeight = 22.sp,
                                 textAlign = TextAlign.Justify,
                                 modifier = Modifier.padding(bottom = 8.dp),
                                 fontFamily = currentFontFamily

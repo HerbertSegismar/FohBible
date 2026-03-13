@@ -73,7 +73,6 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.ranges.ClosedFloatingPointRange
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VerseOptionsModal(
     show: Boolean,
@@ -345,7 +344,7 @@ private fun RangeSliderWithControls(
                 )
             },
             colors = SliderDefaults.colors(
-                thumbColor = Color.Transparent, // hide default thumbs
+                thumbColor = Color.Transparent,
                 activeTrackColor = MaterialTheme.colorScheme.primary,
                 inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
             )
