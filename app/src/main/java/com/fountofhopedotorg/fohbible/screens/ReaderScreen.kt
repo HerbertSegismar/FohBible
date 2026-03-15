@@ -272,10 +272,8 @@ fun ReaderScreen(
     }
     val onWordPress: (String, Boolean) -> Unit = { word, isPrimary ->
         currentModalIsOldTestament = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
-        val trimmed = word.trim()
-        val definition = dictionaryDbHelper?.getWordDefinition(trimmed) ?: "Definition not found."
-        currentWord = trimmed
-        wordDefinition = definition
+        currentWord = word.trim()
+        wordDefinition = ""
         wordDb = if (isPrimary) databaseHelper else secondaryDatabaseHelper
         showWordModal = true
     }

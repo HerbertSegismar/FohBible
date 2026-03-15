@@ -2,18 +2,24 @@
   <dictionary name="project">
     <words>
       <w>Emilys</w>
+      <w>Fairbairn</w>
+      <w>Haddon</w>
+      <w>Nicoll</w>
       <w>Pirata</w>
       <w>Saira</w>
+      <w>Scofield</w>
       <w>abcdefghijklmnopqrstuvwxyz</w>
       <w>ampc</w>
       <w>atbsd</w>
       <w>atsbd</w>
       <w>biblia</w>
+      <w>cbsc</w>
       <w>cbtel</w>
       <w>cebb</w>
       <w>ceeb</w>
       <w>coords</w>
       <w>crossreferences</w>
+      <w>csbc</w>
       <w>dayspring</w>
       <w>dd't</w>
       <w>elyon</w>
@@ -22,6 +28,7 @@
       <w>esvgsb</w>
       <w>esvgsbcom</w>
       <w>ezek</w>
+      <w>fairb</w>
       <w>ffff</w>
       <w>googlesanscode</w>
       <w>hilab</w>
@@ -29,6 +36,7 @@
       <w>jireh</w>
       <w>judg</w>
       <w>kjvsubheadings</w>
+      <w>mhwbc</w>
       <w>nasb</w>
       <w>nissi</w>
       <w>nkjv</w>
@@ -51,6 +59,8 @@
       <w>shammah</w>
       <w>smoochsans</w>
       <w>snackbar</w>
+      <w>spurg</w>
+      <w>spurgeon's</w>
       <w>strongs</w>
       <w>tagab</w>
       <w>thes</w>
