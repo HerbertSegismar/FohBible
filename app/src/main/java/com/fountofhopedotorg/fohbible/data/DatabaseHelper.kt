@@ -137,6 +137,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                 databaseName.endsWith("dictionary.sqlite3") -> "dictionaries/$databaseName"
                 databaseName.endsWith("kjvsubheadings.sqlite3") -> "subheadings/$databaseName"
                 databaseName.endsWith("crossreferences.sqlite3") -> "cross-references/$databaseName"
+                databaseName.endsWith("commentaries.sqlite3") -> "commentaries/$databaseName"
                 else -> "databases/$databaseName"
             }
             context.assets.open(assetPath).use { inputStream ->
@@ -198,6 +199,55 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             e.printStackTrace()
         }
         return refs
+    }
+
+    fun getCommentariesForVerse(bookNumber: Int, chapter: Int, verse: Int): List<VerseCommentary> {
+        val commentaries = mutableListOf<VerseCommentary>()
+        try {
+            val cursor = database?.rawQuery(
+                """
+            SELECT text, chapter_number_from, verse_number_from, chapter_number_to, verse_number_to
+            FROM commentaries
+            WHERE book_number = ?
+              AND chapter_number_from <= ?
+              AND chapter_number_to >= ?
+            """.trimIndent(),
+                arrayOf(bookNumber.toString(), chapter.toString(), chapter.toString())
+            )
+
+            cursor?.use {
+                while (it.moveToNext()) {
+                    val chapterFrom = it.getInt(it.getColumnIndexOrThrow("chapter_number_from"))
+                    val verseFrom = it.getInt(it.getColumnIndexOrThrow("verse_number_from"))
+                    val chapterTo = it.getInt(it.getColumnIndexOrThrow("chapter_number_to"))
+                    val verseTo = it.getInt(it.getColumnIndexOrThrow("verse_number_to"))
+
+                    val isCovered = when {
+                        chapterFrom == chapterTo -> {
+                            chapter == chapterFrom && verse in verseFrom..verseTo
+                        }
+                        chapterFrom < chapterTo -> {
+                            when (chapter) {
+                                chapterFrom -> verse >= verseFrom
+                                chapterTo -> verse <= verseTo
+                                in (chapterFrom + 1) until chapterTo -> true
+                                else -> false
+                            }
+                        }
+                        else -> false
+                    }
+
+                    if (isCovered) {
+                        var text = it.getString(it.getColumnIndexOrThrow("text"))
+                        text = text.replace(Regex("<script[\\s\\S]*?</script>"), "")
+                        commentaries.add(VerseCommentary(text, chapterFrom, verseFrom, chapterTo, verseTo))
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return commentaries
     }
 
     fun getVerseCount(bookNumber: Int, chapter: Int): Int {

@@ -54,7 +54,9 @@ class AppViewModel : ViewModel() {
     var overlayOpacity by mutableFloatStateOf(0.15f)
     var lightOverlayColor by mutableStateOf(Color(0xFFF5F5DC))
     var darkOverlayColor by mutableStateOf(Color(0xFF100F21))
-    var selectedDictionary by mutableStateOf("")
+    var selectedDictionary by mutableStateOf("atsbd")
+
+    var selectedVerseCommentary by mutableStateOf("cbsc")
 
     val isOldTestament: Boolean
         get() = BibleData.getBookByCustomNumber(primaryPassage.bookNumber)?.testament == Testament.OLD

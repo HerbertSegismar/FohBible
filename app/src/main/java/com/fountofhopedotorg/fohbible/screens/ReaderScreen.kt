@@ -33,6 +33,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Note
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material3.Button
@@ -253,6 +254,12 @@ fun ReaderScreen(
     var commentaryContent by remember { mutableStateOf("") }
     var commentaryBibleDb by remember { mutableStateOf<DatabaseHelper?>(null) }
 
+    // NEW: state for verse commentary modal
+    var showVerseCommentaryModal by remember { mutableStateOf(false) }
+    var verseCommentaryBook by remember { mutableIntStateOf(0) }
+    var verseCommentaryChapter by remember { mutableIntStateOf(0) }
+    var verseCommentaryVerse by remember { mutableIntStateOf(0) }
+
     LaunchedEffect(viewModel.selectedDictionary, databaseHelper?.databaseName) {
         dictionaryDbHelper?.close()
         dictionaryDbHelper = DatabaseHelper(contextFont, "${viewModel.selectedDictionary}.dictionary.sqlite3")
@@ -272,8 +279,10 @@ fun ReaderScreen(
     }
     val onWordPress: (String, Boolean) -> Unit = { word, isPrimary ->
         currentModalIsOldTestament = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
-        currentWord = word.trim()
-        wordDefinition = ""
+        val trimmed = word.trim()
+        val definition = dictionaryDbHelper?.getWordDefinition(trimmed) ?: "Definition not found."
+        currentWord = trimmed
+        wordDefinition = definition
         wordDb = if (isPrimary) databaseHelper else secondaryDatabaseHelper
         showWordModal = true
     }
@@ -301,6 +310,16 @@ fun ReaderScreen(
         commentaryBibleDb = if (isPrimary) databaseHelper else secondaryDatabaseHelper
         showCommentaryModal = true
     }
+
+    // NEW: callback for verse commentary icon
+    val onVerseCommentaryClick: (bookNumber: Int, chapter: Int, verseNumber: Int) -> Unit = { book, chap, verseNum ->
+        verseCommentaryBook = book
+        verseCommentaryChapter = chap
+        verseCommentaryVerse = verseNum
+        currentModalIsOldTestament = viewModel.isOldTestament  // assume OT/NT based on primary version
+        showVerseCommentaryModal = true
+    }
+
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -382,7 +401,8 @@ fun ReaderScreen(
                 onVerseLongPress = onVerseLongPress,
                 onCrossRefClick = onCrossRefClick,
                 crossRefHelper = crossRefHelper,
-                refreshKey = refreshKey
+                refreshKey = refreshKey,
+                onVerseCommentaryClick = onVerseCommentaryClick   // NEW
             )
         } else if (synced) {
             SyncedMultiVersionReader(
@@ -410,7 +430,8 @@ fun ReaderScreen(
                 onVerseLongPress = onVerseLongPress,
                 onCrossRefClick = onCrossRefClick,
                 crossRefHelper = crossRefHelper,
-                refreshKey = refreshKey
+                refreshKey = refreshKey,
+                onVerseCommentaryClick = onVerseCommentaryClick   // NEW
             )
         } else {
             IndependentMultiVersionReader(
@@ -443,7 +464,8 @@ fun ReaderScreen(
                 onVerseLongPress = onVerseLongPress,
                 onCrossRefClick = onCrossRefClick,
                 crossRefHelper = crossRefHelper,
-                refreshKey = refreshKey
+                refreshKey = refreshKey,
+                onVerseCommentaryClick = onVerseCommentaryClick   // NEW
             )
         }
         FloatingActionButton(
@@ -551,6 +573,22 @@ fun ReaderScreen(
             initialContent = crossRefContent,
             isOldTestament = currentModalIsOldTestament
         )
+        // NEW: verse commentary modal
+        InteractiveModal(
+            show = showVerseCommentaryModal,
+            onDismiss = { showVerseCommentaryModal = false },
+            onNavigateToReader = { passage ->
+                viewModel.primaryPassage = passage
+                viewModel.navigateTo(Screen.Reader(passage))
+            },
+            databaseHelper = databaseHelper, // always use primary Bible for navigation
+            initialType = "versecommentary",
+            bookNumber = verseCommentaryBook,
+            chapter = verseCommentaryChapter,
+            verse = verseCommentaryVerse,
+            isOldTestament = currentModalIsOldTestament
+        )
+
         val selVerse = selectedVerse
         val selPassage = selectedPassage
         val selIsPrimary = selectedIsPrimary
@@ -627,7 +665,9 @@ private fun SingleVersionReader(
     onVerseLongPress: (Verse, PassageSelection, Boolean) -> Unit,
     onCrossRefClick: (Int, Int, Int, Boolean) -> Unit,
     crossRefHelper: DatabaseHelper,
-    refreshKey: Int
+    refreshKey: Int,
+    // NEW parameter
+    onVerseCommentaryClick: (Int, Int, Int) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     val currentBook by remember(primaryCurrent.bookNumber) { derivedStateOf { BibleData.getBookByCustomNumber(primaryCurrent.bookNumber) } }
@@ -754,7 +794,8 @@ private fun SingleVersionReader(
                     databaseHelper = databaseHelper,
                     crossRefHelper = crossRefHelper,
                     onCrossRefClick = onCrossRefClick,
-                    refreshKey = refreshKey
+                    refreshKey = refreshKey,
+                    onVerseCommentaryClick = onVerseCommentaryClick   // NEW
                 )
             }
         }
@@ -781,7 +822,9 @@ private fun SyncedMultiVersionReader(
     onVerseLongPress: (Verse, PassageSelection, Boolean) -> Unit,
     onCrossRefClick: (Int, Int, Int, Boolean) -> Unit,
     crossRefHelper: DatabaseHelper,
-    refreshKey: Int
+    refreshKey: Int,
+    // NEW parameter
+    onVerseCommentaryClick: (Int, Int, Int) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     val currentBook by remember(primaryCurrent.bookNumber) { derivedStateOf { BibleData.getBookByCustomNumber(primaryCurrent.bookNumber) } }
@@ -970,7 +1013,8 @@ private fun SyncedMultiVersionReader(
                             databaseHelper = databaseHelper,
                             crossRefHelper = crossRefHelper,
                             onCrossRefClick = onCrossRefClick,
-                            refreshKey = refreshKey
+                            refreshKey = refreshKey,
+                            onVerseCommentaryClick = onVerseCommentaryClick   // NEW
                         )
                         ChapterView(
                             passage = thisPassage,
@@ -1001,7 +1045,8 @@ private fun SyncedMultiVersionReader(
                             databaseHelper = secondaryDatabaseHelper,
                             crossRefHelper = crossRefHelper,
                             onCrossRefClick = onCrossRefClick,
-                            refreshKey = refreshKey
+                            refreshKey = refreshKey,
+                            onVerseCommentaryClick = onVerseCommentaryClick   // NEW
                         )
                     }
                 } else {
@@ -1035,7 +1080,8 @@ private fun SyncedMultiVersionReader(
                             databaseHelper = databaseHelper,
                             crossRefHelper = crossRefHelper,
                             onCrossRefClick = onCrossRefClick,
-                            refreshKey = refreshKey
+                            refreshKey = refreshKey,
+                            onVerseCommentaryClick = onVerseCommentaryClick   // NEW
                         )
                         ChapterView(
                             passage = thisPassage,
@@ -1066,7 +1112,8 @@ private fun SyncedMultiVersionReader(
                             databaseHelper = secondaryDatabaseHelper,
                             crossRefHelper = crossRefHelper,
                             onCrossRefClick = onCrossRefClick,
-                            refreshKey = refreshKey
+                            refreshKey = refreshKey,
+                            onVerseCommentaryClick = onVerseCommentaryClick   // NEW
                         )
                     }
                 }
@@ -1098,7 +1145,9 @@ private fun IndependentMultiVersionReader(
     onVerseLongPress: (Verse, PassageSelection, Boolean) -> Unit,
     onCrossRefClick: (Int, Int, Int, Boolean) -> Unit,
     crossRefHelper: DatabaseHelper,
-    refreshKey: Int
+    refreshKey: Int,
+    // NEW parameter
+    onVerseCommentaryClick: (Int, Int, Int) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     val primaryBook by remember(primaryCurrent.bookNumber) { derivedStateOf { BibleData.getBookByCustomNumber(primaryCurrent.bookNumber) } }
@@ -1307,7 +1356,8 @@ private fun IndependentMultiVersionReader(
                             databaseHelper = databaseHelper,
                             crossRefHelper = crossRefHelper,
                             onCrossRefClick = onCrossRefClick,
-                            refreshKey = refreshKey
+                            refreshKey = refreshKey,
+                            onVerseCommentaryClick = onVerseCommentaryClick   // NEW
                         )
                     }
                 }
@@ -1350,7 +1400,8 @@ private fun IndependentMultiVersionReader(
                             databaseHelper = secondaryDatabaseHelper,
                             crossRefHelper = crossRefHelper,
                             onCrossRefClick = onCrossRefClick,
-                            refreshKey = refreshKey
+                            refreshKey = refreshKey,
+                            onVerseCommentaryClick = onVerseCommentaryClick   // NEW
                         )
                     }
                 }
@@ -1396,7 +1447,8 @@ private fun IndependentMultiVersionReader(
                             databaseHelper = databaseHelper,
                             crossRefHelper = crossRefHelper,
                             onCrossRefClick = onCrossRefClick,
-                            refreshKey = refreshKey
+                            refreshKey = refreshKey,
+                            onVerseCommentaryClick = onVerseCommentaryClick   // NEW
                         )
                     }
                 }
@@ -1439,7 +1491,8 @@ private fun IndependentMultiVersionReader(
                             databaseHelper = secondaryDatabaseHelper,
                             crossRefHelper = crossRefHelper,
                             onCrossRefClick = onCrossRefClick,
-                            refreshKey = refreshKey
+                            refreshKey = refreshKey,
+                            onVerseCommentaryClick = onVerseCommentaryClick   // NEW
                         )
                     }
                 }
@@ -1483,7 +1536,8 @@ fun ChapterView(
     databaseHelper: DatabaseHelper? = null,
     crossRefHelper: DatabaseHelper? = null,
     onCrossRefClick: ((Int, Int, Int, Boolean) -> Unit)? = null,
-    refreshKey: Int = 0
+    refreshKey: Int = 0,
+    onVerseCommentaryClick: ((Int, Int, Int) -> Unit)? = null
 ) {
     val processor = remember(content) { VerseTextProcessor() }
     val processedVerses = remember(content, themeColors, isKjvPlus, versionAbbr, refreshKey, viewModel.fontSize) {
@@ -1680,7 +1734,7 @@ fun ChapterView(
                             val isPersistentHighlighted = databaseHelper?.isHighlighted(fullVerse) ?: false
                             val isAnyHighlighted = isTemporaryHighlighted || isPersistentHighlighted
                             val isBookmarked = databaseHelper?.isBookmarked(fullVerse) ?: false
-                            val isNote = databaseHelper?.hasNote(fullVerse) ?: false  // NEW: check for note
+                            val isNote = databaseHelper?.hasNote(fullVerse) ?: false
                             val refCount = crossRefCounts[verse.verseNumber] ?: 0
 
                             if (processedVerse != null) {
@@ -1718,7 +1772,7 @@ fun ChapterView(
                                         if (isBookmarked) {
                                             appendInlineContent("bookmark", "[bookmark]")
                                         }
-                                        if (isNote) {                                        // NEW: append note icon
+                                        if (isNote) {
                                             appendInlineContent("note", "[note]")
                                         }
                                         append(processedVerse.body)
@@ -1726,12 +1780,15 @@ fun ChapterView(
                                             append(" ")
                                             appendInlineContent("crossref_${verse.verseNumber}", "[$refCount]")
                                         }
+                                        if (onVerseCommentaryClick != null) {
+                                            appendInlineContent("commentary_${verse.verseNumber}", "[C]")
+                                        }
                                     }
                                     val inlineContentMap = remember(verse.verseNumber, refCount, isNote, viewModel.fontSize) {
                                         buildMap {
                                             put("bookmark", bookmarkInlineContent)
                                             if (isNote) {
-                                                put("note", noteInlineContent)               // NEW: include note content
+                                                put("note", noteInlineContent)
                                             }
                                             if (refCount > 0 && onCrossRefClick != null) {
                                                 put("crossref_${verse.verseNumber}", InlineTextContent(
@@ -1753,6 +1810,35 @@ fun ChapterView(
                                                             fontSize = (viewModel.fontSize * 0.65f).sp,
                                                             color = themeColors.primary,
                                                             fontWeight = FontWeight.Bold
+                                                        )
+                                                    }
+                                                })
+                                            }
+                                            if (onVerseCommentaryClick != null) {
+                                                put("commentary_${verse.verseNumber}", InlineTextContent(
+                                                    Placeholder(
+                                                        width = (viewModel.fontSize * 1.5f).sp,
+                                                        height = (viewModel.fontSize * 1.5f).sp,
+                                                        placeholderVerticalAlign = PlaceholderVerticalAlign.TextCenter
+                                                    )
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .fillMaxSize()
+                                                            .clickable {
+                                                                onVerseCommentaryClick(
+                                                                    passage.bookNumber,
+                                                                    passage.chapter,
+                                                                    verse.verseNumber
+                                                                )
+                                                            },
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Filled.ChevronRight,
+                                                            contentDescription = "View Verse Commentaries",
+                                                            tint = themeColors.verseNumber,
+                                                            modifier = Modifier.size((viewModel.fontSize * 1.5f).dp)
                                                         )
                                                     }
                                                 })
@@ -1815,7 +1901,7 @@ fun ChapterView(
                                         if (isBookmarked) {
                                             appendInlineContent("bookmark", "[bookmark]")
                                         }
-                                        if (isNote) {                                        // NEW: append note icon
+                                        if (isNote) {
                                             appendInlineContent("note", "[note]")
                                         }
                                         append(verse.text)
@@ -1823,12 +1909,15 @@ fun ChapterView(
                                             append(" ")
                                             appendInlineContent("crossref_${verse.verseNumber}", "[$refCount]")
                                         }
+                                        if (onVerseCommentaryClick != null) {
+                                            appendInlineContent("commentary_${verse.verseNumber}", "[C]")
+                                        }
                                     }
                                     val inlineContentMap = remember(verse.verseNumber, refCount, isNote) {
                                         buildMap {
                                             put("bookmark", bookmarkInlineContent)
                                             if (isNote) {
-                                                put("note", noteInlineContent)               // NEW: include note content
+                                                put("note", noteInlineContent)
                                             }
                                             if (refCount > 0 && onCrossRefClick != null) {
                                                 put("crossref_${verse.verseNumber}", InlineTextContent(
@@ -1849,6 +1938,35 @@ fun ChapterView(
                                                             fontSize = (viewModel.fontSize * 0.65f).sp,
                                                             color = themeColors.primary,
                                                             fontWeight = FontWeight.Bold
+                                                        )
+                                                    }
+                                                })
+                                            }
+                                            if (onVerseCommentaryClick != null) {
+                                                put("commentary_${verse.verseNumber}", InlineTextContent(
+                                                    Placeholder(
+                                                        width = (viewModel.fontSize * 1.5f).sp,
+                                                        height = (viewModel.fontSize * 1.5f).sp,
+                                                        placeholderVerticalAlign = PlaceholderVerticalAlign.TextCenter
+                                                    )
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .fillMaxSize()
+                                                            .clickable {
+                                                                onVerseCommentaryClick(
+                                                                    passage.bookNumber,
+                                                                    passage.chapter,
+                                                                    verse.verseNumber
+                                                                )
+                                                            },
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Filled.ChevronRight,
+                                                            contentDescription = "View Verse Commentaries",
+                                                            tint = themeColors.verseNumber,
+                                                            modifier = Modifier.size((viewModel.fontSize * 1.5f).dp)
                                                         )
                                                     }
                                                 })
