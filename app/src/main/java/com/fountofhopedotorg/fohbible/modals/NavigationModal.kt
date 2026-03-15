@@ -916,7 +916,7 @@ fun BookCard(
     val hex = scope?.let { scopeColors[it] } ?: if (book.testament == Testament.OLD) "#DC2626" else "#059669"
     val baseColor = Color(hex.toColorInt())
     val bgColor = if (themeIsDark) baseColor else lerp(Color.White, baseColor, 0.85f)
-    val borderModifier = if (isSelected) Modifier.border(2.dp, textColor, RoundedCornerShape(4.dp)) else Modifier
+    val borderModifier = if (isSelected) Modifier.border(4.dp, textColor, RoundedCornerShape(4.dp)) else Modifier
     Card(
         onClick = onClick,
         modifier = Modifier
