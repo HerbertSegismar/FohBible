@@ -94,6 +94,32 @@ data class ModalPage(
     val verse: Int? = null
 )
 
+fun formatVerseCommentaryRange(c: VerseCommentary): String {
+    val chTo = c.chapterTo
+    val vTo = c.verseTo
+    return when {
+        chTo == null -> {
+            val versePart = if (vTo == null || c.verseFrom == vTo) {
+                "Verse ${c.verseFrom}"
+            } else {
+                "Verses ${c.verseFrom}-${vTo}"
+            }
+            "$versePart (to end of book)"
+        }
+        c.chapterFrom == chTo -> {
+            if (vTo == null || c.verseFrom == vTo) {
+                "Verse ${c.verseFrom}"
+            } else {
+                "Verses ${c.verseFrom}-$vTo"
+            }
+        }
+        else -> {
+            val endVerse = vTo ?: "end"
+            "Chapters ${c.chapterFrom}:${c.verseFrom} – $chTo:$endVerse"
+        }
+    }
+}
+
 fun sanitizeHtmlContent(content: String?): String {
     if (content.isNullOrEmpty()) return ""
     var sanitized = content
@@ -833,44 +859,35 @@ fun InteractiveModal(
                                                             val previous = viewModel.selectedVerseCommentary
                                                             if (previous != comKey) {
                                                                 viewModel.selectedVerseCommentary = comKey
+
                                                                 val bookNum = currentPage.bookNumber ?: return@DropdownMenuItem
                                                                 val chap = currentPage.chapter ?: return@DropdownMenuItem
                                                                 val vers = currentPage.verse ?: return@DropdownMenuItem
-                                                                val newDisplayName =
-                                                                    verseCommentaryDisplayNames[comKey] ?: comKey
+
+                                                                val newDisplayName = verseCommentaryDisplayNames[comKey] ?: comKey
                                                                 val loadingPage = currentPage.copy(
                                                                     description = newDisplayName,
                                                                     content = "Loading..."
                                                                 )
                                                                 val index = stack.lastIndex
                                                                 stack[index] = loadingPage
+
                                                                 scope.launch {
                                                                     val tempDbHelper = withContext(Dispatchers.IO) {
-                                                                        DatabaseHelper(context, "${comKey}.commentary.sqlite3")
+                                                                        DatabaseHelper(context, "${comKey}.commentaries.sqlite3") // ← FIXED: "commentaries" (plural)
                                                                     }
-                                                                    val commentaries =
-                                                                        getVerseCommentaries(tempDbHelper, bookNum, chap, vers)
+                                                                    val commentaries = getVerseCommentaries(tempDbHelper, bookNum, chap, vers)
                                                                     val newContent = if (commentaries.isNullOrEmpty()) {
                                                                         "No commentaries found."
                                                                     } else {
                                                                         commentaries.joinToString("<br><br>──────────<br><br>") { commentary ->
-                                                                            val rangeText =
-                                                                                if (commentary.chapterFrom == commentary.chapterTo) {
-                                                                                    if (commentary.verseFrom == commentary.verseTo) {
-                                                                                        "Verse ${commentary.verseFrom}"
-                                                                                    } else {
-                                                                                        "Verses ${commentary.verseFrom}-${commentary.verseTo}"
-                                                                                    }
-                                                                                } else {
-                                                                                    "Chapters ${commentary.chapterFrom}:${commentary.verseFrom} – ${commentary.chapterTo}:${commentary.verseTo}"
-                                                                                }
+                                                                            val rangeText = formatVerseCommentaryRange(commentary) // ← now safe with Int?
                                                                             "<b>$rangeText</b><br>${commentary.text}"
                                                                         }
                                                                     }
                                                                     val updateIndex = stack.indexOf(loadingPage)
                                                                     if (updateIndex != -1) {
-                                                                        stack[updateIndex] =
-                                                                            loadingPage.copy(content = newContent)
+                                                                        stack[updateIndex] = loadingPage.copy(content = newContent)
                                                                     }
                                                                     withContext(Dispatchers.IO) { tempDbHelper.close() }
                                                                 }

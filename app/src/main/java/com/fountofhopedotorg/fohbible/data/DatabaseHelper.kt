@@ -206,40 +206,38 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
         try {
             val cursor = database?.rawQuery(
                 """
-            SELECT text, chapter_number_from, verse_number_from, chapter_number_to, verse_number_to
-            FROM commentaries
-            WHERE book_number = ?
-              AND chapter_number_from <= ?
-              AND chapter_number_to >= ?
+            SELECT text, chapter_number_from, verse_number_from, chapter_number_to, verse_number_to 
+            FROM commentaries 
+            WHERE book_number = ? 
+            AND chapter_number_from <= ? 
+            AND (chapter_number_to IS NULL OR chapter_number_to >= ?)
             """.trimIndent(),
                 arrayOf(bookNumber.toString(), chapter.toString(), chapter.toString())
             )
 
-            cursor?.use {
+            cursor?.use { it ->
+                val textIdx = it.getColumnIndexOrThrow("text")
+                val chFromIdx = it.getColumnIndexOrThrow("chapter_number_from")
+                val vFromIdx = it.getColumnIndexOrThrow("verse_number_from")
+                val chToIdx = it.getColumnIndexOrThrow("chapter_number_to")
+                val vToIdx = it.getColumnIndexOrThrow("verse_number_to")
+
                 while (it.moveToNext()) {
-                    val chapterFrom = it.getInt(it.getColumnIndexOrThrow("chapter_number_from"))
-                    val verseFrom = it.getInt(it.getColumnIndexOrThrow("verse_number_from"))
-                    val chapterTo = it.getInt(it.getColumnIndexOrThrow("chapter_number_to"))
-                    val verseTo = it.getInt(it.getColumnIndexOrThrow("verse_number_to"))
+                    val chapterFrom = it.getInt(chFromIdx)
+                    val verseFrom = it.getInt(vFromIdx)
+                    val chapterTo: Int? = if (it.isNull(chToIdx)) null else it.getInt(chToIdx)
+                    val verseTo: Int? = if (it.isNull(vToIdx)) null else it.getInt(vToIdx)
 
-                    val isCovered = when {
-                        chapterFrom == chapterTo -> {
-                            chapter == chapterFrom && verse in verseFrom..verseTo
-                        }
-                        chapterFrom < chapterTo -> {
-                            when (chapter) {
-                                chapterFrom -> verse >= verseFrom
-                                chapterTo -> verse <= verseTo
-                                in (chapterFrom + 1) until chapterTo -> true
-                                else -> false
-                            }
-                        }
-                        else -> false
-                    }
+                    val inChapterRange = chapter >= chapterFrom && (chapterTo?.let { chapter <= it } ?: true)
+                    if (!inChapterRange) continue
 
-                    if (isCovered) {
-                        var text = it.getString(it.getColumnIndexOrThrow("text"))
+                    val lowerMet = chapter != chapterFrom || verse >= verseFrom
+                    val upperMet = chapterTo == null || chapter != chapterTo || (verseTo?.let { verse <= it } ?: true)
+
+                    if (lowerMet && upperMet) {
+                        var text = it.getString(textIdx)
                         text = text.replace(Regex("<script[\\s\\S]*?</script>"), "")
+
                         commentaries.add(VerseCommentary(text, chapterFrom, verseFrom, chapterTo, verseTo))
                     }
                 }

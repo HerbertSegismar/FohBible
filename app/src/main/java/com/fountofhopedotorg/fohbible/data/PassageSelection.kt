@@ -37,6 +37,6 @@ data class VerseCommentary(
     val text: String,
     val chapterFrom: Int,
     val verseFrom: Int,
-    val chapterTo: Int,
-    val verseTo: Int
+    val chapterTo: Int?,
+    val verseTo: Int?
 )
