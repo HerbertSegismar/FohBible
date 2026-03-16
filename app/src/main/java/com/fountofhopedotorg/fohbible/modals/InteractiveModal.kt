@@ -1,5 +1,6 @@
 package com.fountofhopedotorg.fohbible.modals
 
+import android.content.res.Configuration
 import android.graphics.Typeface
 import android.text.SpannableString
 import android.text.method.LinkMovementMethod
@@ -52,6 +53,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -61,6 +63,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.text.HtmlCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.ColorWheelDialog
@@ -623,6 +626,10 @@ fun InteractiveModal(
     } else {
         lightModalColor
     }
+
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
     if (show) {
         if (stack.isEmpty()) return
         val currentPage = stack.last()
@@ -630,9 +637,11 @@ fun InteractiveModal(
         val linkColor = MaterialTheme.colorScheme.primary
         var showModalColorWheel by remember { mutableStateOf(false) }
         var dictionaryDropdownExpanded by remember { mutableStateOf(false) }
-        var commentaryDropdownExpanded by remember { mutableStateOf(false) } // New for verse commentary
+        var commentaryDropdownExpanded by remember { mutableStateOf(false) }
 
         AlertDialog(
+            modifier = if (isLandscape) Modifier.fillMaxWidth(0.9f) else Modifier,
+            properties = if (isLandscape) DialogProperties(usePlatformDefaultWidth = false) else DialogProperties(),
             onDismissRequest = onDismiss,
             title = {
                 Column(
