@@ -224,21 +224,38 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
 
                 while (it.moveToNext()) {
                     val chapterFrom = it.getInt(chFromIdx)
-                    val verseFrom = it.getInt(vFromIdx)
-                    val chapterTo: Int? = if (it.isNull(chToIdx)) null else it.getInt(chToIdx)
-                    val verseTo: Int? = if (it.isNull(vToIdx)) null else it.getInt(vToIdx)
+                    val safeChapterFrom = if (chapterFrom <= 0) 1 else chapterFrom
 
-                    val inChapterRange = chapter >= chapterFrom && (chapterTo?.let { chapter <= it } ?: true)
+                    val verseFrom = if (it.isNull(vFromIdx) || it.getInt(vFromIdx) <= 0) 1 else it.getInt(vFromIdx)
+
+                    // Read to columns
+                    val chapterToRaw = if (it.isNull(chToIdx)) null else it.getInt(chToIdx)
+                    val verseToRaw = if (it.isNull(vToIdx)) null else it.getInt(vToIdx)
+
+                    val chapterTo = if (chapterToRaw != null && chapterToRaw <= 0) null else chapterToRaw
+                    val verseTo = if (verseToRaw != null && verseToRaw <= 0) null else verseToRaw
+
+                    // Case 1: both to columns are null → single‑verse commentary
+                    if (chapterTo == null && verseTo == null) {
+                        if (chapter == safeChapterFrom && verse == verseFrom) {
+                            var text = it.getString(textIdx)
+                            text = text.replace(Regex("<script[\\s\\S]*?</script>"), "")
+                            commentaries.add(VerseCommentary(text, safeChapterFrom, verseFrom, null, null))
+                        }
+                        continue
+                    }
+
+                    // Case 2: range commentary (possibly unbounded within a chapter or across chapters)
+                    val inChapterRange = chapter >= safeChapterFrom && (chapterTo?.let { chapter <= it } ?: true)
                     if (!inChapterRange) continue
 
-                    val lowerMet = chapter != chapterFrom || verse >= verseFrom
+                    val lowerMet = chapter != safeChapterFrom || verse >= verseFrom
                     val upperMet = chapterTo == null || chapter != chapterTo || (verseTo?.let { verse <= it } ?: true)
 
                     if (lowerMet && upperMet) {
                         var text = it.getString(textIdx)
                         text = text.replace(Regex("<script[\\s\\S]*?</script>"), "")
-
-                        commentaries.add(VerseCommentary(text, chapterFrom, verseFrom, chapterTo, verseTo))
+                        commentaries.add(VerseCommentary(text, safeChapterFrom, verseFrom, chapterTo, verseTo))
                     }
                 }
             }
