@@ -573,7 +573,6 @@ fun ReaderScreen(
             initialContent = crossRefContent,
             isOldTestament = currentModalIsOldTestament
         )
-        // NEW: verse commentary modal
         InteractiveModal(
             show = showVerseCommentaryModal,
             onDismiss = { showVerseCommentaryModal = false },
@@ -581,7 +580,7 @@ fun ReaderScreen(
                 viewModel.primaryPassage = passage
                 viewModel.navigateTo(Screen.Reader(passage))
             },
-            databaseHelper = databaseHelper, // always use primary Bible for navigation
+            databaseHelper = databaseHelper,
             initialType = "versecommentary",
             bookNumber = verseCommentaryBook,
             chapter = verseCommentaryChapter,
@@ -666,7 +665,6 @@ private fun SingleVersionReader(
     onCrossRefClick: (Int, Int, Int, Boolean) -> Unit,
     crossRefHelper: DatabaseHelper,
     refreshKey: Int,
-    // NEW parameter
     onVerseCommentaryClick: (Int, Int, Int) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -795,7 +793,7 @@ private fun SingleVersionReader(
                     crossRefHelper = crossRefHelper,
                     onCrossRefClick = onCrossRefClick,
                     refreshKey = refreshKey,
-                    onVerseCommentaryClick = onVerseCommentaryClick   // NEW
+                    onVerseCommentaryClick = onVerseCommentaryClick
                 )
             }
         }
@@ -823,7 +821,6 @@ private fun SyncedMultiVersionReader(
     onCrossRefClick: (Int, Int, Int, Boolean) -> Unit,
     crossRefHelper: DatabaseHelper,
     refreshKey: Int,
-    // NEW parameter
     onVerseCommentaryClick: (Int, Int, Int) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -1014,7 +1011,7 @@ private fun SyncedMultiVersionReader(
                             crossRefHelper = crossRefHelper,
                             onCrossRefClick = onCrossRefClick,
                             refreshKey = refreshKey,
-                            onVerseCommentaryClick = onVerseCommentaryClick   // NEW
+                            onVerseCommentaryClick = onVerseCommentaryClick
                         )
                         ChapterView(
                             passage = thisPassage,
@@ -1046,7 +1043,7 @@ private fun SyncedMultiVersionReader(
                             crossRefHelper = crossRefHelper,
                             onCrossRefClick = onCrossRefClick,
                             refreshKey = refreshKey,
-                            onVerseCommentaryClick = onVerseCommentaryClick   // NEW
+                            onVerseCommentaryClick = onVerseCommentaryClick
                         )
                     }
                 } else {
@@ -1081,7 +1078,7 @@ private fun SyncedMultiVersionReader(
                             crossRefHelper = crossRefHelper,
                             onCrossRefClick = onCrossRefClick,
                             refreshKey = refreshKey,
-                            onVerseCommentaryClick = onVerseCommentaryClick   // NEW
+                            onVerseCommentaryClick = onVerseCommentaryClick
                         )
                         ChapterView(
                             passage = thisPassage,
@@ -1113,7 +1110,7 @@ private fun SyncedMultiVersionReader(
                             crossRefHelper = crossRefHelper,
                             onCrossRefClick = onCrossRefClick,
                             refreshKey = refreshKey,
-                            onVerseCommentaryClick = onVerseCommentaryClick   // NEW
+                            onVerseCommentaryClick = onVerseCommentaryClick
                         )
                     }
                 }
@@ -1146,7 +1143,6 @@ private fun IndependentMultiVersionReader(
     onCrossRefClick: (Int, Int, Int, Boolean) -> Unit,
     crossRefHelper: DatabaseHelper,
     refreshKey: Int,
-    // NEW parameter
     onVerseCommentaryClick: (Int, Int, Int) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -1357,7 +1353,7 @@ private fun IndependentMultiVersionReader(
                             crossRefHelper = crossRefHelper,
                             onCrossRefClick = onCrossRefClick,
                             refreshKey = refreshKey,
-                            onVerseCommentaryClick = onVerseCommentaryClick   // NEW
+                            onVerseCommentaryClick = onVerseCommentaryClick
                         )
                     }
                 }
@@ -1401,7 +1397,7 @@ private fun IndependentMultiVersionReader(
                             crossRefHelper = crossRefHelper,
                             onCrossRefClick = onCrossRefClick,
                             refreshKey = refreshKey,
-                            onVerseCommentaryClick = onVerseCommentaryClick   // NEW
+                            onVerseCommentaryClick = onVerseCommentaryClick
                         )
                     }
                 }
@@ -1448,7 +1444,7 @@ private fun IndependentMultiVersionReader(
                             crossRefHelper = crossRefHelper,
                             onCrossRefClick = onCrossRefClick,
                             refreshKey = refreshKey,
-                            onVerseCommentaryClick = onVerseCommentaryClick   // NEW
+                            onVerseCommentaryClick = onVerseCommentaryClick
                         )
                     }
                 }
@@ -1492,7 +1488,7 @@ private fun IndependentMultiVersionReader(
                             crossRefHelper = crossRefHelper,
                             onCrossRefClick = onCrossRefClick,
                             refreshKey = refreshKey,
-                            onVerseCommentaryClick = onVerseCommentaryClick   // NEW
+                            onVerseCommentaryClick = onVerseCommentaryClick
                         )
                     }
                 }

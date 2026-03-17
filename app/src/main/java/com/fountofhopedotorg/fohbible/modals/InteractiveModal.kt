@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -50,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
@@ -342,8 +342,8 @@ fun InteractiveModal(
         primary = MaterialTheme.colorScheme.primary,
         tagColor = MaterialTheme.colorScheme.secondary,
         tagBg = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f),
-        wordsOfJesus = androidx.compose.ui.graphics.Color(0xFFDA4227),
-        searchHighlightBg = if (viewModel.darkTheme) androidx.compose.ui.graphics.Color(0xFF81D4FA).copy(alpha = 0.3f) else androidx.compose.ui.graphics.Color.Yellow.copy(alpha = 0.3f),
+        wordsOfJesus = Color(0xFFDA4227),
+        searchHighlightBg = if (viewModel.darkTheme) Color(0xFF81D4FA).copy(alpha = 0.3f) else Color.Yellow.copy(alpha = 0.3f),
         highlightIcon = MaterialTheme.colorScheme.primary
     )
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
@@ -395,15 +395,15 @@ fun InteractiveModal(
         "oxford" to "Oxford Dictionary",
         "topical" to "Topical Bible Dictionary"
     )
-    val verseCommentaries = listOf("cbsc", "ebc", "fairb", "hawk", "mhwbc", "spurg", "srb")
+    val verseCommentaries = listOf("cbsc", "ebc", "fairbairn", "hawker", "mhwbc", "spurgeon", "scofield")
     val verseCommentaryDisplayNames = mapOf(
         "cbsc" to "Cambridge Bible Commentary",
         "ebc" to "Expositor's Bible Commentary",
-        "fairb" to "Typology of Scripture",
-        "hawk" to "Hawker's Poor Man's Commentary",
+        "fairbairn" to "Typology of Scripture",
+        "hawker" to "Hawker's Poor Man's Commentary",
         "mhwbc" to "Matthew Henry's",
-        "spurg" to "Charles Haddon Spurgeon's",
-        "srb" to "Scofield Reference Bible"
+        "spurgeon" to "Charles Haddon Spurgeon's",
+        "scofield" to "Scofield Reference Bible"
     )
 
     LaunchedEffect(show, viewModel.selectedDictionary, viewModel.selectedVerseCommentary, databaseHelper?.databaseName) {
@@ -611,12 +611,12 @@ fun InteractiveModal(
             }
         }
     }
-    val lightModalColor = if (viewModel.lightModalBackgroundColor != androidx.compose.ui.graphics.Color.Unspecified) {
+    val lightModalColor = if (viewModel.lightModalBackgroundColor != Color.Unspecified) {
         viewModel.lightModalBackgroundColor
     } else {
         MaterialTheme.colorScheme.surface
     }
-    val darkModalColor = if (viewModel.darkModalBackgroundColor != androidx.compose.ui.graphics.Color.Unspecified) {
+    val darkModalColor = if (viewModel.darkModalBackgroundColor != Color.Unspecified) {
         viewModel.darkModalBackgroundColor
     } else {
         MaterialTheme.colorScheme.surface
@@ -697,7 +697,7 @@ fun InteractiveModal(
                                 "definition" -> {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.fillMaxWidth().padding(top = 2.dp)
+                                        modifier = Modifier.fillMaxWidth()
                                     ) {
                                         Text(
                                             text = description,
@@ -802,7 +802,7 @@ fun InteractiveModal(
                                 "versecommentary" -> {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.fillMaxWidth().padding(top = 2.dp)
+                                        modifier = Modifier.fillMaxWidth()
                                     ) {
                                         Text(
                                             text = description,
@@ -875,8 +875,7 @@ fun InteractiveModal(
                                     Text(
                                         text = description,
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(top = 2.dp)
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -914,7 +913,6 @@ fun InteractiveModal(
                     Column(
                         modifier = Modifier
                             .verticalScroll(rememberScrollState())
-                            .padding(bottom = 8.dp)
                     ) {
                         var lastChapter: Int? = null
                         verses.take(currentBatch).forEach { verse ->
@@ -925,8 +923,7 @@ fun InteractiveModal(
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 8.dp),
+                                        .fillMaxWidth(),
                                     fontFamily = currentFontFamily
                                 )
                                 lastChapter = verse.chapter
@@ -936,7 +933,6 @@ fun InteractiveModal(
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 8.dp)
                                 ) {
                                     processedVerse.header?.let { header ->
                                         if (header.text.isNotEmpty()) {
@@ -945,7 +941,6 @@ fun InteractiveModal(
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 fontWeight = FontWeight.SemiBold,
                                                 color = themeColors.tagColor,
-                                                modifier = Modifier.padding(bottom = 4.dp),
                                                 fontFamily = currentFontFamily
                                             )
                                         }
@@ -1242,7 +1237,7 @@ fun InteractiveModal(
                                     for (span in colorSpans) {
                                         spannable.removeSpan(span)
                                     }
-                                    textView.setTextColor(androidx.compose.ui.graphics.Color.White.toArgb())
+                                    textView.setTextColor(Color.White.toArgb())
                                 } else {
                                     textView.setTextColor(textColor.toArgb())
                                 }
@@ -1251,7 +1246,6 @@ fun InteractiveModal(
                             },
                             modifier = Modifier
                                 .verticalScroll(rememberScrollState())
-                                .padding(bottom = 8.dp)
                         )
                     }
                 }
