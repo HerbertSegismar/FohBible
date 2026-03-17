@@ -150,7 +150,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
         }
     }
 
-    fun getCrossReferenceCountsForChapter(book: Int, chapter: Int): Map<Int, Int> {
+    fun getCrossReferenceCountsForChapter(book: Int, chapter: Int?): Map<Int, Int> {
         val map = mutableMapOf<Int, Int>()
         try {
             database?.rawQuery(

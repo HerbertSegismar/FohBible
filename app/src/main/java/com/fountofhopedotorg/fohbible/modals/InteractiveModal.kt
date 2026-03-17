@@ -18,11 +18,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -37,17 +42,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
@@ -55,7 +62,10 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -386,6 +396,7 @@ fun InteractiveModal(
     var strongDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var commentaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var verseCommentaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
+    var crossRefHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     val dictionaries = listOf("atsbd", "noah", "cbtel", "isbe", "oxford", "topical")
     val dictionaryDisplayNames = mapOf(
         "atsbd" to "ATSBD",
@@ -405,6 +416,18 @@ fun InteractiveModal(
         "spurgeon" to "Charles Haddon Spurgeon's",
         "scofield" to "Scofield Reference Bible"
     )
+
+    DisposableEffect(Unit) {
+        val crossHelper = DatabaseHelper(context, "obx.crossreferences.sqlite3")
+        crossRefHelper = crossHelper
+        onDispose {
+            crossHelper.close()
+            dictionaryDbHelper?.close()
+            strongDbHelper?.close()
+            commentaryDbHelper?.close()
+            verseCommentaryDbHelper?.close()
+        }
+    }
 
     LaunchedEffect(show, viewModel.selectedDictionary, viewModel.selectedVerseCommentary, databaseHelper?.databaseName) {
         dictionaryDbHelper?.close()
@@ -611,6 +634,66 @@ fun InteractiveModal(
             }
         }
     }
+
+    val onCrossRefClick: (bookNumber: Int, chapter: Int, verseNumber: Int, isOldTestament: Boolean) -> Unit = { book, chap, verseNum, isOld ->
+        scope.launch {
+            val refs = withContext(Dispatchers.IO) {
+                crossRefHelper?.getCrossReferences(book, chap, verseNum) ?: emptyList()
+            }
+            val bookName = BibleData.getBookByCustomNumber(book)?.name ?: book.toString()
+            val source = "References for $bookName $chap:$verseNum"
+            val htmlItems = refs.joinToString("<br>") { ref ->
+                val toBook = BibleData.getBookByCustomNumber(ref.bookTo)?.name ?: ref.bookTo.toString()
+                val verseRange = if (ref.verseToStart == ref.verseToEnd) {
+                    ref.verseToStart.toString()
+                } else {
+                    "${ref.verseToStart}-${ref.verseToEnd}"
+                }
+                val href = "B:${ref.bookTo} ${ref.chapterTo}:$verseRange"
+                "<a href=\"$href\">$toBook ${ref.chapterTo}:$verseRange</a>"
+            }
+            val newPage = ModalPage(
+                title = source,
+                type = "commentary",
+                content = htmlItems,
+                isOldTestament = isOld
+            )
+            stack.add(newPage)
+        }
+    }
+
+    val onVerseCommentaryClick: (bookNumber: Int, chapter: Int, verseNumber: Int, isOldTestament: Boolean) -> Unit = { book, chap, verseNum, isOld ->
+        val displayName = verseCommentaryDisplayNames[viewModel.selectedVerseCommentary] ?: viewModel.selectedVerseCommentary
+        val bookName = BibleData.getBookByCustomNumber(book)?.name ?: "Book"
+        val title = "Notes on $bookName $chap:$verseNum"
+        val loadingPage = ModalPage(
+            title = title,
+            type = "versecommentary",
+            content = "Loading...",
+            description = displayName,
+            isOldTestament = isOld,
+            bookNumber = book,
+            chapter = chap,
+            verse = verseNum
+        )
+        stack.add(loadingPage)
+        scope.launch {
+            val commentaries = withContext(Dispatchers.IO) {
+                verseCommentaryDbHelper?.getCommentariesForVerse(book, chap, verseNum)
+            }
+            val newContent = if (commentaries.isNullOrEmpty()) {
+                "No commentaries available for this verse."
+            } else {
+                commentaries.joinToString("\n\n──────────\n\n") { it.text }
+            }
+            val index = stack.indexOf(loadingPage)
+            if (index != -1) {
+                stack[index] = loadingPage.copy(content = newContent)
+            }
+        }
+    }
+
+
     val lightModalColor = if (viewModel.lightModalBackgroundColor != Color.Unspecified) {
         viewModel.lightModalBackgroundColor
     } else {
@@ -908,6 +991,17 @@ fun InteractiveModal(
                         }
                         result
                     }
+                    val chapters = remember(verses) { verses.map { it.chapter }.distinct() }
+                    val crossRefCounts = remember { mutableStateMapOf<Int, Int>() }
+                    LaunchedEffect(chapters, crossRefHelper) {
+                        crossRefCounts.clear()
+                        chapters.forEach { chap ->
+                            val counts = withContext(Dispatchers.IO) {
+                                crossRefHelper?.getCrossReferenceCountsForChapter(passage.bookNumber, chap) ?: emptyMap()
+                            }
+                            crossRefCounts.putAll(counts)
+                        }
+                    }
                     var currentBatch by remember(verses) { mutableIntStateOf(50) }
                     val showChapterHeaders = remember(verses) { verses.mapNotNull { it.chapter }.distinct().size > 1 }
                     Column(
@@ -930,6 +1024,95 @@ fun InteractiveModal(
                             }
                             val processedVerse = processedVerses[verse.verseNumber]
                             if (processedVerse != null) {
+                                val refCount = crossRefCounts[verse.verseNumber] ?: 0
+                                val annotatedString = buildAnnotatedString {
+                                    withStyle(
+                                        style = SpanStyle(
+                                            fontWeight = FontWeight.Bold,
+                                            color = themeColors.verseNumber,
+                                            fontSize = (viewModel.fontSize * 0.85f * 0.778f).sp
+                                        )
+                                    ) {
+                                        append(" ${verse.verseNumber} ")
+                                    }
+                                    append(processedVerse.body)
+                                    if (refCount > 0) {
+                                        append(" ")
+                                        appendInlineContent("crossref_${verse.verseNumber}", "[$refCount]")
+                                    }
+                                    appendInlineContent("commentary_${verse.verseNumber}", "[C]")
+                                }
+
+                                val inlineContentMap = remember(verse.verseNumber, refCount) {
+                                    buildMap {
+                                        if (refCount > 0) {
+                                            put("crossref_${verse.verseNumber}", InlineTextContent(
+                                                Placeholder(
+                                                    width = (viewModel.fontSize * 1.2f).sp,
+                                                    height = (viewModel.fontSize).sp,
+                                                    placeholderVerticalAlign = PlaceholderVerticalAlign.TextCenter
+                                                )
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .clickable {
+                                                            onCrossRefClick(
+                                                                passage.bookNumber,
+                                                                verse.chapter ?: passage.chapter,
+                                                                verse.verseNumber,
+                                                                currentPage.isOldTestament
+                                                            )
+                                                        }
+                                                        .background(
+                                                            themeColors.primary.copy(alpha = 0.15f),
+                                                            RoundedCornerShape(2.dp)
+                                                        )
+                                                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                                                        .clip(RoundedCornerShape(2.dp)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(
+                                                        text = "$refCount",
+                                                        fontSize = (viewModel.fontSize * 0.6f).sp,
+                                                        color = themeColors.primary,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
+                                            })
+                                        }
+                                        put("commentary_${verse.verseNumber}", InlineTextContent(
+                                            Placeholder(
+                                                width = (viewModel.fontSize * 1.5f).sp,
+                                                height = (viewModel.fontSize).sp,
+                                                placeholderVerticalAlign = PlaceholderVerticalAlign.TextCenter
+                                            )
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .clickable {
+                                                        onVerseCommentaryClick(
+                                                            passage.bookNumber,
+                                                            verse.chapter ?: passage.chapter,
+                                                            verse.verseNumber,
+                                                            currentPage.isOldTestament
+                                                        )
+                                                    },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Filled.ChevronRight,
+                                                    contentDescription = "View Verse Commentaries",
+                                                    tint = themeColors.verseNumber,
+                                                    modifier = Modifier.size((viewModel.fontSize).dp)
+                                                )
+                                            }
+                                        })
+                                    }
+                                }
+
+                                var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -945,45 +1128,35 @@ fun InteractiveModal(
                                             )
                                         }
                                     }
-                                    Row(modifier = Modifier.fillMaxWidth()) {
-                                        val annotatedString = buildAnnotatedString {
-                                            withStyle(
-                                                style = SpanStyle(
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = themeColors.verseNumber,
-                                                    fontSize = (viewModel.fontSize * 0.85f * 0.778f).sp
-                                                )
-                                            ) {
-                                                append(" ${verse.verseNumber} ")
-                                            }
-                                            append(processedVerse.body)
-                                        }
-                                        var textLayoutResult: androidx.compose.ui.text.TextLayoutResult? by remember { mutableStateOf(null) }
-                                        Text(
-                                            text = annotatedString,
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .pointerInput(Unit) {
-                                                    detectTapGestures { offset: Offset ->
-                                                        textLayoutResult?.let { layout ->
-                                                            val position = layout.getOffsetForPosition(offset)
-                                                            val annotations = annotatedString.getStringAnnotations(start = position, end = position)
-                                                            annotations.forEach { annotation ->
-                                                                when (annotation.tag) {
-                                                                    "word" -> onWordPress(annotation.item)
-                                                                    "strong" -> onStrongsPress(annotation.item, passage.bookNumber)
-                                                                    "tag" -> onTagPress(annotation.item, passage)
-                                                                }
+
+                                    Text(
+                                        text = annotatedString,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .pointerInput(Unit) {
+                                                detectTapGestures { offset ->
+                                                    textLayoutResult?.let { layout ->
+                                                        val position = layout.getOffsetForPosition(offset)
+                                                        val annotations = annotatedString.getStringAnnotations(
+                                                            start = position,
+                                                            end = position
+                                                        )
+                                                        annotations.forEach { annotation ->
+                                                            when (annotation.tag) {
+                                                                "word" -> onWordPress(annotation.item)
+                                                                "strong" -> onStrongsPress(annotation.item, passage.bookNumber)
+                                                                "tag" -> onTagPress(annotation.item, passage)
                                                             }
                                                         }
                                                     }
-                                                },
-                                            fontSize = (viewModel.fontSize * 0.85f).sp,
-                                            lineHeight = (viewModel.fontSize * 0.85f * 1.333f).sp,
-                                            fontFamily = currentFontFamily,
-                                            onTextLayout = { textLayoutResult = it }
-                                        )
-                                    }
+                                                }
+                                            },
+                                        fontSize = (viewModel.fontSize * 0.85f).sp,
+                                        lineHeight = (viewModel.fontSize * 0.85f * 1.333f).sp,
+                                        fontFamily = currentFontFamily,
+                                        inlineContent = inlineContentMap,
+                                        onTextLayout = { textLayoutResult = it }
+                                    )
                                 }
                             }
                         }
