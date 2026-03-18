@@ -283,7 +283,6 @@ fun NotesScreen(
                             },
                             onNavigate = {
                                 if (!multiSelectMode) {
-                                    // Navigate to reader at the passage (first verse of the range)
                                     val bookNumber = BibleData.getBookByName(note.bookName)?.customNumber ?: 1
                                     val passage = PassageSelection(
                                         bookNumber = bookNumber,
@@ -363,7 +362,6 @@ fun NotesScreen(
                 ),
                 databaseHelper = dbHelper,
                 onSave = {
-                    // Refresh notes
                     loadNotes(dbHelper) { loadedNotes ->
                         notes = sortNotes(loadedNotes, sortOrder)
                     }

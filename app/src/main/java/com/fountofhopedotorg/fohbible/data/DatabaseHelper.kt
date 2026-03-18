@@ -145,9 +145,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                     inputStream.copyTo(outputStream)
                 }
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        } catch (_: Exception) {}
     }
 
     fun getCrossReferenceCountsForChapter(book: Int, chapter: Int?): Map<Int, Int> {
@@ -227,15 +225,11 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                     val safeChapterFrom = if (chapterFrom <= 0) 1 else chapterFrom
 
                     val verseFrom = if (it.isNull(vFromIdx) || it.getInt(vFromIdx) <= 0) 1 else it.getInt(vFromIdx)
-
-                    // Read to columns
                     val chapterToRaw = if (it.isNull(chToIdx)) null else it.getInt(chToIdx)
                     val verseToRaw = if (it.isNull(vToIdx)) null else it.getInt(vToIdx)
 
                     val chapterTo = if (chapterToRaw != null && chapterToRaw <= 0) null else chapterToRaw
                     val verseTo = if (verseToRaw != null && verseToRaw <= 0) null else verseToRaw
-
-                    // Case 1: both to columns are null → single‑verse commentary
                     if (chapterTo == null && verseTo == null) {
                         if (chapter == safeChapterFrom && verse == verseFrom) {
                             var text = it.getString(textIdx)
@@ -244,8 +238,6 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                         }
                         continue
                     }
-
-                    // Case 2: range commentary (possibly unbounded within a chapter or across chapters)
                     val inChapterRange = chapter >= safeChapterFrom && (chapterTo?.let { chapter <= it } ?: true)
                     if (!inChapterRange) continue
 
@@ -259,8 +251,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                     }
                 }
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (_: Exception) {
         }
         return commentaries
     }
@@ -278,8 +269,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                     count = it.getInt(0)
                 }
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (_: Exception) {
         }
         return count
     }
@@ -309,8 +299,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                     }
                 }
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        }catch (_: Exception) {
         }
         return verses
     }
@@ -337,8 +326,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                     }
                 }
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (_: Exception) {
         }
         return subheadings
     }
@@ -388,8 +376,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                     }
                 }
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (_: Exception) {
         }
         return verses
     }
@@ -507,7 +494,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                 put(COLUMN_START_VERSE, startVerse)
                 put(COLUMN_END_VERSE, endVerse)
                 put(COLUMN_NOTE, note)
-                put(COLUMN_TIMESTAMP, System.currentTimeMillis() / 1000) // current epoch seconds
+                put(COLUMN_TIMESTAMP, System.currentTimeMillis() / 1000)
             }
             database?.insertWithOnConflict(
                 NOTES_TABLE,

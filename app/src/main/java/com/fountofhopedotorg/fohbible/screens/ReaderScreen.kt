@@ -253,8 +253,6 @@ fun ReaderScreen(
     var commentaryTitle by remember { mutableStateOf("") }
     var commentaryContent by remember { mutableStateOf("") }
     var commentaryBibleDb by remember { mutableStateOf<DatabaseHelper?>(null) }
-
-    // NEW: state for verse commentary modal
     var showVerseCommentaryModal by remember { mutableStateOf(false) }
     var verseCommentaryBook by remember { mutableIntStateOf(0) }
     var verseCommentaryChapter by remember { mutableIntStateOf(0) }
@@ -310,13 +308,11 @@ fun ReaderScreen(
         commentaryBibleDb = if (isPrimary) databaseHelper else secondaryDatabaseHelper
         showCommentaryModal = true
     }
-
-    // NEW: callback for verse commentary icon
     val onVerseCommentaryClick: (bookNumber: Int, chapter: Int, verseNumber: Int) -> Unit = { book, chap, verseNum ->
         verseCommentaryBook = book
         verseCommentaryChapter = chap
         verseCommentaryVerse = verseNum
-        currentModalIsOldTestament = viewModel.isOldTestament  // assume OT/NT based on primary version
+        currentModalIsOldTestament = viewModel.isOldTestament
         showVerseCommentaryModal = true
     }
 
@@ -402,7 +398,7 @@ fun ReaderScreen(
                 onCrossRefClick = onCrossRefClick,
                 crossRefHelper = crossRefHelper,
                 refreshKey = refreshKey,
-                onVerseCommentaryClick = onVerseCommentaryClick   // NEW
+                onVerseCommentaryClick = onVerseCommentaryClick
             )
         } else if (synced) {
             SyncedMultiVersionReader(
@@ -431,7 +427,7 @@ fun ReaderScreen(
                 onCrossRefClick = onCrossRefClick,
                 crossRefHelper = crossRefHelper,
                 refreshKey = refreshKey,
-                onVerseCommentaryClick = onVerseCommentaryClick   // NEW
+                onVerseCommentaryClick = onVerseCommentaryClick
             )
         } else {
             IndependentMultiVersionReader(
@@ -465,7 +461,7 @@ fun ReaderScreen(
                 onCrossRefClick = onCrossRefClick,
                 crossRefHelper = crossRefHelper,
                 refreshKey = refreshKey,
-                onVerseCommentaryClick = onVerseCommentaryClick   // NEW
+                onVerseCommentaryClick = onVerseCommentaryClick
             )
         }
         FloatingActionButton(

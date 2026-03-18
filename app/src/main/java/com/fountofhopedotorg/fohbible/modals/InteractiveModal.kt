@@ -41,6 +41,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -69,6 +70,7 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -79,6 +81,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.ColorWheelDialog
 import com.fountofhopedotorg.fohbible.data.BibleData
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
+import com.fountofhopedotorg.fohbible.data.ModalPage
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.data.Testament
 import com.fountofhopedotorg.fohbible.data.Verse
@@ -91,21 +94,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
-
-data class ModalPage(
-    val title: String,
-    val type: String,
-    val content: String? = null,
-    val verses: List<Verse>? = null,
-    val passage: PassageSelection? = null,
-    val word: String? = null,
-    val strongNumber: String? = null,
-    val description: String? = null,
-    val isOldTestament: Boolean,
-    val bookNumber: Int? = null,
-    val chapter: Int? = null,
-    val verse: Int? = null
-)
+import java.util.Locale.getDefault
 
 fun sanitizeHtmlContent(content: String?): String {
     if (content.isNullOrEmpty()) return ""
@@ -198,8 +187,7 @@ fun parseVerseLink(href: String, linkText: String): PassageSelection? {
             verse = verseStart,
             verseEnd = verseEnd
         )
-    } catch (e: Exception) {
-        e.printStackTrace()
+    } catch (_: Exception) {
         return null
     }
 }
@@ -721,6 +709,7 @@ fun InteractiveModal(
         var showModalColorWheel by remember { mutableStateOf(false) }
         var dictionaryDropdownExpanded by remember { mutableStateOf(false) }
         var commentaryDropdownExpanded by remember { mutableStateOf(false) }
+        var showEditWordDialog by remember { mutableStateOf(false) }
 
         AlertDialog(
             modifier = if (isLandscape) Modifier.fillMaxWidth(0.9f) else Modifier,
@@ -734,11 +723,28 @@ fun InteractiveModal(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = currentPage.title,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
+                        if (currentPage.type == "definition" && currentPage.word != null) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Definition of ",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = currentPage.word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() },
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.clickable { showEditWordDialog = true },
+                                    textDecoration = TextDecoration.Underline
+                                )
+                            }
+                        } else {
+                            Text(
+                                text = currentPage.title,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
                         if (currentPage.type == "verses" && currentPage.passage != null) {
                             IconButton(
                                 onClick = {
@@ -1557,6 +1563,83 @@ fun InteractiveModal(
                     showModalColorWheel = false
                 },
                 initialColor = modalBackgroundColor
+            )
+        }
+        if (showEditWordDialog) {
+            var newWord by remember { mutableStateOf(currentPage.word ?: "") }
+            AlertDialog(
+                onDismissRequest = { showEditWordDialog = false },
+                title = { Text("Edit Word") },
+                text = {
+                    TextField(
+                        value = newWord.replaceFirstChar {
+                            if (it.isLowerCase()) it.titlecase(
+                                getDefault()
+                            ) else it.toString()
+                        },
+                        onValueChange = { newWord = it },
+                        singleLine = true,
+                        label = { Text("Enter word") }
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showEditWordDialog = false
+                            val trimmedWord = newWord.trim()
+                            if (trimmedWord.isNotEmpty() && trimmedWord != currentPage.word) {
+                                val capitalizedWord = trimmedWord.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
+                                val loadingTitle = "Searching for $capitalizedWord..."
+                                val loadingPage = currentPage.copy(
+                                    title = loadingTitle,
+                                    content = "Loading...",
+                                    word = trimmedWord
+                                )
+                                val index = stack.lastIndex
+                                stack[index] = loadingPage
+                                scope.launch {
+                                    val pairs = getDefinitionOrClosest(dictionaryDbHelper, trimmedWord) ?: emptyList()
+                                    val newContent: String
+                                    val newTitle: String
+                                    if (pairs.isNotEmpty()) {
+                                        val isExact = pairs.size == 1 && pairs[0].first.equals(trimmedWord, ignoreCase = true)
+                                        newTitle = if (isExact) {
+                                            "Definition of ${pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }}"
+                                        } else if (pairs.size == 1) {
+                                            val cap = pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }
+                                            "No match for \"$capitalizedWord\". Closest: $cap"
+                                        } else {
+                                            "Matches for \"$capitalizedWord\""
+                                        }
+                                        newContent = if (isExact) {
+                                            sanitizeHtmlContent(pairs[0].second)
+                                        } else if (pairs.size == 1) {
+                                            cleanDefinition(pairs[0].first, pairs[0].second)
+                                        } else {
+                                            pairs.joinToString("<br><hr><br>") { p ->
+                                                sanitizeHtmlContent(p.second)
+                                            }
+                                        }
+                                    } else {
+                                        newTitle = "Definition of $capitalizedWord not found"
+                                        newContent = "No definition found."
+                                    }
+                                    val updateIndex = stack.indexOf(loadingPage)
+                                    if (updateIndex != -1) {
+                                        stack[updateIndex] = loadingPage.copy(title = newTitle, content = newContent)
+                                    }
+                                }
+                            }
+                        }
+                    ) {
+                        Text("Update")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showEditWordDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
             )
         }
     }

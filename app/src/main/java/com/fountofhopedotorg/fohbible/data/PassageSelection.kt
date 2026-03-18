@@ -9,6 +9,21 @@ data class PassageSelection(
     var chapterEnd: Int? = null
 )
 
+data class ModalPage(
+    val title: String,
+    val type: String,
+    val content: String? = null,
+    val verses: List<Verse>? = null,
+    val passage: PassageSelection? = null,
+    val word: String? = null,
+    val strongNumber: String? = null,
+    val description: String? = null,
+    val isOldTestament: Boolean,
+    val bookNumber: Int? = null,
+    val chapter: Int? = null,
+    val verse: Int? = null
+)
+
 data class Verse(
     val verseNumber: Int,
     val text: String,

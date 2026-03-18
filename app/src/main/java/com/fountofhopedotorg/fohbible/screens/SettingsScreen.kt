@@ -745,8 +745,6 @@ fun SettingsScreen() {
             }
         )
     }
-
-    // NEW: About dialog
     if (showAboutDialog) {
         AboutDialog(onDismiss = { showAboutDialog = false })
     }
@@ -1129,7 +1127,6 @@ fun AboutDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current
     val versionName = remember {
         try {
-            @Suppress("DEPRECATION")
             context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.0"
         } catch (_: Exception) {
             "Unknown"
