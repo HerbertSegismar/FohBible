@@ -408,7 +408,7 @@ fun InteractiveModal(
         "hawker" to "Hawker's Poor Man's Commentary",
         "mhwbc" to "Matthew Henry's Commentary",
         "spurgeon" to "Charles Spurgeon's Commentary",
-        "scofield" to "Scofield Reference Bible"
+        "scofield" to "Scofield Reference Bible Commentary"
     )
 
     DisposableEffect(Unit) {
