@@ -429,7 +429,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
 
                     if (viewModel.showNavigationModal) {
                         NavigationModal(
-                            showNavigationModal = true,
                             onDismissRequest = { viewModel.showNavigationModal = false },
                             onPassageSelected = { passage ->
                                 viewModel.primaryPassage = passage
@@ -439,24 +438,25 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 viewModel.showNavigationModal = false
                                 viewModel.updateCurrentScreen(Screen.Reader(passage))
                             },
+                            showNavigationModal = true,
                             databaseHelper = dbHelper,
                             initialBookNumber = viewModel.primaryPassage.bookNumber,
                             initialChapter = viewModel.primaryPassage.chapter,
-                            initialVerse = viewModel.primaryPassage.verse
+                            initialVerse = viewModel.primaryPassage.verse,
                         )
                     }
                     if (viewModel.showSecondaryNavigationModal) {
                         NavigationModal(
-                            showNavigationModal = true,
                             onDismissRequest = { viewModel.showSecondaryNavigationModal = false },
                             onPassageSelected = { passage ->
                                 viewModel.secondaryPassage = passage
                                 viewModel.showSecondaryNavigationModal = false
                             },
+                            showNavigationModal = true,
                             databaseHelper = dbHelper,
                             initialBookNumber = viewModel.secondaryPassage.bookNumber,
                             initialChapter = viewModel.secondaryPassage.chapter,
-                            initialVerse = viewModel.secondaryPassage.verse
+                            initialVerse = viewModel.secondaryPassage.verse,
                         )
                     }
                     if (viewModel.showPrimaryVersionDropdown) {

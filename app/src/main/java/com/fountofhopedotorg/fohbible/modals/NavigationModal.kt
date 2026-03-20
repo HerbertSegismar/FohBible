@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
-
 package com.fountofhopedotorg.fohbible.modals
 
 import androidx.compose.foundation.background
@@ -107,7 +105,7 @@ fun getScopeForBookNumber(bookNumber: Int): String? {
     }
     return null
 }
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NavigationModal(
     onDismissRequest: () -> Unit,
@@ -120,7 +118,6 @@ fun NavigationModal(
 ) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-
     val oldTestamentBooks = remember { BibleData.oldTestamentBooks.map { it.toBookUi() } }
     val newTestamentBooks = remember { BibleData.newTestamentBooks.map { it.toBookUi() } }
     var selectedBook by remember { mutableStateOf<BookUi?>(null) }
@@ -129,85 +126,16 @@ fun NavigationModal(
     var focusedInput by remember { mutableStateOf<String?>("chapter") }
     var maxVerse by remember { mutableIntStateOf(0) }
     var isLoadingVerseCount by remember { mutableStateOf(false) }
+    var showChapterFlash by remember { mutableStateOf(false) }
+    var showVerseFlash by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+    var pendingVerseDigit by remember { mutableStateOf<String?>(null) }
+
     val selectedBibleBook by remember(selectedBook) {
         derivedStateOf {
             selectedBook?.let { BibleData.getBookByCustomNumber(it.bookNumber) }
         }
     }
-    var showChapterFlash by remember { mutableStateOf(false) }
-    var showVerseFlash by remember { mutableStateOf(false) }
-    val coroutineScope = rememberCoroutineScope()
-
-    val initialBook = remember(initialBookNumber) {
-        initialBookNumber?.let { number ->
-            (oldTestamentBooks + newTestamentBooks).find { it.bookNumber == number }
-        }
-    }
-    var initialSet by remember { mutableStateOf(false) }
-    LaunchedEffect(initialBook) {
-        if (!initialSet && initialBook != null) {
-            selectedBook = initialBook
-            chapterInput = initialChapter.toString()
-            if (initialVerse != null) {
-                if (initialVerse > 0) {
-                    verseInput = initialVerse.toString()
-                    focusedInput = "verse"
-                } else {
-                    focusedInput = "chapter"
-                }
-            }
-            initialSet = true
-        }
-    }
-
-    LaunchedEffect(showChapterFlash) {
-        if (showChapterFlash) {
-            delay(500)
-            showChapterFlash = false
-        }
-    }
-    LaunchedEffect(showVerseFlash) {
-        if (showVerseFlash) {
-            delay(500)
-            showVerseFlash = false
-        }
-    }
-    LaunchedEffect(focusedInput, chapterInput, selectedBook) {
-        if (focusedInput == "verse") {
-            val chapter = chapterInput.toIntOrNull()
-            val bookNumber = selectedBook?.bookNumber
-            if (chapter != null && bookNumber != null && chapter in 1..(selectedBook?.totalChapters ?: 0)) {
-                isLoadingVerseCount = true
-                val count = if (databaseHelper != null) {
-                    try {
-                        withContext(Dispatchers.IO) {
-                            databaseHelper.getVerseCount(bookNumber, chapter)
-                        }
-                    } catch (_: Exception) {
-                        selectedBibleBook?.getVersesForChapter(chapter) ?: 0
-                    }
-                } else {
-                    selectedBibleBook?.getVersesForChapter(chapter) ?: 0
-                }
-                maxVerse = count
-                isLoadingVerseCount = false
-                val currentVerse = verseInput.toIntOrNull()
-                if (currentVerse != null && currentVerse > maxVerse) {
-                    verseInput = ""
-                }
-            } else {
-                maxVerse = 0
-                isLoadingVerseCount = false
-            }
-        } else {
-            val chapter = chapterInput.toIntOrNull()
-            val bookNumber = selectedBook?.bookNumber
-            if (chapter == null || bookNumber == null || chapter !in 1..(selectedBook?.totalChapters ?: 0)) {
-                maxVerse = 0
-            }
-        }
-    }
-
     val isChapterValid by remember(chapterInput, selectedBibleBook) {
         derivedStateOf {
             val chapter = chapterInput.toIntOrNull()
@@ -230,9 +158,10 @@ fun NavigationModal(
             chapter == null || chapter == 0 || chapter > maxChapters
         }
     }
-    val isVerseError by remember(verseInput, maxVerse) {
+    val isVerseError by remember(verseInput, maxVerse, isLoadingVerseCount) {
         derivedStateOf {
             if (verseInput.isEmpty()) return@derivedStateOf false
+            if (isLoadingVerseCount || maxVerse == 0) return@derivedStateOf false
             val verse = verseInput.toIntOrNull()
             verse == null || verse == 0 || verse > maxVerse
         }
@@ -254,8 +183,7 @@ fun NavigationModal(
             }
         }
     }
-
-    val onConfirm = {
+    val performConfirm = {
         if (isInputValid && selectedBook != null) {
             val chapter = chapterInput.toInt()
             val verse = verseInput.toIntOrNull() ?: 1
@@ -271,7 +199,75 @@ fun NavigationModal(
             onDismissRequest()
         }
     }
-
+    val initialBook = remember(initialBookNumber) {
+        initialBookNumber?.let { number ->
+            (oldTestamentBooks + newTestamentBooks).find { it.bookNumber == number }
+        }
+    }
+    var initialSet by remember { mutableStateOf(false) }
+    LaunchedEffect(initialBook) {
+        if (!initialSet && initialBook != null) {
+            selectedBook = initialBook
+            chapterInput = initialChapter.toString()
+            if (initialVerse != null && initialVerse > 0) {
+                verseInput = initialVerse.toString()
+            }
+            focusedInput = "chapter"
+            initialSet = true
+        }
+    }
+    LaunchedEffect(showChapterFlash) {
+        if (showChapterFlash) {
+            delay(500)
+            showChapterFlash = false
+        }
+    }
+    LaunchedEffect(showVerseFlash) {
+        if (showVerseFlash) {
+            delay(500)
+            showVerseFlash = false
+        }
+    }
+    LaunchedEffect(selectedBook, chapterInput) {
+        val chapter = chapterInput.toIntOrNull()
+        val bookNumber = selectedBook?.bookNumber
+        if (chapter != null && bookNumber != null && chapter in 1..(selectedBook?.totalChapters ?: 0)) {
+            isLoadingVerseCount = true
+            val count = if (databaseHelper != null) {
+                try {
+                    withContext(Dispatchers.IO) {
+                        databaseHelper.getVerseCount(bookNumber, chapter)
+                    }
+                } catch (_: Exception) {
+                    selectedBibleBook?.getVersesForChapter(chapter) ?: 0
+                }
+            } else {
+                selectedBibleBook?.getVersesForChapter(chapter) ?: 0
+            }
+            maxVerse = count
+            isLoadingVerseCount = false
+        } else {
+            maxVerse = 0
+            isLoadingVerseCount = false
+        }
+    }
+    LaunchedEffect(maxVerse, pendingVerseDigit, focusedInput) {
+        if (pendingVerseDigit != null && focusedInput == "verse" && maxVerse > 0) {
+            val verseNum = pendingVerseDigit!!.toIntOrNull()
+            if (verseNum != null && verseNum in 1..maxVerse) {
+                verseInput = pendingVerseDigit!!
+                if (verseNum * 10 > maxVerse) {
+                    coroutineScope.launch {
+                        delay(300)
+                        performConfirm()
+                    }
+                }
+            } else {
+                showVerseFlash = true
+            }
+            pendingVerseDigit = null
+        }
+    }
     val onDigit: (String) -> Unit = { digit ->
         if (focusedInput == "chapter") {
             val newValue = chapterInput + digit
@@ -285,20 +281,9 @@ fun NavigationModal(
             } else {
                 val currentNum = chapterInput.toIntOrNull()
                 if (chapterInput.isNotEmpty() && currentNum != null && currentNum in 1..maxChapters) {
+                    pendingVerseDigit = digit
                     focusedInput = "verse"
-                    val newVerseValue = verseInput + digit
-                    val verseNum = newVerseValue.toIntOrNull() ?: 0
-                    if (verseNum in 1..maxVerse && verseNum.toString() == newVerseValue) {
-                        verseInput = newVerseValue
-                        if (verseNum * 10 > maxVerse) {
-                            coroutineScope.launch {
-                                delay(300)
-                                onConfirm()
-                            }
-                        }
-                    } else {
-                        showVerseFlash = true
-                    }
+                    verseInput = ""
                 } else {
                     showChapterFlash = true
                 }
@@ -311,7 +296,7 @@ fun NavigationModal(
                 if (num * 10 > maxVerse) {
                     coroutineScope.launch {
                         delay(300)
-                        onConfirm()
+                        performConfirm()
                     }
                 }
             } else {
@@ -319,7 +304,7 @@ fun NavigationModal(
                 if (verseInput.isNotEmpty() && currentNum != null && currentNum in 1..maxVerse) {
                     coroutineScope.launch {
                         delay(300)
-                        onConfirm()
+                        performConfirm()
                     }
                 } else {
                     showVerseFlash = true
@@ -341,8 +326,8 @@ fun NavigationModal(
         verseInput = ""
         maxVerse = 0
         focusedInput = "chapter"
+        pendingVerseDigit = null
     }
-
     Dialog(
         onDismissRequest = onDismissRequest,
         properties = DialogProperties(
@@ -413,6 +398,7 @@ fun NavigationModal(
                                             verseInput = ""
                                             maxVerse = 0
                                             focusedInput = "chapter"
+                                            pendingVerseDigit = null
                                         },
                                         textColor = MaterialTheme.colorScheme.primary,
                                         selectedBook = selectedBook
@@ -429,6 +415,7 @@ fun NavigationModal(
                                             verseInput = ""
                                             maxVerse = 0
                                             focusedInput = "chapter"
+                                            pendingVerseDigit = null
                                         },
                                         textColor = MaterialTheme.colorScheme.secondary,
                                         selectedBook = selectedBook
@@ -456,7 +443,7 @@ fun NavigationModal(
                                         isChapterValid = isChapterValid,
                                         isVerseValid = isVerseValid,
                                         isLoadingVerseCount = isLoadingVerseCount,
-                                        onConfirm = onConfirm,
+                                        onConfirm = performConfirm,
                                         onDigit = onDigit,
                                         onBackspace = onBackspace,
                                         onClear = onClear,
@@ -491,6 +478,7 @@ fun NavigationModal(
                                         verseInput = ""
                                         maxVerse = 0
                                         focusedInput = "chapter"
+                                        pendingVerseDigit = null
                                     },
                                     textColor = MaterialTheme.colorScheme.primary,
                                     selectedBook = selectedBook
@@ -507,6 +495,7 @@ fun NavigationModal(
                                         verseInput = ""
                                         maxVerse = 0
                                         focusedInput = "chapter"
+                                        pendingVerseDigit = null
                                     },
                                     textColor = MaterialTheme.colorScheme.secondary,
                                     selectedBook = selectedBook
@@ -528,7 +517,7 @@ fun NavigationModal(
                                         isChapterValid = isChapterValid,
                                         isVerseValid = isVerseValid,
                                         isLoadingVerseCount = isLoadingVerseCount,
-                                        onConfirm = onConfirm,
+                                        onConfirm = performConfirm,
                                         onDigit = onDigit,
                                         onBackspace = onBackspace,
                                         onClear = onClear,
@@ -537,7 +526,6 @@ fun NavigationModal(
                                 }
                             }
                         }
-
                     }
                 }
             }
