@@ -148,6 +148,45 @@ fun cleanDefinition(topic: String, rawDef: String): String {
     return cleaned
 }
 
+fun formatDefinitionContent(word: String, content: String, isOxford: Boolean): String {
+    return if (isOxford) {
+        "<b>${word.uppercase(Locale.ROOT)}</b><br>$content"
+    } else {
+        content
+    }
+}
+
+fun buildDefinitionContent(
+    originalWord: String,
+    pairs: List<Pair<String, String>>,
+    isOxford: Boolean,
+    isTopical: Boolean
+): String {
+    if (pairs.isEmpty()) return "No definition found."
+    val isExact = pairs.size == 1 && pairs[0].first.equals(originalWord, ignoreCase = true)
+    return if (isOxford && !isTopical) {
+        if (pairs.size == 1) {
+            val topic = pairs[0].first
+            val rawContent = if (isExact) sanitizeHtmlContent(pairs[0].second) else cleanDefinition(topic, pairs[0].second)
+            "<b>${topic.uppercase(Locale.ROOT)}</b><br>$rawContent"
+        } else {
+            pairs.joinToString("<br><hr><br>") { (topic, def) ->
+                val cleanedDef = sanitizeHtmlContent(def)
+                "<b>${topic.uppercase(Locale.ROOT)}</b><br>$cleanedDef"
+            }
+        }
+    } else {
+        val rawContent = if (isExact) {
+            sanitizeHtmlContent(pairs[0].second)
+        } else if (pairs.size == 1) {
+            cleanDefinition(pairs[0].first, pairs[0].second)
+        } else {
+            pairs.joinToString("<br><hr><br>") { p -> sanitizeHtmlContent(p.second) }
+        }
+        if (isTopical) rawContent else formatDefinitionContent(originalWord, rawContent, false)
+    }
+}
+
 fun parseVerseLink(href: String, linkText: String): PassageSelection? {
     try {
         val parts = href.substringAfter("B:").trim().split(" ")
@@ -474,11 +513,12 @@ fun InteractiveModal(
                             } else {
                                 "Matches for $capitalizedWord"
                             }
-                            val newContent = if (isExact) {
-                                sanitizeHtmlContent(pairs[0].second)
-                            } else {
-                                pairs.joinToString("<br><hr><br>") { sanitizeHtmlContent(it.second) }
-                            }
+                            val newContent = buildDefinitionContent(
+                                originalWord = word,
+                                pairs = pairs,
+                                isOxford = viewModel.selectedDictionary == "oxford",
+                                isTopical = viewModel.selectedDictionary == "topical"
+                            )
                             stack[0] = loadingPage.copy(title = newTitle, content = newContent)
                         } else {
                             stack[0] = loadingPage.copy(title = "Definition not found", content = "No results for \"$word\".")
@@ -835,17 +875,12 @@ fun InteractiveModal(
                                                                     } else {
                                                                         "Matches for \"$capitalizedWord\""
                                                                     }
-                                                                    val newContent = if (pairs.isNotEmpty()) {
-                                                                        if (isExact) {
-                                                                            sanitizeHtmlContent(pairs[0].second)
-                                                                        } else if (pairs.size == 1) {
-                                                                            cleanDefinition(pairs[0].first, pairs[0].second)
-                                                                        } else {
-                                                                            pairs.joinToString("<br><hr><br>") { p -> sanitizeHtmlContent(p.second) }
-                                                                        }
-                                                                    } else {
-                                                                        "No definition found."
-                                                                    }
+                                                                    val newContent = buildDefinitionContent(
+                                                                        originalWord = word,
+                                                                        pairs = pairs,
+                                                                        isOxford = viewModel.selectedDictionary == "oxford",
+                                                                        isTopical = viewModel.selectedDictionary == "topical"
+                                                                    )
                                                                     val updateIndex = stack.indexOf(loadingPage)
                                                                     if (updateIndex != -1) {
                                                                         stack[updateIndex] = loadingPage.copy(
@@ -1445,17 +1480,12 @@ fun InteractiveModal(
                                 } else {
                                     "Matches for \"$capitalizedWord\""
                                 }
-                                val newContent = if (pairs.isNotEmpty()) {
-                                    if (isExact) {
-                                        sanitizeHtmlContent(pairs[0].second)
-                                    } else if (pairs.size == 1) {
-                                        cleanDefinition(pairs[0].first, pairs[0].second)
-                                    } else {
-                                        pairs.joinToString("<br><hr><br>") { p -> sanitizeHtmlContent(p.second) }
-                                    }
-                                } else {
-                                    "No definition found."
-                                }
+                                val newContent = buildDefinitionContent(
+                                    originalWord = word,
+                                    pairs = pairs,
+                                    isOxford = viewModel.selectedDictionary == "oxford",
+                                    isTopical = viewModel.selectedDictionary == "topical"
+                                )
                                 val updateIndex = stack.indexOf(loadingPage)
                                 if (updateIndex != -1) {
                                     stack[updateIndex] = loadingPage.copy(title = newTitle, content = newContent)
@@ -1573,17 +1603,12 @@ fun InteractiveModal(
                                     } else {
                                         "Matches for \"$capitalizedWord\""
                                     }
-                                    val newContent = if (pairs.isNotEmpty()) {
-                                        if (isExact) {
-                                            sanitizeHtmlContent(pairs[0].second)
-                                        } else if (pairs.size == 1) {
-                                            cleanDefinition(pairs[0].first, pairs[0].second)
-                                        } else {
-                                            pairs.joinToString("<br><hr><br>") { p -> sanitizeHtmlContent(p.second) }
-                                        }
-                                    } else {
-                                        "No definition found."
-                                    }
+                                    val newContent = buildDefinitionContent(
+                                        originalWord = word,
+                                        pairs = pairs,
+                                        isOxford = viewModel.selectedDictionary == "oxford",
+                                        isTopical = viewModel.selectedDictionary == "topical"
+                                    )
                                     val updateIndex = stack.indexOf(loadingPage)
                                     if (updateIndex != -1) {
                                         stack[updateIndex] = loadingPage.copy(title = newTitle, content = newContent)
