@@ -981,6 +981,14 @@ fun InteractiveModal(
                             }
                         }
                     }
+                    if (currentPage.type == "commentary" && currentPage.title.startsWith("References for ")) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "OpenBible Project",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             },
             text = {
