@@ -38,6 +38,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.fountofhopedotorg.fohbible.data.Drop
+import com.fountofhopedotorg.fohbible.data.Overlay
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.ui.theme.DefaultPrimaryColor
 import com.fountofhopedotorg.fohbible.utils.getFontFamily
@@ -81,23 +83,6 @@ val JesusAttributes = listOf(
 const val MATRIX_HEIGHT = 612f
 val FONT_SIZE = 12.sp
 const val TRAIL_LENGTH = 15
-
-data class Drop(
-    val id: String,
-    val headAnim: Animatable<Float, *>,
-    val trailChars: List<String>,
-    val x: Float
-)
-
-data class Overlay(
-    val id: String,
-    val text: String,
-    val left: Float,
-    val top: Float,
-    val fontSize: Float,
-    val fadeAnim: Animatable<Float, *>,
-    val positionAnim: Animatable<Float, *>
-)
 
 @Composable
 fun MatrixNative() {

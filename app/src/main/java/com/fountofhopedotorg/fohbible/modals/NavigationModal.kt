@@ -78,14 +78,7 @@ import android.content.res.Configuration
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-
-data class BookUi(
-    val bookNumber: Int,
-    val longName: String,
-    val shortName: String,
-    val testament: Testament,
-    val totalChapters: Int
-)
+import com.fountofhopedotorg.fohbible.data.BookUi
 
 fun BibleBook.toBookUi(): BookUi {
     return BookUi(

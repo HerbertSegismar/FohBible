@@ -1,4 +1,4 @@
-@file:Suppress("CanConvertToMultiDollarString")
+
 package com.fountofhopedotorg.fohbible.utils
 
 import androidx.compose.ui.graphics.Color
@@ -7,55 +7,12 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
-
-sealed class ParsedNode {
-    data class Text(val content: String) : ParsedNode()
-    data class OpeningTag(val tag: String, val fullTag: String) : ParsedNode()
-    data class ClosingTag(val tag: String) : ParsedNode()
-    data class SelfClosingTag(val tag: String, val fullTag: String) : ParsedNode()
-}
-
-sealed class TreeNode {
-    data class Text(val content: String) : TreeNode()
-    data class SelfClosingTag(val tag: String, val fullTag: String) : TreeNode()
-    data class Element(val tag: String, val fullTag: String, val children: List<TreeNode>) : TreeNode()
-}
-
-data class TraversalContext(
-    val textColor: Color,
-    val isTextContainer: Boolean,
-    val isHeader: Boolean,
-    val currentTag: String?,
-    val baseFontSize: TextUnit,
-    val fontSizeMultiplier: Float = 1f,
-    val baselineShift: BaselineShift? = null,
-    val isOldTestament: Boolean
-)
-
-data class ProcessedVerse(
-    val header: AnnotatedString?,
-    val body: AnnotatedString
-)
-
-data class ThemeColors(
-    val textColor: Color,
-    val verseNumber: Color,
-    val primary: Color,
-    val tagColor: Color,
-    val tagBg: Color,
-    val wordsOfJesus: Color,
-    val searchHighlightBg: Color,
-    val highlightIcon: Color
-)
-
-data class ProcessingOptions(
-    val enableWordClick: Boolean = true,
-    val enableStrongsClick: Boolean = true,
-    val enableTagClick: Boolean = true,
-    val showFootnotesInline: Boolean = true,
-    val preserveWhitespace: Boolean = false,
-    val showHeaders: Boolean = true
-)
+import com.fountofhopedotorg.fohbible.data.ParsedNode
+import com.fountofhopedotorg.fohbible.data.ProcessedVerse
+import com.fountofhopedotorg.fohbible.data.ProcessingOptions
+import com.fountofhopedotorg.fohbible.data.ThemeColors
+import com.fountofhopedotorg.fohbible.data.TraversalContext
+import com.fountofhopedotorg.fohbible.data.TreeNode
 
 interface VerseProcessorLogger {
     fun logParseError(tag: String, message: String)
@@ -68,7 +25,7 @@ class VerseTextProcessor(
     companion object {
         private val ATTRIBUTE_REGEX = Regex("""(\w+)="([^"]*)"""")
         private const val CACHE_SIZE = 200
-        private val ESCAPE_REGEX_PATTERN = Regex("[.*+?^${'$'}{}()|\\[\\]\\\\]")
+        private val ESCAPE_REGEX_PATTERN = Regex($$"[.*+?^${}()|\\[\\]\\\\]")
     }
 
     private val verseCache = object : LinkedHashMap<String, ProcessedVerse>(CACHE_SIZE, 0.75f, true) {

@@ -54,7 +54,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -70,32 +69,19 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.Footer
 import com.fountofhopedotorg.fohbible.MainActivity
+import com.fountofhopedotorg.fohbible.MatrixNative
 import com.fountofhopedotorg.fohbible.R
+import com.fountofhopedotorg.fohbible.Screen
 import com.fountofhopedotorg.fohbible.data.BibleData
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
+import com.fountofhopedotorg.fohbible.data.PopularDevotional
+import com.fountofhopedotorg.fohbible.data.QuickAction
 import com.fountofhopedotorg.fohbible.data.Verse
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
-import com.fountofhopedotorg.fohbible.MatrixNative
-import com.fountofhopedotorg.fohbible.Screen
 import com.fountofhopedotorg.fohbible.utils.getFontFamily
 import kotlin.random.Random
-
-data class QuickAction(
-    val title: String,
-    val icon: ImageVector,
-    val color: Color,
-    val onClick: () -> Unit
-)
-
-data class PopularDevotional(
-    val title: String,
-    val preview: String,
-    val bookName: String,
-    val chapter: Int,
-    val verse: Int
-)
 
 @Composable
 fun HomeScreen(

@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -94,9 +95,9 @@ import com.fountofhopedotorg.fohbible.modals.InteractiveModal
 import com.fountofhopedotorg.fohbible.modals.NotesModal
 import com.fountofhopedotorg.fohbible.modals.VerseOptionsModal
 import com.fountofhopedotorg.fohbible.models.AppViewModel
-import com.fountofhopedotorg.fohbible.utils.ProcessedVerse
+import com.fountofhopedotorg.fohbible.data.ProcessedVerse
 import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
-import com.fountofhopedotorg.fohbible.utils.ThemeColors
+import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import com.fountofhopedotorg.fohbible.utils.getFontFamily
 import kotlinx.coroutines.delay
@@ -1776,7 +1777,7 @@ fun ChapterView(
                                                 put("commentary_${verse.verseNumber}", InlineTextContent(
                                                     Placeholder(
                                                         width = (viewModel.fontSize * 1.5f).sp,
-                                                        height = (viewModel.fontSize * 1.5f).sp,
+                                                        height = (viewModel.fontSize).sp,
                                                         placeholderVerticalAlign = PlaceholderVerticalAlign.TextCenter
                                                     )
                                                 ) {
@@ -1924,7 +1925,7 @@ fun ChapterView(
                                                             imageVector = Icons.Filled.ChevronRight,
                                                             contentDescription = "View Verse Commentaries",
                                                             tint = themeColors.verseNumber,
-                                                            modifier = Modifier.size((viewModel.fontSize * 1.5f).dp)
+                                                            modifier = Modifier.width((viewModel.fontSize * 1.5f).dp)
                                                         )
                                                     }
                                                 })

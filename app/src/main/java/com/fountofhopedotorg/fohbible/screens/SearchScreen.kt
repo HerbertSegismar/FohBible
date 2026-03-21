@@ -64,7 +64,9 @@ import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.data.SCOPE_CATEGORIES
 import com.fountofhopedotorg.fohbible.data.SCOPE_RANGES
+import com.fountofhopedotorg.fohbible.data.SearchOptions
 import com.fountofhopedotorg.fohbible.data.SearchScope
+import com.fountofhopedotorg.fohbible.data.SearchVerse
 import com.fountofhopedotorg.fohbible.data.Testament
 import com.fountofhopedotorg.fohbible.data.getBookInfo
 import com.fountofhopedotorg.fohbible.data.getBookNumberFromScope
@@ -73,7 +75,7 @@ import com.fountofhopedotorg.fohbible.data.isBookScope
 import com.fountofhopedotorg.fohbible.data.scopeColors
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
-import com.fountofhopedotorg.fohbible.utils.ThemeColors
+import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -89,9 +91,8 @@ fun getScopeForBookNumber(bookNumber: Int): String? {
     return null
 }
 
-data class SearchOptions(val bookRange: Pair<Int, Int>? = null)
-fun DatabaseHelper.searchVerses(query: String, options: SearchOptions? = null): List<Verse> {
-    val verses = mutableListOf<Verse>()
+fun DatabaseHelper.searchVerses(query: String, options: SearchOptions? = null): List<SearchVerse> {
+    val verses = mutableListOf<SearchVerse>()
     try {
         if (database == null || !database!!.isOpen) return verses
         var whereClause = ""
@@ -123,7 +124,7 @@ fun DatabaseHelper.searchVerses(query: String, options: SearchOptions? = null): 
                 val verseNum = it.getInt(it.getColumnIndexOrThrow("verse"))
                 val text = it.getString(it.getColumnIndexOrThrow("text"))
                 val bookName = getBookInfo(bookNumber)?.name
-                verses.add(Verse(verseNum, text, bookNumber, chapter, bookName))
+                verses.add(SearchVerse(verseNum, text, bookNumber, chapter, bookName))
             }
         }
     } catch (e: Exception) {
@@ -131,15 +132,6 @@ fun DatabaseHelper.searchVerses(query: String, options: SearchOptions? = null): 
     }
     return verses
 }
-
-data class Verse(
-    val verse: Int,
-    val text: String?,
-    val bookNumber: Int = 0,
-    val chapter: Int = 0,
-    val bookName: String? = null,
-    val bookColor: String? = null
-)
 
 val BOOK_COLORS: Map<String, String> = mapOf()
 
@@ -154,7 +146,7 @@ fun generateColorFromString(str: String): String {
     return colors[abs(hash) % colors.size]
 }
 
-fun getBookColor(bookName: String, verse: Verse? = null): String {
+fun getBookColor(bookName: String, verse: SearchVerse? = null): String {
     verse?.bookColor?.let { return it }
     val normalizedBookName = bookName.lowercase().trim()
     BOOK_COLORS[normalizedBookName]?.let { return it }
@@ -165,9 +157,9 @@ fun getBookColor(bookName: String, verse: Verse? = null): String {
 }
 
 suspend fun enhanceSearchResultsWithColors(
-    results: List<Verse>,
+    results: List<SearchVerse>,
     dbHelper: DatabaseHelper?
-): List<Verse> {
+): List<SearchVerse> {
     if (results.isEmpty() || dbHelper == null) return results
     val uniqueBookNumbers = results.map { it.bookNumber }.toSet()
     val colorMap = mutableMapOf<Int, String>()
@@ -205,7 +197,7 @@ fun SearchScreen(
     )
     var hasSearched by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
-    val results = remember { mutableStateListOf<Verse>() }
+    val results = remember { mutableStateListOf<SearchVerse>() }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var scope by remember { mutableStateOf("whole") }
@@ -269,7 +261,7 @@ fun SearchScreen(
         showResultsStats = false
     }
 
-    val handleVersePress: (Verse) -> Unit = { verse ->
+    val handleVersePress: (SearchVerse) -> Unit = { verse ->
         val bookName = verse.bookName ?: "Unknown Book"
         onPassageSelected(
             PassageSelection(
@@ -558,9 +550,9 @@ fun EmptyStates(
 
 @Composable
 fun SearchResultItem(
-    verse: Verse,
+    verse: SearchVerse,
     query: String,
-    onVersePress: (Verse) -> Unit,
+    onVersePress: (SearchVerse) -> Unit,
     colors: Map<String, Color>
 ) {
     val longName = verse.bookName ?: getBookInfo(verse.bookNumber)?.name ?: "Unknown Book"

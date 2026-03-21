@@ -1,0 +1,228 @@
+package com.fountofhopedotorg.fohbible.data
+
+import android.content.Context
+import androidx.compose.animation.core.Animatable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.style.BaselineShift
+import androidx.compose.ui.unit.TextUnit
+import com.fountofhopedotorg.fohbible.MainActivity
+import com.fountofhopedotorg.fohbible.ui.theme.DefaultPrimaryColor
+
+data class PassageSelection(
+    val bookNumber: Int,
+    val bookName: String,
+    val chapter: Int,
+    val verse: Int? = null,
+    var verseEnd: Int? = null,
+    var chapterEnd: Int? = null
+)
+
+data class ModalPage(
+    val title: String,
+    val type: String,
+    val content: String? = null,
+    val verses: List<Verse>? = null,
+    val passage: PassageSelection? = null,
+    val word: String? = null,
+    val strongNumber: String? = null,
+    val description: String? = null,
+    val isOldTestament: Boolean,
+    val bookNumber: Int? = null,
+    val chapter: Int? = null,
+    val verse: Int? = null
+)
+
+data class Verse(
+    val verseNumber: Int,
+    val text: String,
+    val bookName: String? = null,
+    val chapter: Int? = null,
+    val bookNumber: Int? = null
+)
+
+data class SearchVerse(
+    val verse: Int,
+    val text: String?,
+    val bookNumber: Int = 0,
+    val chapter: Int = 0,
+    val bookName: String? = null,
+    val bookColor: String? = null
+)
+
+data class CrossReference(
+    val bookTo: Int,
+    val chapterTo: Int,
+    val verseToStart: Int,
+    val verseToEnd: Int
+)
+
+data class Note(
+    val bookName: String,
+    val chapter: Int,
+    val startVerse: Int,
+    val endVerse: Int,
+    val note: String,
+    val timestamp: Long
+)
+
+data class VerseCommentary(
+    val text: String,
+    val chapterFrom: Int,
+    val verseFrom: Int,
+    val chapterTo: Int?,
+    val verseTo: Int?
+)
+
+data class ScopeRange(val start: Int, val end: Int)
+
+data class BibleBook(
+    val customNumber: Int,
+    val name: String,
+    val chapters: Int,
+    val testament: Testament,
+    val abbreviation: String,
+    val standardNumber: Int = 0
+) {
+    fun getVersesForChapter(chapter: Int, context: Context? = null): Int {
+        return if (context != null) {
+            val dbHelper = DatabaseHelper(context as MainActivity, databaseName = "kj2.sqlite3")
+            dbHelper.getVerseCount(customNumber, chapter)
+        } else {
+            30
+        }
+    }
+}
+
+data class ScopeConfig(
+    val label: String,
+    val description: String,
+    val category: String
+)
+
+data class Subheading(val verse: Int, val text: String)
+
+sealed class VerseContent {
+    data class SubheadingVal(val subheading: Subheading) : VerseContent()
+    data class VerseVal(val verse: Verse) : VerseContent()
+}
+
+data class AppThemeState(
+    val darkTheme: Boolean = false,
+    val primaryColor: Color = DefaultPrimaryColor,
+    val isCustomColor: Boolean = false
+)
+
+data class AppColorScheme(
+    val primary: Color,
+    val onPrimary: Color,
+    val secondary: Color,
+    val onSecondary: Color,
+    val tertiary: Color,
+    val onTertiary: Color,
+    val background: Color,
+    val onBackground: Color,
+    val surface: Color,
+    val onSurface: Color,
+    val surfaceVariant: Color,
+    val primaryContainer: Color,
+    val secondaryContainer: Color
+)
+
+data class ColorTheme(
+    val name: String,
+    val primaryColor: Color,
+    val secondaryColor: Color
+)
+
+data class Drop(
+    val id: String,
+    val headAnim: Animatable<Float, *>,
+    val trailChars: List<String>,
+    val x: Float
+)
+
+data class Overlay(
+    val id: String,
+    val text: String,
+    val left: Float,
+    val top: Float,
+    val fontSize: Float,
+    val fadeAnim: Animatable<Float, *>,
+    val positionAnim: Animatable<Float, *>
+)
+
+sealed class ParsedNode {
+    data class Text(val content: String) : ParsedNode()
+    data class OpeningTag(val tag: String, val fullTag: String) : ParsedNode()
+    data class ClosingTag(val tag: String) : ParsedNode()
+    data class SelfClosingTag(val tag: String, val fullTag: String) : ParsedNode()
+}
+
+sealed class TreeNode {
+    data class Text(val content: String) : TreeNode()
+    data class SelfClosingTag(val tag: String, val fullTag: String) : TreeNode()
+    data class Element(val tag: String, val fullTag: String, val children: List<TreeNode>) : TreeNode()
+}
+
+data class TraversalContext(
+    val textColor: Color,
+    val isTextContainer: Boolean,
+    val isHeader: Boolean,
+    val currentTag: String?,
+    val baseFontSize: TextUnit,
+    val fontSizeMultiplier: Float = 1f,
+    val baselineShift: BaselineShift? = null,
+    val isOldTestament: Boolean
+)
+
+data class ProcessedVerse(
+    val header: AnnotatedString?,
+    val body: AnnotatedString
+)
+
+data class ThemeColors(
+    val textColor: Color,
+    val verseNumber: Color,
+    val primary: Color,
+    val tagColor: Color,
+    val tagBg: Color,
+    val wordsOfJesus: Color,
+    val searchHighlightBg: Color,
+    val highlightIcon: Color
+)
+
+data class ProcessingOptions(
+    val enableWordClick: Boolean = true,
+    val enableStrongsClick: Boolean = true,
+    val enableTagClick: Boolean = true,
+    val showFootnotesInline: Boolean = true,
+    val preserveWhitespace: Boolean = false,
+    val showHeaders: Boolean = true
+)
+
+data class SearchOptions(val bookRange: Pair<Int, Int>? = null)
+
+data class QuickAction(
+    val title: String,
+    val icon: ImageVector,
+    val color: Color,
+    val onClick: () -> Unit
+)
+
+data class PopularDevotional(
+    val title: String,
+    val preview: String,
+    val bookName: String,
+    val chapter: Int,
+    val verse: Int
+)
+
+data class BookUi(
+    val bookNumber: Int,
+    val longName: String,
+    val shortName: String,
+    val testament: Testament,
+    val totalChapters: Int
+)

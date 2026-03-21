@@ -2,6 +2,7 @@ package com.fountofhopedotorg.fohbible.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -11,8 +12,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.core.graphics.ColorUtils
+import com.fountofhopedotorg.fohbible.data.AppColorScheme
 import com.fountofhopedotorg.fohbible.data.AppThemeState
+import com.fountofhopedotorg.fohbible.data.ColorTheme
 import android.graphics.Color as AndroidColor
 
 val LocalAppTheme = staticCompositionLocalOf { AppThemeState() }
@@ -73,22 +80,6 @@ object ThemeManager {
     }
 }
 
-data class AppColorScheme(
-    val primary: Color,
-    val onPrimary: Color,
-    val secondary: Color,
-    val onSecondary: Color,
-    val tertiary: Color,
-    val onTertiary: Color,
-    val background: Color,
-    val onBackground: Color,
-    val surface: Color,
-    val onSurface: Color,
-    val surfaceVariant: Color,
-    val primaryContainer: Color,
-    val secondaryContainer: Color
-)
-
 fun Color.calculateBrightness(): Float {
     val hsv = FloatArray(3)
     AndroidColor.colorToHSV(this.toArgb(), hsv)
@@ -97,12 +88,6 @@ fun Color.calculateBrightness(): Float {
 
 val DefaultPrimaryColor = Color(0xFF2196F3)
 
-data class ColorTheme(
-    val name: String,
-    val primaryColor: Color,
-    val secondaryColor: Color
-)
-
 val PredefinedColorThemes = listOf(
     ColorTheme("Blue", Color(0xFF2196F3), Color(0xFF1976D2)),
     ColorTheme("Green", Color(0xFF4CAF50), Color(0xFF388E3C)),
@@ -110,6 +95,16 @@ val PredefinedColorThemes = listOf(
     ColorTheme("Orange", Color(0xFFFF9800), Color(0xFFF57C00)),
     ColorTheme("Red", Color(0xFFF44336), Color(0xFFD32F2F)),
     ColorTheme("Teal", Color(0xFF009688), Color(0xFF00796B)),
+)
+
+val Typography = Typography(
+    bodyLarge = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Normal,
+        fontSize = 16.sp,
+        lineHeight = 24.sp,
+        letterSpacing = 0.5.sp
+    )
 )
 
 @Composable

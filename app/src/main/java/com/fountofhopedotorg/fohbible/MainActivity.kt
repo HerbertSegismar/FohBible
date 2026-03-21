@@ -118,7 +118,7 @@ import com.fountofhopedotorg.fohbible.screens.NotesScreen
 import com.fountofhopedotorg.fohbible.screens.ReaderScreen
 import com.fountofhopedotorg.fohbible.screens.SearchScreen
 import com.fountofhopedotorg.fohbible.screens.SettingsScreen
-import com.fountofhopedotorg.fohbible.ui.theme.ColorTheme
+import com.fountofhopedotorg.fohbible.data.ColorTheme
 import com.fountofhopedotorg.fohbible.ui.theme.DefaultPrimaryColor
 import com.fountofhopedotorg.fohbible.ui.theme.FohBibleTheme
 import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
