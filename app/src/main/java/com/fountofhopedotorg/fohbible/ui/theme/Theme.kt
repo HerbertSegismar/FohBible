@@ -12,13 +12,8 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.graphics.ColorUtils
+import com.fountofhopedotorg.fohbible.data.AppThemeState
 import android.graphics.Color as AndroidColor
-
-data class AppThemeState(
-    val darkTheme: Boolean = false,
-    val primaryColor: Color = DefaultPrimaryColor,
-    val isCustomColor: Boolean = false
-)
 
 val LocalAppTheme = staticCompositionLocalOf { AppThemeState() }
 

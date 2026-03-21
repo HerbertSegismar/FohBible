@@ -1,26 +1,5 @@
 package com.fountofhopedotorg.fohbible.data
 
-import android.content.Context
-import com.fountofhopedotorg.fohbible.MainActivity
-
-data class BibleBook(
-    val customNumber: Int,
-    val name: String,
-    val chapters: Int,
-    val testament: Testament,
-    val abbreviation: String,
-    val standardNumber: Int = 0
-) {
-    fun getVersesForChapter(chapter: Int, context: Context? = null): Int {
-        return if (context != null) {
-            val dbHelper = DatabaseHelper(context as MainActivity, databaseName = "kj2.sqlite3")
-            dbHelper.getVerseCount(customNumber, chapter)
-        } else {
-            30
-        }
-    }
-}
-
 enum class Testament { OLD, NEW }
 
 fun getBookInfo(bookNumber: Int): BibleBook? {
@@ -45,8 +24,6 @@ const val SCOPE_VISION = "vision"
 
 fun createBookScope(bookNumber: Int): SearchScope = "book-$bookNumber"
 
-data class ScopeRange(val start: Int, val end: Int)
-
 val SCOPE_RANGES: Map<String, ScopeRange?> = mapOf(
     SCOPE_WHOLE to null,
     SCOPE_OLD_TESTAMENT to ScopeRange(10, 460),
@@ -61,12 +38,6 @@ val SCOPE_RANGES: Map<String, ScopeRange?> = mapOf(
     SCOPE_PAULINE_LETTERS to ScopeRange(520, 640),
     SCOPE_LETTERS to ScopeRange(520, 720),
     SCOPE_VISION to ScopeRange(730, 730)
-)
-
-data class ScopeConfig(
-    val label: String,
-    val description: String,
-    val category: String
 )
 
 val scopeColors = mapOf(

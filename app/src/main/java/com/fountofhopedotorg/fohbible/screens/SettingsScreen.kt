@@ -2,7 +2,6 @@
 package com.fountofhopedotorg.fohbible.screens
 
 import android.content.Intent
-import android.graphics.Typeface
 import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -62,7 +61,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -76,36 +74,13 @@ import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.ui.theme.DefaultPrimaryColor
 import com.fountofhopedotorg.fohbible.ui.theme.PredefinedColorThemes
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
+import com.fountofhopedotorg.fohbible.utils.availableFontFamilies
+import com.fountofhopedotorg.fohbible.utils.getFontFamily
 import java.util.Locale
 
 const val MAX_FONT_SIZE = 100
 const val MIN_FONT_SIZE = 1
 
-val availableFontFamilies = listOf("system", "oswald", "rubikglitch", "rubiklines", "poppins", "cookie", "emilyscandy", "googlesanscode", "pirataone", "quintessential", "rougescript", "sairastencilone", "shadowsintolight", "smoochsans", "truculenta", "honk" )
-
-@Composable
-fun getFontFamily(family: String): FontFamily {
-    val context = LocalContext.current
-    return when (family) {
-        "system" -> FontFamily.Default
-        "oswald" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Oswald.ttf")) }
-        "rubikglitch" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/RubikGlitch.ttf")) }
-        "rubiklines" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/RubikLines.ttf")) }
-        "poppins" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Poppins.ttf")) }
-        "cookie" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Cookie.ttf")) }
-        "emilyscandy" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/EmilysCandy.ttf")) }
-        "googlesanscode" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/GoogleSansCode.ttf")) }
-        "pirataone" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/PirataOne.ttf")) }
-        "quintessential" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Quintessential.ttf")) }
-        "rougescript" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/RougeScript.ttf")) }
-        "sairastencilone" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/SairaStencilOne.ttf")) }
-        "shadowsintolight" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/ShadowsIntoLight.ttf")) }
-        "smoochsans" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/SmoochSans.ttf")) }
-        "truculenta" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Truculenta.ttf")) }
-        "honk" -> remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/HonkVariable.ttf")) }
-        else -> FontFamily.Default
-    }
-}
 
 @Composable
 fun SettingsScreen() {

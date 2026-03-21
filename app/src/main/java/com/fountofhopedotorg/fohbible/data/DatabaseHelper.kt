@@ -10,13 +10,6 @@ import java.io.FileOutputStream
 import java.util.Locale.getDefault
 import java.util.Random
 
-data class Subheading(val verse: Int, val text: String)
-
-sealed class VerseContent {
-    data class SubheadingVal(val subheading: Subheading) : VerseContent()
-    data class VerseVal(val verse: Verse) : VerseContent()
-}
-
 class DatabaseHelper(private val context: Context, val databaseName: String) {
     var database: SQLiteDatabase? = null
     private val tag = "DatabaseHelper"

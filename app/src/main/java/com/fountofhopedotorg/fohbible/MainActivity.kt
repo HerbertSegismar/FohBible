@@ -105,6 +105,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.fountofhopedotorg.fohbible.data.AppThemeState
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.modals.FontModal
@@ -117,8 +118,6 @@ import com.fountofhopedotorg.fohbible.screens.NotesScreen
 import com.fountofhopedotorg.fohbible.screens.ReaderScreen
 import com.fountofhopedotorg.fohbible.screens.SearchScreen
 import com.fountofhopedotorg.fohbible.screens.SettingsScreen
-import com.fountofhopedotorg.fohbible.screens.getFontFamily
-import com.fountofhopedotorg.fohbible.ui.theme.AppThemeState
 import com.fountofhopedotorg.fohbible.ui.theme.ColorTheme
 import com.fountofhopedotorg.fohbible.ui.theme.DefaultPrimaryColor
 import com.fountofhopedotorg.fohbible.ui.theme.FohBibleTheme
@@ -127,10 +126,10 @@ import com.fountofhopedotorg.fohbible.ui.theme.PredefinedColorThemes
 import com.fountofhopedotorg.fohbible.ui.theme.ThemeManager
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils.descriptionMap
+import com.fountofhopedotorg.fohbible.utils.getFontFamily
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 
-// ====================== DATASTORE KEYS ======================
 private val PRIMARY_BOOK_NUMBER_KEY = intPreferencesKey("primary_book_number")
 private val PRIMARY_BOOK_NAME_KEY = stringPreferencesKey("primary_book_name")
 private val PRIMARY_CHAPTER_KEY = intPreferencesKey("primary_chapter")
@@ -218,7 +217,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
         )
     }
 
-    // ==================== SAVE ALL PREFERENCES ====================
     LaunchedEffect(Unit) { snapshotFlow { viewModel.fontSize }.collectLatest { dataStore.edit { prefs -> prefs[FONT_SIZE_KEY] = it } } }
     LaunchedEffect(Unit) { snapshotFlow { viewModel.darkTheme }.collectLatest { dataStore.edit { prefs -> prefs[DARK_THEME_KEY] = it } } }
     LaunchedEffect(Unit) { snapshotFlow { viewModel.selectedColor }.collectLatest { dataStore.edit { prefs -> prefs[SELECTED_COLOR_KEY] = it?.toArgb() ?: DefaultPrimaryColor.toArgb() } } }

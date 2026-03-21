@@ -1,7 +1,6 @@
 package com.fountofhopedotorg.fohbible.modals
 
 import android.content.res.Configuration
-import android.graphics.Typeface
 import android.text.SpannableString
 import android.text.method.LinkMovementMethod
 import android.text.style.ClickableSpan
@@ -68,7 +67,6 @@ import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
@@ -87,9 +85,11 @@ import com.fountofhopedotorg.fohbible.data.Testament
 import com.fountofhopedotorg.fohbible.data.Verse
 import com.fountofhopedotorg.fohbible.data.VerseCommentary
 import com.fountofhopedotorg.fohbible.models.AppViewModel
+import com.fountofhopedotorg.fohbible.utils.Fonts
 import com.fountofhopedotorg.fohbible.utils.ProcessedVerse
 import com.fountofhopedotorg.fohbible.utils.ThemeColors
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
+import com.fountofhopedotorg.fohbible.utils.getFontFamily
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -388,41 +388,7 @@ fun InteractiveModal(
         highlightIcon = MaterialTheme.colorScheme.primary
     )
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val systemFont = FontFamily.Default
-    val oswaldFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Oswald.ttf")) }
-    val poppinsFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Poppins.ttf")) }
-    val rubikGlitchFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/RubikGlitch.ttf")) }
-    val rubikLinesFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/RubikLines.ttf")) }
-    val cookieFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Cookie.ttf")) }
-    val emilysCandyFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/EmilysCandy.ttf")) }
-    val googleSansCodeFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/GoogleSansCode.ttf")) }
-    val pirataOneFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/PirataOne.ttf")) }
-    val quintessentialFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Quintessential.ttf")) }
-    val rougeScriptFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/RougeScript.ttf")) }
-    val sairaStencilOneFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/SairaStencilOne.ttf")) }
-    val shadowsIntoLightFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/ShadowsIntoLight.ttf")) }
-    val smoochSansFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/SmoochSans.ttf")) }
-    val truculentaFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Truculenta.ttf")) }
-    val honkFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/HonkVariable.ttf")) }
-    val currentFontFamily = when (viewModel.selectedFontFamily) {
-        "system" -> systemFont
-        "oswald" -> oswaldFont
-        "rubikglitch" -> rubikGlitchFont
-        "rubiklines" -> rubikLinesFont
-        "poppins" -> poppinsFont
-        "cookie" -> cookieFont
-        "emilyscandy" -> emilysCandyFont
-        "googlesanscode" -> googleSansCodeFont
-        "pirataone" -> pirataOneFont
-        "quintessential" -> quintessentialFont
-        "rougescript" -> rougeScriptFont
-        "sairastencilone" -> sairaStencilOneFont
-        "shadowsintolight" -> shadowsIntoLightFont
-        "smoochsans" -> smoochSansFont
-        "truculenta" -> truculentaFont
-        "honk" -> honkFont
-        else -> systemFont
-    }
+    val currentFontFamily = getFontFamily(viewModel.selectedFontFamily)
 
     var dictionaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var strongDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
@@ -1206,25 +1172,7 @@ fun InteractiveModal(
                                     movementMethod = LinkMovementMethod.getInstance()
                                     textSize = viewModel.fontSize.toFloat() * 0.85f
                                     setLineSpacing(0f, 1.333f)
-                                    typeface = when (viewModel.selectedFontFamily) {
-                                        "system" -> Typeface.DEFAULT
-                                        "oswald" -> Typeface.createFromAsset(ctx.assets, "fonts/Oswald.ttf")
-                                        "rubikglitch" -> Typeface.createFromAsset(ctx.assets, "fonts/RubikGlitch.ttf")
-                                        "rubiklines" -> Typeface.createFromAsset(ctx.assets, "fonts/RubikLines.ttf")
-                                        "poppins" -> Typeface.createFromAsset(ctx.assets, "fonts/Poppins.ttf")
-                                        "cookie" -> Typeface.createFromAsset(ctx.assets, "fonts/Cookie.ttf")
-                                        "emilyscandy" -> Typeface.createFromAsset(ctx.assets, "fonts/EmilysCandy.ttf")
-                                        "googlesanscode" -> Typeface.createFromAsset(ctx.assets, "fonts/GoogleSansCode.ttf")
-                                        "pirataone" -> Typeface.createFromAsset(ctx.assets, "fonts/PirataOne.ttf")
-                                        "quintessential" -> Typeface.createFromAsset(ctx.assets, "fonts/Quintessential.ttf")
-                                        "rougescript" -> Typeface.createFromAsset(ctx.assets, "fonts/RougeScript.ttf")
-                                        "sairastencilone" -> Typeface.createFromAsset(ctx.assets, "fonts/SairaStencilOne.ttf")
-                                        "shadowsintolight" -> Typeface.createFromAsset(ctx.assets, "fonts/ShadowsIntoLight.ttf")
-                                        "smoochsans" -> Typeface.createFromAsset(ctx.assets, "fonts/SmoochSans.ttf")
-                                        "truculenta" -> Typeface.createFromAsset(ctx.assets, "fonts/Truculenta.ttf")
-                                        "honk" -> Typeface.createFromAsset(ctx.assets, "fonts/HonkVariable.ttf")
-                                        else -> Typeface.DEFAULT
-                                    }
+                                    typeface = Fonts.getTypeface(ctx, viewModel.selectedFontFamily)
                                     textDirection = View.TEXT_DIRECTION_LTR
                                     gravity = Gravity.START
                                 }

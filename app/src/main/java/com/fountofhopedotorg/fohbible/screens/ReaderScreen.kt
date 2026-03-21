@@ -2,7 +2,6 @@ package com.fountofhopedotorg.fohbible.screens
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Typeface
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -99,6 +98,7 @@ import com.fountofhopedotorg.fohbible.utils.ProcessedVerse
 import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
 import com.fountofhopedotorg.fohbible.utils.ThemeColors
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
+import com.fountofhopedotorg.fohbible.utils.getFontFamily
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -188,42 +188,8 @@ fun ReaderScreen(
     }
     val multi = viewModel.multiVersion
     val synced = viewModel.scrollSync && multi && secondaryDatabaseHelper != null
-    val systemFont = FontFamily.Default
-    val oswaldFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/Oswald.ttf")) }
-    val poppinsFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/Poppins.ttf")) }
-    val rubikGlitchFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/RubikGlitch.ttf")) }
-    val rubikLinesFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/RubikLines.ttf")) }
-    val cookieFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/Cookie.ttf")) }
-    val emilysCandyFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/EmilysCandy.ttf")) }
-    val googleSansCodeFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/GoogleSansCode.ttf")) }
-    val pirataOneFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/PirataOne.ttf")) }
-    val quintessentialFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/Quintessential.ttf")) }
-    val rougeScriptFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/RougeScript.ttf")) }
-    val sairaStencilOneFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/SairaStencilOne.ttf")) }
-    val shadowsIntoLightFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/ShadowsIntoLight.ttf")) }
-    val smoochSansFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/SmoochSans.ttf")) }
-    val truculentaFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/Truculenta.ttf")) }
-    val honkFont = remember { FontFamily(Typeface.createFromAsset(contextFont.assets, "fonts/HonkVariable.ttf")) }
+    val currentFontFamily = getFontFamily(viewModel.selectedFontFamily)
 
-    val currentFontFamily = when (viewModel.selectedFontFamily) {
-        "system" -> systemFont
-        "oswald" -> oswaldFont
-        "rubikglitch" -> rubikGlitchFont
-        "rubiklines" -> rubikLinesFont
-        "poppins" -> poppinsFont
-        "cookie" -> cookieFont
-        "emilyscandy" -> emilysCandyFont
-        "googlesanscode" -> googleSansCodeFont
-        "pirataone" -> pirataOneFont
-        "quintessential" -> quintessentialFont
-        "rougescript" -> rougeScriptFont
-        "sairastencilone" -> sairaStencilOneFont
-        "shadowsintolight" -> shadowsIntoLightFont
-        "smoochsans" -> smoochSansFont
-        "truculenta" -> truculentaFont
-        "honk" -> honkFont
-        else -> systemFont
-    }
     var isButtonVisible by remember { mutableStateOf(true) }
     val buttonAlpha by animateFloatAsState(if (isButtonVisible) 1f else 0.2f, label = "buttonAlpha")
     val scope = rememberCoroutineScope()

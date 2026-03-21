@@ -79,6 +79,7 @@ import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
 import com.fountofhopedotorg.fohbible.MatrixNative
 import com.fountofhopedotorg.fohbible.Screen
+import com.fountofhopedotorg.fohbible.utils.getFontFamily
 import kotlin.random.Random
 
 data class QuickAction(
