@@ -439,6 +439,7 @@ fun InteractiveModal(
     }
 
     val stack = remember { mutableStateListOf<ModalPage>() }
+    val scrollStates = remember { mutableStateMapOf<ModalPage, ScrollState>() }
 
     LaunchedEffect(show) {
         if (show) {
@@ -726,7 +727,7 @@ fun InteractiveModal(
     if (show) {
         if (stack.isEmpty()) return
         val currentPage = stack.last()
-        val scrollState = remember(currentPage) { ScrollState(0) }
+        val scrollState = scrollStates.getOrPut(currentPage) { ScrollState(0) }
 
         val textColor = MaterialTheme.colorScheme.onBackground
         val linkColor = MaterialTheme.colorScheme.primary
