@@ -72,6 +72,7 @@ import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -1783,7 +1784,7 @@ fun ChapterView(
                                             if (refCount > 0 && onCrossRefClick != null) {
                                                 put("crossref_${verse.verseNumber}", InlineTextContent(
                                                     Placeholder(
-                                                        width = (viewModel.fontSize).sp,
+                                                        width = (viewModel.fontSize * 1.4).sp,
                                                         height = (viewModel.fontSize).sp,
                                                         placeholderVerticalAlign = PlaceholderVerticalAlign.TextCenter
                                                     )
@@ -1797,9 +1798,12 @@ fun ChapterView(
                                                     ) {
                                                         Text(
                                                             text = "$refCount",
-                                                            fontSize = (viewModel.fontSize * 0.65f).sp,
+                                                            fontSize = (viewModel.fontSize * 0.7f).sp,
                                                             color = themeColors.primary,
-                                                            fontWeight = FontWeight.Bold
+                                                            fontWeight = FontWeight.Bold,
+                                                            style = TextStyle(
+                                                                lineHeight = (viewModel.fontSize).sp
+                                                            )
                                                         )
                                                     }
                                                 })

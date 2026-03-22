@@ -65,6 +65,7 @@ import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -1128,7 +1129,10 @@ fun InteractiveModal(
                                                         text = "$refCount",
                                                         fontSize = (viewModel.fontSize * 0.6f).sp,
                                                         color = themeColors.primary,
-                                                        fontWeight = FontWeight.Bold
+                                                        fontWeight = FontWeight.Bold,
+                                                        style = TextStyle(
+                                                            lineHeight = (viewModel.fontSize).sp
+                                                        )
                                                     )
                                                 }
                                             })
