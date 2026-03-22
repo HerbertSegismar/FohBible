@@ -58,6 +58,8 @@ class AppViewModel : ViewModel() {
 
     var selectedVerseCommentary by mutableStateOf("cbsc")
 
+    var selectedCrossReferenceDatabase by mutableStateOf("obx")
+
     val isOldTestament: Boolean
         get() = BibleData.getBookByCustomNumber(primaryPassage.bookNumber)?.testament == Testament.OLD
 
@@ -80,7 +82,7 @@ class AppViewModel : ViewModel() {
                 val databaseFiles = mutableListOf<String>()
                 var successCount = 0
                 var totalCount: Int
-                val assetDirs = listOf("databases", "dictionaries")
+                val assetDirs = listOf("databases", "dictionaries", "commentaries", "cross-references", "subheadings", "topical")
 
                 assetDirs.forEach { dir ->
                     try {
