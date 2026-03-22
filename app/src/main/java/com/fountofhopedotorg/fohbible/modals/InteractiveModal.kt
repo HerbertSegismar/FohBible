@@ -388,24 +388,26 @@ fun InteractiveModal(
     var verseCommentaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var crossRefDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
 
-    val dictionaries = listOf("atsbd", "noah", "cbtel", "isbe", "oxford", "topical")
+    val dictionaries = listOf("atsbd", "cbtel", "isbe", "noah", "oxford", "topical", "tcr")
     val dictionaryDisplayNames = mapOf(
         "atsbd" to "ATSBD",
-        "noah" to "Noah Webster's Dictionary",
         "cbtel" to "CBTEL",
         "isbe" to "Int'l Standard Bible Encyclopedia",
+        "noah" to "Noah Webster's Dictionary",
         "oxford" to "Oxford Dictionary",
-        "topical" to "Topical Bible Dictionary"
+        "topical" to "Topical Bible Dictionary",
+        "tcr" to "Thompson Chain Reference"
     )
-    val verseCommentaries = listOf("cbsc", "ebc", "fairbairn", "hawker", "mhwbc", "spurgeon", "scofield")
+    val verseCommentaries = listOf("cbsc", "spurgeon", "ebc", "fairbairn", "hawker", "mhwbc", "scofield", "tsk")
     val verseCommentaryDisplayNames = mapOf(
         "cbsc" to "Cambridge Bible Commentary",
+        "spurgeon" to "Charles Spurgeon's Commentary",
         "ebc" to "Expositor's Bible Commentary",
         "fairbairn" to "Fairbairn's Typology of Scripture",
         "hawker" to "Hawker's Poor Man's Commentary",
         "mhwbc" to "Matthew Henry's Commentary",
-        "spurgeon" to "Charles Spurgeon's Commentary",
-        "scofield" to "Scofield Reference Bible"
+        "scofield" to "Scofield Reference Bible",
+        "tsk" to "Treasury of Scripture Knowledge"
     )
     val crossReferenceDatabases = listOf("esv", "niv11", "obx")
     val crossReferenceDatabaseDisplayNames = mapOf(
@@ -825,6 +827,9 @@ fun InteractiveModal(
                                             ) {
                                                 dictionaries.forEach { dictKey ->
                                                     DropdownMenuItem(
+                                                        modifier = if (dictKey == viewModel.selectedDictionary) {
+                                                            Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                                                        } else Modifier,
                                                         text = { Text(dictionaryDisplayNames[dictKey] ?: dictKey) },
                                                         onClick = {
                                                             dictionaryDropdownExpanded = false
@@ -904,6 +909,9 @@ fun InteractiveModal(
                                             ) {
                                                 verseCommentaries.forEach { comKey ->
                                                     DropdownMenuItem(
+                                                        modifier = if (comKey == viewModel.selectedVerseCommentary) {
+                                                            Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                                                        } else Modifier,
                                                         text = { Text(verseCommentaryDisplayNames[comKey] ?: comKey) },
                                                         onClick = {
                                                             commentaryDropdownExpanded = false
@@ -969,6 +977,9 @@ fun InteractiveModal(
                                             ) {
                                                 crossReferenceDatabases.forEach { dbKey ->
                                                     DropdownMenuItem(
+                                                        modifier = if (dbKey == viewModel.selectedCrossReferenceDatabase) {
+                                                            Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                                                        } else Modifier,
                                                         text = { Text(crossReferenceDatabaseDisplayNames[dbKey] ?: dbKey) },
                                                         onClick = {
                                                             crossRefDropdownExpanded = false

@@ -3,7 +3,6 @@ package com.fountofhopedotorg.fohbible.utils
 object BibleVersionUtils {
     val versionMap: Map<String, String> = mapOf(
         "ampc.sqlite3" to "AMPC",
-        "bsb19.sqlite3" to "BSB19",
         "cebB.sqlite3" to "CEBB",
         "cjb.sqlite3" to "CJB",
         "csb17.sqlite3" to "CSB17",
@@ -27,7 +26,6 @@ object BibleVersionUtils {
     )
     val descriptionMap: Map<String, String> = mapOf(
         "ampc.sqlite3" to "Amplified Bible Classic Edition",
-        "bsb19.sqlite3" to "Berean Study Bible 2019",
         "cebB.sqlite3" to "Cebuano Bible",
         "cjb.sqlite3" to "Complete Jewish Bible",
         "csb17.sqlite3" to "Christian Standard Bible",
