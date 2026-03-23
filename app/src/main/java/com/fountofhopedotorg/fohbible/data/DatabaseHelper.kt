@@ -4,7 +4,6 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
-import android.util.Log
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Locale.getDefault
@@ -12,7 +11,6 @@ import java.util.Random
 
 class DatabaseHelper(private val context: Context, val databaseName: String) {
     var database: SQLiteDatabase? = null
-    private val tag = "DatabaseHelper"
     private val random = Random()
 
     companion object {
@@ -50,8 +48,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             createBookmarksTable()
             createHighlightsTable()
             createNotesTable()
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (_: Exception) {
         }
     }
 
@@ -72,10 +69,8 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             createBookmarksTable()
             createHighlightsTable()
             createNotesTable()
-            Log.d(tag, "Database $databaseName refreshed successfully")
             true
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (_: Exception) {
             false
         }
     }
@@ -154,8 +149,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                     map[verse] = count
                 }
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (_: Exception) {
         }
         return map
     }
@@ -186,8 +180,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                     )
                 }
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (_: Exception) {
         }
         return refs
     }

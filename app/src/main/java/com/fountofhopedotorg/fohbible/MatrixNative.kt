@@ -1,7 +1,6 @@
 package com.fountofhopedotorg.fohbible
 
 import android.graphics.Paint
-import android.graphics.Typeface
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
@@ -42,6 +41,7 @@ import com.fountofhopedotorg.fohbible.data.Drop
 import com.fountofhopedotorg.fohbible.data.Overlay
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.ui.theme.DefaultPrimaryColor
+import com.fountofhopedotorg.fohbible.utils.Fonts
 import com.fountofhopedotorg.fohbible.utils.getFontFamily
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -92,16 +92,10 @@ fun MatrixNative() {
     val overlayColor = MaterialTheme.colorScheme.primary
     val context = LocalContext.current
     val typeface = remember(viewModel.selectedFontFamily) {
-        when (viewModel.selectedFontFamily) {
-            "system" -> Typeface.DEFAULT
-            "oswald" -> Typeface.createFromAsset(context.assets, "fonts/Oswald.ttf")
-            "rubikglitch" -> Typeface.createFromAsset(context.assets, "fonts/RubikGlitch.ttf")
-            "poppins" -> Typeface.createFromAsset(context.assets, "fonts/Poppins.ttf")
-            else -> Typeface.DEFAULT
-        }
+        Fonts.getTypeface(context, viewModel.selectedFontFamily)
     }
     val overlayTypeface = remember {
-        Typeface.createFromAsset(context.assets, "fonts/RubikGlitch.ttf")
+        Fonts.getTypeface(context, "rubikglitch")
     }
     var overlay by remember { mutableStateOf<Overlay?>(null) }
     val drops = remember { mutableStateListOf<Drop>() }

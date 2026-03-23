@@ -1,6 +1,5 @@
 package com.fountofhopedotorg.fohbible.screens
 
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -127,8 +126,7 @@ fun DatabaseHelper.searchVerses(query: String, options: SearchOptions? = null): 
                 verses.add(SearchVerse(verseNum, text, bookNumber, chapter, bookName))
             }
         }
-    } catch (e: Exception) {
-        Log.e("DatabaseHelper", "Error in searchVerses: ${e.message}")
+    } catch (_: Exception) {
     }
     return verses
 }
@@ -170,8 +168,7 @@ suspend fun enhanceSearchResultsWithColors(
                 val bookName = book?.name ?: bookNumber.toString()
                 val color = getBookColor(bookName)
                 colorMap[bookNumber] = color
-            } catch (error: Exception) {
-                Log.e("SearchScreen", "Error fetching book $bookNumber:", error)
+            } catch (_: Exception) {
                 colorMap[bookNumber] = generateColorFromString(bookNumber.toString())
             }
         }
@@ -240,8 +237,7 @@ fun SearchScreen(
             coroutineScope.launch {
                 listState.animateScrollToItem(0)
             }
-        } catch (err: Exception) {
-            Log.e("SearchScreen", "Search error", err)
+        } catch (_: Exception) {
             error = "Failed to search. Please try again."
         } finally {
             loading = false

@@ -1,5 +1,4 @@
 @file:OptIn(ExperimentalMaterial3Api::class)
-
 package com.fountofhopedotorg.fohbible
 
 import androidx.compose.foundation.BorderStroke

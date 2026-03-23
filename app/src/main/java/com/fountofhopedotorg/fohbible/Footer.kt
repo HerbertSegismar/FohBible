@@ -104,7 +104,7 @@ fun Footer() {
         ) {
             AsyncImage(
                 model = R.drawable.christisrisen2,
-                contentDescription = "Christ Is Risen",
+                contentDescription = "Christ Is Risen vector text image",
                 modifier = Modifier.fillMaxWidth(),
                 contentScale = ContentScale.Fit
             )

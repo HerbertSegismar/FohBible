@@ -1,4 +1,3 @@
-
 package com.fountofhopedotorg.fohbible.utils
 
 import androidx.compose.ui.graphics.Color

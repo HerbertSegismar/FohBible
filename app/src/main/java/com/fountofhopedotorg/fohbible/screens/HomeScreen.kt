@@ -2,7 +2,6 @@ package com.fountofhopedotorg.fohbible.screens
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Typeface
 import android.os.Handler
 import android.os.Looper
 import androidx.compose.foundation.Image
@@ -59,7 +58,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -324,42 +322,7 @@ fun DailyVerseCard(
     val isLoading = remember { mutableStateOf(false) }
     var isBookmarked by remember(verses) { mutableStateOf(false) }
 
-    val systemFont = FontFamily.Default
-    val oswaldFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Oswald.ttf")) }
-    val poppinsFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Poppins.ttf")) }
-    val rubikGlitchFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/RubikGlitch.ttf")) }
-    val rubikLinesFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/RubikLines.ttf")) }
-    val cookieFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Cookie.ttf")) }
-    val emilysCandyFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/EmilysCandy.ttf")) }
-    val googleSansCodeFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/GoogleSansCode.ttf")) }
-    val pirataOneFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/PirataOne.ttf")) }
-    val quintessentialFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Quintessential.ttf")) }
-    val rougeScriptFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/RougeScript.ttf")) }
-    val sairaStencilOneFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/SairaStencilOne.ttf")) }
-    val shadowsIntoLightFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/ShadowsIntoLight.ttf")) }
-    val smoochSansFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/SmoochSans.ttf")) }
-    val truculentaFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/Truculenta.ttf")) }
-    val honkFont = remember { FontFamily(Typeface.createFromAsset(context.assets, "fonts/HonkVariable.ttf")) }
-
-    val currentFontFamily = when (viewModel.selectedFontFamily) {
-        "system" -> systemFont
-        "oswald" -> oswaldFont
-        "rubikglitch" -> rubikGlitchFont
-        "rubiklines" -> rubikLinesFont
-        "poppins" -> poppinsFont
-        "cookie" -> cookieFont
-        "emilyscandy" -> emilysCandyFont
-        "googlesanscode" -> googleSansCodeFont
-        "pirataone" -> pirataOneFont
-        "quintessential" -> quintessentialFont
-        "rougescript" -> rougeScriptFont
-        "sairastencilone" -> sairaStencilOneFont
-        "shadowsintolight" -> shadowsIntoLightFont
-        "smoochsans" -> smoochSansFont
-        "truculenta" -> truculentaFont
-        "honk" -> honkFont
-        else -> systemFont
-    }
+    val currentFontFamily = getFontFamily(viewModel.selectedFontFamily)
 
     LaunchedEffect(verses) {
         if (!verses.isNullOrEmpty()) {

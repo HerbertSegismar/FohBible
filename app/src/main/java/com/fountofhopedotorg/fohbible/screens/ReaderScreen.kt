@@ -146,8 +146,6 @@ fun ReaderScreen(
     var currentModalIsOldTestament by remember { mutableStateOf(false) }
     var showNotesModal by remember { mutableStateOf(false) }
     var selectedVersesForNote by remember { mutableStateOf(emptyList<Verse>()) }
-
-    // ====================== DYNAMIC CROSS-REFERENCE HELPER ======================
     var crossRefHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     val contextFont = LocalContext.current
 
@@ -161,8 +159,6 @@ fun ReaderScreen(
             crossRefHelper?.close()
         }
     }
-
-    // ====================== NEW VARS FOR CROSS-REF MODAL ======================
     var crossRefBook by remember { mutableIntStateOf(0) }
     var crossRefChapter by remember { mutableIntStateOf(0) }
     var crossRefVerse by remember { mutableIntStateOf(0) }
@@ -337,7 +333,6 @@ fun ReaderScreen(
     var crossRefContent by remember { mutableStateOf("") }
     var crossRefBibleDb by remember { mutableStateOf<DatabaseHelper?>(null) }
 
-    // ====================== UPDATED onCrossRefClick (dynamic helper) ======================
     val onCrossRefClick: (Int, Int, Int, Boolean) -> Unit = { book, chapter, verse, isPrimary ->
         val dbForVerses = if (isPrimary) databaseHelper else secondaryDatabaseHelper
         val refs = crossRefHelper?.getCrossReferences(book, chapter, verse) ?: emptyList()
@@ -510,7 +505,6 @@ fun ReaderScreen(
             )
         }
 
-        // ====================== ALL MODALS ======================
         InteractiveModal(
             show = showWordModal,
             onDismiss = { showWordModal = false },
