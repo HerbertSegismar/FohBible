@@ -411,9 +411,9 @@ fun InteractiveModal(
     )
     val crossReferenceDatabases = listOf("esv", "niv11", "obx")
     val crossReferenceDatabaseDisplayNames = mapOf(
-        "esv" to "English Standard Version",
-        "niv11" to "New International Version",
-        "obx" to "OpenBible Project"
+        "esv" to "References from ESV",
+        "niv11" to "References from NIV",
+        "obx" to "References from OpenBible Project"
     )
 
     DisposableEffect(Unit) {
@@ -1597,18 +1597,22 @@ fun InteractiveModal(
                                 val refs = withContext(Dispatchers.IO) {
                                     temp.getCrossReferences(b, c, v)
                                 }
-                                val html = sanitizeHtmlContent(
-                                    refs.joinToString("<br>") { ref ->
-                                        val toBook = BibleData.getBookByCustomNumber(ref.bookTo)?.name ?: ref.bookTo.toString()
-                                        val verseRange = if (ref.verseToStart == ref.verseToEnd) {
-                                            ref.verseToStart.toString()
-                                        } else {
-                                            "${ref.verseToStart}-${ref.verseToEnd}"
+                                val html = if (refs.isEmpty()) {
+                                    "No references available"
+                                } else {
+                                    sanitizeHtmlContent(
+                                        refs.joinToString("<br>") { ref ->
+                                            val toBook = BibleData.getBookByCustomNumber(ref.bookTo)?.name ?: ref.bookTo.toString()
+                                            val verseRange = if (ref.verseToStart == ref.verseToEnd) {
+                                                ref.verseToStart.toString()
+                                            } else {
+                                                "${ref.verseToStart}-${ref.verseToEnd}"
+                                            }
+                                            val href = "B:${ref.bookTo} ${ref.chapterTo}:$verseRange"
+                                            "<a href=\"$href\">$toBook ${ref.chapterTo}:$verseRange</a>"
                                         }
-                                        val href = "B:${ref.bookTo} ${ref.chapterTo}:$verseRange"
-                                        "<a href=\"$href\">$toBook ${ref.chapterTo}:$verseRange</a>"
-                                    }
-                                )
+                                    )
+                                }
                                 val idx2 = stack.indexOf(loadingPage)
                                 if (idx2 != -1) {
                                     stack[idx2] = loadingPage.copy(content = html)
