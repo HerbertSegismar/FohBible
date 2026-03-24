@@ -118,7 +118,7 @@ fun prepareStrongContent(rawDefinition: String): String {
     val searchTerm = "Derivation"
     val index = sanitized.indexOf(searchTerm, ignoreCase = true)
     if (index != -1) {
-        return sanitized.take(index) + " " + sanitized.substring(index)
+        return sanitized.take(index) + "<br><br>" + sanitized.substring(index)
     }
     return sanitized
 }
