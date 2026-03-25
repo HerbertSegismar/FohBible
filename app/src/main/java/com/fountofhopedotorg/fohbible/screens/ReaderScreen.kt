@@ -1525,6 +1525,7 @@ fun ChapterView(
     onVerseCommentaryClick: ((Int, Int, Int) -> Unit)? = null
 ) {
     val processor = remember(content) { VerseTextProcessor() }
+
     val processedVerses = remember(content, themeColors, isKjvPlus, versionAbbr, refreshKey, viewModel.fontSize) {
         val result = mutableMapOf<Int, ProcessedVerse>()
         content.forEach { item ->
@@ -1557,7 +1558,8 @@ fun ChapterView(
 
     var highlightedVerse by remember { mutableStateOf<Int?>(null) }
     val offsets = remember { mutableStateMapOf<Int, Float>() }
-    val bookmarkIconSize = (viewModel.fontSize)
+
+    val bookmarkIconSize = viewModel.fontSize
     val bookmarkInlineContent = InlineTextContent(
         Placeholder(
             width = bookmarkIconSize.sp,
@@ -1572,6 +1574,7 @@ fun ChapterView(
             modifier = Modifier.fillMaxSize()
         )
     }
+
     val noteInlineContent = InlineTextContent(
         Placeholder(
             width = bookmarkIconSize.sp,
@@ -1595,7 +1598,12 @@ fun ChapterView(
     }
 
     Box(modifier = modifier) {
-        val texture = if (viewModel.bgImageIndex == 0) null else if (viewModel.bgImageIndex == 34 && viewModel.customTextureUri != null) viewModel.customTextureUri else "file:///android_asset/textures/${viewModel.bgImageIndex}.jpg"
+        val texture = when (viewModel.bgImageIndex) {
+            0 -> null
+            34 if viewModel.customTextureUri != null -> viewModel.customTextureUri
+            else -> "file:///android_asset/textures/${viewModel.bgImageIndex}.jpg"
+        }
+
         if (texture != null) {
             AsyncImage(
                 model = texture,
@@ -1603,12 +1611,9 @@ fun ChapterView(
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
-            val overlayColor = (if (viewModel.darkTheme) viewModel.darkOverlayColor else viewModel.lightOverlayColor).copy(alpha = viewModel.overlayOpacity)
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(overlayColor)
-            )
+            val overlayColor = (if (viewModel.darkTheme) viewModel.darkOverlayColor else viewModel.lightOverlayColor)
+                .copy(alpha = viewModel.overlayOpacity)
+            Box(modifier = Modifier.fillMaxSize().background(overlayColor))
         }
 
         Column {
@@ -1628,20 +1633,12 @@ fun ChapterView(
                                 viewModel.showSecondaryNavigationModal = true
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.White
-                        ),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                         shape = RoundedCornerShape(4.dp),
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                        modifier = Modifier
-                            .height(30.dp)
-                            .weight(0.7f)
-                            .padding(end = 4.dp)
+                        modifier = Modifier.height(30.dp).weight(0.7f).padding(end = 4.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = passage.bookName,
                                 fontWeight = FontWeight.Bold,
@@ -1662,15 +1659,10 @@ fun ChapterView(
                     }
                     Button(
                         onClick = {
-                            if (isPrimary) {
-                                viewModel.showPrimaryVersionDropdown = true
-                            } else {
-                                viewModel.showSecondaryVersionDropdown = true
-                            }
+                            if (isPrimary) viewModel.showPrimaryVersionDropdown = true
+                            else viewModel.showSecondaryVersionDropdown = true
                         },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.White
-                        ),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                         shape = RoundedCornerShape(4.dp),
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                         modifier = Modifier.height(30.dp).weight(0.5f)
@@ -1717,17 +1709,26 @@ fun ChapterView(
                             val isTemporaryHighlighted = verse.verseNumber == highlightedVerse
                             val fullVerse = verse.copy(bookName = passage.bookName, chapter = passage.chapter)
                             val isPersistentHighlighted = databaseHelper?.isHighlighted(fullVerse) ?: false
-                            val isAnyHighlighted = isTemporaryHighlighted || isPersistentHighlighted
+                            val persistentHighlightColor = if (isPersistentHighlighted) {
+                                databaseHelper.getHighlightColor(fullVerse) ?: themeColors.searchHighlightBg
+                            } else null
+
+
                             val isBookmarked = databaseHelper?.isBookmarked(fullVerse) ?: false
                             val isNote = databaseHelper?.hasNote(fullVerse) ?: false
                             val refCount = crossRefCounts[verse.verseNumber] ?: 0
+                            val backgroundModifier = when {
+                                persistentHighlightColor != null -> Modifier.background(persistentHighlightColor)
+                                isTemporaryHighlighted -> Modifier.background(themeColors.searchHighlightBg)
+                                else -> Modifier
+                            }
 
                             if (processedVerse != null) {
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(vertical = 8.dp)
-                                        .then(if (isAnyHighlighted) Modifier.background(themeColors.searchHighlightBg) else Modifier)
+                                        .then(backgroundModifier)
                                         .onGloballyPositioned { coords ->
                                             offsets[verse.verseNumber] = coords.positionInParent().y
                                         }
@@ -1744,6 +1745,7 @@ fun ChapterView(
                                             )
                                         }
                                     }
+
                                     val annotatedString = buildAnnotatedString {
                                         withStyle(
                                             SpanStyle(
@@ -1754,12 +1756,8 @@ fun ChapterView(
                                         ) {
                                             append("${verse.verseNumber} ")
                                         }
-                                        if (isBookmarked) {
-                                            appendInlineContent("bookmark", "[bookmark]")
-                                        }
-                                        if (isNote) {
-                                            appendInlineContent("note", "[note]")
-                                        }
+                                        if (isBookmarked) appendInlineContent("bookmark", "[bookmark]")
+                                        if (isNote) appendInlineContent("note", "[note]")
                                         append(processedVerse.body)
                                         if (refCount > 0 && onCrossRefClick != null) {
                                             append(" ")
@@ -1769,12 +1767,11 @@ fun ChapterView(
                                             appendInlineContent("commentary_${verse.verseNumber}", "[C]")
                                         }
                                     }
+
                                     val inlineContentMap = remember(verse.verseNumber, refCount, isNote, viewModel.fontSize) {
                                         buildMap {
                                             put("bookmark", bookmarkInlineContent)
-                                            if (isNote) {
-                                                put("note", noteInlineContent)
-                                            }
+                                            if (isNote) put("note", noteInlineContent)
                                             if (refCount > 0 && onCrossRefClick != null) {
                                                 put("crossref_${verse.verseNumber}", InlineTextContent(
                                                     Placeholder(
@@ -1795,9 +1792,7 @@ fun ChapterView(
                                                             fontSize = (viewModel.fontSize * 0.7f).sp,
                                                             color = themeColors.primary,
                                                             fontWeight = FontWeight.Bold,
-                                                            style = TextStyle(
-                                                                lineHeight = (viewModel.fontSize).sp
-                                                            )
+                                                            style = TextStyle(lineHeight = (viewModel.fontSize).sp)
                                                         )
                                                     }
                                                 })
@@ -1813,13 +1808,7 @@ fun ChapterView(
                                                     Box(
                                                         modifier = Modifier
                                                             .fillMaxSize()
-                                                            .clickable {
-                                                                onVerseCommentaryClick(
-                                                                    passage.bookNumber,
-                                                                    passage.chapter,
-                                                                    verse.verseNumber
-                                                                )
-                                                            },
+                                                            .clickable { onVerseCommentaryClick(passage.bookNumber, passage.chapter, verse.verseNumber) },
                                                         contentAlignment = Alignment.Center
                                                     ) {
                                                         Icon(
@@ -1854,9 +1843,7 @@ fun ChapterView(
                                                             }
                                                         }
                                                     },
-                                                    onLongPress = {
-                                                        onVerseLongPress?.invoke(verse, passage)
-                                                    }
+                                                    onLongPress = { onVerseLongPress?.invoke(verse, passage) }
                                                 )
                                             },
                                         fontSize = viewModel.fontSize.sp,
@@ -1871,7 +1858,7 @@ fun ChapterView(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(vertical = 8.dp)
-                                        .then(if (isAnyHighlighted) Modifier.background(themeColors.searchHighlightBg) else Modifier)
+                                        .then(backgroundModifier)
                                         .onGloballyPositioned { coords ->
                                             offsets[verse.verseNumber] = coords.positionInParent().y
                                         }
@@ -1886,12 +1873,8 @@ fun ChapterView(
                                         ) {
                                             append("${verse.verseNumber} ")
                                         }
-                                        if (isBookmarked) {
-                                            appendInlineContent("bookmark", "[bookmark]")
-                                        }
-                                        if (isNote) {
-                                            appendInlineContent("note", "[note]")
-                                        }
+                                        if (isBookmarked) appendInlineContent("bookmark", "[bookmark]")
+                                        if (isNote) appendInlineContent("note", "[note]")
                                         append(verse.text)
                                         if (refCount > 0 && onCrossRefClick != null) {
                                             append(" ")
@@ -1901,12 +1884,11 @@ fun ChapterView(
                                             appendInlineContent("commentary_${verse.verseNumber}", "[C]")
                                         }
                                     }
+
                                     val inlineContentMap = remember(verse.verseNumber, refCount, isNote) {
                                         buildMap {
                                             put("bookmark", bookmarkInlineContent)
-                                            if (isNote) {
-                                                put("note", noteInlineContent)
-                                            }
+                                            if (isNote) put("note", noteInlineContent)
                                             if (refCount > 0 && onCrossRefClick != null) {
                                                 put("crossref_${verse.verseNumber}", InlineTextContent(
                                                     Placeholder(
@@ -1941,13 +1923,7 @@ fun ChapterView(
                                                     Box(
                                                         modifier = Modifier
                                                             .fillMaxSize()
-                                                            .clickable {
-                                                                onVerseCommentaryClick(
-                                                                    passage.bookNumber,
-                                                                    passage.chapter,
-                                                                    verse.verseNumber
-                                                                )
-                                                            },
+                                                            .clickable { onVerseCommentaryClick(passage.bookNumber, passage.chapter, verse.verseNumber) },
                                                         contentAlignment = Alignment.Center
                                                     ) {
                                                         Icon(
@@ -1961,6 +1937,7 @@ fun ChapterView(
                                             }
                                         }
                                     }
+
                                     var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
                                     Text(
                                         text = annotatedString,
@@ -1968,9 +1945,7 @@ fun ChapterView(
                                             .fillMaxWidth()
                                             .pointerInput(Unit) {
                                                 detectTapGestures(
-                                                    onLongPress = {
-                                                        onVerseLongPress?.invoke(verse, passage)
-                                                    }
+                                                    onLongPress = { onVerseLongPress?.invoke(verse, passage) }
                                                 )
                                             },
                                         fontSize = viewModel.fontSize.sp,
@@ -1984,25 +1959,25 @@ fun ChapterView(
                         }
                     }
                 }
-
-                if (isCurrentPage) {
-                    LaunchedEffect(targetVerse, content) {
-                        if (targetVerse != null && content.isNotEmpty() && targetVerse > 0) {
-                            delay(200)
-                            val offset = offsets[targetVerse]
-                            if (offset == null) {
-                                onInitialScrollComplete()
-                                return@LaunchedEffect
-                            }
-                            state.animateScrollTo(offset.toInt())
-                            highlightedVerse = targetVerse
-                            delay(2000)
-                            highlightedVerse = null
-                        }
-                        onInitialScrollComplete()
-                    }
-                }
             }
+        }
+    }
+
+    if (isCurrentPage) {
+        LaunchedEffect(targetVerse, content) {
+            if (targetVerse != null && content.isNotEmpty() && targetVerse > 0) {
+                delay(200)
+                val offset = offsets[targetVerse]
+                if (offset == null) {
+                    onInitialScrollComplete()
+                    return@LaunchedEffect
+                }
+                state.animateScrollTo(offset.toInt())
+                highlightedVerse = targetVerse
+                delay(2000)
+                highlightedVerse = null
+            }
+            onInitialScrollComplete()
         }
     }
 }

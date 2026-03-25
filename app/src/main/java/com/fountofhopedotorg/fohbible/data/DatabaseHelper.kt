@@ -4,6 +4,8 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Locale.getDefault
@@ -28,6 +30,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
         const val COLUMN_END_VERSE = "end_verse"
         const val COLUMN_NOTE = "note"
         const val COLUMN_TIMESTAMP = "timestamp"
+        const val COLUMN_HIGHLIGHT_COLOR = "highlight_color"
     }
 
     init {
@@ -48,6 +51,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             createBookmarksTable()
             createHighlightsTable()
             createNotesTable()
+            migrateHighlightsTable()
         } catch (_: Exception) {
         }
     }
@@ -101,6 +105,23 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             )
             """.trimIndent()
         )
+    }
+
+    private fun migrateHighlightsTable() {
+        try {
+            val cursor = database?.rawQuery("PRAGMA table_info($HIGHLIGHTS_TABLE)", null)
+            var hasColorColumn = false
+            cursor?.use {
+                while (it.moveToNext()) {
+                    if (it.getString(it.getColumnIndexOrThrow("name")) == COLUMN_HIGHLIGHT_COLOR) {
+                        hasColorColumn = true
+                    }
+                }
+            }
+            if (!hasColorColumn) {
+                database?.execSQL("ALTER TABLE $HIGHLIGHTS_TABLE ADD COLUMN $COLUMN_HIGHLIGHT_COLOR INTEGER")
+            }
+        } catch (_: Exception) {}
     }
     private fun createNotesTable() {
         database?.execSQL(
@@ -429,17 +450,36 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
         return verses
     }
 
-    fun addHighlight(verse: Verse) {
+    fun addHighlight(verse: Verse, colorArgb: Int = Color.Yellow.toArgb()) {
         try {
             val values = ContentValues().apply {
                 put(COLUMN_BOOK_NAME, verse.bookName)
                 put(COLUMN_CHAPTER, verse.chapter)
                 put(COLUMN_VERSE_NUMBER, verse.verseNumber)
                 put(COLUMN_TEXT, verse.text)
+                put(COLUMN_HIGHLIGHT_COLOR, colorArgb)
             }
-            database?.insertWithOnConflict(HIGHLIGHTS_TABLE, null, values, SQLiteDatabase.CONFLICT_IGNORE)
-        } catch (_: Exception) {
-        }
+            database?.insertWithOnConflict(HIGHLIGHTS_TABLE, null, values, SQLiteDatabase.CONFLICT_REPLACE)
+        } catch (_: Exception) {}
+    }
+
+    fun getHighlightColor(verse: Verse): Color? {
+        var colorInt: Int? = null
+        try {
+            val cursor = database?.query(
+                HIGHLIGHTS_TABLE,
+                arrayOf(COLUMN_HIGHLIGHT_COLOR),
+                "$COLUMN_BOOK_NAME = ? AND $COLUMN_CHAPTER = ? AND $COLUMN_VERSE_NUMBER = ?",
+                arrayOf(verse.bookName, verse.chapter.toString(), verse.verseNumber.toString()),
+                null, null, null
+            )
+            cursor?.use {
+                if (it.moveToFirst() && !it.isNull(0)) {
+                    colorInt = it.getInt(0)
+                }
+            }
+        } catch (_: Exception) {}
+        return colorInt?.let { Color(it) }
     }
 
     fun removeHighlight(verse: Verse) {

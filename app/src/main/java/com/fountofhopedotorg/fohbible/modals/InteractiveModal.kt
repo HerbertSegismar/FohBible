@@ -1598,7 +1598,7 @@ fun InteractiveModal(
                                     temp.getCrossReferences(b, c, v)
                                 }
                                 val html = if (refs.isEmpty()) {
-                                    "No references available"
+                                    "No references available."
                                 } else {
                                     sanitizeHtmlContent(
                                         refs.joinToString("<br>") { ref ->
