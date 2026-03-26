@@ -130,6 +130,8 @@ import com.fountofhopedotorg.fohbible.utils.getFontFamily
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 
+
+private val MARKER_COLOR_KEY = intPreferencesKey("marker_color")
 private val PRIMARY_BOOK_NUMBER_KEY = intPreferencesKey("primary_book_number")
 private val PRIMARY_BOOK_NAME_KEY = stringPreferencesKey("primary_book_name")
 private val PRIMARY_CHAPTER_KEY = intPreferencesKey("primary_chapter")
@@ -202,6 +204,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
         viewModel.overlayOpacity = prefs[OVERLAY_OPACITY_KEY] ?: 0.15f
         viewModel.lightOverlayColor = Color(prefs[LIGHT_OVERLAY_COLOR_KEY] ?: Color(0xFFF5F5DC).toArgb())
         viewModel.darkOverlayColor = Color(prefs[DARK_OVERLAY_COLOR_KEY] ?: Color(0xFF100F21).toArgb())
+        viewModel.markerColor = Color(prefs[MARKER_COLOR_KEY] ?: Color(0xDD8A66DE).toArgb())
 
         viewModel.primaryPassage = PassageSelection(
             bookNumber = prefs[PRIMARY_BOOK_NUMBER_KEY] ?: 10,
@@ -274,6 +277,11 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
         primaryColor = viewModel.selectedColor ?: DefaultPrimaryColor,
         isCustomColor = viewModel.isCustomColor
     )
+
+    LaunchedEffect(Unit) {
+        snapshotFlow { viewModel.markerColor.toArgb() }
+            .collectLatest { dataStore.edit { prefs -> prefs[MARKER_COLOR_KEY] = it } }
+    }
 
     var dbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     LaunchedEffect(viewModel.currentDbName) {
@@ -544,6 +552,16 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 viewModel.showReaderOverlayColorWheel = false
                             },
                             initialColor = if (viewModel.darkTheme) viewModel.darkOverlayColor else viewModel.lightOverlayColor
+                        )
+                    }
+                    if (viewModel.showMarkerColorWheelDialog) {
+                        ColorWheelDialog(
+                            onDismissRequest = { viewModel.showMarkerColorWheelDialog = false },
+                            onColorSelected = { color ->
+                                viewModel.markerColor = color
+                                viewModel.showMarkerColorWheelDialog = false
+                            },
+                            initialColor = viewModel.markerColor
                         )
                     }
                 }
@@ -1619,6 +1637,31 @@ fun ReaderAppBar(
                         }
                     }
                 }
+                HorizontalDivider()
+                DropdownMenuItem(
+                    text = {
+                        Text("Marker Color", modifier = Modifier.fillMaxWidth())
+                    },
+                    leadingIcon = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .background(viewModel.markerColor)
+                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                            )
+                        }
+                    },
+                    onClick = {
+                        viewModel.showMarkerColorWheelDialog = true
+                        showNavigationDropdown = false
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     )

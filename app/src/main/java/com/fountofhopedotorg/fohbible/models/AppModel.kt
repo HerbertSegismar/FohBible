@@ -23,6 +23,9 @@ import java.io.IOException
 
 class AppViewModel : ViewModel() {
 
+    var markerColor by mutableStateOf(Color(0xDD8A66DE))
+    var showMarkerColorWheelDialog by mutableStateOf(false)
+
     var showSecondaryNavigationModal by mutableStateOf(false)
     var lightModalBackgroundColor by mutableStateOf(Color(0xFFEAE7E3))
     var darkModalBackgroundColor by mutableStateOf(Color(0xFF121523))
