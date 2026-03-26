@@ -108,7 +108,7 @@ fun NotesScreen(
     var sortOrder by remember { mutableStateOf(NoteSortOrder.DATE_NEWEST) }
     var showNotesModal by remember { mutableStateOf(false) }
     var selectedNoteForEdit by remember { mutableStateOf<Note?>(null) }
-
+    val viewModel = viewModel<AppViewModel>()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val lazyListState = rememberLazyListState()
@@ -365,7 +365,8 @@ fun NotesScreen(
                     loadNotes(dbHelper) { loadedNotes ->
                         notes = sortNotes(loadedNotes, sortOrder)
                     }
-                }
+                },
+                appViewModel = viewModel
             )
         }
     }

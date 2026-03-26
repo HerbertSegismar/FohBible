@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.screens.MAX_FONT_SIZE
 import com.fountofhopedotorg.fohbible.screens.MIN_FONT_SIZE
 
@@ -23,10 +24,15 @@ fun FontModal(
     tempSize: String,
     onChange: (String) -> Unit,
     onConfirm: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    appViewModel: AppViewModel
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = if (appViewModel.darkTheme)
+            appViewModel.darkModalBackgroundColor
+        else
+            appViewModel.lightModalBackgroundColor,
         title = {
             Text(
                 "Font Size",

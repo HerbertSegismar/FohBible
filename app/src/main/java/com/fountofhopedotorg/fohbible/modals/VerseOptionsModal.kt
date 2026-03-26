@@ -69,6 +69,7 @@ import com.fountofhopedotorg.fohbible.ColorWheelDialog
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.data.Verse
+import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.ui.theme.ThemeManager
 import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
 import kotlin.math.max
@@ -87,6 +88,7 @@ fun VerseOptionsModal(
     onAddHighlight: () -> Unit,
     onShare: (List<Verse>) -> Unit,
     onAddNote: (List<Verse>) -> Unit = {},
+    appViewModel: AppViewModel
 ) {
     var currentStart by remember { mutableIntStateOf(verse.verseNumber) }
     var currentEnd by remember { mutableIntStateOf(verse.verseNumber) }
@@ -124,11 +126,15 @@ fun VerseOptionsModal(
                     .padding(horizontal = 16.dp)
                     .shadow(elevation = 24.dp, shape = RoundedCornerShape(10.dp), clip = true),
                 shape = RoundedCornerShape(10.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                colors = CardDefaults.cardColors(
+                    containerColor = if (appViewModel.darkTheme)
+                        appViewModel.darkModalBackgroundColor
+                    else
+                        appViewModel.lightModalBackgroundColor
+                )
             ) {
                 Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
 
-                    // Header
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -136,7 +142,7 @@ fun VerseOptionsModal(
                                 brush = Brush.verticalGradient(
                                     listOf(
                                         MaterialTheme.colorScheme.primaryContainer,
-                                        MaterialTheme.colorScheme.secondary
+                                        MaterialTheme.colorScheme.primary
                                     )
                                 )
                             )

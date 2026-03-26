@@ -328,7 +328,8 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                     }
                                     viewModel.navigateTo(targetScreen)
                                 },
-                                onBack = if (viewModel.navigationStack.size > 1) { { viewModel.goBack() } } else null
+                                onBack = if (viewModel.navigationStack.size > 1) { { viewModel.goBack() } } else null,
+                                appViewModel = viewModel
                             )
                         }
                     }
@@ -467,7 +468,8 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 },
                                 currentAbbr = viewModel.currentVersionAbbr,
                                 versionMap = BibleVersionUtils.versionMap,
-                                descriptionMap = descriptionMap
+                                descriptionMap = descriptionMap,
+                                appViewModel = viewModel
                             )
                         }
                     }
@@ -481,7 +483,8 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 },
                                 currentAbbr = viewModel.secondaryVersionAbbr,
                                 versionMap = BibleVersionUtils.versionMap,
-                                descriptionMap = descriptionMap
+                                descriptionMap = descriptionMap,
+                                appViewModel = viewModel
                             )
                         }
                     }
@@ -499,7 +502,8 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 onCustomColorClick = {
                                     viewModel.showColorThemeDialog = false
                                     viewModel.showColorWheelDialog = true
-                                }
+                                },
+                                appViewModel = viewModel
                             )
                         }
                     }
@@ -554,13 +558,20 @@ fun VersionSelectionDialog(
     onVersionSelected: (String, String) -> Unit,
     currentAbbr: String,
     versionMap: Map<String, String>,
-    descriptionMap: Map<String, String>
+    descriptionMap: Map<String, String>,
+    appViewModel: AppViewModel
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .height(450.dp),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (appViewModel.darkTheme)
+                appViewModel.darkModalBackgroundColor
+            else
+                appViewModel.lightModalBackgroundColor
+        )
     ) {
         Column(
             modifier = Modifier
@@ -656,13 +667,20 @@ fun VersionSelectionDialog(
 fun UpdatedColorThemeDialog(
     onDismiss: () -> Unit,
     onColorSelected: (Color) -> Unit,
-    onCustomColorClick: () -> Unit
+    onCustomColorClick: () -> Unit,
+    appViewModel: AppViewModel
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .height(450.dp),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (appViewModel.darkTheme)
+                appViewModel.darkModalBackgroundColor
+            else
+                appViewModel.lightModalBackgroundColor
+        )
     ) {
         Column(
             modifier = Modifier
@@ -852,7 +870,8 @@ fun HomeAppBar(
     onThemeToggle: () -> Unit,
     onColorLensClick: () -> Unit,
     onScreenChange: (Screen) -> Unit,
-    onBack: (() -> Unit)? = null
+    onBack: (() -> Unit)? = null,
+    appViewModel: AppViewModel
 ) {
     var showNavigationDropdown by remember { mutableStateOf(false) }
     val viewModel: AppViewModel = viewModel()
@@ -974,7 +993,10 @@ fun HomeAppBar(
             DropdownMenu(
                 expanded = showNavigationDropdown,
                 onDismissRequest = { showNavigationDropdown = false },
-                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                modifier = Modifier.background(if (appViewModel.darkTheme)
+                    appViewModel.darkModalBackgroundColor
+                else
+                    appViewModel.lightModalBackgroundColor)
             ) {
                 @Composable
                 fun createDropdownItem(
@@ -1058,7 +1080,7 @@ fun ReaderAppBar(
     onThemeToggle: () -> Unit,
     onColorLensClick: () -> Unit,
     onScreenChange: (Screen) -> Unit,
-    onBack: (() -> Unit)? = null
+    onBack: (() -> Unit)? = null,
 ) {
     val viewModel: AppViewModel = viewModel()
     var showNavigationDropdown by remember { mutableStateOf(false) }
@@ -1269,8 +1291,11 @@ fun ReaderAppBar(
             DropdownMenu(
                 expanded = showMultiDropdown,
                 onDismissRequest = { showMultiDropdown = false },
-                modifier = Modifier.background(MaterialTheme.colorScheme.surface),
-                offset = DpOffset(x = 100.dp, y = 0.dp)
+                modifier = Modifier.background((if (viewModel.darkTheme)
+                    viewModel.darkModalBackgroundColor
+                else
+                    viewModel.lightModalBackgroundColor)),
+                offset = DpOffset(x = 100.dp, y = 0.dp),
             ) {
                 Text(
                     text = "Windows Layout",
@@ -1362,7 +1387,10 @@ fun ReaderAppBar(
             DropdownMenu(
                 expanded = showNavigationDropdown,
                 onDismissRequest = { showNavigationDropdown = false },
-                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                modifier = Modifier.background(if (viewModel.darkTheme)
+                    viewModel.darkModalBackgroundColor
+                else
+                    viewModel.lightModalBackgroundColor)
             ) {
                 @Composable
                 fun createDropdownItem(
@@ -1603,7 +1631,8 @@ fun ReaderAppBar(
                 viewModel.fontSize = newSize
                 showFontSizeDialog = false
             },
-            onDismiss = { showFontSizeDialog = false }
+            onDismiss = { showFontSizeDialog = false },
+            appViewModel = viewModel
         )
     }
 }

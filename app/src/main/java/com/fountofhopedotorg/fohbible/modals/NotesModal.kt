@@ -51,6 +51,7 @@ import androidx.compose.ui.window.Dialog
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.data.Verse
+import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
 
 @Composable
@@ -60,7 +61,8 @@ fun NotesModal(
     verses: List<Verse>,
     passage: PassageSelection?,
     databaseHelper: DatabaseHelper?,
-    onSave: () -> Unit = {}
+    onSave: () -> Unit = {},
+    appViewModel: AppViewModel
 ) {
     val book = verses.firstOrNull()?.bookName ?: passage?.bookName ?: ""
     val chapter = verses.firstOrNull()?.chapter ?: passage?.chapter ?: 0
@@ -119,14 +121,13 @@ fun NotesModal(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
-                    .shadow(
-                        elevation = 24.dp,
-                        shape = RoundedCornerShape(10.dp),
-                        clip = true
-                    ),
+                    .shadow(elevation = 24.dp, shape = RoundedCornerShape(10.dp), clip = true),
                 shape = RoundedCornerShape(10.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = if (appViewModel.darkTheme)
+                        appViewModel.darkModalBackgroundColor
+                    else
+                        appViewModel.lightModalBackgroundColor
                 )
             ) {
                 Column(
@@ -142,7 +143,7 @@ fun NotesModal(
                                 brush = Brush.verticalGradient(
                                     colors = listOf(
                                         MaterialTheme.colorScheme.primaryContainer,
-                                        MaterialTheme.colorScheme.secondary
+                                        MaterialTheme.colorScheme.primary
                                     )
                                 )
                             )
@@ -165,6 +166,7 @@ fun NotesModal(
                                 fontWeight = FontWeight.Medium
                             )
                         }
+
                         IconButton(
                             onClick = onDismiss,
                             modifier = Modifier
@@ -194,6 +196,7 @@ fun NotesModal(
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
+
                     OutlinedTextField(
                         value = noteText,
                         onValueChange = { noteText = it },
@@ -243,6 +246,7 @@ fun NotesModal(
                             Text("Save")
                         }
                     }
+
                     TextButton(
                         onClick = onDismiss,
                         modifier = Modifier

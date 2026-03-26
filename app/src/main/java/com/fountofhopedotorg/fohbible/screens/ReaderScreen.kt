@@ -475,7 +475,11 @@ fun ReaderScreen(
         DropdownMenu(
             expanded = showMenu,
             onDismissRequest = { showMenu = false },
-            modifier = Modifier.align(Alignment.TopEnd)
+            modifier = Modifier.align(Alignment.TopEnd),
+            containerColor = if (viewModel.darkTheme)
+                viewModel.darkModalBackgroundColor
+            else
+                viewModel.lightModalBackgroundColor
         ) {
             DropdownMenuItem(
                 text = { Text("Background Texture") },
@@ -620,7 +624,8 @@ fun ReaderScreen(
                     selectedVersesForNote = verses
                     showNotesModal = true
                     showVerseOptions = false
-                }
+                },
+                appViewModel = viewModel
             )
         }
 
@@ -630,7 +635,8 @@ fun ReaderScreen(
             verses = selectedVersesForNote,
             passage = passage,
             databaseHelper = databaseHelper,
-            onSave = { refreshKey++ }
+            onSave = { refreshKey++ },
+            appViewModel = viewModel
         )
     }
 }

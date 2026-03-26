@@ -551,7 +551,8 @@ fun SettingsScreen() {
                 viewModel.fontSize = newSize.coerceIn(MIN_FONT_SIZE, MAX_FONT_SIZE)
                 showFontModal = false
             },
-            onDismiss = { showFontModal = false }
+            onDismiss = { showFontModal = false },
+            appViewModel = viewModel
         )
     }
 
