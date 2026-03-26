@@ -190,7 +190,8 @@ data class ThemeColors(
     val tagBg: Color,
     val wordsOfJesus: Color,
     val searchHighlightBg: Color,
-    val highlightIcon: Color
+    val highlightIcon: Color,
+    val wordHighlightBg: Color = Color.Transparent
 )
 
 data class ProcessingOptions(
@@ -226,3 +227,25 @@ data class BookUi(
     val testament: Testament,
     val totalChapters: Int
 )
+
+data class SelectedWord(
+    val verseNumber: Int,
+    val start: Int,
+    val end: Int,
+    val color: Color
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is SelectedWord) return false
+        return verseNumber == other.verseNumber && start == other.start && end == other.end
+    }
+
+    override fun hashCode(): Int {
+        var result = verseNumber
+        result = 31 * result + start
+        result = 31 * result + end
+        return result
+    }
+}
+
+data class WordHighlight(val verseNumber: Int, val wordText: String, val color: Color)

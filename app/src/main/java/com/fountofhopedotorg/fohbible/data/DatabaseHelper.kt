@@ -31,10 +31,35 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
         const val COLUMN_NOTE = "note"
         const val COLUMN_TIMESTAMP = "timestamp"
         const val COLUMN_HIGHLIGHT_COLOR = "highlight_color"
+        const val WORD_HIGHLIGHTS_TABLE = "word_highlights"
+        const val COLUMN_START_POS = "start_pos"
+        const val COLUMN_END_POS = "end_pos"
     }
 
     init {
         openDatabase()
+    }
+
+    private fun createWordHighlightsTable() {
+        database?.execSQL(
+            """ 
+        CREATE TABLE IF NOT EXISTS $WORD_HIGHLIGHTS_TABLE (
+            $COLUMN_BOOK_NAME TEXT,
+            $COLUMN_CHAPTER INTEGER,
+            $COLUMN_VERSE_NUMBER INTEGER,
+            $COLUMN_START_POS INTEGER,
+            $COLUMN_END_POS INTEGER,
+            $COLUMN_HIGHLIGHT_COLOR INTEGER,
+            PRIMARY KEY (
+                $COLUMN_BOOK_NAME, 
+                $COLUMN_CHAPTER, 
+                $COLUMN_VERSE_NUMBER, 
+                $COLUMN_START_POS, 
+                $COLUMN_END_POS
+            )
+        )
+        """.trimIndent()
+        )
     }
 
     private fun openDatabase() {
@@ -51,6 +76,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             createBookmarksTable()
             createHighlightsTable()
             createNotesTable()
+            createWordHighlightsTable()
             migrateHighlightsTable()
         } catch (_: Exception) {
         }
@@ -73,6 +99,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             createBookmarksTable()
             createHighlightsTable()
             createNotesTable()
+            createWordHighlightsTable()
             true
         } catch (_: Exception) {
             false
@@ -664,6 +691,68 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
         return commentary
     }
 
+    fun addWordHighlight(
+        verse: Verse,
+        start: Int,
+        end: Int,
+        colorArgb: Int = Color.Yellow.toArgb()
+    ) {
+        try {
+            val values = ContentValues().apply {
+                put(COLUMN_BOOK_NAME, verse.bookName)
+                put(COLUMN_CHAPTER, verse.chapter)
+                put(COLUMN_VERSE_NUMBER, verse.verseNumber)
+                put(COLUMN_START_POS, start)
+                put(COLUMN_END_POS, end)
+                put(COLUMN_HIGHLIGHT_COLOR, colorArgb)
+            }
+            database?.insertWithOnConflict(
+                WORD_HIGHLIGHTS_TABLE,
+                null,
+                values,
+                SQLiteDatabase.CONFLICT_REPLACE
+            )
+        } catch (_: Exception) {}
+    }
+
+    fun removeWordHighlight(verse: Verse, start: Int, end: Int) {
+        try {
+            database?.delete(
+                WORD_HIGHLIGHTS_TABLE,
+                "$COLUMN_BOOK_NAME = ? AND $COLUMN_CHAPTER = ? AND $COLUMN_VERSE_NUMBER = ? AND $COLUMN_START_POS = ? AND $COLUMN_END_POS = ?",
+                arrayOf(
+                    verse.bookName,
+                    verse.chapter.toString(),
+                    verse.verseNumber.toString(),
+                    start.toString(),
+                    end.toString()
+                )
+            )
+        } catch (_: Exception) {}
+    }
+
+    fun getWordHighlightsForVerse(verse: Verse): List<SelectedWord> {
+        val highlights = mutableListOf<SelectedWord>()
+        try {
+            val cursor = database?.query(
+                WORD_HIGHLIGHTS_TABLE,
+                arrayOf(COLUMN_START_POS, COLUMN_END_POS, COLUMN_HIGHLIGHT_COLOR),
+                "$COLUMN_BOOK_NAME = ? AND $COLUMN_CHAPTER = ? AND $COLUMN_VERSE_NUMBER = ?",
+                arrayOf(verse.bookName, verse.chapter.toString(), verse.verseNumber.toString()),
+                null, null, null
+            )
+            cursor?.use {
+                while (it.moveToNext()) {
+                    val start = it.getInt(it.getColumnIndexOrThrow(COLUMN_START_POS))
+                    val end = it.getInt(it.getColumnIndexOrThrow(COLUMN_END_POS))
+                    val colorInt = it.getInt(it.getColumnIndexOrThrow(COLUMN_HIGHLIGHT_COLOR))
+                    highlights.add(SelectedWord(verse.verseNumber, start, end, Color(colorInt)))
+                }
+            }
+        } catch (_: Exception) {}
+        return highlights
+    }
+
     fun close() {
         database?.close()
     }
@@ -686,3 +775,4 @@ fun getVersesWithSubheadings(
     }
     return contentMap.toSortedMap().flatMap { it.value }
 }
+
