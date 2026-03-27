@@ -81,7 +81,7 @@ import java.util.Locale
 const val MAX_FONT_SIZE = 100
 const val MIN_FONT_SIZE = 1
 
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen() {
     val viewModel: AppViewModel = viewModel()
@@ -102,6 +102,10 @@ fun SettingsScreen() {
     var showRefreshConfirmDialog by remember { mutableStateOf(false) }
     var showRefreshResultDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
+
+    // New state variables for missing items
+    var showWordMarkerColorWheel by remember { mutableStateOf(false) }
+    var showVerseMarkerColorWheel by remember { mutableStateOf(false) }
 
     LaunchedEffect(viewModel.isCustomColor, viewModel.customColor) {
         isUsingCustomColor = viewModel.isCustomColor
@@ -296,7 +300,6 @@ fun SettingsScreen() {
                             "${viewModel.fontSize}",
                             modifier = Modifier.padding(horizontal = 8.dp),
                             color = MaterialTheme.colorScheme.primary
-
                         )
                         IconButton(
                             onClick = { viewModel.fontSize = minOf(MAX_FONT_SIZE, viewModel.fontSize + 1) },
@@ -374,6 +377,51 @@ fun SettingsScreen() {
                             .background(viewModel.darkOverlayColor)
                             .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
                             .clickable { showDarkOverlayColorWheel = true }
+                    )
+                }
+
+                // New: Word Marker Color
+                SettingsItem(
+                    title = "Word Marker Color",
+                    subtitle = "Color for highlighting individual words"
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(viewModel.wordMarkerColor)
+                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                            .clickable { showWordMarkerColorWheel = true }
+                    )
+                }
+
+                // New: Verse Marker Color
+                SettingsItem(
+                    title = "Verse Marker Color",
+                    subtitle = "Color for highlighting entire verses"
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(viewModel.verseMarkerColor)
+                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                            .clickable { showVerseMarkerColorWheel = true }
+                    )
+                }
+
+                // New: Dictionary Mode
+                SettingsItem(
+                    title = "Dictionary Mode",
+                    subtitle = "Show dictionary definitions on tap instead of highlighting"
+                ) {
+                    Switch(
+                        checked = viewModel.isDictionaryMode,
+                        onCheckedChange = { viewModel.isDictionaryMode = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.primary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                        )
                     )
                 }
 
@@ -489,7 +537,10 @@ fun SettingsScreen() {
                             viewModel.darkOverlayColor = Color(0xFF100F21)
                             viewModel.lightModalBackgroundColor = Color(0xFFE0E0E0)
                             viewModel.darkModalBackgroundColor = Color(0xFF2D2D2D)
-
+                            // Reset new items as well
+                            viewModel.wordMarkerColor = Color(0xFFFFA500)
+                            viewModel.verseMarkerColor = Color(0xFF4CAF50)
+                            viewModel.isDictionaryMode = false
                         },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
@@ -520,6 +571,7 @@ fun SettingsScreen() {
             }
         }
     }
+
     if (showVersionInfoDialog && selectedVersionInfo != null) {
         VersionInfoDialog(
             versionName = selectedVersionInfo!!.first,
@@ -590,6 +642,30 @@ fun SettingsScreen() {
                 showDarkOverlayColorWheel = false
             },
             initialColor = viewModel.darkOverlayColor
+        )
+    }
+
+    // New: Word Marker Color Wheel
+    if (showWordMarkerColorWheel) {
+        ColorWheelDialog(
+            onDismissRequest = { showWordMarkerColorWheel = false },
+            onColorSelected = { color ->
+                viewModel.wordMarkerColor = color
+                showWordMarkerColorWheel = false
+            },
+            initialColor = viewModel.wordMarkerColor
+        )
+    }
+
+    // New: Verse Marker Color Wheel
+    if (showVerseMarkerColorWheel) {
+        ColorWheelDialog(
+            onDismissRequest = { showVerseMarkerColorWheel = false },
+            onColorSelected = { color ->
+                viewModel.verseMarkerColor = color
+                showVerseMarkerColorWheel = false
+            },
+            initialColor = viewModel.verseMarkerColor
         )
     }
 

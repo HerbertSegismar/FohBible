@@ -36,12 +36,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Label
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.Note
 import androidx.compose.material.icons.filled.AutoAwesomeMosaic
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Brightness2
 import androidx.compose.material.icons.filled.Brightness6
+import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Home
@@ -79,6 +81,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -129,8 +132,10 @@ import com.fountofhopedotorg.fohbible.ui.theme.ThemeManager
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils.descriptionMap
 import com.fountofhopedotorg.fohbible.utils.getFontFamily
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 
 private val MARKER_COLOR_KEY = intPreferencesKey("marker_color")
@@ -1116,6 +1121,7 @@ fun ReaderAppBar(
     val viewModel: AppViewModel = viewModel()
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val coroutineScope = rememberCoroutineScope()
 
     var showNavigationDropdown by remember { mutableStateOf(false) }
     var showMultiDropdown by remember { mutableStateOf(false) }
@@ -1377,8 +1383,6 @@ fun ReaderAppBar(
                     viewModel.multiViewLayout = "vertical"
                 }
             }
-
-            // Main menu button
             IconButton(
                 onClick = { showNavigationDropdown = !showNavigationDropdown },
                 modifier = Modifier
@@ -1397,26 +1401,21 @@ fun ReaderAppBar(
                     )
                 }
             }
-
-            // MAIN DROPDOWN MENU
             DropdownMenu(
                 expanded = showNavigationDropdown,
                 onDismissRequest = { showNavigationDropdown = false },
                 modifier = Modifier.background(if (viewModel.darkTheme) viewModel.darkModalBackgroundColor else viewModel.lightModalBackgroundColor)
             ) {
                 if (isLandscape) {
-                    // Two‑column layout
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        // Left column: navigation + Background Texture
                         Column(
                             modifier = Modifier
                                 .weight(1f)
                                 .padding(end = 8.dp)
                         ) {
-                            // Navigation items
                             @Composable
                             fun createDropdownItem(
                                 title: String,
@@ -1502,6 +1501,7 @@ fun ReaderAppBar(
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             )
+                            Spacer(modifier = Modifier.weight(1f))
                         }
                         Column(
                             modifier = Modifier
@@ -1511,7 +1511,7 @@ fun ReaderAppBar(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 8.dp, vertical = 12.dp)
+                                    .padding(horizontal = 8.dp, vertical = 8.dp)
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -1533,7 +1533,6 @@ fun ReaderAppBar(
                                         fontWeight = FontWeight.Medium
                                     )
                                 }
-                                Spacer(modifier = Modifier.height(12.dp))
                                 Slider(
                                     value = viewModel.overlayOpacity,
                                     onValueChange = { viewModel.overlayOpacity = it },
@@ -1564,7 +1563,6 @@ fun ReaderAppBar(
                                     },
                                 )
                             }
-
                             DropdownMenuItem(
                                 text = {
                                     Text(
@@ -1587,8 +1585,6 @@ fun ReaderAppBar(
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             )
-
-                            // Word Marker Color
                             DropdownMenuItem(
                                 text = { Text("Word Marker Color", modifier = Modifier.fillMaxWidth()) },
                                 leadingIcon = {
@@ -1611,8 +1607,6 @@ fun ReaderAppBar(
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             )
-
-                            // Verse Marker Color
                             DropdownMenuItem(
                                 text = { Text("Verse Marker Color", modifier = Modifier.fillMaxWidth()) },
                                 leadingIcon = {
@@ -1635,12 +1629,33 @@ fun ReaderAppBar(
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             )
-
-                            // Font Size
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = if (viewModel.isDictionaryMode) "Dictionary Mode" else "Highlight Mode",
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        if (viewModel.isDictionaryMode) Icons.AutoMirrored.Filled.MenuBook else Icons.Filled.Brush,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                },
+                                onClick = {
+                                    viewModel.isDictionaryMode = !viewModel.isDictionaryMode
+                                    coroutineScope.launch {
+                                        delay(400)
+                                        showNavigationDropdown = false
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -1660,7 +1675,7 @@ fun ReaderAppBar(
                                         fontWeight = FontWeight.Medium
                                     )
                                 }
-                                Spacer(modifier = Modifier.height(12.dp))
+                                Spacer(modifier = Modifier.height(8.dp)) // was 12.dp
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.Center,
@@ -1694,7 +1709,6 @@ fun ReaderAppBar(
                         }
                     }
                 } else {
-                    // Portrait: original single‑column layout (unchanged)
                     @Composable
                     fun createDropdownItem(
                         title: String,
@@ -1848,9 +1862,7 @@ fun ReaderAppBar(
                             fontSize = 12.sp
                         )
                     }
-
                     HorizontalDivider()
-
                     DropdownMenuItem(
                         text = {
                             Text(
@@ -1916,6 +1928,30 @@ fun ReaderAppBar(
                         onClick = {
                             viewModel.showVerseMarkerColorWheelDialog = true
                             showNavigationDropdown = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    HorizontalDivider()
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = if (viewModel.isDictionaryMode) "Dictionary Mode" else "Highlight Mode",
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                if (viewModel.isDictionaryMode) Icons.AutoMirrored.Filled.MenuBook else Icons.Filled.Brush,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
+                        onClick = {
+                            viewModel.isDictionaryMode = !viewModel.isDictionaryMode
+                            coroutineScope.launch {
+                                delay(400)
+                                showNavigationDropdown = false
+                            }
                         },
                         modifier = Modifier.fillMaxWidth()
                     )

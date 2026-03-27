@@ -1876,56 +1876,54 @@ fun ChapterView(
                                         text = finalAnnotatedString,
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .pointerInput(Unit) {
+                                            .pointerInput(viewModel.isDictionaryMode) {
                                                 detectTapGestures(
                                                     onTap = { offset ->
                                                         textLayoutResult?.let { layout ->
                                                             val position = layout.getOffsetForPosition(offset)
                                                             val annotations = finalAnnotatedString.getStringAnnotations(start = position, end = position)
-                                                            annotations.forEach { annotation ->
-                                                                when (annotation.tag) {
-                                                                    "word" -> onWordPress?.invoke(annotation.item, isPrimary)
-                                                                    "strong" -> onStrongsPress?.invoke(annotation.item, passage.bookNumber, isPrimary)
-                                                                    "tag" -> onTagPress?.invoke(annotation.item, passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary)
+                                                            val wordAnnotation = annotations.find { it.tag == "word" }
+                                                            if (wordAnnotation != null) {
+                                                                if (viewModel.isDictionaryMode) {
+                                                                    onWordPress?.invoke(wordAnnotation.item, isPrimary)
+                                                                } else {
+                                                                    val word = SelectedWord(
+                                                                        verse.verseNumber,
+                                                                        wordAnnotation.start,
+                                                                        wordAnnotation.end,
+                                                                        currentMarkerColor
+                                                                    )
+                                                                    val wasSelected = selectedWords.contains(word)
+                                                                    selectedWords = if (wasSelected) {
+                                                                        selectedWords - word
+                                                                    } else {
+                                                                        selectedWords + word
+                                                                    }
+                                                                    if (databaseHelper != null) {
+                                                                        if (wasSelected) {
+                                                                            databaseHelper.removeWordHighlight(fullVerse, word.start, word.end)
+                                                                        } else {
+                                                                            databaseHelper.addWordHighlight(
+                                                                                fullVerse,
+                                                                                word.start,
+                                                                                word.end,
+                                                                                currentMarkerColor.toArgb()
+                                                                            )
+                                                                        }
+                                                                    }
+                                                                }
+                                                            } else {
+                                                                annotations.forEach { annotation ->
+                                                                    when (annotation.tag) {
+                                                                        "strong" -> onStrongsPress?.invoke(annotation.item, passage.bookNumber, isPrimary)
+                                                                        "tag" -> onTagPress?.invoke(annotation.item, passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary)
+                                                                    }
                                                                 }
                                                             }
                                                         }
                                                     },
                                                     onLongPress = {
                                                         onVerseLongPress?.invoke(verse, passage)
-                                                    },
-                                                    onDoubleTap = { offset ->
-                                                        textLayoutResult?.let { layout ->
-                                                            val position = layout.getOffsetForPosition(offset)
-                                                            val annotations = finalAnnotatedString.getStringAnnotations(start = position, end = position)
-                                                            val wordAnnotation = annotations.find { it.tag == "word" }
-                                                            if (wordAnnotation != null) {
-                                                                val word = SelectedWord(
-                                                                    verse.verseNumber,
-                                                                    wordAnnotation.start,
-                                                                    wordAnnotation.end,
-                                                                    currentMarkerColor
-                                                                )
-                                                                val wasSelected = selectedWords.contains(word)
-                                                                selectedWords = if (wasSelected) {
-                                                                    selectedWords - word
-                                                                } else {
-                                                                    selectedWords + word
-                                                                }
-                                                                if (databaseHelper != null) {
-                                                                    if (wasSelected) {
-                                                                        databaseHelper.removeWordHighlight(fullVerse, word.start, word.end)
-                                                                    } else {
-                                                                        databaseHelper.addWordHighlight(
-                                                                            fullVerse,
-                                                                            word.start,
-                                                                            word.end,
-                                                                            currentMarkerColor.toArgb()
-                                                                        )
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
                                                     }
                                                 )
                                             },

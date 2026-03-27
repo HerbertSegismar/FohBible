@@ -25,6 +25,7 @@ class AppViewModel : ViewModel() {
 
     var wordMarkerColor by mutableStateOf(Color(0xDD8A66DE))
     var showWordMarkerColorWheelDialog by mutableStateOf(false)
+    var isDictionaryMode by mutableStateOf(true)
 
     var verseMarkerColor by mutableStateOf(Color(0xDDEADF80))
     var showVerseMarkerColorWheelDialog by mutableStateOf(false)
