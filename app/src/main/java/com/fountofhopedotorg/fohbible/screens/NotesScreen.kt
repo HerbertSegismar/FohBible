@@ -84,7 +84,9 @@ import com.fountofhopedotorg.fohbible.data.Verse
 import com.fountofhopedotorg.fohbible.modals.NotesModal
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -94,6 +96,7 @@ import java.util.Locale
 fun NotesScreen(
     onNavigateToReader: (PassageSelection) -> Unit
 ) {
+    var editVerses by remember { mutableStateOf<List<Verse>?>(null) }
     val context = LocalContext.current
     val appViewModel: AppViewModel = viewModel()
     var notes by remember { mutableStateOf<List<Note>>(emptyList()) }
@@ -113,6 +116,21 @@ fun NotesScreen(
     val scope = rememberCoroutineScope()
     val lazyListState = rememberLazyListState()
     val dbHelper = remember(selectedDbName) { DatabaseHelper(context as MainActivity, selectedDbName) }
+
+    LaunchedEffect(selectedNoteForEdit) {
+        if (selectedNoteForEdit != null) {
+            editVerses = null
+            val note = selectedNoteForEdit!!
+            val bookNumber = BibleData.getBookByName(note.bookName)?.customNumber ?: return@LaunchedEffect
+            val verses = withContext(Dispatchers.IO) {
+                dbHelper.getVerses(bookNumber, note.chapter)
+                    .filter { it.verseNumber in note.startVerse..note.endVerse }
+            }
+            editVerses = verses
+        } else {
+            editVerses = null
+        }
+    }
 
     LaunchedEffect(selectedDbName, multiSelectMode) {
         if (!multiSelectMode) {
@@ -339,35 +357,31 @@ fun NotesScreen(
                 onDismiss = { showDeleteConfirmation = false }
             )
         }
-        selectedNoteForEdit?.let { note ->
-            NotesModal(
-                show = showNotesModal,
-                onDismiss = {
-                    showNotesModal = false
-                    selectedNoteForEdit = null
-                },
-                verses = listOf(
-                    Verse(
-                        verseNumber = note.startVerse,
-                        text = "",
-                        bookName = note.bookName,
-                        chapter = note.chapter
-                    )
-                ),
-                passage = PassageSelection(
-                    bookNumber = BibleData.getBookByName(note.bookName)?.customNumber ?: 1,
-                    bookName = note.bookName,
-                    chapter = note.chapter,
-                    verse = note.startVerse
-                ),
-                databaseHelper = dbHelper,
-                onSave = {
-                    loadNotes(dbHelper) { loadedNotes ->
-                        notes = sortNotes(loadedNotes, sortOrder)
-                    }
-                },
-                appViewModel = viewModel
-            )
+        selectedNoteForEdit?.let { _ ->
+            if (showNotesModal && selectedNoteForEdit != null && editVerses != null) {
+                NotesModal(
+                    show = true,
+                    onDismiss = {
+                        showNotesModal = false
+                        selectedNoteForEdit = null
+                        editVerses = null
+                    },
+                    verses = editVerses!!,
+                    passage = PassageSelection(
+                        bookNumber = BibleData.getBookByName(selectedNoteForEdit!!.bookName)?.customNumber ?: 1,
+                        bookName = selectedNoteForEdit!!.bookName,
+                        chapter = selectedNoteForEdit!!.chapter,
+                        verse = selectedNoteForEdit!!.startVerse
+                    ),
+                    databaseHelper = dbHelper,
+                    onSave = {
+                        loadNotes(dbHelper) { loadedNotes ->
+                            notes = sortNotes(loadedNotes, sortOrder)
+                        }
+                    },
+                    appViewModel = viewModel
+                )
+            }
         }
     }
 }

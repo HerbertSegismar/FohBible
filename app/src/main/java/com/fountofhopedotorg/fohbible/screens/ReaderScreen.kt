@@ -1628,7 +1628,9 @@ fun ChapterView(
             }
         )
     }
-
+    val groupedHighlights = remember(selectedWords) {
+        selectedWords.groupBy { it.verseNumber }
+    }
     Box(modifier = modifier) {
         val texture = when (viewModel.bgImageIndex) {
             0 -> null
@@ -1747,10 +1749,10 @@ fun ChapterView(
                                 else -> Modifier
                             }
                             val currentMarkerColor by rememberUpdatedState(markerColor)
+                            val wordHighlightsForVerse = groupedHighlights[verse.verseNumber] ?: emptyList()
+                            val highlightsHash = wordHighlightsForVerse.hashCode()
 
-                            // FIX: Wrap the entire verse column in a key that includes the verse number and its persistent highlight status.
-                            // This forces recomposition when the highlight status changes, so the TextLayoutResult updates.
-                            key("verse_${verse.verseNumber}_$isPersistentHighlighted") {
+                            key("verse_${verse.verseNumber}_${isPersistentHighlighted}_${isBookmarked}_${isNote}_$highlightsHash") {
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -1783,9 +1785,9 @@ fun ChapterView(
                                         ) {
                                             append("${verse.verseNumber} ")
                                         }
+                                        append(processedVerse?.body ?: verse.text)
                                         if (isBookmarked) appendInlineContent("bookmark", "[bookmark]")
                                         if (isNote) appendInlineContent("note", "[note]")
-                                        append(processedVerse?.body ?: verse.text)
                                         if (refCount > 0 && onCrossRefClick != null) {
                                             append(" ")
                                             appendInlineContent("crossref_${verse.verseNumber}", "[$refCount]")
@@ -1794,9 +1796,9 @@ fun ChapterView(
                                             appendInlineContent("commentary_${verse.verseNumber}", "[C]")
                                         }
                                     }
-                                    val inlineContentMap = remember(verse.verseNumber, refCount, isNote, viewModel.fontSize) {
+                                    val inlineContentMap = remember(verse.verseNumber, refCount, isNote, isBookmarked, viewModel.fontSize) {
                                         buildMap {
-                                            put("bookmark", bookmarkInlineContent)
+                                            if (isBookmarked) put("bookmark", bookmarkInlineContent)
                                             if (isNote) put("note", noteInlineContent)
                                             if (refCount > 0 && onCrossRefClick != null) {
                                                 put("crossref_${verse.verseNumber}", InlineTextContent(
@@ -1851,14 +1853,13 @@ fun ChapterView(
 
                                     var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
 
-                                    val finalAnnotatedString = remember(annotatedString, selectedWords, verse.verseNumber) {
-                                        val wordsForVerse = selectedWords.filter { it.verseNumber == verse.verseNumber }
-                                        if (wordsForVerse.isEmpty()) {
+                                    val finalAnnotatedString = remember(annotatedString, wordHighlightsForVerse) {
+                                        if (wordHighlightsForVerse.isEmpty()) {
                                             annotatedString
                                         } else {
                                             val builder = AnnotatedString.Builder()
                                             builder.append(annotatedString)
-                                            wordsForVerse.sortedByDescending { it.start }.forEach { word ->
+                                            wordHighlightsForVerse.sortedByDescending { it.start }.forEach { word ->
                                                 if (word.start in 0 until builder.length && word.end in word.start..builder.length) {
                                                     builder.addStyle(
                                                         SpanStyle(background = word.color),

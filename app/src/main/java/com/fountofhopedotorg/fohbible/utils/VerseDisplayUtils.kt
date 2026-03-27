@@ -489,7 +489,6 @@ class VerseTextProcessor(
                     builder.append(" ")
                 }
                 if (isWord(word) && word.length > 1) {
-                    // Determine background: search highlight takes precedence
                     val bgColor = if (highlight != null && word.contains(highlight, ignoreCase = true)) {
                         themeColors.searchHighlightBg
                     } else if (wordHighlights != null && word.lowercase() in wordHighlights) {
@@ -609,7 +608,6 @@ class VerseTextProcessor(
             ) {
                 builder.append(word)
             }
-            // Add a space after the word unless it's punctuation
             val trimmedWord = word.trim()
             if (trimmedWord != "." && trimmedWord != "," && trimmedWord != ":" && trimmedWord != ";" && trimmedWord != "?" && trimmedWord != "!" && trimmedWord != word) {
                 builder.append(" ")
