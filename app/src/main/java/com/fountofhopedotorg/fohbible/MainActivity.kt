@@ -1,6 +1,7 @@
 @file:OptIn(ExperimentalMaterial3Api::class)
 package com.fountofhopedotorg.fohbible
 
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -89,6 +90,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -204,7 +206,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
         viewModel.overlayOpacity = prefs[OVERLAY_OPACITY_KEY] ?: 0.15f
         viewModel.lightOverlayColor = Color(prefs[LIGHT_OVERLAY_COLOR_KEY] ?: Color(0xFFF5F5DC).toArgb())
         viewModel.darkOverlayColor = Color(prefs[DARK_OVERLAY_COLOR_KEY] ?: Color(0xFF100F21).toArgb())
-        viewModel.markerColor = Color(prefs[MARKER_COLOR_KEY] ?: Color(0xDD8A66DE).toArgb())
+        viewModel.wordMarkerColor = Color(prefs[MARKER_COLOR_KEY] ?: Color(0xDD8A66DE).toArgb())
 
         viewModel.primaryPassage = PassageSelection(
             bookNumber = prefs[PRIMARY_BOOK_NUMBER_KEY] ?: 10,
@@ -279,7 +281,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     )
 
     LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.markerColor.toArgb() }
+        snapshotFlow { viewModel.wordMarkerColor.toArgb() }
             .collectLatest { dataStore.edit { prefs -> prefs[MARKER_COLOR_KEY] = it } }
     }
 
@@ -554,14 +556,24 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             initialColor = if (viewModel.darkTheme) viewModel.darkOverlayColor else viewModel.lightOverlayColor
                         )
                     }
-                    if (viewModel.showMarkerColorWheelDialog) {
+                    if (viewModel.showWordMarkerColorWheelDialog) {
                         ColorWheelDialog(
-                            onDismissRequest = { viewModel.showMarkerColorWheelDialog = false },
+                            onDismissRequest = { viewModel.showWordMarkerColorWheelDialog = false },
                             onColorSelected = { color ->
-                                viewModel.markerColor = color
-                                viewModel.showMarkerColorWheelDialog = false
+                                viewModel.wordMarkerColor = color
+                                viewModel.showWordMarkerColorWheelDialog = false
                             },
-                            initialColor = viewModel.markerColor
+                            initialColor = viewModel.wordMarkerColor
+                        )
+                    }
+                    if (viewModel.showVerseMarkerColorWheelDialog) {
+                        ColorWheelDialog(
+                            onDismissRequest = { viewModel.showVerseMarkerColorWheelDialog = false },
+                            onColorSelected = { color ->
+                                viewModel.verseMarkerColor = color
+                                viewModel.showVerseMarkerColorWheelDialog = false
+                            },
+                            initialColor = viewModel.verseMarkerColor
                         )
                     }
                 }
@@ -1089,6 +1101,7 @@ fun HomeAppBar(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReaderAppBar(
     currentScreen: Screen.Reader,
@@ -1101,10 +1114,14 @@ fun ReaderAppBar(
     onBack: (() -> Unit)? = null,
 ) {
     val viewModel: AppViewModel = viewModel()
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
     var showNavigationDropdown by remember { mutableStateOf(false) }
     var showMultiDropdown by remember { mutableStateOf(false) }
     var showFontSizeDialog by remember { mutableStateOf(false) }
     var tempFontSize by remember { mutableStateOf(viewModel.fontSize.toString()) }
+
     val rotation by animateFloatAsState(
         targetValue = if (showNavigationDropdown) 180f else 0f,
         animationSpec = tween(durationMillis = 300),
@@ -1139,8 +1156,10 @@ fun ReaderAppBar(
         animationSpec = tween(durationMillis = 300),
         label = "syncRotation"
     )
+
     val minFontSize = 1
     val maxFontSize = 100
+
     TopAppBar(
         title = {
             if (!viewModel.multiVersion) {
@@ -1150,9 +1169,7 @@ fun ReaderAppBar(
                 ) {
                     Button(
                         onClick = onBibleIconClick,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.White
-                        ),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                         shape = RoundedCornerShape(4.dp),
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                         modifier = Modifier
@@ -1183,9 +1200,7 @@ fun ReaderAppBar(
                     }
                     Button(
                         onClick = { viewModel.showPrimaryVersionDropdown = true },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.White
-                        ),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                         shape = RoundedCornerShape(4.dp),
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                         modifier = Modifier
@@ -1204,9 +1219,7 @@ fun ReaderAppBar(
                     if (viewModel.multiVersion) {
                         Button(
                             onClick = { viewModel.showSecondaryVersionDropdown = true },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.White
-                            ),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                             shape = RoundedCornerShape(4.dp),
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
                             modifier = Modifier
@@ -1224,9 +1237,7 @@ fun ReaderAppBar(
                 }
             }
         },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = LocalAppTheme.current.primaryColor
-        ),
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = LocalAppTheme.current.primaryColor),
         modifier = modifier,
         navigationIcon = {
             if (onBack != null) {
@@ -1306,13 +1317,11 @@ fun ReaderAppBar(
                     )
                 }
             }
+            // Mosaic dropdown (unchanged)
             DropdownMenu(
                 expanded = showMultiDropdown,
                 onDismissRequest = { showMultiDropdown = false },
-                modifier = Modifier.background((if (viewModel.darkTheme)
-                    viewModel.darkModalBackgroundColor
-                else
-                    viewModel.lightModalBackgroundColor)),
+                modifier = Modifier.background(if (viewModel.darkTheme) viewModel.darkModalBackgroundColor else viewModel.lightModalBackgroundColor),
                 offset = DpOffset(x = 100.dp, y = 0.dp),
             ) {
                 Text(
@@ -1325,6 +1334,7 @@ fun ReaderAppBar(
                 )
                 HorizontalDivider()
                 val current = if (!viewModel.multiVersion) "single" else viewModel.multiViewLayout
+
                 @Composable
                 fun createItem(title: String, onClick: () -> Unit) {
                     val isActive = title.lowercase() == current
@@ -1333,27 +1343,10 @@ fun ReaderAppBar(
                     )
                     val leadingIcon: (@Composable () -> Unit) = {
                         when (title.lowercase()) {
-                            "single" -> Icon(
-                                Icons.Default.LooksOne,
-                                contentDescription = null,
-                                tint = textColor
-                            )
-                            "horizontal" -> Icon(
-                                Icons.Default.ViewStream,
-                                contentDescription = null,
-                                tint = textColor,
-                                modifier = Modifier.rotate(90f)
-                            )
-                            "vertical" -> Icon(
-                                Icons.Default.ViewStream,
-                                contentDescription = null,
-                                tint = textColor
-                            )
-                            else -> Icon(
-                                Icons.AutoMirrored.Filled.Label,
-                                contentDescription = null,
-                                tint = textColor
-                            )
+                            "single" -> Icon(Icons.Default.LooksOne, contentDescription = null, tint = textColor)
+                            "horizontal" -> Icon(Icons.Default.ViewStream, contentDescription = null, tint = textColor, modifier = Modifier.rotate(90f))
+                            "vertical" -> Icon(Icons.Default.ViewStream, contentDescription = null, tint = textColor)
+                            else -> Icon(Icons.AutoMirrored.Filled.Label, contentDescription = null, tint = textColor)
                         }
                     }
                     DropdownMenuItem(
@@ -1370,10 +1363,10 @@ fun ReaderAppBar(
                             showMultiDropdown = false
                         },
                         leadingIcon = leadingIcon,
-                        modifier = Modifier
-                            .fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
+
                 createItem("Single") { viewModel.multiVersion = false }
                 createItem("Horizontal") {
                     viewModel.multiVersion = true
@@ -1384,6 +1377,8 @@ fun ReaderAppBar(
                     viewModel.multiViewLayout = "vertical"
                 }
             }
+
+            // Main menu button
             IconButton(
                 onClick = { showNavigationDropdown = !showNavigationDropdown },
                 modifier = Modifier
@@ -1402,269 +1397,589 @@ fun ReaderAppBar(
                     )
                 }
             }
+
+            // MAIN DROPDOWN MENU
             DropdownMenu(
                 expanded = showNavigationDropdown,
                 onDismissRequest = { showNavigationDropdown = false },
-                modifier = Modifier.background(if (viewModel.darkTheme)
-                    viewModel.darkModalBackgroundColor
-                else
-                    viewModel.lightModalBackgroundColor)
+                modifier = Modifier.background(if (viewModel.darkTheme) viewModel.darkModalBackgroundColor else viewModel.lightModalBackgroundColor)
             ) {
-                @Composable
-                fun createDropdownItem(
-                    title: String,
-                    icon: ImageVector,
-                    isActive: Boolean,
-                    onClick: () -> Unit
-                ) {
-                    val backgroundColor by animateColorAsState(
-                        targetValue = if (isActive) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                        animationSpec = tween(durationMillis = 200),
-                        label = "dropdownBackground"
+                if (isLandscape) {
+                    // Two‑column layout
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        // Left column: navigation + Background Texture
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 8.dp)
+                        ) {
+                            // Navigation items
+                            @Composable
+                            fun createDropdownItem(
+                                title: String,
+                                icon: ImageVector,
+                                isActive: Boolean,
+                                onClick: () -> Unit
+                            ) {
+                                val backgroundColor by animateColorAsState(
+                                    targetValue = if (isActive) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                                    animationSpec = tween(durationMillis = 200),
+                                    label = "dropdownBackground"
+                                )
+                                val textColor by animateColorAsState(
+                                    targetValue = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                    animationSpec = tween(durationMillis = 200),
+                                    label = "dropdownTextColor"
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = title,
+                                            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+                                            color = textColor
+                                        )
+                                    },
+                                    onClick = onClick,
+                                    modifier = Modifier.background(backgroundColor),
+                                    leadingIcon = {
+                                        val modifier = if (title == "Notes") Modifier.rotate(90f) else Modifier
+                                        Icon(
+                                            icon,
+                                            contentDescription = title,
+                                            tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = modifier
+                                        )
+                                    }
+                                )
+                            }
+
+                            val isHomeActive = false
+                            val isReaderActive = true
+                            val isBookmarksActive = false
+                            val isNotesActive = false
+                            val isSearchActive = false
+                            val isSettingsActive = false
+
+                            createDropdownItem("Home", Icons.Filled.Home, isHomeActive) {
+                                onScreenChange(Screen.Home)
+                                showNavigationDropdown = false
+                            }
+                            createDropdownItem("Reader", Icons.Filled.Book, isReaderActive) {
+                                onScreenChange(Screen.Reader())
+                                showNavigationDropdown = false
+                            }
+                            createDropdownItem("Bookmarks", Icons.Filled.Bookmark, isBookmarksActive) {
+                                onScreenChange(Screen.Bookmarks)
+                                showNavigationDropdown = false
+                            }
+                            createDropdownItem("Notes", Icons.AutoMirrored.Filled.Note, isNotesActive) {
+                                onScreenChange(Screen.Notes)
+                                showNavigationDropdown = false
+                            }
+                            createDropdownItem("Search", Icons.Filled.Search, isSearchActive) {
+                                onScreenChange(Screen.Search)
+                                showNavigationDropdown = false
+                            }
+                            createDropdownItem("Settings", Icons.Filled.Settings, isSettingsActive) {
+                                onScreenChange(Screen.Settings)
+                                showNavigationDropdown = false
+                            }
+                            DropdownMenuItem(
+                                text = { Text("Background Texture", modifier = Modifier.fillMaxWidth()) },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Outlined.Texture,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                },
+                                onClick = {
+                                    viewModel.showBgModal = true
+                                    showNavigationDropdown = false
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(start = 8.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp, vertical = 12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        modifier = Modifier.padding(start = 10.dp),
+                                        text = "Overlay Opacity",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        fontSize = 14.sp,
+                                    )
+                                    Text(
+                                        modifier = Modifier.padding(end = 10.dp),
+                                        text = "${(viewModel.overlayOpacity * 100).toInt()}%",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Slider(
+                                    value = viewModel.overlayOpacity,
+                                    onValueChange = { viewModel.overlayOpacity = it },
+                                    valueRange = 0f..1f,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = MaterialTheme.colorScheme.primary,
+                                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                                        inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                        activeTickColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                                        inactiveTickColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    ),
+                                    thumb = {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(20.dp)
+                                                .shadow(2.dp, shape = CircleShape)
+                                                .background(
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    shape = CircleShape
+                                                )
+                                                .border(
+                                                    width = 2.dp,
+                                                    color = MaterialTheme.colorScheme.surface,
+                                                    shape = CircleShape
+                                                )
+                                        )
+                                    },
+                                )
+                            }
+
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = if (viewModel.darkTheme) "Dark Overlay Color" else "Light Overlay Color",
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                },
+                                leadingIcon = {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .clip(CircleShape)
+                                            .background(if (viewModel.darkTheme) viewModel.darkOverlayColor else viewModel.lightOverlayColor)
+                                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                                    )
+                                },
+                                onClick = {
+                                    viewModel.showReaderOverlayColorWheel = true
+                                    showNavigationDropdown = false
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            // Word Marker Color
+                            DropdownMenuItem(
+                                text = { Text("Word Marker Color", modifier = Modifier.fillMaxWidth()) },
+                                leadingIcon = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(24.dp)
+                                                .clip(CircleShape)
+                                                .background(viewModel.wordMarkerColor)
+                                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    viewModel.showWordMarkerColorWheelDialog = true
+                                    showNavigationDropdown = false
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            // Verse Marker Color
+                            DropdownMenuItem(
+                                text = { Text("Verse Marker Color", modifier = Modifier.fillMaxWidth()) },
+                                leadingIcon = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(24.dp)
+                                                .clip(CircleShape)
+                                                .background(viewModel.verseMarkerColor)
+                                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    viewModel.showVerseMarkerColorWheelDialog = true
+                                    showNavigationDropdown = false
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            // Font Size
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Font Size",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        fontSize = 14.sp
+                                    )
+                                    Text(
+                                        text = "1-100",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    IconButton(
+                                        onClick = {
+                                            viewModel.fontSize = maxOf(minFontSize, viewModel.fontSize - 1)
+                                        },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Text("A-", fontWeight = FontWeight.Bold)
+                                    }
+                                    Text(
+                                        "${viewModel.fontSize}",
+                                        modifier = Modifier.padding(horizontal = 16.dp).clickable { showFontSizeDialog = true },
+                                        fontSize = 16.sp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    IconButton(
+                                        onClick = {
+                                            viewModel.fontSize = minOf(maxFontSize, viewModel.fontSize + 1)
+                                        },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Text("A+", fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Portrait: original single‑column layout (unchanged)
+                    @Composable
+                    fun createDropdownItem(
+                        title: String,
+                        icon: ImageVector,
+                        isActive: Boolean,
+                        onClick: () -> Unit
+                    ) {
+                        val backgroundColor by animateColorAsState(
+                            targetValue = if (isActive) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                            animationSpec = tween(durationMillis = 200),
+                            label = "dropdownBackground"
+                        )
+                        val textColor by animateColorAsState(
+                            targetValue = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                            animationSpec = tween(durationMillis = 200),
+                            label = "dropdownTextColor"
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = title,
+                                    fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+                                    color = textColor
+                                )
+                            },
+                            onClick = onClick,
+                            modifier = Modifier.background(backgroundColor),
+                            leadingIcon = {
+                                val modifier = if (title == "Notes") Modifier.rotate(90f) else Modifier
+                                Icon(
+                                    icon,
+                                    contentDescription = title,
+                                    tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = modifier
+                                )
+                            }
+                        )
+                    }
+
+                    val isHomeActive = false
+                    val isReaderActive = true
+                    val isBookmarksActive = false
+                    val isNotesActive = false
+                    val isSearchActive = false
+                    val isSettingsActive = false
+
+                    createDropdownItem("Home", Icons.Filled.Home, isHomeActive) {
+                        onScreenChange(Screen.Home)
+                        showNavigationDropdown = false
+                    }
+                    createDropdownItem("Reader", Icons.Filled.Book, isReaderActive) {
+                        onScreenChange(Screen.Reader())
+                        showNavigationDropdown = false
+                    }
+                    createDropdownItem("Bookmarks", Icons.Filled.Bookmark, isBookmarksActive) {
+                        onScreenChange(Screen.Bookmarks)
+                        showNavigationDropdown = false
+                    }
+                    createDropdownItem("Notes", Icons.AutoMirrored.Filled.Note, isNotesActive) {
+                        onScreenChange(Screen.Notes)
+                        showNavigationDropdown = false
+                    }
+                    createDropdownItem("Search", Icons.Filled.Search, isSearchActive) {
+                        onScreenChange(Screen.Search)
+                        showNavigationDropdown = false
+                    }
+                    createDropdownItem("Settings", Icons.Filled.Settings, isSettingsActive) {
+                        onScreenChange(Screen.Settings)
+                        showNavigationDropdown = false
+                    }
+
+                    HorizontalDivider()
+
+                    DropdownMenuItem(
+                        text = { Text("Background Texture", modifier = Modifier.fillMaxWidth()) },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Outlined.Texture,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
+                        onClick = {
+                            viewModel.showBgModal = true
+                            showNavigationDropdown = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
                     )
-                    val textColor by animateColorAsState(
-                        targetValue = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                        animationSpec = tween(durationMillis = 200),
-                        label = "dropdownTextColor"
-                    )
+
+                    HorizontalDivider()
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Overlay Opacity",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = "${(viewModel.overlayOpacity * 100).toInt()}%",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Slider(
+                            value = viewModel.overlayOpacity,
+                            onValueChange = { viewModel.overlayOpacity = it },
+                            valueRange = 0f..1f,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = SliderDefaults.colors(
+                                thumbColor = MaterialTheme.colorScheme.primary,
+                                activeTrackColor = MaterialTheme.colorScheme.primary,
+                                inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                activeTickColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                                inactiveTickColor = MaterialTheme.colorScheme.surfaceVariant,
+                            ),
+                            thumb = {
+                                Box(
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .shadow(2.dp, shape = CircleShape)
+                                        .background(
+                                            color = MaterialTheme.colorScheme.primary,
+                                            shape = CircleShape
+                                        )
+                                        .border(
+                                            width = 2.dp,
+                                            color = MaterialTheme.colorScheme.surface,
+                                            shape = CircleShape
+                                        )
+                                )
+                            },
+                        )
+                        Text(
+                            text = "Adjust Overlay Opacity with Slider",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp),
+                            fontFamily = getFontFamily("oswald"),
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    HorizontalDivider()
+
                     DropdownMenuItem(
                         text = {
                             Text(
-                                text = title,
-                                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-                                color = textColor
+                                text = if (viewModel.darkTheme) "Dark Overlay Color" else "Light Overlay Color",
+                                modifier = Modifier.fillMaxWidth()
                             )
                         },
-                        onClick = onClick,
-                        modifier = Modifier.background(backgroundColor),
                         leadingIcon = {
-                            val modifier = if (title == "Notes") Modifier.rotate(90f) else Modifier
-                            Icon(
-                                icon,
-                                contentDescription = title,
-                                tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = modifier
-                            )
-                        }
-                    )
-                }
-                val isHomeActive = false
-                val isReaderActive = true
-                val isBookmarksActive = false
-                val isNotesActive = false
-                val isSearchActive = false
-                val isSettingsActive = false
-                createDropdownItem("Home", Icons.Filled.Home, isHomeActive) {
-                    onScreenChange(Screen.Home)
-                    showNavigationDropdown = false
-                }
-                createDropdownItem("Reader", Icons.Filled.Book, isReaderActive) {
-                    onScreenChange(Screen.Reader())
-                    showNavigationDropdown = false
-                }
-                createDropdownItem("Bookmarks", Icons.Filled.Bookmark, isBookmarksActive) {
-                    onScreenChange(Screen.Bookmarks)
-                    showNavigationDropdown = false
-                }
-                createDropdownItem("Notes", Icons.AutoMirrored.Filled.Note, isNotesActive) {
-                    onScreenChange(Screen.Notes)
-                    showNavigationDropdown = false
-                }
-                createDropdownItem("Search", Icons.Filled.Search, isSearchActive) {
-                    onScreenChange(Screen.Search)
-                    showNavigationDropdown = false
-                }
-                createDropdownItem("Settings", Icons.Filled.Settings, isSettingsActive) {
-                    onScreenChange(Screen.Settings)
-                    showNavigationDropdown = false
-                }
-                HorizontalDivider()
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            text = "Background Texture",
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Outlined.Texture,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    },
-                    onClick = {
-                        viewModel.showBgModal = true
-                        showNavigationDropdown = false
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                HorizontalDivider()
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Overlay Opacity",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontSize = 14.sp
-                        )
-                        Text(
-                            text = "${(viewModel.overlayOpacity * 100).toInt()}%",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Slider(
-                        value = viewModel.overlayOpacity,
-                        onValueChange = { viewModel.overlayOpacity = it },
-                        valueRange = 0f..1f,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = SliderDefaults.colors(
-                            thumbColor = MaterialTheme.colorScheme.primary,
-                            activeTrackColor = MaterialTheme.colorScheme.primary,
-                            inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
-                            activeTickColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                            inactiveTickColor = MaterialTheme.colorScheme.surfaceVariant
-                        ),
-                        thumb = {
-                            Box(
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .shadow(2.dp, shape = CircleShape)
-                                    .background(
-                                        color = MaterialTheme.colorScheme.primary,
-                                        shape = CircleShape
-                                    )
-                                    .border(
-                                        width = 2.dp,
-                                        color = MaterialTheme.colorScheme.surface,
-                                        shape = CircleShape
-                                    )
-                            )
-                        },
-                        onValueChangeFinished = { }
-                    )
-                    Text(
-                        text = "Adjust Overlay Opacity with Slider",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp),
-                        fontFamily = getFontFamily("oswald"),
-                        fontSize = 12.sp
-                    )
-                }
-                HorizontalDivider()
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            text = if (viewModel.darkTheme) "Dark Overlay Color" else "Light Overlay Color",
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    },
-                    leadingIcon = {
-                        Box(
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clip(CircleShape)
-                                .background(if (viewModel.darkTheme) viewModel.darkOverlayColor else viewModel.lightOverlayColor)
-                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                        )
-                    },
-                    onClick = {
-                        viewModel.showReaderOverlayColorWheel = true
-                        showNavigationDropdown = false
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                HorizontalDivider()
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Font Size",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontSize = 14.sp
-                        )
-                        Text(
-                            text = "1-100",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(
-                            onClick = { viewModel.fontSize = maxOf(minFontSize, viewModel.fontSize - 1) },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Text("A-", fontWeight = FontWeight.Bold)
-                        }
-                        Text(
-                            "${viewModel.fontSize}",
-                            modifier = Modifier.padding(horizontal = 16.dp).clickable { showFontSizeDialog = true },
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
-                        )
-                        IconButton(
-                            onClick = { viewModel.fontSize = minOf(maxFontSize, viewModel.fontSize + 1) },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Text("A+", fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-                HorizontalDivider()
-                DropdownMenuItem(
-                    text = {
-                        Text("Marker Color", modifier = Modifier.fillMaxWidth())
-                    },
-                    leadingIcon = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
                             Box(
                                 modifier = Modifier
                                     .size(24.dp)
                                     .clip(CircleShape)
-                                    .background(viewModel.markerColor)
+                                    .background(if (viewModel.darkTheme) viewModel.darkOverlayColor else viewModel.lightOverlayColor)
                                     .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
                             )
+                        },
+                        onClick = {
+                            viewModel.showReaderOverlayColorWheel = true
+                            showNavigationDropdown = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    HorizontalDivider()
+                    DropdownMenuItem(
+                        text = { Text("Word Marker Color", modifier = Modifier.fillMaxWidth()) },
+                        leadingIcon = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clip(CircleShape)
+                                        .background(viewModel.wordMarkerColor)
+                                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                                )
+                            }
+                        },
+                        onClick = {
+                            viewModel.showWordMarkerColorWheelDialog = true
+                            showNavigationDropdown = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    HorizontalDivider()
+                    DropdownMenuItem(
+                        text = { Text("Verse Marker Color", modifier = Modifier.fillMaxWidth()) },
+                        leadingIcon = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clip(CircleShape)
+                                        .background(viewModel.verseMarkerColor)
+                                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                                )
+                            }
+                        },
+                        onClick = {
+                            viewModel.showVerseMarkerColorWheelDialog = true
+                            showNavigationDropdown = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    HorizontalDivider()
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Font Size",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = "1-100",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Medium
+                            )
                         }
-                    },
-                    onClick = {
-                        viewModel.showMarkerColorWheelDialog = true
-                        showNavigationDropdown = false
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    viewModel.fontSize = maxOf(minFontSize, viewModel.fontSize - 1)
+                                },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Text("A-", fontWeight = FontWeight.Bold)
+                            }
+                            Text(
+                                "${viewModel.fontSize}",
+                                modifier = Modifier.padding(horizontal = 16.dp).clickable { showFontSizeDialog = true },
+                                fontSize = 16.sp,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
+                            )
+                            IconButton(
+                                onClick = {
+                                    viewModel.fontSize = minOf(maxFontSize, viewModel.fontSize + 1)
+                                },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Text("A+", fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
             }
         }
     )
+
     if (showFontSizeDialog) {
         FontModal(
             tempSize = tempFontSize,

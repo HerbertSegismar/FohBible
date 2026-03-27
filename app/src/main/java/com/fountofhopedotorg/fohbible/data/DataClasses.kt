@@ -247,5 +247,3 @@ data class SelectedWord(
         return result
     }
 }
-
-data class WordHighlight(val verseNumber: Int, val wordText: String, val color: Color)

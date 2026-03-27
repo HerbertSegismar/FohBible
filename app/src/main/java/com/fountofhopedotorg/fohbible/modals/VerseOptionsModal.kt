@@ -65,12 +65,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.fountofhopedotorg.fohbible.ColorWheelDialog
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.data.Verse
 import com.fountofhopedotorg.fohbible.models.AppViewModel
-import com.fountofhopedotorg.fohbible.ui.theme.ThemeManager
 import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
 import kotlin.math.max
 import kotlin.math.min
@@ -94,15 +92,18 @@ fun VerseOptionsModal(
     var currentEnd by remember { mutableIntStateOf(verse.verseNumber) }
     var isBookmarked by remember { mutableStateOf(false) }
     var isHighlighted by remember { mutableStateOf(false) }
-    var showColorPicker by remember { mutableStateOf(false) }
 
     val minV = min(currentStart, currentEnd)
     val maxV = max(currentStart, currentEnd)
     val currentVerses = chapterVerses.filter { it.verseNumber in minV..maxV }.sortedBy { it.verseNumber }
 
     LaunchedEffect(currentVerses) {
-        isBookmarked = currentVerses.all { databaseHelper?.isBookmarked(it.copy(bookName = passage.bookName, chapter = passage.chapter)) ?: false }
-        isHighlighted = currentVerses.all { databaseHelper?.isHighlighted(it.copy(bookName = passage.bookName, chapter = passage.chapter)) ?: false }
+        isBookmarked = currentVerses.all {
+            databaseHelper?.isBookmarked(it.copy(bookName = passage.bookName, chapter = passage.chapter)) ?: false
+        }
+        isHighlighted = currentVerses.all {
+            databaseHelper?.isHighlighted(it.copy(bookName = passage.bookName, chapter = passage.chapter)) ?: false
+        }
     }
 
     val displayText = if (currentVerses.isNotEmpty()) {
@@ -127,14 +128,11 @@ fun VerseOptionsModal(
                     .shadow(elevation = 24.dp, shape = RoundedCornerShape(10.dp), clip = true),
                 shape = RoundedCornerShape(10.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = if (appViewModel.darkTheme)
-                        appViewModel.darkModalBackgroundColor
-                    else
-                        appViewModel.lightModalBackgroundColor
+                    containerColor = if (appViewModel.darkTheme) appViewModel.darkModalBackgroundColor else appViewModel.lightModalBackgroundColor
                 )
             ) {
                 Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-
+                    // Header
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -177,6 +175,7 @@ fun VerseOptionsModal(
                             Icon(Icons.Default.Close, contentDescription = "Close")
                         }
                     }
+
                     if (chapterVerses.isNotEmpty()) {
                         Text(
                             text = "Edit Range",
@@ -200,6 +199,8 @@ fun VerseOptionsModal(
                             modifier = Modifier.padding(start = 20.dp, top = 8.dp, bottom = 8.dp)
                         )
                     }
+
+                    // Verse preview
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -218,6 +219,8 @@ fun VerseOptionsModal(
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
+
+                    // Action buttons
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -243,6 +246,8 @@ fun VerseOptionsModal(
                                 onDismiss()
                             }
                         )
+
+                        // ←←← HIGHLIGHT BUTTON (now uses verseMarkerColor directly)
                         ActionButton(
                             icon = if (isHighlighted) Icons.Default.Star else Icons.Outlined.StarBorder,
                             title = if (isHighlighted) "Highlighted" else "Add Highlight",
@@ -256,7 +261,16 @@ fun VerseOptionsModal(
                                     onAddHighlight()
                                     onDismiss()
                                 } else {
-                                    showColorPicker = true
+                                    // Apply verseMarkerColor immediately and close modal
+                                    val highlightColor = appViewModel.verseMarkerColor.toArgb()
+                                    currentVerses.forEach {
+                                        databaseHelper?.addHighlight(
+                                            it.copy(bookName = passage.bookName, chapter = passage.chapter),
+                                            highlightColor
+                                        )
+                                    }
+                                    onAddHighlight()
+                                    onDismiss()
                                 }
                             }
                         )
@@ -300,24 +314,9 @@ fun VerseOptionsModal(
             }
         }
     }
-    if (showColorPicker) {
-        ColorWheelDialog(
-            onDismissRequest = { showColorPicker = false },
-            onColorSelected = { selectedColor ->
-                currentVerses.forEach {
-                    databaseHelper?.addHighlight(
-                        it.copy(bookName = passage.bookName, chapter = passage.chapter),
-                        selectedColor.toArgb()
-                    )
-                }
-                onAddHighlight()
-                showColorPicker = false
-                onDismiss()
-            },
-            initialColor = ThemeManager.primaryColor
-        )
-    }
 }
+
+// RangeSliderWithControls and ActionButton functions remain unchanged (same as before)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RangeSliderWithControls(
@@ -338,12 +337,8 @@ private fun RangeSliderWithControls(
             valueRange = 1f..maxVerse.toFloat(),
             steps = maxVerse - 1,
             modifier = Modifier.fillMaxWidth(),
-            startThumb = {
-                Box(modifier = Modifier.size(20.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
-            },
-            endThumb = {
-                Box(modifier = Modifier.size(20.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
-            },
+            startThumb = { Box(modifier = Modifier.size(20.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary)) },
+            endThumb = { Box(modifier = Modifier.size(20.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary)) },
             colors = SliderDefaults.colors(
                 thumbColor = Color.Transparent,
                 activeTrackColor = MaterialTheme.colorScheme.primary,
@@ -407,8 +402,7 @@ private fun ActionButton(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    maxLines = 1, overflow = TextOverflow.Ellipsis
                 )
             }
             Icon(

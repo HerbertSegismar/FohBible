@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -51,6 +50,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -360,7 +360,7 @@ fun ReaderScreen(
                 crossRefHelper = crossRefHelper,
                 refreshKey = refreshKey,
                 onVerseCommentaryClick = onVerseCommentaryClick,
-                markerColor = viewModel.markerColor
+                markerColor = viewModel.wordMarkerColor
             )
         } else if (synced) {
             SyncedMultiVersionReader(
@@ -390,7 +390,7 @@ fun ReaderScreen(
                 crossRefHelper = crossRefHelper,
                 refreshKey = refreshKey,
                 onVerseCommentaryClick = onVerseCommentaryClick,
-                markerColor = viewModel.markerColor
+                markerColor = viewModel.wordMarkerColor
             )
         } else {
             IndependentMultiVersionReader(
@@ -425,7 +425,7 @@ fun ReaderScreen(
                 crossRefHelper = crossRefHelper,
                 refreshKey = refreshKey,
                 onVerseCommentaryClick = onVerseCommentaryClick,
-                markerColor = viewModel.markerColor
+                markerColor = viewModel.wordMarkerColor
             )
         }
         FloatingActionButton(
@@ -1616,7 +1616,11 @@ fun ChapterView(
                 if (databaseHelper != null) {
                     content.forEach { item ->
                         if (item is VerseContent.VerseVal) {
-                            val highlights = databaseHelper.getWordHighlightsForVerse(item.verse)
+                            val fullVerse = item.verse.copy(
+                                bookName = passage.bookName,
+                                chapter = passage.chapter
+                            )
+                            val highlights = databaseHelper.getWordHighlightsForVerse(fullVerse)
                             addAll(highlights)
                         }
                     }
@@ -1744,7 +1748,9 @@ fun ChapterView(
                             }
                             val currentMarkerColor by rememberUpdatedState(markerColor)
 
-                            if (processedVerse != null) {
+                            // FIX: Wrap the entire verse column in a key that includes the verse number and its persistent highlight status.
+                            // This forces recomposition when the highlight status changes, so the TextLayoutResult updates.
+                            key("verse_${verse.verseNumber}_$isPersistentHighlighted") {
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -1754,7 +1760,7 @@ fun ChapterView(
                                             offsets[verse.verseNumber] = coords.positionInParent().y
                                         }
                                 ) {
-                                    processedVerse.header?.let { header ->
+                                    processedVerse?.header?.let { header ->
                                         if (header.text.isNotEmpty()) {
                                             Text(
                                                 text = header,
@@ -1779,7 +1785,7 @@ fun ChapterView(
                                         }
                                         if (isBookmarked) appendInlineContent("bookmark", "[bookmark]")
                                         if (isNote) appendInlineContent("note", "[note]")
-                                        append(processedVerse.body)
+                                        append(processedVerse?.body ?: verse.text)
                                         if (refCount > 0 && onCrossRefClick != null) {
                                             append(" ")
                                             appendInlineContent("crossref_${verse.verseNumber}", "[$refCount]")
@@ -1884,162 +1890,6 @@ fun ChapterView(
                                                             }
                                                         }
                                                     },
-                                                    onLongPress = {
-                                                        onVerseLongPress?.invoke(verse, passage)
-                                                    },
-                                                    onDoubleTap = { offset ->
-                                                        textLayoutResult?.let { layout ->
-                                                            val position = layout.getOffsetForPosition(offset)
-                                                            val annotations = finalAnnotatedString.getStringAnnotations(start = position, end = position)
-                                                            val wordAnnotation = annotations.find { it.tag == "word" }
-                                                            if (wordAnnotation != null) {
-                                                                val word = SelectedWord(
-                                                                    verse.verseNumber,
-                                                                    wordAnnotation.start,
-                                                                    wordAnnotation.end,
-                                                                    currentMarkerColor
-                                                                )
-                                                                val wasSelected = selectedWords.contains(word)
-                                                                selectedWords = if (wasSelected) {
-                                                                    selectedWords - word
-                                                                } else {
-                                                                    selectedWords + word
-                                                                }
-                                                                if (databaseHelper != null) {
-                                                                    if (wasSelected) {
-                                                                        databaseHelper.removeWordHighlight(fullVerse, word.start, word.end)
-                                                                    } else {
-                                                                        databaseHelper.addWordHighlight(
-                                                                            fullVerse,
-                                                                            word.start,
-                                                                            word.end,
-                                                                            currentMarkerColor.toArgb()
-                                                                        )
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                )
-                                            },
-                                        fontSize = viewModel.fontSize.sp,
-                                        lineHeight = (viewModel.fontSize * 1.333f).sp,
-                                        fontFamily = currentFontFamily,
-                                        inlineContent = inlineContentMap,
-                                        onTextLayout = { textLayoutResult = it }
-                                    )
-                                }
-                            } else {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 8.dp)
-                                        .then(backgroundModifier)
-                                        .onGloballyPositioned { coords ->
-                                            offsets[verse.verseNumber] = coords.positionInParent().y
-                                        }
-                                ) {
-                                    val annotatedString = buildAnnotatedString {
-                                        withStyle(
-                                            SpanStyle(
-                                                fontWeight = FontWeight.Bold,
-                                                color = themeColors.verseNumber,
-                                                fontSize = bookmarkIconSize.sp
-                                            )
-                                        ) {
-                                            append("${verse.verseNumber} ")
-                                        }
-                                        if (isBookmarked) appendInlineContent("bookmark", "[bookmark]")
-                                        if (isNote) appendInlineContent("note", "[note]")
-                                        append(verse.text)
-                                        if (refCount > 0 && onCrossRefClick != null) {
-                                            append(" ")
-                                            appendInlineContent("crossref_${verse.verseNumber}", "[$refCount]")
-                                        }
-                                        if (onVerseCommentaryClick != null) {
-                                            appendInlineContent("commentary_${verse.verseNumber}", "[C]")
-                                        }
-                                    }
-                                    val inlineContentMap = remember(verse.verseNumber, refCount, isNote) {
-                                        buildMap {
-                                            put("bookmark", bookmarkInlineContent)
-                                            if (isNote) put("note", noteInlineContent)
-                                            if (refCount > 0 && onCrossRefClick != null) {
-                                                put("crossref_${verse.verseNumber}", InlineTextContent(
-                                                    Placeholder(
-                                                        width = (viewModel.fontSize * 0.9f).sp,
-                                                        height = (viewModel.fontSize * 0.9f).sp,
-                                                        placeholderVerticalAlign = PlaceholderVerticalAlign.TextCenter
-                                                    )
-                                                ) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .clickable { onCrossRefClick(passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary) }
-                                                            .background(themeColors.primary.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
-                                                            .padding(horizontal = 4.dp, vertical = 1.dp)
-                                                    ) {
-                                                        Text(
-                                                            text = "$refCount",
-                                                            fontSize = (viewModel.fontSize * 0.65f).sp,
-                                                            color = themeColors.primary,
-                                                            fontWeight = FontWeight.Bold
-                                                        )
-                                                    }
-                                                })
-                                            }
-                                            if (onVerseCommentaryClick != null) {
-                                                put("commentary_${verse.verseNumber}", InlineTextContent(
-                                                    Placeholder(
-                                                        width = (viewModel.fontSize * 1.5f).sp,
-                                                        height = (viewModel.fontSize * 1.5f).sp,
-                                                        placeholderVerticalAlign = PlaceholderVerticalAlign.TextCenter
-                                                    )
-                                                ) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .fillMaxSize()
-                                                            .clickable { onVerseCommentaryClick(passage.bookNumber, passage.chapter, verse.verseNumber) },
-                                                        contentAlignment = Alignment.Center
-                                                    ) {
-                                                        Icon(
-                                                            imageVector = Icons.Filled.ChevronRight,
-                                                            contentDescription = "View Verse Commentaries",
-                                                            tint = themeColors.verseNumber,
-                                                            modifier = Modifier.width((viewModel.fontSize * 1.5f).dp)
-                                                        )
-                                                    }
-                                                })
-                                            }
-                                        }
-                                    }
-                                    var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
-
-                                    val finalAnnotatedString = remember(annotatedString, selectedWords, verse.verseNumber) {
-                                        val wordsForVerse = selectedWords.filter { it.verseNumber == verse.verseNumber }
-                                        if (wordsForVerse.isEmpty()) {
-                                            annotatedString
-                                        } else {
-                                            val builder = AnnotatedString.Builder()
-                                            builder.append(annotatedString)
-                                            wordsForVerse.sortedByDescending { it.start }.forEach { word ->
-                                                if (word.start in 0 until builder.length && word.end in word.start..builder.length) {
-                                                    builder.addStyle(
-                                                        SpanStyle(background = word.color),
-                                                        word.start,
-                                                        word.end
-                                                    )
-                                                }
-                                            }
-                                            builder.toAnnotatedString()
-                                        }
-                                    }
-
-                                    Text(
-                                        text = finalAnnotatedString,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .pointerInput(Unit) {
-                                                detectTapGestures(
                                                     onLongPress = {
                                                         onVerseLongPress?.invoke(verse, passage)
                                                     },
