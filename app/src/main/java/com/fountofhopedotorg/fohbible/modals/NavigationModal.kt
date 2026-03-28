@@ -798,6 +798,8 @@ fun ActionButton(
 
 @Composable
 fun BookHeader(book: BookUi) {
+    val chapCount = book.totalChapters
+    val chapText = if (chapCount > 1) "chapters" else "chapter"
     Card(
         modifier = Modifier
             .fillMaxWidth(),
@@ -821,7 +823,7 @@ fun BookHeader(book: BookUi) {
                     color = Color.White
                 )
                 Text(
-                    text = "${book.totalChapters} chapters",
+                    text = "$chapCount $chapText",
                     style = MaterialTheme.typography.bodyMedium,
                     fontSize = 12.sp,
                     color = Color.White
@@ -838,7 +840,8 @@ fun BookHeader(book: BookUi) {
                     text = book.shortName,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp
+                    fontSize = 10.sp,
+                    maxLines = 1
                 )
             }
         }
