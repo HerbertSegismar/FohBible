@@ -537,10 +537,9 @@ fun SettingsScreen() {
                             viewModel.darkOverlayColor = Color(0xFF100F21)
                             viewModel.lightModalBackgroundColor = Color(0xFFE0E0E0)
                             viewModel.darkModalBackgroundColor = Color(0xFF2D2D2D)
-                            // Reset new items as well
                             viewModel.wordMarkerColor = Color(0xFFFFA500)
                             viewModel.verseMarkerColor = Color(0xFF4CAF50)
-                            viewModel.isDictionaryMode = false
+                            viewModel.isDictionaryMode = true
                         },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
