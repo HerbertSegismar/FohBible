@@ -724,17 +724,14 @@ fun InteractiveModal(
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-
     var crossRefDropdownExpanded by remember { mutableStateOf(false) }
 
     if (show) {
         if (stack.isEmpty()) return
         val currentPage = stack.last()
         val scrollState = scrollStates.getOrPut(currentPage) { ScrollState(0) }
-
         val textColor = MaterialTheme.colorScheme.onBackground
         val linkColor = MaterialTheme.colorScheme.primary
-
         var showModalColorWheel by remember { mutableStateOf(false) }
         var dictionaryDropdownExpanded by remember { mutableStateOf(false) }
         var commentaryDropdownExpanded by remember { mutableStateOf(false) }
@@ -998,18 +995,18 @@ fun InteractiveModal(
                                                                     val refs = withContext(Dispatchers.IO) {
                                                                         temp.getCrossReferences(b, c, v)
                                                                     }
-                                                                    val html = sanitizeHtmlContent(
-                                                                        refs.joinToString("<br>") { ref ->
-                                                                            val toBook = BibleData.getBookByCustomNumber(ref.bookTo)?.name ?: ref.bookTo.toString()
-                                                                            val verseRange = if (ref.verseToStart == ref.verseToEnd) {
-                                                                                ref.verseToStart.toString()
-                                                                            } else {
-                                                                                "${ref.verseToStart}-${ref.verseToEnd}"
+                                                                    val html = if (refs.isEmpty()) {
+                                                                        "No references available."
+                                                                    } else {
+                                                                        sanitizeHtmlContent(
+                                                                            refs.joinToString("<br>") { ref ->
+                                                                                val toBook = BibleData.getBookByCustomNumber(ref.bookTo)?.name ?: ref.bookTo.toString()
+                                                                                val verseRange = if (ref.verseToStart == ref.verseToEnd) ref.verseToStart.toString() else "${ref.verseToStart}-${ref.verseToEnd}"
+                                                                                val href = "B:${ref.bookTo} ${ref.chapterTo}:$verseRange"
+                                                                                "<a href=\"$href\">$toBook ${ref.chapterTo}:$verseRange</a>"
                                                                             }
-                                                                            val href = "B:${ref.bookTo} ${ref.chapterTo}:$verseRange"
-                                                                            "<a href=\"$href\">$toBook ${ref.chapterTo}:$verseRange</a>"
-                                                                        }
-                                                                    )
+                                                                        )
+                                                                    }
                                                                     val idx = stack.indexOf(loadingPage)
                                                                     if (idx != -1) {
                                                                         stack[idx] = loadingPage.copy(content = html)

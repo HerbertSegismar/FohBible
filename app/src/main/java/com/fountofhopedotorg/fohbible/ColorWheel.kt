@@ -128,7 +128,7 @@ fun ColorWheelDialog(
                     .padding(8.dp),
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.inverseOnSurface,
+                    containerColor = MaterialTheme.colorScheme.surface,
                     contentColor = MaterialTheme.colorScheme.onSurface,
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
