@@ -132,15 +132,14 @@ fun VerseOptionsModal(
                 )
             ) {
                 Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-                    // Header
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(
                                 brush = Brush.verticalGradient(
                                     listOf(
-                                        MaterialTheme.colorScheme.primaryContainer,
-                                        MaterialTheme.colorScheme.primary
+                                        MaterialTheme.colorScheme.primary,
+                                        Color.Transparent
                                     )
                                 )
                             )
@@ -219,8 +218,6 @@ fun VerseOptionsModal(
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
-
-                    // Action buttons
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -246,8 +243,6 @@ fun VerseOptionsModal(
                                 onDismiss()
                             }
                         )
-
-                        // ←←← HIGHLIGHT BUTTON (now uses verseMarkerColor directly)
                         ActionButton(
                             icon = if (isHighlighted) Icons.Default.Star else Icons.Outlined.StarBorder,
                             title = if (isHighlighted) "Highlighted" else "Add Highlight",
@@ -261,7 +256,6 @@ fun VerseOptionsModal(
                                     onAddHighlight()
                                     onDismiss()
                                 } else {
-                                    // Apply verseMarkerColor immediately and close modal
                                     val highlightColor = appViewModel.verseMarkerColor.toArgb()
                                     currentVerses.forEach {
                                         databaseHelper?.addHighlight(

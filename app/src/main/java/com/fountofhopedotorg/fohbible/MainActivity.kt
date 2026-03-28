@@ -960,9 +960,15 @@ fun HomeAppBar(
             )
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = LocalAppTheme.current.primaryColor
+            containerColor = Color.Transparent
         ),
-        modifier = modifier,
+        modifier = modifier.background(
+            brush = Brush.verticalGradient(
+                0.0f to LocalAppTheme.current.primaryColor,
+                0.8f to LocalAppTheme.current.primaryColor,
+                1.0f to Color.Transparent
+            )
+        ),
         navigationIcon = {
             if (onBack != null) {
                 IconButton(onClick = { onBack() }) {
@@ -1243,8 +1249,16 @@ fun ReaderAppBar(
                 }
             }
         },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = LocalAppTheme.current.primaryColor),
-        modifier = modifier,
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = Color.Transparent
+        ),
+        modifier = modifier.background(
+            brush = Brush.verticalGradient(
+                0.0f to LocalAppTheme.current.primaryColor,
+                0.8f to LocalAppTheme.current.primaryColor,
+                1.0f to Color.Transparent
+            )
+        ),
         navigationIcon = {
             if (onBack != null) {
                 IconButton(
@@ -1323,7 +1337,6 @@ fun ReaderAppBar(
                     )
                 }
             }
-            // Mosaic dropdown (unchanged)
             DropdownMenu(
                 expanded = showMultiDropdown,
                 onDismissRequest = { showMultiDropdown = false },
