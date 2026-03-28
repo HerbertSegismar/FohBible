@@ -376,7 +376,7 @@ fun NavigationModal(
                         ) {
                             LazyColumn(
                                 modifier = Modifier
-                                    .weight(2f)
+                                    .weight(1.78f)
                                     .fillMaxHeight()
                                     .padding(horizontal = 10.dp),
                                 contentPadding = PaddingValues(vertical = 8.dp)
@@ -417,7 +417,7 @@ fun NavigationModal(
                             }
                             Box(
                                 modifier = Modifier
-                                    .weight(1f)
+                                    .weight(1.11f)
                                     .fillMaxHeight()
                                     .padding(10.dp)
                                     .verticalScroll(rememberScrollState())
