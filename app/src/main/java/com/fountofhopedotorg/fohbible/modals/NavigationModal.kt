@@ -361,7 +361,7 @@ fun NavigationModal(
                             titleContentColor = Color.White,
                             navigationIconContentColor = Color.White,
                         ),
-                        modifier = Modifier.height(48.dp)
+                        modifier = Modifier.height(40.dp)
                     )
                 }
             ) { paddingValues ->
