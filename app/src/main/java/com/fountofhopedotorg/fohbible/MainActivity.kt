@@ -965,7 +965,7 @@ fun HomeAppBar(
         modifier = modifier.background(
             brush = Brush.verticalGradient(
                 0.0f to LocalAppTheme.current.primaryColor,
-                0.8f to LocalAppTheme.current.primaryColor,
+                0.7f to LocalAppTheme.current.primaryColor,
                 1.0f to Color.Transparent
             )
         ),
@@ -1255,7 +1255,7 @@ fun ReaderAppBar(
         modifier = modifier.background(
             brush = Brush.verticalGradient(
                 0.0f to LocalAppTheme.current.primaryColor,
-                0.8f to LocalAppTheme.current.primaryColor,
+                0.7f to LocalAppTheme.current.primaryColor,
                 1.0f to Color.Transparent
             )
         ),
@@ -1520,11 +1520,12 @@ fun ReaderAppBar(
                             modifier = Modifier
                                 .weight(1f)
                                 .padding(start = 8.dp)
+
                         ) {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 8.dp, vertical = 8.dp)
+                                    .padding(start = 8.dp, top = 10.dp, bottom = 5.dp, end = 8.dp)
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -1550,7 +1551,7 @@ fun ReaderAppBar(
                                     value = viewModel.overlayOpacity,
                                     onValueChange = { viewModel.overlayOpacity = it },
                                     valueRange = 0f..1f,
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier.fillMaxWidth().height(40.dp),
                                     colors = SliderDefaults.colors(
                                         thumbColor = MaterialTheme.colorScheme.primary,
                                         activeTrackColor = MaterialTheme.colorScheme.primary,
@@ -1586,7 +1587,7 @@ fun ReaderAppBar(
                                 leadingIcon = {
                                     Box(
                                         modifier = Modifier
-                                            .size(24.dp)
+                                            .size(22.dp)
                                             .clip(CircleShape)
                                             .background(if (viewModel.darkTheme) viewModel.darkOverlayColor else viewModel.lightOverlayColor)
                                             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
@@ -1607,7 +1608,7 @@ fun ReaderAppBar(
                                     ) {
                                         Box(
                                             modifier = Modifier
-                                                .size(24.dp)
+                                                .size(22.dp)
                                                 .clip(CircleShape)
                                                 .background(viewModel.wordMarkerColor)
                                                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
@@ -1629,7 +1630,7 @@ fun ReaderAppBar(
                                     ) {
                                         Box(
                                             modifier = Modifier
-                                                .size(24.dp)
+                                                .size(22.dp)
                                                 .clip(CircleShape)
                                                 .background(viewModel.verseMarkerColor)
                                                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)

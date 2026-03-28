@@ -43,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
@@ -52,6 +53,7 @@ import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.data.Verse
 import com.fountofhopedotorg.fohbible.models.AppViewModel
+import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
 import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
 
 @Composable
@@ -141,10 +143,9 @@ fun NotesModal(
                             .fillMaxWidth()
                             .background(
                                 brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        MaterialTheme.colorScheme.primaryContainer,
-                                        MaterialTheme.colorScheme.primary
-                                    )
+                                    0.0f to LocalAppTheme.current.primaryColor,
+                                    0.25f to LocalAppTheme.current.primaryColor,
+                                    1.0f to Color.Transparent
                                 )
                             )
                             .padding(vertical = 24.dp, horizontal = 20.dp),

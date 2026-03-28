@@ -69,6 +69,7 @@ import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.data.Verse
 import com.fountofhopedotorg.fohbible.models.AppViewModel
+import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
 import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
 import kotlin.math.max
 import kotlin.math.min
@@ -137,10 +138,9 @@ fun VerseOptionsModal(
                             .fillMaxWidth()
                             .background(
                                 brush = Brush.verticalGradient(
-                                    listOf(
-                                        MaterialTheme.colorScheme.primary,
-                                        Color.Transparent
-                                    )
+                                    0.0f to LocalAppTheme.current.primaryColor,
+                                    0.25f to LocalAppTheme.current.primaryColor,
+                                    1.0f to Color.Transparent
                                 )
                             )
                             .padding(vertical = 24.dp, horizontal = 20.dp),
