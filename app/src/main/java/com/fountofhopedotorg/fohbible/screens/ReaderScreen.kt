@@ -131,16 +131,22 @@ fun ReaderScreen(
     onPassageChange: (PassageSelection) -> Unit = {}
 ) {
     val viewModel = viewModel<AppViewModel>()
-    val themeColors = ThemeColors(
-        textColor = MaterialTheme.colorScheme.onBackground,
-        verseNumber = MaterialTheme.colorScheme.primary,
-        primary = MaterialTheme.colorScheme.primary,
-        tagColor = MaterialTheme.colorScheme.secondary,
-        tagBg = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f),
-        wordsOfJesus = Color(0xFFDA4227),
-        searchHighlightBg = if (viewModel.darkTheme) Color(0xFF26EC2E).copy(alpha = 0.2f) else Color.Yellow.copy(alpha = 0.3f),
-        highlightIcon = MaterialTheme.colorScheme.primary
-    )
+    val colorScheme = MaterialTheme.colorScheme
+    val themeColors = remember(colorScheme, viewModel.darkTheme) {
+        ThemeColors(
+            textColor = colorScheme.onBackground,
+            verseNumber = colorScheme.primary,
+            primary = colorScheme.primary,
+            tagColor = colorScheme.secondary,
+            tagBg = colorScheme.secondary.copy(alpha = 0.1f),
+            wordsOfJesus = Color(0xFFDA4227),
+            searchHighlightBg = if (viewModel.darkTheme)
+                Color(0xFF26EC2E).copy(alpha = 0.2f)
+            else
+                Color.Yellow.copy(alpha = 0.3f),
+            highlightIcon = colorScheme.primary
+        )
+    }
 
     var primaryCurrent by remember { mutableStateOf(passage.copy(verse = 1)) }
     var secondaryCurrent by remember { mutableStateOf(viewModel.secondaryPassage.copy(verse = 1)) }
@@ -716,7 +722,6 @@ private fun SingleVersionReader(
     LaunchedEffect(primaryCurrent) {
         if (!isUserSwiping) {
             coroutineScope.launch {
-                delay(50)
                 val offset = if (hasPrev) 1 else 0
                 pagerState.scrollToPage(offset)
                 pendingPassageChange = null
