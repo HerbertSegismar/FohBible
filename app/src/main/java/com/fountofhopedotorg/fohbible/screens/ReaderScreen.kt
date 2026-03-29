@@ -110,6 +110,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
+private const val PSALMS_CUSTOM_NUMBER = 230
 private fun createCommentaryHelperIfExists(
     context: Context, baseDbName: String?
 ): DatabaseHelper? {
@@ -311,6 +312,40 @@ fun ReaderScreen(
     }
     var refreshKey by remember { mutableIntStateOf(0) }
     val subheadingsDbHelper = remember { DatabaseHelper(contextFont, "kjvsubheadings.sqlite3") }
+
+    val psalmsBookNumber = 230
+
+    LaunchedEffect(databaseHelper?.databaseName, secondaryDatabaseHelper?.databaseName, psalmsBookNumber) {
+        val psalmKey = psalmsBookNumber to 119
+        if (databaseHelper != null && psalmKey !in primaryLoadedVerses) {
+            try {
+                primaryLoadedVerses[psalmKey] = getVersesWithSubheadings(
+                    databaseHelper,
+                    subheadingsDbHelper,
+                    psalmsBookNumber,
+                    119
+                )
+            } catch (_: Exception) {}
+        }
+
+        if (psalmKey !in primaryLoadedVerses) {
+            primaryLoadedVerses[psalmKey] = databaseHelper?.let { versesHelper ->
+                getVersesWithSubheadings(versesHelper, subheadingsDbHelper, psalmsBookNumber, 119)
+            } ?: emptyList()
+        }
+
+        if (secondaryDatabaseHelper != null && psalmKey !in secondaryLoadedVerses) {
+            try {
+                secondaryLoadedVerses[psalmKey] = getVersesWithSubheadings(
+                    secondaryDatabaseHelper!!,
+                    subheadingsDbHelper,
+                    psalmsBookNumber,
+                    119
+                )
+            } catch (_: Exception) {}
+        }
+    }
+
     var showCrossRefModal by remember { mutableStateOf(false) }
     var crossRefSource by remember { mutableStateOf("") }
     var crossRefContent by remember { mutableStateOf("") }
@@ -687,6 +722,13 @@ private fun SingleVersionReader(
                 } ?: emptyList()
             }
         }
+
+        val psalmKey = PSALMS_CUSTOM_NUMBER to 119
+        if (psalmKey !in primaryLoadedVerses) {
+            primaryLoadedVerses[psalmKey] = databaseHelper?.let { versesHelper ->
+                getVersesWithSubheadings(versesHelper, subheadingsDbHelper, PSALMS_CUSTOM_NUMBER, 119)
+            } ?: emptyList()
+        }
     }
     val pagerState = rememberPagerState(
         initialPage = currentOffset,
@@ -868,6 +910,15 @@ private fun SyncedMultiVersionReader(
                     getVersesWithSubheadings(versesHelper, subheadingsDbHelper, nextPassage.bookNumber, nextPassage.chapter)
                 } ?: emptyList()
             }
+        }
+        val psalmKey = PSALMS_CUSTOM_NUMBER to 119
+        if (psalmKey !in primaryLoadedVerses) {
+            primaryLoadedVerses[psalmKey] = databaseHelper?.let { versesHelper ->
+                getVersesWithSubheadings(versesHelper, subheadingsDbHelper, PSALMS_CUSTOM_NUMBER, 119)
+            } ?: emptyList()
+        }
+        if (secondaryDatabaseHelper != null && psalmKey !in secondaryLoadedVerses) {
+            secondaryLoadedVerses[psalmKey] = getVersesWithSubheadings(secondaryDatabaseHelper, subheadingsDbHelper, PSALMS_CUSTOM_NUMBER, 119)
         }
     }
     val pagerState = rememberPagerState(
@@ -1212,6 +1263,12 @@ private fun IndependentMultiVersionReader(
                 } ?: emptyList()
             }
         }
+        val psalmKey = PSALMS_CUSTOM_NUMBER to 119
+        if (psalmKey !in primaryLoadedVerses) {
+            primaryLoadedVerses[psalmKey] = databaseHelper?.let { versesHelper ->
+                getVersesWithSubheadings(versesHelper, subheadingsDbHelper, PSALMS_CUSTOM_NUMBER, 119)
+            } ?: emptyList()
+        }
     }
     LaunchedEffect(secondaryCurrent, secondaryHasPrev, secondaryHasNext, secondaryDatabaseHelper) {
         val currentKey = secondaryCurrent.bookNumber to secondaryCurrent.chapter
@@ -1235,6 +1292,12 @@ private fun IndependentMultiVersionReader(
                     getVersesWithSubheadings(versesHelper, subheadingsDbHelper, secondaryNext.bookNumber, secondaryNext.chapter)
                 } ?: emptyList()
             }
+        }
+        val psalmKey = PSALMS_CUSTOM_NUMBER to 119
+        if (psalmKey !in secondaryLoadedVerses) {
+            secondaryLoadedVerses[psalmKey] = secondaryDatabaseHelper?.let { versesHelper ->
+                getVersesWithSubheadings(versesHelper, subheadingsDbHelper, PSALMS_CUSTOM_NUMBER, 119)
+            } ?: emptyList()
         }
     }
     val primaryPagerState = rememberPagerState(

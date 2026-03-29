@@ -56,6 +56,7 @@ dependencies {
     implementation(libs.androidx.navigation.runtime.ktx)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.compose.foundation.layout)
+    implementation(libs.androidx.paging.common)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
