@@ -313,39 +313,6 @@ fun ReaderScreen(
     var refreshKey by remember { mutableIntStateOf(0) }
     val subheadingsDbHelper = remember { DatabaseHelper(contextFont, "kjvsubheadings.sqlite3") }
 
-    val psalmsBookNumber = 230
-
-    LaunchedEffect(databaseHelper?.databaseName, secondaryDatabaseHelper?.databaseName, psalmsBookNumber) {
-        val psalmKey = psalmsBookNumber to 119
-        if (databaseHelper != null && psalmKey !in primaryLoadedVerses) {
-            try {
-                primaryLoadedVerses[psalmKey] = getVersesWithSubheadings(
-                    databaseHelper,
-                    subheadingsDbHelper,
-                    psalmsBookNumber,
-                    119
-                )
-            } catch (_: Exception) {}
-        }
-
-        if (psalmKey !in primaryLoadedVerses) {
-            primaryLoadedVerses[psalmKey] = databaseHelper?.let { versesHelper ->
-                getVersesWithSubheadings(versesHelper, subheadingsDbHelper, psalmsBookNumber, 119)
-            } ?: emptyList()
-        }
-
-        if (secondaryDatabaseHelper != null && psalmKey !in secondaryLoadedVerses) {
-            try {
-                secondaryLoadedVerses[psalmKey] = getVersesWithSubheadings(
-                    secondaryDatabaseHelper!!,
-                    subheadingsDbHelper,
-                    psalmsBookNumber,
-                    119
-                )
-            } catch (_: Exception) {}
-        }
-    }
-
     var showCrossRefModal by remember { mutableStateOf(false) }
     var crossRefSource by remember { mutableStateOf("") }
     var crossRefContent by remember { mutableStateOf("") }
