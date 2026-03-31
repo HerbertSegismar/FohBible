@@ -1018,6 +1018,7 @@ private fun SyncedMultiVersionReader(
                     // A single source of truth for who is "driving" the scroll
                     var isSyncing by remember { mutableStateOf(false) }
 
+                    // Sync Primary -> Secondary
                     LaunchedEffect(primaryState) {
                         snapshotFlow {
                             primaryState.firstVisibleItemIndex to primaryState.firstVisibleItemScrollOffset
@@ -1029,6 +1030,8 @@ private fun SyncedMultiVersionReader(
                             }
                         }
                     }
+
+                    // Sync Secondary -> Primary
                     LaunchedEffect(secondaryState) {
                         snapshotFlow {
                             secondaryState.firstVisibleItemIndex to secondaryState.firstVisibleItemScrollOffset
