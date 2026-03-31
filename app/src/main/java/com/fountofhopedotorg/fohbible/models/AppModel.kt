@@ -23,7 +23,7 @@ import java.io.IOException
 
 class AppViewModel : ViewModel() {
 
-    var isLazyReader by mutableStateOf(false)
+    var isLazyReader by mutableStateOf(true)
     var wordMarkerColor by mutableStateOf(Color(0xDD8A66DE))
     var showWordMarkerColorWheelDialog by mutableStateOf(false)
     var isDictionaryMode by mutableStateOf(true)

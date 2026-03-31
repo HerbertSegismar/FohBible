@@ -553,7 +553,7 @@ fun SettingsScreen() {
                             viewModel.wordMarkerColor = Color(0xFFFFA500)
                             viewModel.verseMarkerColor = Color(0xFF4CAF50)
                             viewModel.isDictionaryMode = true
-                            viewModel.isLazyReader = false
+                            viewModel.isLazyReader = true
                         },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
