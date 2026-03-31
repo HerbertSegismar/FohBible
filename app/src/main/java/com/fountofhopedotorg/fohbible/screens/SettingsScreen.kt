@@ -535,7 +535,7 @@ fun SettingsScreen() {
                             viewModel.darkTheme = false
                             viewModel.selectedColor = DefaultPrimaryColor
                             viewModel.isCustomColor = false
-                            viewModel.selectedFontFamily = "system"
+                            viewModel.selectedFontFamily = "googlesanscode"
                             viewModel.currentDbName = "kj2.sqlite3"
                             viewModel.currentVersionAbbr = BibleVersionUtils.versionMap["kj2.sqlite3"] ?: "KJ2"
                             viewModel.multiVersion = false
@@ -550,7 +550,7 @@ fun SettingsScreen() {
                             viewModel.darkOverlayColor = Color(0xFF100F21)
                             viewModel.lightModalBackgroundColor = Color(0xFFE0E0E0)
                             viewModel.darkModalBackgroundColor = Color(0xFF2D2D2D)
-                            viewModel.wordMarkerColor = Color(0xFFFFA500)
+                            viewModel.wordMarkerColor = Color(0xDD8A66DE)
                             viewModel.verseMarkerColor = Color(0xFF4CAF50)
                             viewModel.isDictionaryMode = true
                             viewModel.isLazyReader = true

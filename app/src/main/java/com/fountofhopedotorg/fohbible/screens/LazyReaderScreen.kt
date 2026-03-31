@@ -1836,7 +1836,7 @@ fun ChapterView(
 
             LazyColumn(
                 state = state,
-                modifier = Modifier.weight(1f).padding(12.dp)
+                modifier = Modifier.weight(1f).padding(horizontal = 12.dp)
             ) {
                 items(
                     items = content,

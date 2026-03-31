@@ -28,7 +28,7 @@ class AppViewModel : ViewModel() {
     var showWordMarkerColorWheelDialog by mutableStateOf(false)
     var isDictionaryMode by mutableStateOf(true)
 
-    var verseMarkerColor by mutableStateOf(Color(0xDDEADF80))
+    var verseMarkerColor by mutableStateOf(Color(0xFF4CAF50))
     var showVerseMarkerColorWheelDialog by mutableStateOf(false)
 
     var showSecondaryNavigationModal by mutableStateOf(false)
@@ -38,7 +38,7 @@ class AppViewModel : ViewModel() {
     var darkTheme by mutableStateOf(false)
     var selectedColor by mutableStateOf<Color?>(null)
     var isCustomColor by mutableStateOf(false)
-    var selectedFontFamily by mutableStateOf("system")
+    var selectedFontFamily by mutableStateOf("googlesanscode")
     val navigationStack = mutableStateListOf<Screen>(Screen.Home)
     var currentDbName by mutableStateOf("kj2.sqlite3")
     var currentVersionAbbr by mutableStateOf(BibleVersionUtils.versionMap["kj2.sqlite3"]!!)
@@ -59,7 +59,7 @@ class AppViewModel : ViewModel() {
     var secondaryPassage by mutableStateOf(PassageSelection(500, "John", 1, 1))
     var bgImageIndex by mutableIntStateOf(0)
     var customTextureUri by mutableStateOf<String?>(null)
-    var overlayOpacity by mutableFloatStateOf(0.15f)
+    var overlayOpacity by mutableFloatStateOf(0.5f)
     var lightOverlayColor by mutableStateOf(Color(0xFFF5F5DC))
     var darkOverlayColor by mutableStateOf(Color(0xFF100F21))
     var selectedDictionary by mutableStateOf("atsbd")
