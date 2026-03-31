@@ -121,6 +121,7 @@ import com.fountofhopedotorg.fohbible.screens.BookmarksScreen
 import com.fountofhopedotorg.fohbible.screens.HomeScreen
 import com.fountofhopedotorg.fohbible.screens.NotesScreen
 import com.fountofhopedotorg.fohbible.screens.ReaderScreen
+import com.fountofhopedotorg.fohbible.screens.LazyReaderScreen
 import com.fountofhopedotorg.fohbible.screens.SearchScreen
 import com.fountofhopedotorg.fohbible.screens.SettingsScreen
 import com.fountofhopedotorg.fohbible.data.ColorTheme
@@ -389,18 +390,30 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 databaseHelper = dbHelper
                             )
                         }
+
                         is Screen.Reader -> {
-                            ReaderScreen(
-                                passage = currentScreen.passage ?: viewModel.primaryPassage,
-                                databaseHelper = dbHelper,
-                                onPassageChange = { newPassage ->
-                                    viewModel.navigationStack[viewModel.navigationStack.lastIndex] = Screen.Reader(newPassage)
-                                    viewModel.primaryPassage = newPassage
-                                    if (viewModel.scrollSync) {
-                                        viewModel.secondaryPassage = newPassage
-                                    }
+                            val passage = currentScreen.passage ?: viewModel.primaryPassage
+                            val onPassageChange: (PassageSelection) -> Unit = { newPassage ->
+                                viewModel.navigationStack[viewModel.navigationStack.lastIndex] = Screen.Reader(newPassage)
+                                viewModel.primaryPassage = newPassage
+                                if (viewModel.scrollSync) {
+                                    viewModel.secondaryPassage = newPassage
                                 }
-                            )
+                            }
+
+                            if (viewModel.isLazyReader) {
+                                LazyReaderScreen(
+                                    passage = passage,
+                                    databaseHelper = dbHelper,
+                                    onPassageChange = onPassageChange
+                                )
+                            } else {
+                                ReaderScreen(
+                                    passage = passage,
+                                    databaseHelper = dbHelper,
+                                    onPassageChange = onPassageChange
+                                )
+                            }
                         }
                         Screen.Bookmarks -> BookmarksScreen(
                             onNavigateToReader = { passage ->

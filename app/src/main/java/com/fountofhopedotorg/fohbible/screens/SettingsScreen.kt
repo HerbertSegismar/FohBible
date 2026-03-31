@@ -410,21 +410,6 @@ fun SettingsScreen() {
                     )
                 }
 
-                // New: Dictionary Mode
-                SettingsItem(
-                    title = "Dictionary Mode",
-                    subtitle = "Show dictionary definitions on tap instead of highlighting"
-                ) {
-                    Switch(
-                        checked = viewModel.isDictionaryMode,
-                        onCheckedChange = { viewModel.isDictionaryMode = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.primary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                        )
-                    )
-                }
-
                 SettingsItem(
                     title = "Light Modal Background Color",
                     subtitle = "Modal background color for light theme"
@@ -450,6 +435,34 @@ fun SettingsScreen() {
                             .background(viewModel.darkModalBackgroundColor)
                             .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
                             .clickable { showDarkModalColorWheel = true }
+                    )
+                }
+
+                SettingsItem(
+                    title = "Dictionary Mode",
+                    subtitle = "Toggle between dictionary or highlight mode on word tap"
+                ) {
+                    Switch(
+                        checked = viewModel.isDictionaryMode,
+                        onCheckedChange = { viewModel.isDictionaryMode = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.primary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                        )
+                    )
+                }
+
+                SettingsItem(
+                    title = "Lazy Reader Mode",
+                    subtitle = "Toggle between partial or full chapter verses loading. Lazy loading is ideal for older devices."
+                ) {
+                    Switch(
+                        checked = viewModel.isLazyReader,
+                        onCheckedChange = { viewModel.isLazyReader = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.primary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                        )
                     )
                 }
             }
@@ -540,6 +553,7 @@ fun SettingsScreen() {
                             viewModel.wordMarkerColor = Color(0xFFFFA500)
                             viewModel.verseMarkerColor = Color(0xFF4CAF50)
                             viewModel.isDictionaryMode = true
+                            viewModel.isLazyReader = false
                         },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
