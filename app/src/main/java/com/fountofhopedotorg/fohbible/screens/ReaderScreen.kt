@@ -108,8 +108,10 @@ import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import com.fountofhopedotorg.fohbible.utils.getFontFamily
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.time.Clock
 
 private fun createCommentaryHelperIfExists(
     context: Context,
@@ -1015,30 +1017,27 @@ private fun SyncedMultiVersionReader(
                 val secondaryState = rememberLazyListState()
 
                 if (viewModel.scrollSync && !suppressSync) {
-                    // A single source of truth for who is "driving" the scroll
-                    var isSyncing by remember { mutableStateOf(false) }
+                    LaunchedEffect(primaryState, secondaryState) {
+                        snapshotFlow {
+                            val isPScrolling = primaryState.isScrollInProgress
+                            val isSScrolling = secondaryState.isScrollInProgress
 
-                    LaunchedEffect(primaryState) {
-                        snapshotFlow {
-                            primaryState.firstVisibleItemIndex to primaryState.firstVisibleItemScrollOffset
-                        }.collect { (index, offset) ->
-                            if (!isSyncing && primaryState.isScrollInProgress) {
-                                isSyncing = true
-                                secondaryState.scrollToItem(index, offset)
-                                isSyncing = false
-                            }
+                            Triple(isPScrolling, isSScrolling, Clock.System.now())
                         }
-                    }
-                    LaunchedEffect(secondaryState) {
-                        snapshotFlow {
-                            secondaryState.firstVisibleItemIndex to secondaryState.firstVisibleItemScrollOffset
-                        }.collect { (index, offset) ->
-                            if (!isSyncing && secondaryState.isScrollInProgress) {
-                                isSyncing = true
-                                primaryState.scrollToItem(index, offset)
-                                isSyncing = false
+                            .filter { (isP, isS) -> isP || isS }
+                            .collect { (isP, isS) ->
+                                if (isP) {
+                                    secondaryState.scrollToItem(
+                                        primaryState.firstVisibleItemIndex,
+                                        primaryState.firstVisibleItemScrollOffset
+                                    )
+                                } else if (isS) {
+                                    primaryState.scrollToItem(
+                                        secondaryState.firstVisibleItemIndex,
+                                        secondaryState.firstVisibleItemScrollOffset
+                                    )
+                                }
                             }
-                        }
                     }
                 }
 
