@@ -6,9 +6,11 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,15 +22,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Note
 import androidx.compose.material.icons.filled.Bookmark
@@ -93,9 +93,6 @@ import com.fountofhopedotorg.fohbible.data.BibleBook
 import com.fountofhopedotorg.fohbible.data.BibleData
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
-import com.fountofhopedotorg.fohbible.data.ProcessedVerse
-import com.fountofhopedotorg.fohbible.data.SelectedWord
-import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.data.Verse
 import com.fountofhopedotorg.fohbible.data.VerseContent
 import com.fountofhopedotorg.fohbible.data.getVersesWithSubheadings
@@ -103,15 +100,18 @@ import com.fountofhopedotorg.fohbible.modals.InteractiveModal
 import com.fountofhopedotorg.fohbible.modals.NotesModal
 import com.fountofhopedotorg.fohbible.modals.VerseOptionsModal
 import com.fountofhopedotorg.fohbible.models.AppViewModel
+import com.fountofhopedotorg.fohbible.data.ProcessedVerse
+import com.fountofhopedotorg.fohbible.data.SelectedWord
 import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
+import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import com.fountofhopedotorg.fohbible.utils.getFontFamily
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.time.Clock
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 private fun createCommentaryHelperIfExists(
     context: Context,
@@ -240,6 +240,7 @@ fun ReaderScreen(
         scheduleFade()
     }
 
+    // Database helpers (created once and reused)
     var dictionaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var strongDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var commentaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
@@ -803,7 +804,7 @@ private fun SingleVersionReader(
             if (primaryContent.isEmpty()) {
                 LoadingIndicator()
             } else {
-                val primaryState = rememberLazyListState()
+                val primaryState = rememberScrollState()
                 ChapterView(
                     passage = thisPassage,
                     content = primaryContent,
@@ -1013,31 +1014,35 @@ private fun SyncedMultiVersionReader(
             if (primaryContent.isEmpty() || secondaryContent.isEmpty()) {
                 LoadingIndicator()
             } else {
-                val primaryState = rememberLazyListState()
-                val secondaryState = rememberLazyListState()
+                val primaryState = rememberScrollState()
+                val secondaryState = rememberScrollState()
 
                 if (viewModel.scrollSync && !suppressSync) {
-                    LaunchedEffect(primaryState, secondaryState) {
-                        snapshotFlow {
-                            val isPScrolling = primaryState.isScrollInProgress
-                            val isSScrolling = secondaryState.isScrollInProgress
-
-                            Triple(isPScrolling, isSScrolling, Clock.System.now())
-                        }
-                            .filter { (isP, isS) -> isP || isS }
-                            .collect { (isP, isS) ->
-                                if (isP) {
-                                    secondaryState.scrollToItem(
-                                        primaryState.firstVisibleItemIndex,
-                                        primaryState.firstVisibleItemScrollOffset
-                                    )
-                                } else if (isS) {
-                                    primaryState.scrollToItem(
-                                        secondaryState.firstVisibleItemIndex,
-                                        secondaryState.firstVisibleItemScrollOffset
-                                    )
-                                }
+                    LaunchedEffect(primaryState) {
+                        snapshotFlow { primaryState.value }.collect { _ ->
+                            val pMax = primaryState.maxValue.coerceAtLeast(1)
+                            val sMax = secondaryState.maxValue.coerceAtLeast(1)
+                            val fraction = primaryState.value.toFloat() / pMax
+                            val targetS = (fraction * sMax).roundToInt()
+                            val currentS = secondaryState.value
+                            val deltaS = targetS - currentS
+                            if (abs(deltaS) > 5) {
+                                secondaryState.scrollBy(deltaS.toFloat())
                             }
+                        }
+                    }
+                    LaunchedEffect(secondaryState) {
+                        snapshotFlow { secondaryState.value }.collect { _ ->
+                            val pMax = primaryState.maxValue.coerceAtLeast(1)
+                            val sMax = secondaryState.maxValue.coerceAtLeast(1)
+                            val fraction = secondaryState.value.toFloat() / sMax
+                            val targetP = (fraction * pMax).roundToInt()
+                            val currentP = primaryState.value
+                            val deltaP = targetP - currentP
+                            if (abs(deltaP) > 5) {
+                                primaryState.scrollBy(deltaP.toFloat())
+                            }
+                        }
                     }
                 }
 
@@ -1294,7 +1299,6 @@ private fun IndependentMultiVersionReader(
             }
         }
     }
-
     LaunchedEffect(secondaryCurrent, secondaryHasPrev, secondaryHasNext, secondaryDatabaseHelper) {
         val currentKey = secondaryCurrent.bookNumber to secondaryCurrent.chapter
         if (currentKey !in secondaryLoadedVerses) {
@@ -1436,7 +1440,7 @@ private fun IndependentMultiVersionReader(
                     if (content.isEmpty()) {
                         LoadingIndicator()
                     } else {
-                        val state = rememberLazyListState()
+                        val state = rememberScrollState()
                         ChapterView(
                             passage = thisPassage,
                             content = content,
@@ -1481,7 +1485,7 @@ private fun IndependentMultiVersionReader(
                     if (content.isEmpty()) {
                         LoadingIndicator()
                     } else {
-                        val state = rememberLazyListState()
+                        val state = rememberScrollState()
                         ChapterView(
                             passage = thisPassage,
                             content = content,
@@ -1528,7 +1532,7 @@ private fun IndependentMultiVersionReader(
                     if (content.isEmpty()) {
                         LoadingIndicator()
                     } else {
-                        val state = rememberLazyListState()
+                        val state = rememberScrollState()
                         ChapterView(
                             passage = thisPassage,
                             content = content,
@@ -1573,7 +1577,7 @@ private fun IndependentMultiVersionReader(
                     if (content.isEmpty()) {
                         LoadingIndicator()
                     } else {
-                        val state = rememberLazyListState()
+                        val state = rememberScrollState()
                         ChapterView(
                             passage = thisPassage,
                             content = content,
@@ -1629,7 +1633,7 @@ fun ChapterView(
     targetVerse: Int?,
     versionAbbr: String,
     isPrimary: Boolean,
-    state: LazyListState,
+    state: ScrollState,
     modifier: Modifier = Modifier,
     isKjvPlus: Boolean = false,
     onInitialScrollComplete: () -> Unit = {},
@@ -1834,19 +1838,25 @@ fun ChapterView(
                 }
             }
 
-            LazyColumn(
-                state = state,
-                modifier = Modifier.weight(1f).padding(12.dp)
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(state)
+                    .padding(12.dp)
             ) {
-                items(
-                    items = content,
-                    key = { item ->
-                        when (item) {
-                            is VerseContent.SubheadingVal -> "sub_${item.subheading.text.hashCode()}"
-                            is VerseContent.VerseVal -> "verse_${item.verse.verseNumber}"
-                        }
+                if (processedVerses.isEmpty() && content.isNotEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        LoadingIndicator()
                     }
-                ) { item ->
+                    return@Column
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                content.forEach { item ->
                     when (item) {
                         is VerseContent.SubheadingVal -> {
                             Text(
@@ -2121,8 +2131,7 @@ fun ChapterView(
                     onInitialScrollComplete()
                     return@LaunchedEffect
                 }
-                val targetIndex = content.indexOfFirst { it is VerseContent.VerseVal && it.verse.verseNumber == targetVerse }
-                if (targetIndex >= 0) state.animateScrollToItem(targetIndex)
+                state.animateScrollTo(offset.toInt())
                 highlightedVerse = targetVerse
                 delay(2000)
                 highlightedVerse = null
