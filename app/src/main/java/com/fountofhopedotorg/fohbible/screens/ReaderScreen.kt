@@ -54,6 +54,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -105,12 +106,13 @@ import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
 import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import com.fountofhopedotorg.fohbible.utils.getFontFamily
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-private const val PSALMS_CUSTOM_NUMBER = 230
 private fun createCommentaryHelperIfExists(
     context: Context, baseDbName: String?
 ): DatabaseHelper? {
@@ -312,7 +314,6 @@ fun ReaderScreen(
     }
     var refreshKey by remember { mutableIntStateOf(0) }
     val subheadingsDbHelper = remember { DatabaseHelper(contextFont, "kjvsubheadings.sqlite3") }
-
     var showCrossRefModal by remember { mutableStateOf(false) }
     var crossRefSource by remember { mutableStateOf("") }
     var crossRefContent by remember { mutableStateOf("") }
@@ -689,13 +690,6 @@ private fun SingleVersionReader(
                 } ?: emptyList()
             }
         }
-
-        val psalmKey = PSALMS_CUSTOM_NUMBER to 119
-        if (psalmKey !in primaryLoadedVerses) {
-            primaryLoadedVerses[psalmKey] = databaseHelper?.let { versesHelper ->
-                getVersesWithSubheadings(versesHelper, subheadingsDbHelper, PSALMS_CUSTOM_NUMBER, 119)
-            } ?: emptyList()
-        }
     }
     val pagerState = rememberPagerState(
         initialPage = currentOffset,
@@ -877,15 +871,6 @@ private fun SyncedMultiVersionReader(
                     getVersesWithSubheadings(versesHelper, subheadingsDbHelper, nextPassage.bookNumber, nextPassage.chapter)
                 } ?: emptyList()
             }
-        }
-        val psalmKey = PSALMS_CUSTOM_NUMBER to 119
-        if (psalmKey !in primaryLoadedVerses) {
-            primaryLoadedVerses[psalmKey] = databaseHelper?.let { versesHelper ->
-                getVersesWithSubheadings(versesHelper, subheadingsDbHelper, PSALMS_CUSTOM_NUMBER, 119)
-            } ?: emptyList()
-        }
-        if (secondaryDatabaseHelper != null && psalmKey !in secondaryLoadedVerses) {
-            secondaryLoadedVerses[psalmKey] = getVersesWithSubheadings(secondaryDatabaseHelper, subheadingsDbHelper, PSALMS_CUSTOM_NUMBER, 119)
         }
     }
     val pagerState = rememberPagerState(
@@ -1230,12 +1215,6 @@ private fun IndependentMultiVersionReader(
                 } ?: emptyList()
             }
         }
-        val psalmKey = PSALMS_CUSTOM_NUMBER to 119
-        if (psalmKey !in primaryLoadedVerses) {
-            primaryLoadedVerses[psalmKey] = databaseHelper?.let { versesHelper ->
-                getVersesWithSubheadings(versesHelper, subheadingsDbHelper, PSALMS_CUSTOM_NUMBER, 119)
-            } ?: emptyList()
-        }
     }
     LaunchedEffect(secondaryCurrent, secondaryHasPrev, secondaryHasNext, secondaryDatabaseHelper) {
         val currentKey = secondaryCurrent.bookNumber to secondaryCurrent.chapter
@@ -1259,12 +1238,6 @@ private fun IndependentMultiVersionReader(
                     getVersesWithSubheadings(versesHelper, subheadingsDbHelper, secondaryNext.bookNumber, secondaryNext.chapter)
                 } ?: emptyList()
             }
-        }
-        val psalmKey = PSALMS_CUSTOM_NUMBER to 119
-        if (psalmKey !in secondaryLoadedVerses) {
-            secondaryLoadedVerses[psalmKey] = secondaryDatabaseHelper?.let { versesHelper ->
-                getVersesWithSubheadings(versesHelper, subheadingsDbHelper, PSALMS_CUSTOM_NUMBER, 119)
-            } ?: emptyList()
         }
     }
     val primaryPagerState = rememberPagerState(
@@ -1573,39 +1546,60 @@ fun ChapterView(
     onVerseCommentaryClick: ((Int, Int, Int) -> Unit)? = null,
     markerColor: Color
 ) {
-    val processor = remember(content) { VerseTextProcessor() }
-    val processedVerses = remember(content, themeColors, isKjvPlus, versionAbbr, refreshKey, viewModel.fontSize) {
-        val result = mutableMapOf<Int, ProcessedVerse>()
-        content.forEach { item ->
-            if (item is VerseContent.VerseVal) {
-                val verse = item.verse
-                val onStrongsLocal = if (onStrongsPress != null) {
-                    { strongNumber: String -> onStrongsPress.invoke(strongNumber, passage.bookNumber, isPrimary) }
-                } else null
-                val onTagLocal = if (onTagPress != null) {
-                    { marker: String -> onTagPress.invoke(marker, passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary) }
-                } else null
-                val isPersistentHighlighted = databaseHelper?.isHighlighted(verse.copy(bookName = passage.bookName, chapter = passage.chapter)) ?: false
-                val processed = processor.processVerse(
-                    verseText = verse.text,
-                    baseFontSize = viewModel.fontSize.sp,
-                    themeColors = themeColors,
-                    textColor = themeColors.textColor,
-                    onTagPress = onTagLocal,
-                    onWordPress = { word: String -> onWordPress?.invoke(word, isPrimary) },
-                    onStrongsPress = onStrongsLocal,
-                    isHighlighted = isPersistentHighlighted,
-                    isKjvPlus = isKjvPlus,
-                    isOldTestament = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
-                )
-                result[verse.verseNumber] = processed
+    val isOldTestamentForThisVersion = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
+
+    val processedVerses by produceState(
+        initialValue = emptyMap(),
+        content,
+        viewModel.fontSize,
+        themeColors,
+        isKjvPlus,
+        refreshKey,
+        isOldTestamentForThisVersion
+    ) {
+        value = withContext(Dispatchers.Default) {
+            val result = mutableMapOf<Int, ProcessedVerse>()
+            val processor = VerseTextProcessor()
+
+            content.forEach { item ->
+                if (item is VerseContent.VerseVal) {
+                    val verse = item.verse
+                    val fullVerse = verse.copy(bookName = passage.bookName, chapter = passage.chapter)
+                    val isPersistentHighlighted = databaseHelper?.isHighlighted(fullVerse) ?: false
+
+                    val onStrongsLocal: ((String) -> Unit)? = onStrongsPress?.let { callback ->
+                        { strong -> callback(strong, passage.bookNumber, isPrimary) }
+                    }
+                    val onTagLocal: ((String) -> Unit)? = onTagPress?.let { callback ->
+                        { marker -> callback(marker, passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary) }
+                    }
+                    val onWordLocal: ((String) -> Unit)? = onWordPress?.let { callback ->
+                        { word -> callback(word, isPrimary) }
+                    }
+
+                    val processed = processor.processVerse(
+                        verseText = verse.text,
+                        baseFontSize = viewModel.fontSize.sp,
+                        themeColors = themeColors,
+                        textColor = themeColors.textColor,
+                        onTagPress = onTagLocal,
+                        onWordPress = onWordLocal,
+                        onStrongsPress = onStrongsLocal,
+                        isHighlighted = isPersistentHighlighted,
+                        isKjvPlus = isKjvPlus,
+                        isOldTestament = isOldTestamentForThisVersion
+                    )
+                    result[verse.verseNumber] = processed
+                }
             }
+            result
         }
-        result
     }
+
     var highlightedVerse by remember { mutableStateOf<Int?>(null) }
     val offsets = remember { mutableStateMapOf<Int, Float>() }
     val bookmarkIconSize = viewModel.fontSize
+
     val bookmarkInlineContent = InlineTextContent(
         Placeholder(
             width = bookmarkIconSize.sp,
@@ -1620,6 +1614,7 @@ fun ChapterView(
             modifier = Modifier.fillMaxSize()
         )
     }
+
     val noteInlineContent = InlineTextContent(
         Placeholder(
             width = bookmarkIconSize.sp,
@@ -1634,12 +1629,14 @@ fun ChapterView(
             modifier = Modifier.fillMaxSize().rotate(90f)
         )
     }
+
     val crossRefCounts = remember { mutableStateMapOf<Int, Int>() }
     LaunchedEffect(passage.bookNumber, passage.chapter, crossRefHelper) {
         val counts = crossRefHelper?.getCrossReferenceCountsForChapter(passage.bookNumber, passage.chapter) ?: emptyMap()
         crossRefCounts.clear()
         crossRefCounts.putAll(counts)
     }
+
     var selectedWords by remember(
         passage.bookNumber,
         passage.chapter,
@@ -1651,10 +1648,7 @@ fun ChapterView(
                 if (databaseHelper != null) {
                     content.forEach { item ->
                         if (item is VerseContent.VerseVal) {
-                            val fullVerse = item.verse.copy(
-                                bookName = passage.bookName,
-                                chapter = passage.chapter
-                            )
+                            val fullVerse = item.verse.copy(bookName = passage.bookName, chapter = passage.chapter)
                             val highlights = databaseHelper.getWordHighlightsForVerse(fullVerse)
                             addAll(highlights)
                         }
@@ -1663,15 +1657,16 @@ fun ChapterView(
             }
         )
     }
-    val groupedHighlights = remember(selectedWords) {
-        selectedWords.groupBy { it.verseNumber }
-    }
+
+    val groupedHighlights = remember(selectedWords) { selectedWords.groupBy { it.verseNumber } }
+
     Box(modifier = modifier) {
         val texture = when (viewModel.bgImageIndex) {
             0 -> null
             34 -> if (viewModel.customTextureUri != null) viewModel.customTextureUri else null
             else -> "file:///android_asset/textures/${viewModel.bgImageIndex}.jpg"
         }
+
         if (texture != null) {
             AsyncImage(
                 model = texture,
@@ -1683,6 +1678,7 @@ fun ChapterView(
                 .copy(alpha = viewModel.overlayOpacity)
             Box(modifier = Modifier.fillMaxSize().background(overlayColor))
         }
+
         Column {
             if (viewModel.multiVersion) {
                 Row(
@@ -1717,7 +1713,7 @@ fun ChapterView(
                                 modifier = Modifier.weight(0.5f)
                             )
                             Text(
-                                text = passage.chapter.let { "$it" },
+                                text = passage.chapter.toString(),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp,
                                 color = MaterialTheme.colorScheme.primary,
@@ -1726,7 +1722,8 @@ fun ChapterView(
                     }
                     Button(
                         onClick = {
-                            if (isPrimary) viewModel.showPrimaryVersionDropdown = true else viewModel.showSecondaryVersionDropdown = true
+                            if (isPrimary) viewModel.showPrimaryVersionDropdown = true
+                            else viewModel.showSecondaryVersionDropdown = true
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                         shape = RoundedCornerShape(4.dp),
@@ -1743,13 +1740,25 @@ fun ChapterView(
                     }
                 }
             }
+
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .verticalScroll(state)
                     .padding(12.dp)
             ) {
+                if (processedVerses.isEmpty() && content.isNotEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        LoadingIndicator()
+                    }
+                    return@Column
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
+
                 content.forEach { item ->
                     when (item) {
                         is VerseContent.SubheadingVal -> {
@@ -1766,6 +1775,7 @@ fun ChapterView(
                                 fontFamily = currentFontFamily
                             )
                         }
+
                         is VerseContent.VerseVal -> {
                             val verse = item.verse
                             val processedVerse = processedVerses[verse.verseNumber]
@@ -1778,11 +1788,13 @@ fun ChapterView(
                             val isBookmarked = databaseHelper?.isBookmarked(fullVerse) ?: false
                             val isNote = databaseHelper?.hasNote(fullVerse) ?: false
                             val refCount = crossRefCounts[verse.verseNumber] ?: 0
+
                             val backgroundModifier = when {
                                 persistentHighlightColor != null -> Modifier.background(persistentHighlightColor)
                                 isTemporaryHighlighted -> Modifier.background(themeColors.searchHighlightBg)
                                 else -> Modifier
                             }
+
                             val currentMarkerColor by rememberUpdatedState(markerColor)
                             val wordHighlightsForVerse = groupedHighlights[verse.verseNumber] ?: emptyList()
                             val highlightsHash = wordHighlightsForVerse.hashCode()
@@ -1815,7 +1827,7 @@ fun ChapterView(
                                             SpanStyle(
                                                 fontWeight = FontWeight.Bold,
                                                 color = themeColors.verseNumber,
-                                                fontSize = bookmarkIconSize.sp * 0.8
+                                                fontSize = bookmarkIconSize.sp * 0.8f
                                             )
                                         ) {
                                             append("${verse.verseNumber} ")
@@ -1831,7 +1843,14 @@ fun ChapterView(
                                             appendInlineContent("commentary_${verse.verseNumber}", "[C]")
                                         }
                                     }
-                                    val inlineContentMap = remember(verse.verseNumber, refCount, isNote, isBookmarked, viewModel.fontSize) {
+
+                                    val inlineContentMap = remember(
+                                        verse.verseNumber,
+                                        refCount,
+                                        isNote,
+                                        isBookmarked,
+                                        viewModel.fontSize
+                                    ) {
                                         buildMap {
                                             if (isBookmarked) put("bookmark", bookmarkInlineContent)
                                             if (isNote) put("note", noteInlineContent)
@@ -1845,8 +1864,18 @@ fun ChapterView(
                                                 ) {
                                                     Box(
                                                         modifier = Modifier
-                                                            .clickable { onCrossRefClick(passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary) }
-                                                            .background(themeColors.primary.copy(alpha = 0.15f), RoundedCornerShape(2.dp))
+                                                            .clickable {
+                                                                onCrossRefClick(
+                                                                    passage.bookNumber,
+                                                                    passage.chapter,
+                                                                    verse.verseNumber,
+                                                                    isPrimary
+                                                                )
+                                                            }
+                                                            .background(
+                                                                themeColors.primary.copy(alpha = 0.15f),
+                                                                RoundedCornerShape(2.dp)
+                                                            )
                                                             .fillMaxSize(),
                                                         contentAlignment = Alignment.Center
                                                     ) {
@@ -1871,7 +1900,13 @@ fun ChapterView(
                                                     Box(
                                                         modifier = Modifier
                                                             .fillMaxSize()
-                                                            .clickable { onVerseCommentaryClick(passage.bookNumber, passage.chapter, verse.verseNumber) },
+                                                            .clickable {
+                                                                onVerseCommentaryClick(
+                                                                    passage.bookNumber,
+                                                                    passage.chapter,
+                                                                    verse.verseNumber
+                                                                )
+                                                            },
                                                         contentAlignment = Alignment.Center
                                                     ) {
                                                         Icon(
@@ -1888,7 +1923,10 @@ fun ChapterView(
 
                                     var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
 
-                                    val finalAnnotatedString = remember(annotatedString, wordHighlightsForVerse) {
+                                    val finalAnnotatedString = remember(
+                                        annotatedString,
+                                        wordHighlightsForVerse
+                                    ) {
                                         if (wordHighlightsForVerse.isEmpty()) {
                                             annotatedString
                                         } else {
@@ -1916,7 +1954,10 @@ fun ChapterView(
                                                     onTap = { offset ->
                                                         textLayoutResult?.let { layout ->
                                                             val position = layout.getOffsetForPosition(offset)
-                                                            val annotations = finalAnnotatedString.getStringAnnotations(start = position, end = position)
+                                                            val annotations = finalAnnotatedString.getStringAnnotations(
+                                                                start = position,
+                                                                end = position
+                                                            )
                                                             val wordAnnotation = annotations.find { it.tag == "word" }
                                                             if (wordAnnotation != null) {
                                                                 if (viewModel.isDictionaryMode) {
@@ -1950,8 +1991,18 @@ fun ChapterView(
                                                             } else {
                                                                 annotations.forEach { annotation ->
                                                                     when (annotation.tag) {
-                                                                        "strong" -> onStrongsPress?.invoke(annotation.item, passage.bookNumber, isPrimary)
-                                                                        "tag" -> onTagPress?.invoke(annotation.item, passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary)
+                                                                        "strong" -> onStrongsPress?.invoke(
+                                                                            annotation.item,
+                                                                            passage.bookNumber,
+                                                                            isPrimary
+                                                                        )
+                                                                        "tag" -> onTagPress?.invoke(
+                                                                            annotation.item,
+                                                                            passage.bookNumber,
+                                                                            passage.chapter,
+                                                                            verse.verseNumber,
+                                                                            isPrimary
+                                                                        )
                                                                     }
                                                                 }
                                                             }
@@ -1976,7 +2027,6 @@ fun ChapterView(
             }
         }
     }
-
     if (isCurrentPage) {
         LaunchedEffect(targetVerse, content) {
             if (targetVerse != null && content.isNotEmpty() && targetVerse > 0) {
@@ -1995,7 +2045,6 @@ fun ChapterView(
         }
     }
 }
-
 fun getPreviousPassage(current: PassageSelection, currentBook: BibleBook?): PassageSelection {
     if (currentBook == null) return current
     if (currentBook.chapters <= 2 && current.chapter == 1) return current
