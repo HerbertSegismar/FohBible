@@ -68,8 +68,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.Placeholder
@@ -1692,7 +1690,6 @@ fun ChapterView(
     }
 
     var highlightedVerse by remember { mutableStateOf<Int?>(null) }
-    val offsets = remember { mutableStateMapOf<Int, Float>() }
 
     val bookmarkIconSize = viewModel.fontSize
     val bookmarkInlineContent = InlineTextContent(
@@ -1891,9 +1888,6 @@ fun ChapterView(
                                         .fillMaxWidth()
                                         .padding(vertical = 8.dp)
                                         .then(backgroundModifier)
-                                        .onGloballyPositioned { coords ->
-                                            offsets[verse.verseNumber] = coords.positionInParent().y
-                                        }
                                 ) {
                                     processedVerse?.header?.let { header ->
                                         if (header.text.isNotEmpty()) {
@@ -2115,17 +2109,18 @@ fun ChapterView(
     if (isCurrentPage) {
         LaunchedEffect(targetVerse, content) {
             if (targetVerse != null && content.isNotEmpty() && targetVerse > 0) {
-                delay(200)
-                val offset = offsets[targetVerse]
-                if (offset == null) {
-                    onInitialScrollComplete()
-                    return@LaunchedEffect
+                delay(100)
+
+                val targetIndex = content.indexOfFirst {
+                    it is VerseContent.VerseVal && it.verse.verseNumber == targetVerse
                 }
-                val targetIndex = content.indexOfFirst { it is VerseContent.VerseVal && it.verse.verseNumber == targetVerse }
-                if (targetIndex >= 0) state.animateScrollToItem(targetIndex)
-                highlightedVerse = targetVerse
-                delay(2000)
-                highlightedVerse = null
+
+                if (targetIndex >= 0) {
+                    state.animateScrollToItem(targetIndex)
+                    highlightedVerse = targetVerse
+                    delay(2000)
+                    highlightedVerse = null
+                }
             }
             onInitialScrollComplete()
         }

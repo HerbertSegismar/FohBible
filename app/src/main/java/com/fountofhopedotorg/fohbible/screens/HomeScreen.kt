@@ -173,7 +173,7 @@ fun HomeScreen(
                 )
 
                 Text(
-                    text = "Bible App",
+                    text = "Study Bible",
                     fontSize = 30.sp,
                     color = MaterialTheme.colorScheme.primary,
                     textAlign = TextAlign.Center,

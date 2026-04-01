@@ -24,11 +24,11 @@ import java.io.IOException
 class AppViewModel : ViewModel() {
 
     var isLazyReader by mutableStateOf(true)
-    var wordMarkerColor by mutableStateOf(Color(0xDD8A66DE))
+    var wordMarkerColor by mutableStateOf(Color(0xDDAC95E1))
     var showWordMarkerColorWheelDialog by mutableStateOf(false)
     var isDictionaryMode by mutableStateOf(true)
 
-    var verseMarkerColor by mutableStateOf(Color(0xFF4CAF50))
+    var verseMarkerColor by mutableStateOf(Color(0xFF95F198))
     var showVerseMarkerColorWheelDialog by mutableStateOf(false)
 
     var showSecondaryNavigationModal by mutableStateOf(false)
@@ -59,7 +59,7 @@ class AppViewModel : ViewModel() {
     var secondaryPassage by mutableStateOf(PassageSelection(500, "John", 1, 1))
     var bgImageIndex by mutableIntStateOf(0)
     var customTextureUri by mutableStateOf<String?>(null)
-    var overlayOpacity by mutableFloatStateOf(0.5f)
+    var overlayOpacity by mutableFloatStateOf(0.8f)
     var lightOverlayColor by mutableStateOf(Color(0xFFF5F5DC))
     var darkOverlayColor by mutableStateOf(Color(0xFF100F21))
     var selectedDictionary by mutableStateOf("atsbd")

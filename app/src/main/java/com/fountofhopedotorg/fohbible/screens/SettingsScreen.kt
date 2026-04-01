@@ -102,8 +102,6 @@ fun SettingsScreen() {
     var showRefreshConfirmDialog by remember { mutableStateOf(false) }
     var showRefreshResultDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
-
-    // New state variables for missing items
     var showWordMarkerColorWheel by remember { mutableStateOf(false) }
     var showVerseMarkerColorWheel by remember { mutableStateOf(false) }
 
@@ -358,7 +356,7 @@ fun SettingsScreen() {
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(40.dp)
+                            .size(30.dp)
                             .clip(CircleShape)
                             .background(viewModel.lightOverlayColor)
                             .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
@@ -372,37 +370,33 @@ fun SettingsScreen() {
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(40.dp)
+                            .size(30.dp)
                             .clip(CircleShape)
                             .background(viewModel.darkOverlayColor)
                             .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
                             .clickable { showDarkOverlayColorWheel = true }
                     )
                 }
-
-                // New: Word Marker Color
                 SettingsItem(
                     title = "Word Marker Color",
                     subtitle = "Color for highlighting individual words"
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(40.dp)
+                            .size(30.dp)
                             .clip(CircleShape)
                             .background(viewModel.wordMarkerColor)
                             .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
                             .clickable { showWordMarkerColorWheel = true }
                     )
                 }
-
-                // New: Verse Marker Color
                 SettingsItem(
                     title = "Verse Marker Color",
                     subtitle = "Color for highlighting entire verses"
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(40.dp)
+                            .size(30.dp)
                             .clip(CircleShape)
                             .background(viewModel.verseMarkerColor)
                             .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
@@ -416,7 +410,7 @@ fun SettingsScreen() {
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(40.dp)
+                            .size(30.dp)
                             .clip(CircleShape)
                             .background(viewModel.lightModalBackgroundColor)
                             .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
@@ -430,7 +424,7 @@ fun SettingsScreen() {
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(40.dp)
+                            .size(30.dp)
                             .clip(CircleShape)
                             .background(viewModel.darkModalBackgroundColor)
                             .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
@@ -454,7 +448,7 @@ fun SettingsScreen() {
 
                 SettingsItem(
                     title = "Lazy Reader Mode",
-                    subtitle = "Toggle between partial or full chapter verses loading. Lazy loading is ideal for older devices."
+                    subtitle = "Toggle between partial or full chapter loading. Lazy reader only loads the visible verses at least and is ideal for slower devices"
                 ) {
                     Switch(
                         checked = viewModel.isLazyReader,
@@ -545,13 +539,13 @@ fun SettingsScreen() {
                             viewModel.scrollSync = true
                             viewModel.customTextureUri = null
                             viewModel.bgImageIndex = 0
-                            viewModel.overlayOpacity = 0.5f
+                            viewModel.overlayOpacity = 0.8f
                             viewModel.lightOverlayColor = Color(0xFFF5F5DC)
                             viewModel.darkOverlayColor = Color(0xFF100F21)
                             viewModel.lightModalBackgroundColor = Color(0xFFE0E0E0)
                             viewModel.darkModalBackgroundColor = Color(0xFF2D2D2D)
-                            viewModel.wordMarkerColor = Color(0xDD8A66DE)
-                            viewModel.verseMarkerColor = Color(0xFF4CAF50)
+                            viewModel.wordMarkerColor = Color(0xDDAC95E1)
+                            viewModel.verseMarkerColor = Color(0xFF95F198)
                             viewModel.isDictionaryMode = true
                             viewModel.isLazyReader = true
                         },
@@ -1202,8 +1196,8 @@ fun AboutDialog(onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         title = {
             Text(
-                "About FoH Bible",
-                style = MaterialTheme.typography.titleLarge,
+                "Fount of Hope Study Bible",
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
         },
@@ -1225,7 +1219,7 @@ fun AboutDialog(onDismiss: () -> Unit) {
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Thank you for using Fount Of Hope Bible. Your support means a lot to us!",
+                    "Thank you for using Fount Of Hope Study Bible. Your support means a lot to us!",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
