@@ -209,10 +209,10 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
         viewModel.scrollSync = prefs[SCROLL_SYNC_KEY] ?: true
         viewModel.bgImageIndex = prefs[BG_INDEX_KEY] ?: 0
         viewModel.customTextureUri = prefs[CUSTOM_TEXTURE_KEY]
-        viewModel.overlayOpacity = prefs[OVERLAY_OPACITY_KEY] ?: 0.15f
+        viewModel.overlayOpacity = prefs[OVERLAY_OPACITY_KEY] ?: 0.8f
         viewModel.lightOverlayColor = Color(prefs[LIGHT_OVERLAY_COLOR_KEY] ?: Color(0xFFF5F5DC).toArgb())
         viewModel.darkOverlayColor = Color(prefs[DARK_OVERLAY_COLOR_KEY] ?: Color(0xFF100F21).toArgb())
-        viewModel.wordMarkerColor = Color(prefs[MARKER_COLOR_KEY] ?: Color(0xDD8A66DE).toArgb())
+        viewModel.wordMarkerColor = Color(prefs[MARKER_COLOR_KEY] ?: Color(0xDDAC95E1).toArgb())
 
         viewModel.primaryPassage = PassageSelection(
             bookNumber = prefs[PRIMARY_BOOK_NUMBER_KEY] ?: 10,
