@@ -13,14 +13,7 @@ import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.data.TraversalContext
 import com.fountofhopedotorg.fohbible.data.TreeNode
 
-interface VerseProcessorLogger {
-    fun logParseError(tag: String, message: String)
-    fun logPerformance(operation: String, durationMs: Long)
-}
-
-class VerseTextProcessor(
-    private val logger: VerseProcessorLogger? = null
-) {
+class VerseTextProcessor {
     companion object {
         private val ATTRIBUTE_REGEX = Regex("""(\w+)="([^"]*)"""")
         private const val CACHE_SIZE = 200
@@ -48,7 +41,6 @@ class VerseTextProcessor(
         options: ProcessingOptions = ProcessingOptions(),
         wordHighlights: Set<String>? = null
     ): ProcessedVerse {
-        val startTime = System.currentTimeMillis()
         if (verseText.isNullOrBlank()) {
             return ProcessedVerse(
                 header = null,
@@ -61,7 +53,6 @@ class VerseTextProcessor(
             highlight, isHighlighted, options, themeColors, wordHighlights
         )
         verseCache[cacheKey]?.let { cached ->
-            logger?.logPerformance("Cache hit", System.currentTimeMillis() - startTime)
             return cached
         }
 
@@ -88,9 +79,6 @@ class VerseTextProcessor(
             body = body
         )
         verseCache[cacheKey] = result
-
-        val duration = System.currentTimeMillis() - startTime
-        logger?.logPerformance("Process verse", duration)
         return result
     }
 
@@ -144,7 +132,6 @@ class VerseTextProcessor(
                 }
                 val tagEnd = text.indexOf('>', i)
                 if (tagEnd == -1) {
-                    logger?.logParseError("malformed_tag", "No closing '>' found at position $i")
                     currentText.append(text.substring(i))
                     break
                 }
@@ -154,8 +141,6 @@ class VerseTextProcessor(
                         val tagName = fullTag.substring(2, fullTag.length - 1).trim().split(" ")[0]
                         if (stack.isNotEmpty() && stack.last() == tagName) {
                             stack.removeAt(stack.size - 1)
-                        } else {
-                            logger?.logParseError("closing_tag", "Unexpected closing tag </$tagName>")
                         }
                         nodes.add(ParsedNode.ClosingTag(tagName))
                     }
@@ -179,7 +164,6 @@ class VerseTextProcessor(
             nodes.add(ParsedNode.Text(currentText.toString()))
         }
         if (stack.isNotEmpty()) {
-            logger?.logParseError("unclosed_tags", "Found ${stack.size} unclosed tags: $stack")
             for (tag in stack.reversed()) {
                 nodes.add(ParsedNode.ClosingTag(tag))
             }
@@ -207,28 +191,16 @@ class VerseTextProcessor(
                 }
                 is ParsedNode.ClosingTag -> {
                     if (stack.isNotEmpty()) {
-                        val lastElement = elementStack.lastOrNull()
-                        if (lastElement != null && lastElement.tag != node.tag) {
-                            logger?.logParseError(
-                                "tag_mismatch",
-                                "Closing tag </${node.tag}> doesn't match opening tag <${lastElement.tag}>"
-                            )
-                        }
                         if (elementStack.isNotEmpty()) {
                             elementStack.removeAt(elementStack.size - 1)
                         }
                         current = stack.removeAt(stack.size - 1)
-                    } else {
-                        logger?.logParseError("extra_closing", "Extra closing tag </${node.tag}> with no matching opening tag")
                     }
                 }
                 is ParsedNode.SelfClosingTag -> {
                     current.add(TreeNode.SelfClosingTag(node.tag, node.fullTag))
                 }
             }
-        }
-        if (elementStack.isNotEmpty()) {
-            logger?.logParseError("unclosed_elements", "${elementStack.size} elements were not properly closed")
         }
         return root
     }
@@ -541,7 +513,6 @@ class VerseTextProcessor(
             val regex = try {
                 Regex(escapedHighlight, RegexOption.IGNORE_CASE)
             } catch (_: Exception) {
-                logger?.logParseError("regex_error", "Invalid highlight regex: $escapedHighlight")
                 return
             }
             var lastIndex = 0

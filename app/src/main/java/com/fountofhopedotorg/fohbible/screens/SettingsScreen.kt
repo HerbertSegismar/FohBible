@@ -378,19 +378,6 @@ fun SettingsScreen() {
                     )
                 }
                 SettingsItem(
-                    title = "Word Marker Color",
-                    subtitle = "Color for highlighting individual words"
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(30.dp)
-                            .clip(CircleShape)
-                            .background(viewModel.wordMarkerColor)
-                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
-                            .clickable { showWordMarkerColorWheel = true }
-                    )
-                }
-                SettingsItem(
                     title = "Verse Marker Color",
                     subtitle = "Color for highlighting entire verses"
                 ) {
@@ -431,19 +418,33 @@ fun SettingsScreen() {
                             .clickable { showDarkModalColorWheel = true }
                     )
                 }
-
-                SettingsItem(
-                    title = "Dictionary Mode",
-                    subtitle = "Toggle between dictionary or highlight mode on word tap"
-                ) {
-                    Switch(
-                        checked = viewModel.isDictionaryMode,
-                        onCheckedChange = { viewModel.isDictionaryMode = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.primary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                if (viewModel.isStudyMode) {
+                    SettingsItem(
+                        title = "Word Marker Color",
+                        subtitle = "Color for highlighting individual words"
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clip(CircleShape)
+                                .background(viewModel.wordMarkerColor)
+                                .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                                .clickable { showWordMarkerColorWheel = true }
                         )
-                    )
+                    }
+                    SettingsItem(
+                        title = "Dictionary Mode",
+                        subtitle = "Toggle between dictionary or highlight mode on word tap"
+                    ) {
+                        Switch(
+                            checked = viewModel.isDictionaryMode,
+                            onCheckedChange = { viewModel.isDictionaryMode = it },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                            )
+                        )
+                    }
                 }
 
                 SettingsItem(
@@ -453,6 +454,19 @@ fun SettingsScreen() {
                     Switch(
                         checked = viewModel.isLazyReader,
                         onCheckedChange = { viewModel.isLazyReader = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.primary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                        )
+                    )
+                }
+                SettingsItem(
+                    title = "Study Mode",
+                    subtitle = "Turn this off if you want simple verse rendering mode activated"
+                ) {
+                    Switch(
+                        checked = viewModel.isStudyMode,
+                        onCheckedChange = { viewModel.isStudyMode = it },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = MaterialTheme.colorScheme.primary,
                             checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
@@ -529,7 +543,7 @@ fun SettingsScreen() {
                             viewModel.darkTheme = false
                             viewModel.selectedColor = DefaultPrimaryColor
                             viewModel.isCustomColor = false
-                            viewModel.selectedFontFamily = "googlesanscode"
+                            viewModel.selectedFontFamily = "system"
                             viewModel.currentDbName = "kj2.sqlite3"
                             viewModel.currentVersionAbbr = BibleVersionUtils.versionMap["kj2.sqlite3"] ?: "KJ2"
                             viewModel.multiVersion = false
@@ -548,6 +562,7 @@ fun SettingsScreen() {
                             viewModel.verseMarkerColor = Color(0xFF95F198)
                             viewModel.isDictionaryMode = true
                             viewModel.isLazyReader = true
+                            viewModel.isStudyMode = true
                         },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
@@ -651,8 +666,6 @@ fun SettingsScreen() {
             initialColor = viewModel.darkOverlayColor
         )
     }
-
-    // New: Word Marker Color Wheel
     if (showWordMarkerColorWheel) {
         ColorWheelDialog(
             onDismissRequest = { showWordMarkerColorWheel = false },
@@ -663,8 +676,6 @@ fun SettingsScreen() {
             initialColor = viewModel.wordMarkerColor
         )
     }
-
-    // New: Verse Marker Color Wheel
     if (showVerseMarkerColorWheel) {
         ColorWheelDialog(
             onDismissRequest = { showVerseMarkerColorWheel = false },

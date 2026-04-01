@@ -23,6 +23,7 @@ import java.io.IOException
 
 class AppViewModel : ViewModel() {
 
+    var isStudyMode by mutableStateOf(true)
     var isLazyReader by mutableStateOf(true)
     var wordMarkerColor by mutableStateOf(Color(0xDDAC95E1))
     var showWordMarkerColorWheelDialog by mutableStateOf(false)
@@ -38,7 +39,7 @@ class AppViewModel : ViewModel() {
     var darkTheme by mutableStateOf(false)
     var selectedColor by mutableStateOf<Color?>(null)
     var isCustomColor by mutableStateOf(false)
-    var selectedFontFamily by mutableStateOf("googlesanscode")
+    var selectedFontFamily by mutableStateOf("system")
     val navigationStack = mutableStateListOf<Screen>(Screen.Home)
     var currentDbName by mutableStateOf("kj2.sqlite3")
     var currentVersionAbbr by mutableStateOf(BibleVersionUtils.versionMap["kj2.sqlite3"]!!)

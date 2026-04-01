@@ -1651,40 +1651,60 @@ fun ChapterView(
         themeColors,
         isKjvPlus,
         refreshKey,
-        isOldTestamentForThisVersion
+        isOldTestamentForThisVersion,
+        viewModel.isStudyMode
     ) {
         value = withContext(Dispatchers.Default) {
             val result = mutableMapOf<Int, ProcessedVerse>()
-            val processor = VerseTextProcessor()
-            content.forEach { item ->
-                if (item is VerseContent.VerseVal) {
-                    val verse = item.verse
-                    val fullVerse = verse.copy(bookName = passage.bookName, chapter = passage.chapter)
-                    val isPersistentHighlighted = databaseHelper?.isHighlighted(fullVerse) ?: false
-                    val onStrongsLocal: ((String) -> Unit)? = onStrongsPress?.let { callback ->
-                        { strong -> callback(strong, passage.bookNumber, isPrimary) }
+
+            if (viewModel.isStudyMode) {
+                val processor = VerseTextProcessor()
+
+                content.forEach { item ->
+                    if (item is VerseContent.VerseVal) {
+                        val verse = item.verse
+                        val fullVerse = verse.copy(bookName = passage.bookName, chapter = passage.chapter)
+                        val isPersistentHighlighted = databaseHelper?.isHighlighted(fullVerse) ?: false
+
+                        val onStrongsLocal: ((String) -> Unit)? = onStrongsPress?.let { callback ->
+                            { strong -> callback(strong, passage.bookNumber, isPrimary) }
+                        }
+                        val onTagLocal: ((String) -> Unit)? = onTagPress?.let { callback ->
+                            { marker -> callback(marker, passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary) }
+                        }
+                        val onWordLocal: ((String) -> Unit)? = onWordPress?.let { callback ->
+                            { word -> callback(word, isPrimary) }
+                        }
+
+                        val processed = processor.processVerse(
+                            verseText = verse.text,
+                            baseFontSize = viewModel.fontSize.sp,
+                            themeColors = themeColors,
+                            textColor = themeColors.textColor,
+                            onTagPress = onTagLocal,
+                            onWordPress = onWordLocal,
+                            onStrongsPress = onStrongsLocal,
+                            isHighlighted = isPersistentHighlighted,
+                            isKjvPlus = isKjvPlus,
+                            isOldTestament = isOldTestamentForThisVersion
+                        )
+                        result[verse.verseNumber] = processed
                     }
-                    val onTagLocal: ((String) -> Unit)? = onTagPress?.let { callback ->
-                        { marker -> callback(marker, passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary) }
+                }
+            } else {
+                content.forEach { item ->
+                    if (item is VerseContent.VerseVal) {
+                        val verse = item.verse
+                        val plainText = SimpleVerseProcessor.stripXmlTags(verse.text)
+
+                        result[verse.verseNumber] = ProcessedVerse(
+                            header = null,
+                            body = AnnotatedString(plainText)
+                        )
                     }
-                    val onWordLocal: ((String) -> Unit)? = onWordPress?.let { callback ->
-                        { word -> callback(word, isPrimary) }
-                    }
-                    val processed = processor.processVerse(
-                        verseText = verse.text,
-                        baseFontSize = viewModel.fontSize.sp,
-                        themeColors = themeColors,
-                        textColor = themeColors.textColor,
-                        onTagPress = onTagLocal,
-                        onWordPress = onWordLocal,
-                        onStrongsPress = onStrongsLocal,
-                        isHighlighted = isPersistentHighlighted,
-                        isKjvPlus = isKjvPlus,
-                        isOldTestament = isOldTestamentForThisVersion
-                    )
-                    result[verse.verseNumber] = processed
                 }
             }
+
             result
         }
     }
@@ -1789,7 +1809,7 @@ fun ChapterView(
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                         shape = RoundedCornerShape(4.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        contentPadding = PaddingValues(4.dp),
                         modifier = Modifier.height(30.dp).weight(0.7f).padding(end = 4.dp)
                     ) {
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -1817,7 +1837,7 @@ fun ChapterView(
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                         shape = RoundedCornerShape(4.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        contentPadding = PaddingValues(4.dp),
                         modifier = Modifier.height(30.dp).weight(0.5f)
                     ) {
                         Text(
@@ -1833,7 +1853,7 @@ fun ChapterView(
 
             LazyColumn(
                 state = state,
-                modifier = Modifier.weight(1f).padding(horizontal = 12.dp)
+                modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
             ) {
                 items(
                     items = content,
@@ -1886,7 +1906,7 @@ fun ChapterView(
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 8.dp)
+                                        .padding(vertical = 4.dp)
                                         .then(backgroundModifier)
                                 ) {
                                     processedVerse?.header?.let { header ->
@@ -1915,12 +1935,14 @@ fun ChapterView(
                                         append(processedVerse?.body ?: verse.text)
                                         if (isBookmarked) appendInlineContent("bookmark", "[bookmark]")
                                         if (isNote) appendInlineContent("note", "[note]")
-                                        if (refCount > 0 && onCrossRefClick != null) {
-                                            append(" ")
-                                            appendInlineContent("crossref_${verse.verseNumber}", "[$refCount]")
-                                        }
-                                        if (onVerseCommentaryClick != null) {
-                                            appendInlineContent("commentary_${verse.verseNumber}", "[C]")
+                                        if (viewModel.isStudyMode) {
+                                            if (refCount > 0 && onCrossRefClick != null) {
+                                                append(" ")
+                                                appendInlineContent("crossref_${verse.verseNumber}", "[$refCount]")
+                                            }
+                                            if (onVerseCommentaryClick != null) {
+                                                appendInlineContent("commentary_${verse.verseNumber}", "[C]")
+                                            }
                                         }
                                     }
 
@@ -1934,40 +1956,42 @@ fun ChapterView(
                                         buildMap {
                                             if (isBookmarked) put("bookmark", bookmarkInlineContent)
                                             if (isNote) put("note", noteInlineContent)
-                                            if (refCount > 0 && onCrossRefClick != null) {
-                                                put("crossref_${verse.verseNumber}", InlineTextContent(
-                                                    Placeholder(
-                                                        width = (viewModel.fontSize * 1.4).sp,
-                                                        height = (viewModel.fontSize).sp,
-                                                        placeholderVerticalAlign = PlaceholderVerticalAlign.TextCenter
-                                                    )
-                                                ) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .clickable {
-                                                                onCrossRefClick(
-                                                                    passage.bookNumber,
-                                                                    passage.chapter,
-                                                                    verse.verseNumber,
-                                                                    isPrimary
-                                                                )
-                                                            }
-                                                            .background(
-                                                                themeColors.primary.copy(alpha = 0.15f),
-                                                                RoundedCornerShape(2.dp)
-                                                            )
-                                                            .fillMaxSize(),
-                                                        contentAlignment = Alignment.Center
-                                                    ) {
-                                                        Text(
-                                                            text = "$refCount",
-                                                            fontSize = (viewModel.fontSize * 0.7f).sp,
-                                                            color = themeColors.primary,
-                                                            fontWeight = FontWeight.Bold,
-                                                            style = TextStyle(lineHeight = (viewModel.fontSize).sp)
+                                            if (viewModel.isStudyMode) {
+                                                if (refCount > 0 && onCrossRefClick != null) {
+                                                    put("crossref_${verse.verseNumber}", InlineTextContent(
+                                                        Placeholder(
+                                                            width = (viewModel.fontSize * 1.4).sp,
+                                                            height = (viewModel.fontSize).sp,
+                                                            placeholderVerticalAlign = PlaceholderVerticalAlign.TextCenter
                                                         )
-                                                    }
-                                                })
+                                                    ) {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .clickable {
+                                                                    onCrossRefClick(
+                                                                        passage.bookNumber,
+                                                                        passage.chapter,
+                                                                        verse.verseNumber,
+                                                                        isPrimary
+                                                                    )
+                                                                }
+                                                                .background(
+                                                                    themeColors.primary.copy(alpha = 0.15f),
+                                                                    RoundedCornerShape(2.dp)
+                                                                )
+                                                                .fillMaxSize(),
+                                                            contentAlignment = Alignment.Center
+                                                        ) {
+                                                            Text(
+                                                                text = "$refCount",
+                                                                fontSize = (viewModel.fontSize * 0.7f).sp,
+                                                                color = themeColors.primary,
+                                                                fontWeight = FontWeight.Bold,
+                                                                style = TextStyle(lineHeight = (viewModel.fontSize).sp)
+                                                            )
+                                                        }
+                                                    })
+                                                }
                                             }
                                             if (onVerseCommentaryClick != null) {
                                                 put("commentary_${verse.verseNumber}", InlineTextContent(

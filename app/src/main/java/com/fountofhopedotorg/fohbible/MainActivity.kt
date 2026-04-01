@@ -1914,29 +1914,6 @@ fun ReaderAppBar(
                     )
                     HorizontalDivider()
                     DropdownMenuItem(
-                        text = { Text("Word Marker Color", modifier = Modifier.fillMaxWidth()) },
-                        leadingIcon = {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(24.dp)
-                                        .clip(CircleShape)
-                                        .background(viewModel.wordMarkerColor)
-                                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                                )
-                            }
-                        },
-                        onClick = {
-                            viewModel.showWordMarkerColorWheelDialog = true
-                            showNavigationDropdown = false
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    HorizontalDivider()
-                    DropdownMenuItem(
                         text = { Text("Verse Marker Color", modifier = Modifier.fillMaxWidth()) },
                         leadingIcon = {
                             Row(
@@ -1959,29 +1936,54 @@ fun ReaderAppBar(
                         modifier = Modifier.fillMaxWidth()
                     )
                     HorizontalDivider()
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                text = if (viewModel.isDictionaryMode) "Dictionary Mode" else "Highlight Mode",
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        },
-                        leadingIcon = {
-                            Icon(
-                                if (viewModel.isDictionaryMode) Icons.AutoMirrored.Filled.MenuBook else Icons.Filled.Brush,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        },
-                        onClick = {
-                            viewModel.isDictionaryMode = !viewModel.isDictionaryMode
-                            coroutineScope.launch {
-                                delay(400)
+                    if (viewModel.isStudyMode) {
+                        DropdownMenuItem(
+                            text = { Text("Word Marker Color", modifier = Modifier.fillMaxWidth()) },
+                            leadingIcon = {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .clip(CircleShape)
+                                            .background(viewModel.wordMarkerColor)
+                                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                                    )
+                                }
+                            },
+                            onClick = {
+                                viewModel.showWordMarkerColorWheelDialog = true
                                 showNavigationDropdown = false
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = if (viewModel.isDictionaryMode) "Dictionary Mode" else "Highlight Mode",
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    if (viewModel.isDictionaryMode) Icons.AutoMirrored.Filled.MenuBook else Icons.Filled.Brush,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            onClick = {
+                                viewModel.isDictionaryMode = !viewModel.isDictionaryMode
+                                coroutineScope.launch {
+                                    delay(400)
+                                    showNavigationDropdown = false
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                     HorizontalDivider()
 
                     Column(
