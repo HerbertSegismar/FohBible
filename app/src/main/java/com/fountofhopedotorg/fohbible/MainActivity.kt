@@ -20,6 +20,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -73,6 +74,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -111,6 +113,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.data.AppThemeState
+import com.fountofhopedotorg.fohbible.data.ColorTheme
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.modals.FontModal
@@ -119,12 +122,11 @@ import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.screens.BgModal
 import com.fountofhopedotorg.fohbible.screens.BookmarksScreen
 import com.fountofhopedotorg.fohbible.screens.HomeScreen
+import com.fountofhopedotorg.fohbible.screens.LazyReaderScreen
 import com.fountofhopedotorg.fohbible.screens.NotesScreen
 import com.fountofhopedotorg.fohbible.screens.ReaderScreen
-import com.fountofhopedotorg.fohbible.screens.LazyReaderScreen
 import com.fountofhopedotorg.fohbible.screens.SearchScreen
 import com.fountofhopedotorg.fohbible.screens.SettingsScreen
-import com.fountofhopedotorg.fohbible.data.ColorTheme
 import com.fountofhopedotorg.fohbible.ui.theme.DefaultPrimaryColor
 import com.fountofhopedotorg.fohbible.ui.theme.FohBibleTheme
 import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
@@ -1480,7 +1482,7 @@ fun ReaderAppBar(
             ) {
                 if (isLandscape) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         Column(
@@ -1558,34 +1560,52 @@ fun ReaderAppBar(
                                 onScreenChange(Screen.Settings)
                                 showNavigationDropdown = false
                             }
-                            DropdownMenuItem(
-                                text = { Text("Background Texture", modifier = Modifier.fillMaxWidth()) },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Outlined.Texture,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                },
-                                onClick = {
-                                    viewModel.showBgModal = true
-                                    showNavigationDropdown = false
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            Spacer(modifier = Modifier.weight(1f))
+                            if (viewModel.isStudyMode) {
+                                DropdownMenuItem(
+                                    text = { Text("Background Texture", modifier = Modifier.fillMaxWidth()) },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Outlined.Texture,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    },
+                                    onClick = {
+                                        viewModel.showBgModal = true
+                                        showNavigationDropdown = false
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
                         }
+                        VerticalDivider()
                         Column(
                             modifier = Modifier
                                 .weight(1f)
-                                .padding(start = 8.dp)
-
                         ) {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(start = 8.dp, top = 10.dp, bottom = 5.dp, end = 8.dp)
                             ) {
+                                if (!viewModel.isStudyMode) {
+                                    DropdownMenuItem(
+                                        text = { Text("Background Texture", modifier = Modifier.fillMaxWidth()) },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Outlined.Texture,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        },
+                                        onClick = {
+                                            viewModel.showBgModal = true
+                                            showNavigationDropdown = false
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -1636,6 +1656,7 @@ fun ReaderAppBar(
                                     },
                                 )
                             }
+                            HorizontalDivider()
                             DropdownMenuItem(
                                 text = {
                                     Text(
@@ -1654,28 +1675,6 @@ fun ReaderAppBar(
                                 },
                                 onClick = {
                                     viewModel.showReaderOverlayColorWheel = true
-                                    showNavigationDropdown = false
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Word Marker Color", modifier = Modifier.fillMaxWidth()) },
-                                leadingIcon = {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(22.dp)
-                                                .clip(CircleShape)
-                                                .background(viewModel.wordMarkerColor)
-                                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                                        )
-                                    }
-                                },
-                                onClick = {
-                                    viewModel.showWordMarkerColorWheelDialog = true
                                     showNavigationDropdown = false
                                 },
                                 modifier = Modifier.fillMaxWidth()
@@ -1702,29 +1701,55 @@ fun ReaderAppBar(
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             )
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        text = if (viewModel.isDictionaryMode) "Dictionary Mode" else "Highlight Mode",
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        if (viewModel.isDictionaryMode) Icons.AutoMirrored.Filled.MenuBook else Icons.Filled.Brush,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                },
-                                onClick = {
-                                    viewModel.isDictionaryMode = !viewModel.isDictionaryMode
-                                    coroutineScope.launch {
-                                        delay(400)
+                            if (viewModel.isStudyMode) {
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    text = { Text("Word Marker Color", modifier = Modifier.fillMaxWidth()) },
+                                    leadingIcon = {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(22.dp)
+                                                    .clip(CircleShape)
+                                                    .background(viewModel.wordMarkerColor)
+                                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        viewModel.showWordMarkerColorWheelDialog = true
                                         showNavigationDropdown = false
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            )
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = if (viewModel.isDictionaryMode) "Dictionary Mode" else "Highlight Mode",
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            if (viewModel.isDictionaryMode) Icons.AutoMirrored.Filled.MenuBook else Icons.Filled.Brush,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    },
+                                    onClick = {
+                                        viewModel.isDictionaryMode = !viewModel.isDictionaryMode
+                                        coroutineScope.launch {
+                                            delay(400)
+                                            showNavigationDropdown = false
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                            HorizontalDivider()
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -1748,7 +1773,7 @@ fun ReaderAppBar(
                                         fontWeight = FontWeight.Medium
                                     )
                                 }
-                                Spacer(modifier = Modifier.height(8.dp)) // was 12.dp
+                                Spacer(modifier = Modifier.height(8.dp))
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.Center,
@@ -2029,8 +2054,8 @@ fun ReaderAppBar(
                             },
                             modifier = Modifier.fillMaxWidth()
                         )
+                        HorizontalDivider()
                     }
-                    HorizontalDivider()
 
                     Column(
                         modifier = Modifier
