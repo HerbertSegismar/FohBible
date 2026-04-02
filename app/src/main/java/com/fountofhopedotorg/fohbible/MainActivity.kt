@@ -168,6 +168,15 @@ private val CUSTOM_TEXTURE_KEY = stringPreferencesKey("custom_texture")
 private val OVERLAY_OPACITY_KEY = floatPreferencesKey("overlay_opacity")
 private val LIGHT_OVERLAY_COLOR_KEY = intPreferencesKey("light_overlay_color")
 private val DARK_OVERLAY_COLOR_KEY = intPreferencesKey("dark_overlay_color")
+private val IS_STUDY_MODE_KEY = booleanPreferencesKey("is_study_mode")
+private val IS_LAZY_READER_KEY = booleanPreferencesKey("is_lazy_reader")
+private val IS_DICTIONARY_MODE_KEY = booleanPreferencesKey("is_dictionary_mode")
+private val VERSE_MARKER_COLOR_KEY = intPreferencesKey("verse_marker_color")
+private val LIGHT_MODAL_BG_COLOR_KEY = intPreferencesKey("light_modal_bg_color")
+private val DARK_MODAL_BG_COLOR_KEY = intPreferencesKey("dark_modal_bg_color")
+private val SELECTED_DICTIONARY_KEY = stringPreferencesKey("selected_dictionary")
+private val SELECTED_VERSE_COMMENTARY_KEY = stringPreferencesKey("selected_verse_commentary")
+private val SELECTED_CROSS_REFERENCE_DB_KEY = stringPreferencesKey("selected_cross_ref_db")
 
 val ComponentActivity.appDataStore: DataStore<Preferences> by preferencesDataStore(name = "app_preferences")
 
@@ -213,6 +222,15 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
         viewModel.lightOverlayColor = Color(prefs[LIGHT_OVERLAY_COLOR_KEY] ?: Color(0xFFF5F5DC).toArgb())
         viewModel.darkOverlayColor = Color(prefs[DARK_OVERLAY_COLOR_KEY] ?: Color(0xFF100F21).toArgb())
         viewModel.wordMarkerColor = Color(prefs[MARKER_COLOR_KEY] ?: Color(0xDDAC95E1).toArgb())
+        viewModel.isStudyMode = prefs[IS_STUDY_MODE_KEY] ?: true
+        viewModel.isLazyReader = prefs[IS_LAZY_READER_KEY] ?: true
+        viewModel.isDictionaryMode = prefs[IS_DICTIONARY_MODE_KEY] ?: true
+        viewModel.verseMarkerColor = Color(prefs[VERSE_MARKER_COLOR_KEY] ?: Color(0xFF95F198).toArgb())
+        viewModel.lightModalBackgroundColor = Color(prefs[LIGHT_MODAL_BG_COLOR_KEY] ?: Color(0xFFEAE7E3).toArgb())
+        viewModel.darkModalBackgroundColor = Color(prefs[DARK_MODAL_BG_COLOR_KEY] ?: Color(0xFF121523).toArgb())
+        viewModel.selectedDictionary = prefs[SELECTED_DICTIONARY_KEY] ?: "atsbd"
+        viewModel.selectedVerseCommentary = prefs[SELECTED_VERSE_COMMENTARY_KEY] ?: "cbsc"
+        viewModel.selectedCrossReferenceDatabase = prefs[SELECTED_CROSS_REFERENCE_DB_KEY] ?: "obx"
 
         viewModel.primaryPassage = PassageSelection(
             bookNumber = prefs[PRIMARY_BOOK_NUMBER_KEY] ?: 10,
@@ -289,6 +307,34 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     LaunchedEffect(Unit) {
         snapshotFlow { viewModel.wordMarkerColor.toArgb() }
             .collectLatest { dataStore.edit { prefs -> prefs[MARKER_COLOR_KEY] = it } }
+    }
+
+    LaunchedEffect(Unit) {
+        snapshotFlow { viewModel.isStudyMode }.collectLatest { dataStore.edit { prefs -> prefs[IS_STUDY_MODE_KEY] = it } }
+    }
+    LaunchedEffect(Unit) {
+        snapshotFlow { viewModel.isLazyReader }.collectLatest { dataStore.edit { prefs -> prefs[IS_LAZY_READER_KEY] = it } }
+    }
+    LaunchedEffect(Unit) {
+        snapshotFlow { viewModel.isDictionaryMode }.collectLatest { dataStore.edit { prefs -> prefs[IS_DICTIONARY_MODE_KEY] = it } }
+    }
+    LaunchedEffect(Unit) {
+        snapshotFlow { viewModel.verseMarkerColor.toArgb() }.collectLatest { dataStore.edit { prefs -> prefs[VERSE_MARKER_COLOR_KEY] = it } }
+    }
+    LaunchedEffect(Unit) {
+        snapshotFlow { viewModel.lightModalBackgroundColor.toArgb() }.collectLatest { dataStore.edit { prefs -> prefs[LIGHT_MODAL_BG_COLOR_KEY] = it } }
+    }
+    LaunchedEffect(Unit) {
+        snapshotFlow { viewModel.darkModalBackgroundColor.toArgb() }.collectLatest { dataStore.edit { prefs -> prefs[DARK_MODAL_BG_COLOR_KEY] = it } }
+    }
+    LaunchedEffect(Unit) {
+        snapshotFlow { viewModel.selectedDictionary }.collectLatest { dataStore.edit { prefs -> prefs[SELECTED_DICTIONARY_KEY] = it } }
+    }
+    LaunchedEffect(Unit) {
+        snapshotFlow { viewModel.selectedVerseCommentary }.collectLatest { dataStore.edit { prefs -> prefs[SELECTED_VERSE_COMMENTARY_KEY] = it } }
+    }
+    LaunchedEffect(Unit) {
+        snapshotFlow { viewModel.selectedCrossReferenceDatabase }.collectLatest { dataStore.edit { prefs -> prefs[SELECTED_CROSS_REFERENCE_DB_KEY] = it } }
     }
 
     var dbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
