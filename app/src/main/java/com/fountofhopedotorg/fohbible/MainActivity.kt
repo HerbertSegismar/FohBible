@@ -134,7 +134,6 @@ import com.fountofhopedotorg.fohbible.ui.theme.PredefinedColorThemes
 import com.fountofhopedotorg.fohbible.ui.theme.ThemeManager
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils.descriptionMap
-import com.fountofhopedotorg.fohbible.utils.getFontFamily
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
@@ -241,8 +240,8 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
             verse = prefs[PRIMARY_VERSE_KEY] ?: 1
         )
         viewModel.secondaryPassage = PassageSelection(
-            bookNumber = prefs[SECONDARY_BOOK_NUMBER_KEY] ?: 10,
-            bookName = prefs[SECONDARY_BOOK_NAME_KEY] ?: "Genesis",
+            bookNumber = prefs[SECONDARY_BOOK_NUMBER_KEY] ?: 500,
+            bookName = prefs[SECONDARY_BOOK_NAME_KEY] ?: "John",
             chapter = prefs[SECONDARY_CHAPTER_KEY] ?: 1,
             verse = prefs[SECONDARY_VERSE_KEY] ?: 1
         )
@@ -1901,7 +1900,7 @@ fun ReaderAppBar(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -1921,7 +1920,6 @@ fun ReaderAppBar(
                                 fontWeight = FontWeight.Medium
                             )
                         }
-                        Spacer(modifier = Modifier.height(12.dp))
                         Slider(
                             value = viewModel.overlayOpacity,
                             onValueChange = { viewModel.overlayOpacity = it },
@@ -1951,14 +1949,6 @@ fun ReaderAppBar(
                                 )
                             },
                         )
-                        Text(
-                            text = "Adjust Overlay Opacity with Slider",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 4.dp),
-                            fontFamily = getFontFamily("oswald"),
-                            fontSize = 12.sp
-                        )
                     }
                     HorizontalDivider()
                     DropdownMenuItem(
@@ -1971,7 +1961,7 @@ fun ReaderAppBar(
                         leadingIcon = {
                             Box(
                                 modifier = Modifier
-                                    .size(24.dp)
+                                    .size(20.dp)
                                     .clip(CircleShape)
                                     .background(if (viewModel.darkTheme) viewModel.darkOverlayColor else viewModel.lightOverlayColor)
                                     .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
@@ -1989,11 +1979,11 @@ fun ReaderAppBar(
                         leadingIcon = {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(24.dp)
+                                        .size(20.dp)
                                         .clip(CircleShape)
                                         .background(viewModel.verseMarkerColor)
                                         .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
@@ -2013,11 +2003,11 @@ fun ReaderAppBar(
                             leadingIcon = {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(24.dp)
+                                            .size(20.dp)
                                             .clip(CircleShape)
                                             .background(viewModel.wordMarkerColor)
                                             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
@@ -2060,7 +2050,7 @@ fun ReaderAppBar(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -2080,7 +2070,6 @@ fun ReaderAppBar(
                                 fontWeight = FontWeight.Medium
                             )
                         }
-                        Spacer(modifier = Modifier.height(12.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.Center,
@@ -2090,7 +2079,7 @@ fun ReaderAppBar(
                                 onClick = {
                                     viewModel.fontSize = maxOf(minFontSize, viewModel.fontSize - 1)
                                 },
-                                modifier = Modifier.size(32.dp)
+                                modifier = Modifier.size(24.dp)
                             ) {
                                 Text("A-", fontWeight = FontWeight.Bold)
                             }
@@ -2105,7 +2094,7 @@ fun ReaderAppBar(
                                 onClick = {
                                     viewModel.fontSize = minOf(maxFontSize, viewModel.fontSize + 1)
                                 },
-                                modifier = Modifier.size(32.dp)
+                                modifier = Modifier.size(24.dp)
                             ) {
                                 Text("A+", fontWeight = FontWeight.Bold)
                             }
