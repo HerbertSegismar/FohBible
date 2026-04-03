@@ -1656,10 +1656,8 @@ fun ChapterView(
     ) {
         value = withContext(Dispatchers.Default) {
             val result = mutableMapOf<Int, ProcessedVerse>()
-
             if (viewModel.isStudyMode) {
                 val processor = VerseTextProcessor()
-
                 content.forEach { item ->
                     if (item is VerseContent.VerseVal) {
                         val verse = item.verse
@@ -1696,7 +1694,6 @@ fun ChapterView(
                     if (item is VerseContent.VerseVal) {
                         val verse = item.verse
                         val plainText = SimpleVerseProcessor.stripXmlTags(verse.text)
-
                         result[verse.verseNumber] = ProcessedVerse(
                             header = null,
                             body = AnnotatedString(plainText)
@@ -1704,7 +1701,6 @@ fun ChapterView(
                     }
                 }
             }
-
             result
         }
     }
@@ -1770,7 +1766,9 @@ fun ChapterView(
         )
     }
 
-    val groupedHighlights = remember(selectedWords) { selectedWords.groupBy { it.verseNumber } }
+    val groupedHighlights = remember(selectedWords) {
+        selectedWords.groupBy { it.verseNumber }
+    }
 
     Box(modifier = modifier) {
         val texture = when (viewModel.bgImageIndex) {
@@ -1778,6 +1776,7 @@ fun ChapterView(
             34 -> if (viewModel.customTextureUri != null) viewModel.customTextureUri else null
             else -> "file:///android_asset/textures/${viewModel.bgImageIndex}.jpg"
         }
+
         if (texture != null) {
             AsyncImage(
                 model = texture,
@@ -1831,9 +1830,11 @@ fun ChapterView(
                             )
                         }
                     }
+
                     Button(
                         onClick = {
-                            if (isPrimary) viewModel.showPrimaryVersionDropdown = true else viewModel.showSecondaryVersionDropdown = true
+                            if (isPrimary) viewModel.showPrimaryVersionDropdown = true
+                            else viewModel.showSecondaryVersionDropdown = true
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                         shape = RoundedCornerShape(4.dp),
@@ -1853,7 +1854,9 @@ fun ChapterView(
 
             LazyColumn(
                 state = state,
-                modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 4.dp)
             ) {
                 items(
                     items = content,
@@ -1879,6 +1882,7 @@ fun ChapterView(
                                 fontFamily = currentFontFamily
                             )
                         }
+
                         is VerseContent.VerseVal -> {
                             val verse = item.verse
                             val processedVerse = processedVerses[verse.verseNumber]
@@ -1933,8 +1937,10 @@ fun ChapterView(
                                             append("${verse.verseNumber} ")
                                         }
                                         append(processedVerse?.body ?: verse.text)
+
                                         if (isBookmarked) appendInlineContent("bookmark", "[bookmark]")
                                         if (isNote) appendInlineContent("note", "[note]")
+
                                         if (viewModel.isStudyMode) {
                                             if (refCount > 0 && onCrossRefClick != null) {
                                                 append(" ")
@@ -1956,6 +1962,7 @@ fun ChapterView(
                                         buildMap {
                                             if (isBookmarked) put("bookmark", bookmarkInlineContent)
                                             if (isNote) put("note", noteInlineContent)
+
                                             if (viewModel.isStudyMode) {
                                                 if (refCount > 0 && onCrossRefClick != null) {
                                                     put("crossref_${verse.verseNumber}", InlineTextContent(
@@ -1992,35 +1999,36 @@ fun ChapterView(
                                                         }
                                                     })
                                                 }
-                                            }
-                                            if (onVerseCommentaryClick != null) {
-                                                put("commentary_${verse.verseNumber}", InlineTextContent(
-                                                    Placeholder(
-                                                        width = (viewModel.fontSize * 1.5f).sp,
-                                                        height = (viewModel.fontSize).sp,
-                                                        placeholderVerticalAlign = PlaceholderVerticalAlign.TextCenter
-                                                    )
-                                                ) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .fillMaxSize()
-                                                            .clickable {
-                                                                onVerseCommentaryClick(
-                                                                    passage.bookNumber,
-                                                                    passage.chapter,
-                                                                    verse.verseNumber
-                                                                )
-                                                            },
-                                                        contentAlignment = Alignment.Center
-                                                    ) {
-                                                        Icon(
-                                                            imageVector = Icons.Filled.ChevronRight,
-                                                            contentDescription = "View Verse Commentaries",
-                                                            tint = themeColors.verseNumber,
-                                                            modifier = Modifier.size((viewModel.fontSize * 1.5f).dp)
+
+                                                if (onVerseCommentaryClick != null) {
+                                                    put("commentary_${verse.verseNumber}", InlineTextContent(
+                                                        Placeholder(
+                                                            width = (viewModel.fontSize * 1.5f).sp,
+                                                            height = (viewModel.fontSize).sp,
+                                                            placeholderVerticalAlign = PlaceholderVerticalAlign.TextCenter
                                                         )
-                                                    }
-                                                })
+                                                    ) {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .fillMaxSize()
+                                                                .clickable {
+                                                                    onVerseCommentaryClick(
+                                                                        passage.bookNumber,
+                                                                        passage.chapter,
+                                                                        verse.verseNumber
+                                                                    )
+                                                                },
+                                                            contentAlignment = Alignment.Center
+                                                        ) {
+                                                            Icon(
+                                                                imageVector = Icons.Filled.ChevronRight,
+                                                                contentDescription = "View Verse Commentaries",
+                                                                tint = themeColors.verseNumber,
+                                                                modifier = Modifier.size((viewModel.fontSize * 1.5f).dp)
+                                                            )
+                                                        }
+                                                    })
+                                                }
                                             }
                                         }
                                     }
@@ -2112,7 +2120,9 @@ fun ChapterView(
                                                             }
                                                         }
                                                     },
-                                                    onLongPress = { onVerseLongPress?.invoke(verse, passage) }
+                                                    onLongPress = {
+                                                        onVerseLongPress?.invoke(verse, passage)
+                                                    }
                                                 )
                                             },
                                         fontSize = viewModel.fontSize.sp,
@@ -2126,6 +2136,9 @@ fun ChapterView(
                         }
                     }
                 }
+                item(key = "bottom_spacer") {
+                    Spacer(modifier = Modifier.height(100.dp))
+                }
             }
         }
     }
@@ -2134,11 +2147,7 @@ fun ChapterView(
         LaunchedEffect(targetVerse, content) {
             if (targetVerse != null && content.isNotEmpty() && targetVerse > 0) {
                 delay(100)
-
-                val targetIndex = content.indexOfFirst {
-                    it is VerseContent.VerseVal && it.verse.verseNumber == targetVerse
-                }
-
+                val targetIndex = content.indexOfFirst { it is VerseContent.VerseVal && it.verse.verseNumber == targetVerse }
                 if (targetIndex >= 0) {
                     state.animateScrollToItem(targetIndex)
                     highlightedVerse = targetVerse
@@ -2150,7 +2159,6 @@ fun ChapterView(
         }
     }
 }
-
 fun lazyGetPreviousPassage(current: PassageSelection, currentBook: BibleBook?): PassageSelection {
     if (currentBook == null) return current
     if (currentBook.chapters <= 2 && current.chapter == 1) return current

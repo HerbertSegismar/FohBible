@@ -104,6 +104,7 @@ fun SettingsScreen() {
     var showAboutDialog by remember { mutableStateOf(false) }
     var showWordMarkerColorWheel by remember { mutableStateOf(false) }
     var showVerseMarkerColorWheel by remember { mutableStateOf(false) }
+    var showResetConfirmDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(viewModel.isCustomColor, viewModel.customColor) {
         isUsingCustomColor = viewModel.isCustomColor
@@ -132,103 +133,11 @@ fun SettingsScreen() {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Text(
-                "Settings",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                "Customize your Bible reading experience",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        item {
-            SettingsSection(title = "Bible Version", subtitle = "Choose your preferred translation") {
-                BibleVersionSelector(
-                    title = "Primary Bible Version",
-                    currentAbbr = viewModel.currentVersionAbbr,
-                    description = BibleVersionUtils.descriptionMap[viewModel.currentDbName] ?: "Bible translation",
-                    onVersionSelected = { file, abbr ->
-                        viewModel.currentDbName = file
-                        viewModel.currentVersionAbbr = abbr
-                    }
-                )
-
+            SettingsSection(title = "App Settings", subtitle = "Customize App appearance") {
                 SettingsItem(
-                    title = "Multi-Version Display",
-                    subtitle = "Show two Bible versions side by side"
+                    title = "Dark Mode",
+                    subtitle = "Toggle between light and dark themes"
                 ) {
-                    Switch(
-                        checked = viewModel.multiVersion,
-                        onCheckedChange = { viewModel.multiVersion = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.primary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                        )
-                    )
-                }
-
-                if (viewModel.multiVersion) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    BibleVersionSelector(
-                        title = "Secondary Bible Version",
-                        currentAbbr = viewModel.secondaryVersionAbbr.ifEmpty { "Select version" },
-                        description = if (viewModel.secondaryVersionAbbr.isNotEmpty()) {
-                            BibleVersionUtils.versionMap.entries
-                                .find { it.value == viewModel.secondaryVersionAbbr }
-                                ?.let { BibleVersionUtils.descriptionMap[it.key] } ?: "Bible translation"
-                        } else {
-                            "Select a secondary version"
-                        },
-                        onVersionSelected = { file, abbr ->
-                            viewModel.secondaryDbName = file
-                            viewModel.secondaryVersionAbbr = abbr
-                        }
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    SettingsItem(
-                        title = "Multi-View Layout",
-                        subtitle = "Horizontal or vertical arrangement"
-                    ) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(
-                                text = "Horizontal",
-                                modifier = Modifier
-                                    .clickable { viewModel.multiViewLayout = "horizontal" }
-                                    .background(if (viewModel.multiViewLayout == "horizontal") MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent)
-                                    .padding(8.dp)
-                            )
-                            Text(
-                                text = "Vertical",
-                                modifier = Modifier
-                                    .clickable { viewModel.multiViewLayout = "vertical" }
-                                    .background(if (viewModel.multiViewLayout == "vertical") MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent)
-                                    .padding(8.dp)
-                            )
-                        }
-                    }
-                    SettingsItem(
-                        title = "Scroll Sync",
-                        subtitle = "Synchronize scrolling between versions"
-                    ) {
-                        Switch(
-                            checked = viewModel.scrollSync,
-                            onCheckedChange = { viewModel.scrollSync = it },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.primary,
-                                checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                            )
-                        )
-                    }
-                }
-            }
-        }
-
-        item {
-            SettingsSection(title = "Reader Settings", subtitle = "Customize reading experience") {
-                SettingsItem(title = "Dark Mode", subtitle = "Toggle between light and dark themes") {
                     Switch(
                         checked = viewModel.darkTheme,
                         onCheckedChange = { viewModel.darkTheme = it },
@@ -263,6 +172,97 @@ fun SettingsScreen() {
                                 onClick = { showColorWheel = true }
                             )
                         }
+                    }
+                }
+            }
+        }
+
+        item {
+            SettingsSection(title = "Reader Settings", subtitle = "Customize your Bible reading experience") {
+                BibleVersionSelector(
+                    title = "Primary Bible Version",
+                    currentAbbr = viewModel.currentVersionAbbr,
+                    description = BibleVersionUtils.descriptionMap[viewModel.currentDbName] ?: "Bible translation",
+                    onVersionSelected = { file, abbr ->
+                        viewModel.currentDbName = file
+                        viewModel.currentVersionAbbr = abbr
+                    }
+                )
+
+                SettingsItem(
+                    title = "Multi-Version Display",
+                    subtitle = "Show two Bible versions side by side"
+                ) {
+                    Switch(
+                        checked = viewModel.multiVersion,
+                        onCheckedChange = { viewModel.multiVersion = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.primary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                        )
+                    )
+                }
+
+                if (viewModel.multiVersion) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    BibleVersionSelector(
+                        title = "Secondary Bible Version",
+                        currentAbbr = viewModel.secondaryVersionAbbr.ifEmpty { "Select version" },
+                        description = if (viewModel.secondaryVersionAbbr.isNotEmpty()) {
+                            BibleVersionUtils.versionMap.entries
+                                .find { it.value == viewModel.secondaryVersionAbbr }
+                                ?.let { BibleVersionUtils.descriptionMap[it.key] }
+                                ?: "Bible translation"
+                        } else {
+                            "Select a secondary version"
+                        },
+                        onVersionSelected = { file, abbr ->
+                            viewModel.secondaryDbName = file
+                            viewModel.secondaryVersionAbbr = abbr
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    SettingsItem(
+                        title = "Multi-View Layout",
+                        subtitle = "Horizontal or vertical arrangement"
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                text = "Horizontal",
+                                modifier = Modifier
+                                    .clickable { viewModel.multiViewLayout = "horizontal" }
+                                    .background(
+                                        if (viewModel.multiViewLayout == "horizontal") MaterialTheme.colorScheme.primary.copy(
+                                            alpha = 0.1f
+                                        ) else Color.Transparent
+                                    )
+                                    .padding(8.dp)
+                            )
+                            Text(
+                                text = "Vertical",
+                                modifier = Modifier
+                                    .clickable { viewModel.multiViewLayout = "vertical" }
+                                    .background(
+                                        if (viewModel.multiViewLayout == "vertical") MaterialTheme.colorScheme.primary.copy(
+                                            alpha = 0.1f
+                                        ) else Color.Transparent
+                                    )
+                                    .padding(8.dp)
+                            )
+                        }
+                    }
+                    SettingsItem(
+                        title = "Scroll Sync",
+                        subtitle = "Synchronize scrolling between versions"
+                    ) {
+                        Switch(
+                            checked = viewModel.scrollSync,
+                            onCheckedChange = { viewModel.scrollSync = it },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                            )
+                        )
                     }
                 }
 
@@ -538,32 +538,7 @@ fun SettingsScreen() {
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Button(
-                        onClick = {
-                            viewModel.fontSize = 18
-                            viewModel.darkTheme = false
-                            viewModel.selectedColor = DefaultPrimaryColor
-                            viewModel.isCustomColor = false
-                            viewModel.selectedFontFamily = "system"
-                            viewModel.currentDbName = "kj2.sqlite3"
-                            viewModel.currentVersionAbbr = BibleVersionUtils.versionMap["kj2.sqlite3"] ?: "KJ2"
-                            viewModel.multiVersion = false
-                            viewModel.secondaryDbName = "esv.sqlite3"
-                            viewModel.secondaryVersionAbbr = BibleVersionUtils.versionMap["esv.sqlite3"] ?: "ESV"
-                            viewModel.multiViewLayout = "horizontal"
-                            viewModel.scrollSync = true
-                            viewModel.customTextureUri = null
-                            viewModel.bgImageIndex = 0
-                            viewModel.overlayOpacity = 0.8f
-                            viewModel.lightOverlayColor = Color(0xFFF5F5DC)
-                            viewModel.darkOverlayColor = Color(0xFF100F21)
-                            viewModel.lightModalBackgroundColor = Color(0xFFE0E0E0)
-                            viewModel.darkModalBackgroundColor = Color(0xFF2D2D2D)
-                            viewModel.wordMarkerColor = Color(0xDDAC95E1)
-                            viewModel.verseMarkerColor = Color(0xFF95F198)
-                            viewModel.isDictionaryMode = true
-                            viewModel.isLazyReader = true
-                            viewModel.isStudyMode = true
-                        },
+                        onClick = { showResetConfirmDialog = true },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -593,6 +568,76 @@ fun SettingsScreen() {
             }
         }
     }
+
+    if (showResetConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetConfirmDialog = false },
+            title = {
+                Text(
+                    "Reset All Settings",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+            },
+            text = {
+                Column {
+                    Text("This will restore EVERY setting to its default value:")
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("• Font size, theme, colors", style = MaterialTheme.typography.bodyMedium)
+                    Text("• Bible versions, layout, sync", style = MaterialTheme.typography.bodyMedium)
+                    Text("• Background, overlay, markers", style = MaterialTheme.typography.bodyMedium)
+                    Text("• Study mode, lazy reader, etc.", style = MaterialTheme.typography.bodyMedium)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "This action cannot be undone.\n\nAre you sure you want to continue?",
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.fontSize = 18
+                        viewModel.darkTheme = false
+                        viewModel.selectedColor = DefaultPrimaryColor
+                        viewModel.isCustomColor = false
+                        viewModel.selectedFontFamily = "system"
+                        viewModel.currentDbName = "kj2.sqlite3"
+                        viewModel.currentVersionAbbr = BibleVersionUtils.versionMap["kj2.sqlite3"] ?: "KJ2"
+                        viewModel.multiVersion = false
+                        viewModel.secondaryDbName = "esv.sqlite3"
+                        viewModel.secondaryVersionAbbr = BibleVersionUtils.versionMap["esv.sqlite3"] ?: "ESV"
+                        viewModel.multiViewLayout = "horizontal"
+                        viewModel.scrollSync = true
+                        viewModel.customTextureUri = null
+                        viewModel.bgImageIndex = 0
+                        viewModel.overlayOpacity = 0.8f
+                        viewModel.lightOverlayColor = Color(0xFFF5F5DC)
+                        viewModel.darkOverlayColor = Color(0xFF100F21)
+                        viewModel.lightModalBackgroundColor = Color(0xFFE0E0E0)
+                        viewModel.darkModalBackgroundColor = Color(0xFF2D2D2D)
+                        viewModel.wordMarkerColor = Color(0xDDAC95E1)
+                        viewModel.verseMarkerColor = Color(0xFF95F198)
+                        viewModel.isDictionaryMode = true
+                        viewModel.isLazyReader = true
+                        viewModel.isStudyMode = true
+
+                        showResetConfirmDialog = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Reset All")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetConfirmDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
 
     if (showVersionInfoDialog && selectedVersionInfo != null) {
         VersionInfoDialog(
