@@ -1915,8 +1915,9 @@ fun ChapterView(
 
                             val currentMarkerColor by rememberUpdatedState(markerColor)
                             val wordHighlightsForVerse = groupedHighlights[verse.verseNumber] ?: emptyList()
+                            val highlightsHash = wordHighlightsForVerse.hashCode()
 
-                            key("verse_${verse.verseNumber}_${isPersistentHighlighted}_${isBookmarked}_${isNote}") {
+                            key("verse_${verse.verseNumber}_${isPersistentHighlighted}_${isBookmarked}_${isNote}_$highlightsHash") {
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
