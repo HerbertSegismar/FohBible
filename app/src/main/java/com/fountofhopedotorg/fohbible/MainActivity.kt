@@ -178,7 +178,7 @@ private val DARK_MODAL_BG_COLOR_KEY = intPreferencesKey("dark_modal_bg_color")
 private val SELECTED_DICTIONARY_KEY = stringPreferencesKey("selected_dictionary")
 private val SELECTED_VERSE_COMMENTARY_KEY = stringPreferencesKey("selected_verse_commentary")
 private val SELECTED_CROSS_REFERENCE_DB_KEY = stringPreferencesKey("selected_cross_ref_db")
-
+private val PREDEFINED_HIGHLIGHT_COLORS_KEY = stringPreferencesKey("predefined_highlight_colors")
 val ComponentActivity.appDataStore: DataStore<Preferences> by preferencesDataStore(name = "app_preferences")
 
 class MainActivity : ComponentActivity() {
@@ -245,6 +245,19 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
             chapter = prefs[SECONDARY_CHAPTER_KEY] ?: 1,
             verse = prefs[SECONDARY_VERSE_KEY] ?: 1
         )
+        val savedHighlightColors = prefs[PREDEFINED_HIGHLIGHT_COLORS_KEY]
+        viewModel.predefinedHighlightColors.clear()
+        if (!savedHighlightColors.isNullOrBlank()) {
+            savedHighlightColors.split(",").forEach { argbStr ->
+                try {
+                    val argb = argbStr.toInt()
+                    viewModel.predefinedHighlightColors.add(Color(argb))
+                } catch (_: Exception) { }
+            }
+        }
+        if (viewModel.predefinedHighlightColors.isEmpty()) {
+            viewModel.resetHighlightColorsToDefault()
+        }
     }
 
     LaunchedEffect(Unit) { snapshotFlow { viewModel.fontSize }.collectLatest { dataStore.edit { prefs -> prefs[FONT_SIZE_KEY] = it } } }
@@ -308,6 +321,15 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     LaunchedEffect(Unit) {
         snapshotFlow { viewModel.wordMarkerColor.toArgb() }
             .collectLatest { dataStore.edit { prefs -> prefs[MARKER_COLOR_KEY] = it } }
+    }
+    LaunchedEffect(Unit) {
+        snapshotFlow { viewModel.predefinedHighlightColors.toList() }
+            .collectLatest { colors ->
+                dataStore.edit { prefs ->
+                    val argbString = colors.joinToString(",") { it.toArgb().toString() }
+                    prefs[PREDEFINED_HIGHLIGHT_COLORS_KEY] = argbString
+                }
+            }
     }
 
     LaunchedEffect(Unit) {

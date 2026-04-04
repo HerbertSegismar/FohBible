@@ -105,6 +105,8 @@ fun SettingsScreen() {
     var showWordMarkerColorWheel by remember { mutableStateOf(false) }
     var showVerseMarkerColorWheel by remember { mutableStateOf(false) }
     var showResetConfirmDialog by remember { mutableStateOf(false) }
+    var showHighlightColorWheel by remember { mutableStateOf(false) }
+    var showResetHighlightColorsDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(viewModel.isCustomColor, viewModel.customColor) {
         isUsingCustomColor = viewModel.isCustomColor
@@ -432,6 +434,7 @@ fun SettingsScreen() {
                                 .clickable { showWordMarkerColorWheel = true }
                         )
                     }
+
                     SettingsItem(
                         title = "Dictionary Mode",
                         subtitle = "Toggle between dictionary or highlight mode on word tap"
@@ -472,6 +475,44 @@ fun SettingsScreen() {
                             checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                         )
                     )
+                }
+            }
+        }
+
+        item {
+            SettingsSection(
+                title = "Highlight Colors",
+                subtitle = "Tap to edit colors"
+            ) {
+                Column {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            for (i in 0..5) {
+                                HighlightColorSquare(
+                                    color = viewModel.predefinedHighlightColors.getOrElse(i) { Color.White },
+                                    onClick = {
+                                        viewModel.editingHighlightColorIndex = i
+                                        viewModel.showHighlightColorEditor = true
+                                        showHighlightColorWheel = true
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextButton(
+                        onClick = { showResetHighlightColorsDialog = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Reset to Default Highlight Colors")
+                    }
                 }
             }
         }
@@ -569,6 +610,62 @@ fun SettingsScreen() {
         }
     }
 
+    if (showResetHighlightColorsDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetHighlightColorsDialog = false },
+            title = {
+                Text(
+                    "Reset Highlight Colors",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+            },
+            text = {
+                Text("This will reset all highlight colors to their default values. Continue?")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.resetHighlightColorsToDefault()
+                        showResetHighlightColorsDialog = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Reset")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetHighlightColorsDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showHighlightColorWheel) {
+        ColorWheelDialog(
+            onDismissRequest = {
+                showHighlightColorWheel = false
+                viewModel.showHighlightColorEditor = false
+                viewModel.editingHighlightColorIndex = -1
+            },
+            onColorSelected = { color ->
+                if (viewModel.editingHighlightColorIndex != -1) {
+                    // Update the color at the edited index
+                    viewModel.updateHighlightColor(viewModel.editingHighlightColorIndex, color)
+                    viewModel.showHighlightColorEditor = false
+                    viewModel.editingHighlightColorIndex = -1
+                }
+                showHighlightColorWheel = false
+            },
+            initialColor = if (viewModel.editingHighlightColorIndex != -1) {
+                viewModel.predefinedHighlightColors.getOrNull(viewModel.editingHighlightColorIndex) ?: Color.White
+            } else {
+                Color.White
+            }
+        )
+    }
+
     if (showResetConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showResetConfirmDialog = false },
@@ -622,6 +719,7 @@ fun SettingsScreen() {
                         viewModel.isDictionaryMode = true
                         viewModel.isLazyReader = true
                         viewModel.isStudyMode = true
+                        viewModel.resetHighlightColorsToDefault()
 
                         showResetConfirmDialog = false
                     },
@@ -637,7 +735,6 @@ fun SettingsScreen() {
             }
         )
     }
-
 
     if (showVersionInfoDialog && selectedVersionInfo != null) {
         VersionInfoDialog(
@@ -711,6 +808,7 @@ fun SettingsScreen() {
             initialColor = viewModel.darkOverlayColor
         )
     }
+
     if (showWordMarkerColorWheel) {
         ColorWheelDialog(
             onDismissRequest = { showWordMarkerColorWheel = false },
@@ -721,6 +819,7 @@ fun SettingsScreen() {
             initialColor = viewModel.wordMarkerColor
         )
     }
+
     if (showVerseMarkerColorWheel) {
         ColorWheelDialog(
             onDismissRequest = { showVerseMarkerColorWheel = false },
@@ -860,6 +959,7 @@ fun SettingsScreen() {
             }
         )
     }
+
     if (showAboutDialog) {
         AboutDialog(onDismiss = { showAboutDialog = false })
     }
@@ -1237,6 +1337,34 @@ fun BgModal(
         }
     }
 }
+
+@Composable
+fun HighlightColorSquare(
+    color: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
+            .clickable { onClick() }
+            .padding(4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(40.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(color)
+                .border(
+                    2.dp,
+                    if (color == Color.White) MaterialTheme.colorScheme.outline else color,
+                    RoundedCornerShape(10.dp)
+                )
+        )
+    }
+}
+
 @Composable
 fun AboutDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current

@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.scrollBy
@@ -25,6 +26,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
@@ -107,6 +109,7 @@ import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import com.fountofhopedotorg.fohbible.utils.getFontFamily
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -240,7 +243,18 @@ fun ReaderScreen(
         scheduleFade()
     }
 
-    // Database helpers (created once and reused)
+    var isWordHighlightMode by remember { mutableStateOf(false) }
+    var highlightJob by remember { mutableStateOf<Job?>(null) }
+
+    fun activateWordHighlightMode() {
+        isWordHighlightMode = true
+        highlightJob?.cancel()
+        highlightJob = scope.launch {
+            delay(5000L)
+            isWordHighlightMode = false
+        }
+    }
+
     var dictionaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var strongDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var commentaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
@@ -400,7 +414,8 @@ fun ReaderScreen(
                 crossRefHelper = crossRefHelper,
                 refreshKey = refreshKey,
                 onVerseCommentaryClick = onVerseCommentaryClick,
-                markerColor = viewModel.wordMarkerColor
+                markerColor = viewModel.wordMarkerColor,
+                onWordHighlightAction = { activateWordHighlightMode() }
             )
         } else if (synced) {
             SyncedMultiVersionReader(
@@ -430,7 +445,8 @@ fun ReaderScreen(
                 crossRefHelper = crossRefHelper,
                 refreshKey = refreshKey,
                 onVerseCommentaryClick = onVerseCommentaryClick,
-                markerColor = viewModel.wordMarkerColor
+                markerColor = viewModel.wordMarkerColor,
+                onWordHighlightAction = { activateWordHighlightMode() }
             )
         } else {
             IndependentMultiVersionReader(
@@ -465,184 +481,222 @@ fun ReaderScreen(
                 crossRefHelper = crossRefHelper,
                 refreshKey = refreshKey,
                 onVerseCommentaryClick = onVerseCommentaryClick,
-                markerColor = viewModel.wordMarkerColor
+                markerColor = viewModel.wordMarkerColor,
+                onWordHighlightAction = { activateWordHighlightMode() }
             )
         }
+        val fabModifier = Modifier
+            .align(Alignment.BottomCenter)
+            .padding(bottom = 8.dp)
 
-        FloatingActionButton(
-            onClick = {
-                viewModel.isReaderFullScreen = !viewModel.isReaderFullScreen
-                isButtonVisible = true
-                scheduleFade()
-            },
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 8.dp)
-                .size(50.dp)
-                .alpha(buttonAlpha),
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = Color.White
-        ) {
-            Icon(
-                imageVector = if (viewModel.isReaderFullScreen) Icons.Filled.FullscreenExit else Icons.Filled.Fullscreen,
-                contentDescription = if (viewModel.isReaderFullScreen) "Exit Fullscreen" else "Enter Fullscreen"
-            )
-        }
-
-        DropdownMenu(
-            expanded = showMenu,
-            onDismissRequest = { showMenu = false },
-            modifier = Modifier.align(Alignment.TopEnd),
-            containerColor = if (viewModel.darkTheme) viewModel.darkModalBackgroundColor else viewModel.lightModalBackgroundColor
-        ) {
-            DropdownMenuItem(
-                text = { Text("Background Texture") },
-                onClick = { showBgModal = true; showMenu = false }
-            )
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("Overlay Opacity")
-                Slider(
-                    value = viewModel.overlayOpacity,
-                    onValueChange = { viewModel.overlayOpacity = it },
-                    valueRange = 0f..1f
+        if (isWordHighlightMode) {
+            Row(
+                modifier = fabModifier
+                    .background(
+                        themeColors.primary.copy(alpha = 0.1f),
+                        RoundedCornerShape(50)
+                    )
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                viewModel.predefinedHighlightColors.forEach { color ->
+                    val isSelected = color == viewModel.wordMarkerColor
+                    Box(
+                        modifier = Modifier
+                            .size(30.dp)
+                            .clickable {
+                                viewModel.wordMarkerColor = color
+                                activateWordHighlightMode()
+                            }
+                            .background(color, CircleShape)
+                            .then(
+                                if (isSelected) {
+                                    Modifier.border(3.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                                } else Modifier
+                            )
+                    )
+                }
+            }
+        } else {
+            FloatingActionButton(
+                onClick = {
+                    viewModel.isReaderFullScreen = !viewModel.isReaderFullScreen
+                    isButtonVisible = true
+                    scheduleFade()
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 8.dp)
+                    .size(50.dp)
+                    .alpha(buttonAlpha),
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = Color.White
+            ) {
+                Icon(
+                    imageVector = if (viewModel.isReaderFullScreen) Icons.Filled.FullscreenExit else Icons.Filled.Fullscreen,
+                    contentDescription = if (viewModel.isReaderFullScreen) "Exit Fullscreen" else "Enter Fullscreen"
                 )
             }
-        }
 
-        if (showBgModal) {
-            BgModal(
-                currentIndex = viewModel.bgImageIndex,
-                customUri = viewModel.customTextureUri,
-                onSelect = { index ->
-                    viewModel.bgImageIndex = index
-                    showBgModal = false
+            DropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false },
+                modifier = Modifier.align(Alignment.TopEnd),
+                containerColor = if (viewModel.darkTheme) viewModel.darkModalBackgroundColor else viewModel.lightModalBackgroundColor
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Background Texture") },
+                    onClick = { showBgModal = true; showMenu = false }
+                )
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Overlay Opacity")
+                    Slider(
+                        value = viewModel.overlayOpacity,
+                        onValueChange = { viewModel.overlayOpacity = it },
+                        valueRange = 0f..1f
+                    )
+                }
+            }
+
+            if (showBgModal) {
+                BgModal(
+                    currentIndex = viewModel.bgImageIndex,
+                    customUri = viewModel.customTextureUri,
+                    onSelect = { index ->
+                        viewModel.bgImageIndex = index
+                        showBgModal = false
+                    },
+                    onDismiss = { showBgModal = false },
+                    onPickCustom = { imagePickerLauncher.launch("image/*") },
+                    onRemoveCustom = { viewModel.customTextureUri = null }
+                )
+            }
+
+            InteractiveModal(
+                show = showWordModal,
+                onDismiss = { showWordModal = false },
+                onNavigateToReader = { p ->
+                    viewModel.primaryPassage = p
+                    viewModel.navigateTo(Screen.Reader(p))
                 },
-                onDismiss = { showBgModal = false },
-                onPickCustom = { imagePickerLauncher.launch("image/*") },
-                onRemoveCustom = { viewModel.customTextureUri = null }
+                databaseHelper = wordDb,
+                initialType = "definition",
+                word = currentWord,
+                definition = wordDefinition,
+                isOldTestament = currentModalIsOldTestament
             )
-        }
 
-        InteractiveModal(
-            show = showWordModal,
-            onDismiss = { showWordModal = false },
-            onNavigateToReader = { p ->
-                viewModel.primaryPassage = p
-                viewModel.navigateTo(Screen.Reader(p))
-            },
-            databaseHelper = wordDb,
-            initialType = "definition",
-            word = currentWord,
-            definition = wordDefinition,
-            isOldTestament = currentModalIsOldTestament
-        )
+            InteractiveModal(
+                show = showStrongsModal,
+                onDismiss = { showStrongsModal = false },
+                onNavigateToReader = { p ->
+                    viewModel.primaryPassage = p
+                    viewModel.navigateTo(Screen.Reader(p))
+                },
+                databaseHelper = strongDb,
+                initialType = "strong",
+                strongNumber = currentStrongNumber,
+                strongDefinition = strongDefinition,
+                isOldTestament = currentModalIsOldTestament
+            )
 
-        InteractiveModal(
-            show = showStrongsModal,
-            onDismiss = { showStrongsModal = false },
-            onNavigateToReader = { p ->
-                viewModel.primaryPassage = p
-                viewModel.navigateTo(Screen.Reader(p))
-            },
-            databaseHelper = strongDb,
-            initialType = "strong",
-            strongNumber = currentStrongNumber,
-            strongDefinition = strongDefinition,
-            isOldTestament = currentModalIsOldTestament
-        )
+            InteractiveModal(
+                show = showCommentaryModal,
+                onDismiss = { showCommentaryModal = false },
+                onNavigateToReader = { p ->
+                    viewModel.primaryPassage = p
+                    viewModel.navigateTo(Screen.Reader(p))
+                },
+                databaseHelper = commentaryBibleDb,
+                initialType = "commentary",
+                initialTitle = commentaryTitle,
+                initialContent = commentaryContent,
+                isOldTestament = currentModalIsOldTestament
+            )
 
-        InteractiveModal(
-            show = showCommentaryModal,
-            onDismiss = { showCommentaryModal = false },
-            onNavigateToReader = { p ->
-                viewModel.primaryPassage = p
-                viewModel.navigateTo(Screen.Reader(p))
-            },
-            databaseHelper = commentaryBibleDb,
-            initialType = "commentary",
-            initialTitle = commentaryTitle,
-            initialContent = commentaryContent,
-            isOldTestament = currentModalIsOldTestament
-        )
+            InteractiveModal(
+                show = showCrossRefModal,
+                onDismiss = { showCrossRefModal = false },
+                onNavigateToReader = { p ->
+                    viewModel.primaryPassage = p
+                    viewModel.navigateTo(Screen.Reader(p))
+                },
+                databaseHelper = crossRefBibleDb,
+                initialType = "crossreference",
+                initialTitle = crossRefSource,
+                initialContent = crossRefContent,
+                bookNumber = crossRefBook,
+                chapter = crossRefChapter,
+                verse = crossRefVerse,
+                isOldTestament = currentModalIsOldTestament
+            )
 
-        InteractiveModal(
-            show = showCrossRefModal,
-            onDismiss = { showCrossRefModal = false },
-            onNavigateToReader = { p ->
-                viewModel.primaryPassage = p
-                viewModel.navigateTo(Screen.Reader(p))
-            },
-            databaseHelper = crossRefBibleDb,
-            initialType = "crossreference",
-            initialTitle = crossRefSource,
-            initialContent = crossRefContent,
-            bookNumber = crossRefBook,
-            chapter = crossRefChapter,
-            verse = crossRefVerse,
-            isOldTestament = currentModalIsOldTestament
-        )
+            InteractiveModal(
+                show = showVerseCommentaryModal,
+                onDismiss = { showVerseCommentaryModal = false },
+                onNavigateToReader = { p ->
+                    viewModel.primaryPassage = p
+                    viewModel.navigateTo(Screen.Reader(p))
+                },
+                databaseHelper = databaseHelper,
+                initialType = "versecommentary",
+                bookNumber = verseCommentaryBook,
+                chapter = verseCommentaryChapter,
+                verse = verseCommentaryVerse,
+                isOldTestament = currentModalIsOldTestament
+            )
 
-        InteractiveModal(
-            show = showVerseCommentaryModal,
-            onDismiss = { showVerseCommentaryModal = false },
-            onNavigateToReader = { p ->
-                viewModel.primaryPassage = p
-                viewModel.navigateTo(Screen.Reader(p))
-            },
-            databaseHelper = databaseHelper,
-            initialType = "versecommentary",
-            bookNumber = verseCommentaryBook,
-            chapter = verseCommentaryChapter,
-            verse = verseCommentaryVerse,
-            isOldTestament = currentModalIsOldTestament
-        )
+            val selVerse = selectedVerse
+            val selPassage = selectedPassage
+            val selIsPrimary = selectedIsPrimary
+            if (showVerseOptions && selVerse != null && selPassage != null) {
+                val db = if (selIsPrimary) databaseHelper else secondaryDatabaseHelper
+                val loadedVerses = if (selIsPrimary) primaryLoadedVerses else secondaryLoadedVerses
+                val key = selPassage.bookNumber to selPassage.chapter
+                val content = loadedVerses[key] ?: emptyList()
+                val chapterVerses =
+                    content.filterIsInstance<VerseContent.VerseVal>().map { it.verse }
 
-        val selVerse = selectedVerse
-        val selPassage = selectedPassage
-        val selIsPrimary = selectedIsPrimary
-        if (showVerseOptions && selVerse != null && selPassage != null) {
-            val db = if (selIsPrimary) databaseHelper else secondaryDatabaseHelper
-            val loadedVerses = if (selIsPrimary) primaryLoadedVerses else secondaryLoadedVerses
-            val key = selPassage.bookNumber to selPassage.chapter
-            val content = loadedVerses[key] ?: emptyList()
-            val chapterVerses = content.filterIsInstance<VerseContent.VerseVal>().map { it.verse }
-
-            VerseOptionsModal(
-                show = showVerseOptions,
-                onDismiss = { showVerseOptions = false },
-                passage = selPassage,
-                verse = selVerse,
-                chapterVerses = chapterVerses,
-                databaseHelper = db,
-                onAddBookmark = { refreshKey++ },
-                onAddHighlight = { refreshKey++ },
-                onShare = { selectedVerses ->
-                    val verseNumbers = selectedVerses.map { it.verseNumber }
-                    val minV = verseNumbers.minOrNull() ?: selVerse.verseNumber
-                    val maxV = verseNumbers.maxOrNull() ?: selVerse.verseNumber
-                    val rangeString = if (minV == maxV) "$minV" else "$minV-$maxV"
-                    val contextLine = "${selPassage.bookName} ${selPassage.chapter}:$rangeString"
-                    val shareText = buildString {
-                        appendLine(contextLine)
-                        selectedVerses.forEach {
-                            appendLine("${it.verseNumber} ${SimpleVerseProcessor.stripXmlTags(it.text)}")
+                VerseOptionsModal(
+                    show = showVerseOptions,
+                    onDismiss = { showVerseOptions = false },
+                    passage = selPassage,
+                    verse = selVerse,
+                    chapterVerses = chapterVerses,
+                    databaseHelper = db,
+                    onAddBookmark = { refreshKey++ },
+                    onAddHighlight = { refreshKey++ },
+                    onShare = { selectedVerses ->
+                        val verseNumbers = selectedVerses.map { it.verseNumber }
+                        val minV = verseNumbers.minOrNull() ?: selVerse.verseNumber
+                        val maxV = verseNumbers.maxOrNull() ?: selVerse.verseNumber
+                        val rangeString = if (minV == maxV) "$minV" else "$minV-$maxV"
+                        val contextLine =
+                            "${selPassage.bookName} ${selPassage.chapter}:$rangeString"
+                        val shareText = buildString {
+                            appendLine(contextLine)
+                            selectedVerses.forEach {
+                                appendLine("${it.verseNumber} ${SimpleVerseProcessor.stripXmlTags(it.text)}")
+                            }
+                        }.trimEnd()
+                        val shareIntent = Intent().apply {
+                            action = Intent.ACTION_SEND
+                            putExtra(Intent.EXTRA_TEXT, shareText)
+                            type = "text/plain"
                         }
-                    }.trimEnd()
-                    val shareIntent = Intent().apply {
-                        action = Intent.ACTION_SEND
-                        putExtra(Intent.EXTRA_TEXT, shareText)
-                        type = "text/plain"
-                    }
-                    val chooserTitle = if (selectedVerses.size == 1) "Share verse" else "Share verses"
-                    contextFont.startActivity(Intent.createChooser(shareIntent, chooserTitle))
-                },
-                onAddNote = { verses ->
-                    selectedVersesForNote = verses
-                    showNotesModal = true
-                    showVerseOptions = false
-                },
-                appViewModel = viewModel
-            )
+                        val chooserTitle =
+                            if (selectedVerses.size == 1) "Share verse" else "Share verses"
+                        contextFont.startActivity(Intent.createChooser(shareIntent, chooserTitle))
+                    },
+                    onAddNote = { verses ->
+                        selectedVersesForNote = verses
+                        showNotesModal = true
+                        showVerseOptions = false
+                    },
+                    appViewModel = viewModel
+                )
+            }
         }
 
         NotesModal(
@@ -677,7 +731,8 @@ private fun SingleVersionReader(
     crossRefHelper: DatabaseHelper?,
     refreshKey: Int,
     onVerseCommentaryClick: (Int, Int, Int) -> Unit,
-    markerColor: Color
+    markerColor: Color,
+    onWordHighlightAction: (() -> Unit)? = null
 ) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -827,7 +882,8 @@ private fun SingleVersionReader(
                     onCrossRefClick = onCrossRefClick,
                     refreshKey = refreshKey,
                     onVerseCommentaryClick = onVerseCommentaryClick,
-                    markerColor = markerColor
+                    markerColor = markerColor,
+                    onWordHighlightAction = onWordHighlightAction
                 )
             }
         }
@@ -856,7 +912,8 @@ private fun SyncedMultiVersionReader(
     crossRefHelper: DatabaseHelper?,
     refreshKey: Int,
     onVerseCommentaryClick: (Int, Int, Int) -> Unit,
-    markerColor: Color
+    markerColor: Color,
+    onWordHighlightAction: (() -> Unit)? = null
 ) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -1077,7 +1134,8 @@ private fun SyncedMultiVersionReader(
                             onCrossRefClick = onCrossRefClick,
                             refreshKey = refreshKey,
                             onVerseCommentaryClick = onVerseCommentaryClick,
-                            markerColor = markerColor
+                            markerColor = markerColor,
+                            onWordHighlightAction = onWordHighlightAction
                         )
                         ChapterView(
                             passage = thisPassage,
@@ -1108,7 +1166,8 @@ private fun SyncedMultiVersionReader(
                             onCrossRefClick = onCrossRefClick,
                             refreshKey = refreshKey,
                             onVerseCommentaryClick = onVerseCommentaryClick,
-                            markerColor = markerColor
+                            markerColor = markerColor,
+                            onWordHighlightAction = onWordHighlightAction
                         )
                     }
                 } else {
@@ -1142,7 +1201,8 @@ private fun SyncedMultiVersionReader(
                             onCrossRefClick = onCrossRefClick,
                             refreshKey = refreshKey,
                             onVerseCommentaryClick = onVerseCommentaryClick,
-                            markerColor = markerColor
+                            markerColor = markerColor,
+                            onWordHighlightAction = onWordHighlightAction
                         )
                         ChapterView(
                             passage = thisPassage,
@@ -1173,7 +1233,8 @@ private fun SyncedMultiVersionReader(
                             onCrossRefClick = onCrossRefClick,
                             refreshKey = refreshKey,
                             onVerseCommentaryClick = onVerseCommentaryClick,
-                            markerColor = markerColor
+                            markerColor = markerColor,
+                            onWordHighlightAction = onWordHighlightAction
                         )
                     }
                 }
@@ -1207,7 +1268,8 @@ private fun IndependentMultiVersionReader(
     crossRefHelper: DatabaseHelper?,
     refreshKey: Int,
     onVerseCommentaryClick: (Int, Int, Int) -> Unit,
-    markerColor: Color
+    markerColor: Color,
+    onWordHighlightAction: (() -> Unit)? = null
 ) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -1463,7 +1525,8 @@ private fun IndependentMultiVersionReader(
                             onCrossRefClick = onCrossRefClick,
                             refreshKey = refreshKey,
                             onVerseCommentaryClick = onVerseCommentaryClick,
-                            markerColor = markerColor
+                            markerColor = markerColor,
+                            onWordHighlightAction = onWordHighlightAction
                         )
                     }
                 }
@@ -1508,7 +1571,8 @@ private fun IndependentMultiVersionReader(
                             onCrossRefClick = onCrossRefClick,
                             refreshKey = refreshKey,
                             onVerseCommentaryClick = onVerseCommentaryClick,
-                            markerColor = markerColor
+                            markerColor = markerColor,
+                            onWordHighlightAction = onWordHighlightAction
                         )
                     }
                 }
@@ -1555,7 +1619,8 @@ private fun IndependentMultiVersionReader(
                             onCrossRefClick = onCrossRefClick,
                             refreshKey = refreshKey,
                             onVerseCommentaryClick = onVerseCommentaryClick,
-                            markerColor = markerColor
+                            markerColor = markerColor,
+                            onWordHighlightAction = onWordHighlightAction
                         )
                     }
                 }
@@ -1600,7 +1665,8 @@ private fun IndependentMultiVersionReader(
                             onCrossRefClick = onCrossRefClick,
                             refreshKey = refreshKey,
                             onVerseCommentaryClick = onVerseCommentaryClick,
-                            markerColor = markerColor
+                            markerColor = markerColor,
+                            onWordHighlightAction = onWordHighlightAction
                         )
                     }
                 }
@@ -1646,7 +1712,8 @@ fun ChapterView(
     onCrossRefClick: ((Int, Int, Int, Boolean) -> Unit)? = null,
     refreshKey: Int = 0,
     onVerseCommentaryClick: ((Int, Int, Int) -> Unit)? = null,
-    markerColor: Color
+    markerColor: Color,
+    onWordHighlightAction: (() -> Unit)? = null
 ) {
     val isOldTestamentForThisVersion = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
 
@@ -2113,6 +2180,7 @@ fun ChapterView(
                                                                             )
                                                                         }
                                                                     }
+                                                                    onWordHighlightAction?.invoke()
                                                                 }
                                                             } else {
                                                                 annotations.forEach { annotation ->

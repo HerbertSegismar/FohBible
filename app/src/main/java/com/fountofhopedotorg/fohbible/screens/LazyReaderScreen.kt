@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -26,6 +27,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
@@ -105,6 +107,7 @@ import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import com.fountofhopedotorg.fohbible.utils.getFontFamily
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -223,6 +226,18 @@ fun LazyReaderScreen(
     var isButtonVisible by remember { mutableStateOf(true) }
     val buttonAlpha by animateFloatAsState(if (isButtonVisible) 1f else 0.2f, label = "buttonAlpha")
     val scope = rememberCoroutineScope()
+
+    var isWordHighlightMode by remember { mutableStateOf(false) }
+    var highlightJob by remember { mutableStateOf<Job?>(null) }
+
+    fun activateWordHighlightMode() {
+        isWordHighlightMode = true
+        highlightJob?.cancel()
+        highlightJob = scope.launch {
+            delay(5000L)
+            isWordHighlightMode = false
+        }
+    }
 
     fun scheduleFade() {
         scope.launch {
@@ -395,7 +410,8 @@ fun LazyReaderScreen(
                 crossRefHelper = crossRefHelper,
                 refreshKey = refreshKey,
                 onVerseCommentaryClick = onVerseCommentaryClick,
-                markerColor = viewModel.wordMarkerColor
+                markerColor = viewModel.wordMarkerColor,
+                onWordHighlightAction = { activateWordHighlightMode() }
             )
         } else if (synced) {
             SyncedMultiVersionReader(
@@ -425,7 +441,8 @@ fun LazyReaderScreen(
                 crossRefHelper = crossRefHelper,
                 refreshKey = refreshKey,
                 onVerseCommentaryClick = onVerseCommentaryClick,
-                markerColor = viewModel.wordMarkerColor
+                markerColor = viewModel.wordMarkerColor,
+                onWordHighlightAction = { activateWordHighlightMode() }
             )
         } else {
             IndependentMultiVersionReader(
@@ -460,28 +477,66 @@ fun LazyReaderScreen(
                 crossRefHelper = crossRefHelper,
                 refreshKey = refreshKey,
                 onVerseCommentaryClick = onVerseCommentaryClick,
-                markerColor = viewModel.wordMarkerColor
+                markerColor = viewModel.wordMarkerColor,
+                onWordHighlightAction = { activateWordHighlightMode() }
             )
         }
 
-        FloatingActionButton(
-            onClick = {
-                viewModel.isReaderFullScreen = !viewModel.isReaderFullScreen
-                isButtonVisible = true
-                scheduleFade()
-            },
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 8.dp)
-                .size(50.dp)
-                .alpha(buttonAlpha),
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = Color.White
-        ) {
-            Icon(
-                imageVector = if (viewModel.isReaderFullScreen) Icons.Filled.FullscreenExit else Icons.Filled.Fullscreen,
-                contentDescription = if (viewModel.isReaderFullScreen) "Exit Fullscreen" else "Enter Fullscreen"
-            )
+        val fabModifier = Modifier
+            .align(Alignment.BottomCenter)
+            .padding(bottom = 8.dp)
+
+        if (isWordHighlightMode) {
+            Row(
+                modifier = fabModifier
+                    .background(
+                        themeColors.primary.copy(alpha = 0.1f),
+                        RoundedCornerShape(50)
+                    )
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                viewModel.predefinedHighlightColors.forEach { color ->
+                    val isSelected = color == viewModel.wordMarkerColor
+                    Box(
+                        modifier = Modifier
+                            .size(30.dp)
+                            .clickable {
+                                viewModel.wordMarkerColor = color
+                                activateWordHighlightMode()
+                            }
+                            .background(color, CircleShape)
+                            .then(
+                                if (isSelected) {
+                                    Modifier.border(3.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                                } else {
+                                    Modifier
+                                }
+                            )
+                    )
+                }
+            }
+        } else {
+            FloatingActionButton(
+                onClick = {
+                    viewModel.isReaderFullScreen = !viewModel.isReaderFullScreen
+                    isButtonVisible = true
+                    scheduleFade()
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 8.dp)
+                    .size(50.dp)
+                    .alpha(buttonAlpha),
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = Color.White
+            ) {
+                Icon(
+                    imageVector = if (viewModel.isReaderFullScreen) Icons.Filled.FullscreenExit else Icons.Filled.Fullscreen,
+                    contentDescription = if (viewModel.isReaderFullScreen) "Exit Fullscreen" else "Enter Fullscreen"
+                )
+            }
         }
 
         DropdownMenu(
@@ -672,7 +727,8 @@ private fun SingleVersionReader(
     crossRefHelper: DatabaseHelper?,
     refreshKey: Int,
     onVerseCommentaryClick: (Int, Int, Int) -> Unit,
-    markerColor: Color
+    markerColor: Color,
+    onWordHighlightAction: (() -> Unit)? = null
 ) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -822,7 +878,8 @@ private fun SingleVersionReader(
                     onCrossRefClick = onCrossRefClick,
                     refreshKey = refreshKey,
                     onVerseCommentaryClick = onVerseCommentaryClick,
-                    markerColor = markerColor
+                    markerColor = markerColor,
+                    onWordHighlightAction = onWordHighlightAction
                 )
             }
         }
@@ -851,7 +908,8 @@ private fun SyncedMultiVersionReader(
     crossRefHelper: DatabaseHelper?,
     refreshKey: Int,
     onVerseCommentaryClick: (Int, Int, Int) -> Unit,
-    markerColor: Color
+    markerColor: Color,
+    onWordHighlightAction: (() -> Unit)? = null
 ) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -1070,7 +1128,8 @@ private fun SyncedMultiVersionReader(
                             onCrossRefClick = onCrossRefClick,
                             refreshKey = refreshKey,
                             onVerseCommentaryClick = onVerseCommentaryClick,
-                            markerColor = markerColor
+                            markerColor = markerColor,
+                            onWordHighlightAction = onWordHighlightAction
                         )
                         ChapterView(
                             passage = thisPassage,
@@ -1101,7 +1160,8 @@ private fun SyncedMultiVersionReader(
                             onCrossRefClick = onCrossRefClick,
                             refreshKey = refreshKey,
                             onVerseCommentaryClick = onVerseCommentaryClick,
-                            markerColor = markerColor
+                            markerColor = markerColor,
+                            onWordHighlightAction = onWordHighlightAction
                         )
                     }
                 } else {
@@ -1135,7 +1195,8 @@ private fun SyncedMultiVersionReader(
                             onCrossRefClick = onCrossRefClick,
                             refreshKey = refreshKey,
                             onVerseCommentaryClick = onVerseCommentaryClick,
-                            markerColor = markerColor
+                            markerColor = markerColor,
+                            onWordHighlightAction = onWordHighlightAction
                         )
                         ChapterView(
                             passage = thisPassage,
@@ -1166,7 +1227,8 @@ private fun SyncedMultiVersionReader(
                             onCrossRefClick = onCrossRefClick,
                             refreshKey = refreshKey,
                             onVerseCommentaryClick = onVerseCommentaryClick,
-                            markerColor = markerColor
+                            markerColor = markerColor,
+                            onWordHighlightAction = onWordHighlightAction
                         )
                     }
                 }
@@ -1200,7 +1262,8 @@ private fun IndependentMultiVersionReader(
     crossRefHelper: DatabaseHelper?,
     refreshKey: Int,
     onVerseCommentaryClick: (Int, Int, Int) -> Unit,
-    markerColor: Color
+    markerColor: Color,
+    onWordHighlightAction: (() -> Unit)? = null
 ) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -1457,7 +1520,8 @@ private fun IndependentMultiVersionReader(
                             onCrossRefClick = onCrossRefClick,
                             refreshKey = refreshKey,
                             onVerseCommentaryClick = onVerseCommentaryClick,
-                            markerColor = markerColor
+                            markerColor = markerColor,
+                            onWordHighlightAction = onWordHighlightAction
                         )
                     }
                 }
@@ -1502,7 +1566,8 @@ private fun IndependentMultiVersionReader(
                             onCrossRefClick = onCrossRefClick,
                             refreshKey = refreshKey,
                             onVerseCommentaryClick = onVerseCommentaryClick,
-                            markerColor = markerColor
+                            markerColor = markerColor,
+                            onWordHighlightAction = onWordHighlightAction
                         )
                     }
                 }
@@ -1549,7 +1614,8 @@ private fun IndependentMultiVersionReader(
                             onCrossRefClick = onCrossRefClick,
                             refreshKey = refreshKey,
                             onVerseCommentaryClick = onVerseCommentaryClick,
-                            markerColor = markerColor
+                            markerColor = markerColor,
+                            onWordHighlightAction = onWordHighlightAction
                         )
                     }
                 }
@@ -1594,7 +1660,8 @@ private fun IndependentMultiVersionReader(
                             onCrossRefClick = onCrossRefClick,
                             refreshKey = refreshKey,
                             onVerseCommentaryClick = onVerseCommentaryClick,
-                            markerColor = markerColor
+                            markerColor = markerColor,
+                            onWordHighlightAction = onWordHighlightAction
                         )
                     }
                 }
@@ -1640,7 +1707,8 @@ fun ChapterView(
     onCrossRefClick: ((Int, Int, Int, Boolean) -> Unit)? = null,
     refreshKey: Int = 0,
     onVerseCommentaryClick: ((Int, Int, Int) -> Unit)? = null,
-    markerColor: Color
+    markerColor: Color,
+    onWordHighlightAction: (() -> Unit)? = null
 ) {
     val isOldTestamentForThisVersion = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
 
@@ -2098,6 +2166,7 @@ fun ChapterView(
                                                                                 currentMarkerColor.toArgb()
                                                                             )
                                                                         }
+                                                                        onWordHighlightAction?.invoke()
                                                                     }
                                                                 }
                                                             } else {

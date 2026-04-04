@@ -23,6 +23,22 @@ import java.io.IOException
 
 class AppViewModel : ViewModel() {
 
+    val predefinedHighlightColors = mutableStateListOf<Color>().apply {
+        addAll(
+            listOf(
+                Color(0xFFFBEE4E),
+                Color(0xFF6EEB7E),
+                Color(0xFF4EC7EB),
+                Color(0xFF4E7BEB),
+                Color(0xFFAF4EEB),
+                Color(0xFFEB4E9E)
+            )
+        )
+    }
+
+    var editingHighlightColorIndex by mutableIntStateOf(-1)
+    var showHighlightColorEditor by mutableStateOf(false)
+
     var isStudyMode by mutableStateOf(true)
     var isLazyReader by mutableStateOf(true)
     var wordMarkerColor by mutableStateOf(Color(0xDDAC95E1))
@@ -80,6 +96,26 @@ class AppViewModel : ViewModel() {
     var lastRefreshSuccess by mutableStateOf(false)
 
     var showReaderOverlayColorWheel by mutableStateOf(false)
+
+    fun updateHighlightColor(index: Int, newColor: Color) {
+        if (index in predefinedHighlightColors.indices) {
+            predefinedHighlightColors[index] = newColor
+        }
+    }
+
+    fun resetHighlightColorsToDefault() {
+        predefinedHighlightColors.clear()
+        predefinedHighlightColors.addAll(
+            listOf(
+                Color(0xFFFBEE4E),  // Yellow
+                Color(0xFF6EEB7E),  // Green
+                Color(0xFF4EC7EB),  // Blue
+                Color(0xFF4E7BEB),  // Darker Blue
+                Color(0xFFAF4EEB),  // Purple
+                Color(0xFFEB4E9E)   // Pink
+            )
+        )
+    }
 
     fun refreshDatabases(context: Context) {
         isRefreshingDatabases = true
