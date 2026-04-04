@@ -481,7 +481,7 @@ fun SettingsScreen() {
 
         item {
             SettingsSection(
-                title = "Highlight Colors",
+                title = "Word Marker Colors",
                 subtitle = "Tap to edit colors"
             ) {
                 Column {
@@ -511,7 +511,7 @@ fun SettingsScreen() {
                         onClick = { showResetHighlightColorsDialog = true },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Reset to Default Highlight Colors")
+                        Text("Reset to Default Colors")
                     }
                 }
             }

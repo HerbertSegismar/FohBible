@@ -107,12 +107,12 @@ class AppViewModel : ViewModel() {
         predefinedHighlightColors.clear()
         predefinedHighlightColors.addAll(
             listOf(
-                Color(0xFFFBEE4E),  // Yellow
-                Color(0xFF6EEB7E),  // Green
-                Color(0xFF4EC7EB),  // Blue
-                Color(0xFF4E7BEB),  // Darker Blue
-                Color(0xFFAF4EEB),  // Purple
-                Color(0xFFEB4E9E)   // Pink
+                Color(0xFFFBEE4E),
+                Color(0xFF6EEB7E),
+                Color(0xFF4EC7EB),
+                Color(0xFF4E7BEB),
+                Color(0xFFAF4EEB),
+                Color(0xFFEB4E9E)
             )
         )
     }
