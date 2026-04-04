@@ -621,7 +621,7 @@ fun SettingsScreen() {
                 )
             },
             text = {
-                Text("This will reset all highlight colors to their default values. Continue?")
+                Text("This will reset all marker colors to their default values. Continue?")
             },
             confirmButton = {
                 TextButton(
