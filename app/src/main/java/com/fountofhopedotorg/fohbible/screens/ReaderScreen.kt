@@ -741,12 +741,12 @@ private fun SingleVersionReader(
     }
     val prevPassage by remember(primaryCurrent, currentBook) {
         derivedStateOf {
-            if (currentBook == null) primaryCurrent else getPreviousPassage(primaryCurrent, currentBook)
+            if (currentBook == null) primaryCurrent else getPreviousChapter(primaryCurrent, currentBook)
         }
     }
     val nextPassage by remember(primaryCurrent, currentBook) {
         derivedStateOf {
-            if (currentBook == null) primaryCurrent else getNextPassage(primaryCurrent, currentBook)
+            if (currentBook == null) primaryCurrent else getNextChapter(primaryCurrent, currentBook)
         }
     }
     val hasPrev by remember(prevPassage) { derivedStateOf { prevPassage != primaryCurrent } }
@@ -922,12 +922,12 @@ private fun SyncedMultiVersionReader(
     }
     val prevPassage by remember(primaryCurrent, currentBook) {
         derivedStateOf {
-            if (currentBook == null) primaryCurrent else getPreviousPassage(primaryCurrent, currentBook)
+            if (currentBook == null) primaryCurrent else getPreviousChapter(primaryCurrent, currentBook)
         }
     }
     val nextPassage by remember(primaryCurrent, currentBook) {
         derivedStateOf {
-            if (currentBook == null) primaryCurrent else getNextPassage(primaryCurrent, currentBook)
+            if (currentBook == null) primaryCurrent else getNextChapter(primaryCurrent, currentBook)
         }
     }
     val hasPrev by remember(prevPassage) { derivedStateOf { prevPassage != primaryCurrent } }
@@ -1278,12 +1278,12 @@ private fun IndependentMultiVersionReader(
     }
     val primaryPrev by remember(primaryCurrent, primaryBook) {
         derivedStateOf {
-            if (primaryBook == null) primaryCurrent else getPreviousPassage(primaryCurrent, primaryBook)
+            if (primaryBook == null) primaryCurrent else getPreviousChapter(primaryCurrent, primaryBook)
         }
     }
     val primaryNext by remember(primaryCurrent, primaryBook) {
         derivedStateOf {
-            if (primaryBook == null) primaryCurrent else getNextPassage(primaryCurrent, primaryBook)
+            if (primaryBook == null) primaryCurrent else getNextChapter(primaryCurrent, primaryBook)
         }
     }
     val primaryHasPrev by remember(primaryPrev) { derivedStateOf { primaryPrev != primaryCurrent } }
@@ -1307,12 +1307,12 @@ private fun IndependentMultiVersionReader(
     }
     val secondaryPrev by remember(secondaryCurrent, secondaryBook) {
         derivedStateOf {
-            if (secondaryBook == null) secondaryCurrent else getPreviousPassage(secondaryCurrent, secondaryBook)
+            if (secondaryBook == null) secondaryCurrent else getPreviousChapter(secondaryCurrent, secondaryBook)
         }
     }
     val secondaryNext by remember(secondaryCurrent, secondaryBook) {
         derivedStateOf {
-            if (secondaryBook == null) secondaryCurrent else getNextPassage(secondaryCurrent, secondaryBook)
+            if (secondaryBook == null) secondaryCurrent else getNextChapter(secondaryCurrent, secondaryBook)
         }
     }
     val secondaryHasPrev by remember(secondaryPrev) { derivedStateOf { secondaryPrev != secondaryCurrent } }
@@ -2241,7 +2241,7 @@ fun ChapterView(
         }
     }
 }
-fun getPreviousPassage(current: PassageSelection, currentBook: BibleBook?): PassageSelection {
+fun getPreviousChapter(current: PassageSelection, currentBook: BibleBook?): PassageSelection {
     if (currentBook == null) return current
     if (currentBook.chapters <= 2 && current.chapter == 1) return current
     return if (current.chapter == 1) {
@@ -2251,7 +2251,7 @@ fun getPreviousPassage(current: PassageSelection, currentBook: BibleBook?): Pass
     }
 }
 
-fun getNextPassage(current: PassageSelection, currentBook: BibleBook?): PassageSelection {
+fun getNextChapter(current: PassageSelection, currentBook: BibleBook?): PassageSelection {
     if (currentBook == null) return current
     if (currentBook.chapters <= 2 && current.chapter == currentBook.chapters) return current
     return if (current.chapter == currentBook.chapters) {
