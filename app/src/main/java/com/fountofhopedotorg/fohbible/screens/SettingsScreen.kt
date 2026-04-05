@@ -420,34 +420,32 @@ fun SettingsScreen() {
                             .clickable { showDarkModalColorWheel = true }
                     )
                 }
-                if (viewModel.isStudyMode) {
-                    SettingsItem(
-                        title = "Word Marker Color",
-                        subtitle = "Color for highlighting individual words"
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(30.dp)
-                                .clip(CircleShape)
-                                .background(viewModel.wordMarkerColor)
-                                .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
-                                .clickable { showWordMarkerColorWheel = true }
-                        )
-                    }
+                SettingsItem(
+                    title = "Word Marker Color",
+                    subtitle = "Color for highlighting individual words"
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(30.dp)
+                            .clip(CircleShape)
+                            .background(viewModel.wordMarkerColor)
+                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                            .clickable { showWordMarkerColorWheel = true }
+                    )
+                }
 
-                    SettingsItem(
-                        title = "Dictionary Mode",
-                        subtitle = "Toggle between dictionary or highlight mode on word tap"
-                    ) {
-                        Switch(
-                            checked = viewModel.isDictionaryMode,
-                            onCheckedChange = { viewModel.isDictionaryMode = it },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.primary,
-                                checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                            )
+                SettingsItem(
+                    title = "Dictionary Mode",
+                    subtitle = "Toggle between dictionary or highlight mode on word tap"
+                ) {
+                    Switch(
+                        checked = viewModel.isDictionaryMode,
+                        onCheckedChange = { viewModel.isDictionaryMode = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.primary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                         )
-                    }
+                    )
                 }
 
                 SettingsItem(
@@ -465,7 +463,7 @@ fun SettingsScreen() {
                 }
                 SettingsItem(
                     title = "Study Mode",
-                    subtitle = "Turn this off if you want simple verse rendering mode activated"
+                    subtitle = "Turn this off to remove the extra buttons for cross-references and commentaries at the end of each verse"
                 ) {
                     Switch(
                         checked = viewModel.isStudyMode,
@@ -481,7 +479,7 @@ fun SettingsScreen() {
 
         item {
             SettingsSection(
-                title = "Word Marker Colors",
+                title = "Word Marker Palette Colors",
                 subtitle = "Tap to edit colors"
             ) {
                 Column {

@@ -1719,54 +1719,41 @@ fun ChapterView(
         themeColors,
         isKjvPlus,
         refreshKey,
-        isOldTestamentForThisVersion,
-        viewModel.isStudyMode
+        isOldTestamentForThisVersion
     ) {
         value = withContext(Dispatchers.Default) {
             val result = mutableMapOf<Int, ProcessedVerse>()
-            if (viewModel.isStudyMode) {
-                val processor = VerseTextProcessor()
-                content.forEach { item ->
-                    if (item is VerseContent.VerseVal) {
-                        val verse = item.verse
-                        val fullVerse = verse.copy(bookName = passage.bookName, chapter = passage.chapter)
-                        val isPersistentHighlighted = databaseHelper?.isHighlighted(fullVerse) ?: false
 
-                        val onStrongsLocal: ((String) -> Unit)? = onStrongsPress?.let { callback ->
-                            { strong -> callback(strong, passage.bookNumber, isPrimary) }
-                        }
-                        val onTagLocal: ((String) -> Unit)? = onTagPress?.let { callback ->
-                            { marker -> callback(marker, passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary) }
-                        }
-                        val onWordLocal: ((String) -> Unit)? = onWordPress?.let { callback ->
-                            { word -> callback(word, isPrimary) }
-                        }
+            val processor = VerseTextProcessor()
+            content.forEach { item ->
+                if (item is VerseContent.VerseVal) {
+                    val verse = item.verse
+                    val fullVerse = verse.copy(bookName = passage.bookName, chapter = passage.chapter)
+                    val isPersistentHighlighted = databaseHelper?.isHighlighted(fullVerse) ?: false
 
-                        val processed = processor.processVerse(
-                            verseText = verse.text,
-                            baseFontSize = viewModel.fontSize.sp,
-                            themeColors = themeColors,
-                            textColor = themeColors.textColor,
-                            onTagPress = onTagLocal,
-                            onWordPress = onWordLocal,
-                            onStrongsPress = onStrongsLocal,
-                            isHighlighted = isPersistentHighlighted,
-                            isKjvPlus = isKjvPlus,
-                            isOldTestament = isOldTestamentForThisVersion
-                        )
-                        result[verse.verseNumber] = processed
+                    val onStrongsLocal: ((String) -> Unit)? = onStrongsPress?.let { callback ->
+                        { strong -> callback(strong, passage.bookNumber, isPrimary) }
                     }
-                }
-            } else {
-                content.forEach { item ->
-                    if (item is VerseContent.VerseVal) {
-                        val verse = item.verse
-                        val plainText = SimpleVerseProcessor.stripXmlTags(verse.text)
-                        result[verse.verseNumber] = ProcessedVerse(
-                            header = null,
-                            body = AnnotatedString(plainText)
-                        )
+                    val onTagLocal: ((String) -> Unit)? = onTagPress?.let { callback ->
+                        { marker -> callback(marker, passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary) }
                     }
+                    val onWordLocal: ((String) -> Unit)? = onWordPress?.let { callback ->
+                        { word -> callback(word, isPrimary) }
+                    }
+
+                    val processed = processor.processVerse(
+                        verseText = verse.text,
+                        baseFontSize = viewModel.fontSize.sp,
+                        themeColors = themeColors,
+                        textColor = themeColors.textColor,
+                        onTagPress = onTagLocal,
+                        onWordPress = onWordLocal,
+                        onStrongsPress = onStrongsLocal,
+                        isHighlighted = isPersistentHighlighted,
+                        isKjvPlus = isKjvPlus,
+                        isOldTestament = isOldTestamentForThisVersion
+                    )
+                    result[verse.verseNumber] = processed
                 }
             }
             result
