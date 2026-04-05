@@ -121,7 +121,7 @@ private fun createCommentaryHelperIfExists(
 ): DatabaseHelper? {
     if (baseDbName.isNullOrEmpty()) return null
     val comName = baseDbName.replace(".sqlite3", "com.sqlite3")
-    val assetPath = "databases/ comName"
+    val assetPath = "databases/$comName"
     return try {
         context.assets.open(assetPath).use { }
         DatabaseHelper(context, comName)
@@ -161,12 +161,11 @@ fun ReaderScreen(
     val contextFont = LocalContext.current
     LaunchedEffect(viewModel.selectedCrossReferenceDatabase) {
         crossRefHelper?.close()
-        crossRefHelper = DatabaseHelper(contextFont, " {viewModel.selectedCrossReferenceDatabase}.crossreferences.sqlite3")
+        crossRefHelper = DatabaseHelper(contextFont, "${viewModel.selectedCrossReferenceDatabase}.crossreferences.sqlite3")
     }
+
     DisposableEffect(Unit) {
-        onDispose {
-            crossRefHelper?.close()
-        }
+        onDispose { crossRefHelper?.close() }
     }
     var crossRefBook by remember { mutableIntStateOf(0) }
     var crossRefChapter by remember { mutableIntStateOf(0) }
@@ -331,15 +330,15 @@ fun ReaderScreen(
         val dbForVerses = if (isPrimary) databaseHelper else secondaryDatabaseHelper
         val refs = crossRefHelper?.getCrossReferences(book, chapter, verse) ?: emptyList()
         val bookName = BibleData.getBookByCustomNumber(book)?.name ?: book.toString()
-        crossRefSource = "References for $bookName $chapter: verse"
+        crossRefSource = "References for $bookName $chapter:$verse"
         val htmlItems = refs.joinToString("<br>") { ref ->
             val toBook = BibleData.getBookByCustomNumber(ref.bookTo)?.name ?: ref.bookTo.toString()
             val verseRange = if (ref.verseToStart == ref.verseToEnd) {
                 ref.verseToStart.toString()
             } else {
-                " {ref.verseToStart}- {ref.verseToEnd}"
+                "${ref.verseToStart}-${ref.verseToEnd}"
             }
-            val href = "B: {ref.bookTo} ${ref.chapterTo}:$verseRange"
+            val href = "B:${ref.bookTo} ${ref.chapterTo}:$verseRange"
             "<a href=\"$href\">$toBook ${ref.chapterTo}:$verseRange</a>"
         }
         crossRefContent = htmlItems
