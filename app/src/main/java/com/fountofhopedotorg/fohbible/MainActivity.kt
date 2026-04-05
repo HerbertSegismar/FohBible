@@ -1262,11 +1262,11 @@ fun ReaderAppBar(
                 ) {
                     Button(
                         onClick = onBibleIconClick,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.onBackground.copy(0.2f)),
                         shape = RoundedCornerShape(4.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp),
                         modifier = Modifier
-                            .height(30.dp)
+                            .height(25.dp)
                             .weight(0.7f)
                             .padding(end = 4.dp)
                     ) {
@@ -1280,24 +1280,24 @@ fun ReaderAppBar(
                                 fontSize = 16.sp,
                                 overflow = TextOverflow.Ellipsis,
                                 maxLines = 1,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = Color.White,
                                 modifier = Modifier.weight(0.5f)
                             )
                             Text(
                                 text = currentScreen.passage?.chapter?.let { " $it" } ?: "",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = Color.White,
                             )
                         }
                     }
                     Button(
                         onClick = { viewModel.showPrimaryVersionDropdown = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.onBackground.copy(0.2f)),
                         shape = RoundedCornerShape(4.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp),
                         modifier = Modifier
-                            .height(30.dp)
+                            .height(25.dp)
                             .weight(0.5f)
                             .padding(end = if (onBack == null) 8.dp else 2.dp)
                     ) {
@@ -1305,27 +1305,9 @@ fun ReaderAppBar(
                             text = currentVersionAbbr,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = Color.White,
                             maxLines = 1
                         )
-                    }
-                    if (viewModel.multiVersion) {
-                        Button(
-                            onClick = { viewModel.showSecondaryVersionDropdown = true },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-                            shape = RoundedCornerShape(4.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
-                            modifier = Modifier
-                                .height(36.dp)
-                                .padding(end = 0.dp)
-                        ) {
-                            Text(
-                                text = viewModel.secondaryVersionAbbr,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
                     }
                 }
             }

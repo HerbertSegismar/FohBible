@@ -1867,7 +1867,7 @@ fun ChapterView(
                                 viewModel.showSecondaryNavigationModal = true
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.onBackground.copy(0.2f)),
                         shape = RoundedCornerShape(4.dp),
                         contentPadding = PaddingValues(horizontal = 4.dp),
                         modifier = Modifier.height(20.dp).weight(0.7f).padding(end = 4.dp)
@@ -1879,7 +1879,7 @@ fun ChapterView(
                                 fontSize = 16.sp,
                                 overflow = TextOverflow.Ellipsis,
                                 maxLines = 1,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = Color.White,
                                 textAlign = TextAlign.Start,
                                 modifier = Modifier.weight(0.5f)
                             )
@@ -1887,7 +1887,7 @@ fun ChapterView(
                                 text = passage.chapter.toString(),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = Color.White,
                             )
                         }
                     }
@@ -1897,7 +1897,7 @@ fun ChapterView(
                             if (isPrimary) viewModel.showPrimaryVersionDropdown = true
                             else viewModel.showSecondaryVersionDropdown = true
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.onBackground.copy(0.2f)),
                         shape = RoundedCornerShape(4.dp),
                         contentPadding = PaddingValues(horizontal = 4.dp),
                         modifier = Modifier.height(20.dp).weight(0.5f)
@@ -1906,7 +1906,7 @@ fun ChapterView(
                             text = versionAbbr,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = Color.White,
                             maxLines = 1
                         )
                     }
