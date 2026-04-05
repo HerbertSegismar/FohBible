@@ -361,7 +361,7 @@ fun SettingsScreen() {
                             .size(30.dp)
                             .clip(CircleShape)
                             .background(viewModel.lightOverlayColor)
-                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                            .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
                             .clickable { showLightOverlayColorWheel = true }
                     )
                 }
@@ -375,7 +375,7 @@ fun SettingsScreen() {
                             .size(30.dp)
                             .clip(CircleShape)
                             .background(viewModel.darkOverlayColor)
-                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                            .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
                             .clickable { showDarkOverlayColorWheel = true }
                     )
                 }
@@ -388,7 +388,7 @@ fun SettingsScreen() {
                             .size(30.dp)
                             .clip(CircleShape)
                             .background(viewModel.verseMarkerColor)
-                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                            .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
                             .clickable { showVerseMarkerColorWheel = true }
                     )
                 }
@@ -402,7 +402,7 @@ fun SettingsScreen() {
                             .size(30.dp)
                             .clip(CircleShape)
                             .background(viewModel.lightModalBackgroundColor)
-                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                            .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
                             .clickable { showLightModalColorWheel = true }
                     )
                 }
@@ -416,7 +416,7 @@ fun SettingsScreen() {
                             .size(30.dp)
                             .clip(CircleShape)
                             .background(viewModel.darkModalBackgroundColor)
-                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                            .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
                             .clickable { showDarkModalColorWheel = true }
                     )
                 }
@@ -429,7 +429,7 @@ fun SettingsScreen() {
                             .size(30.dp)
                             .clip(CircleShape)
                             .background(viewModel.wordMarkerColor)
-                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                            .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
                             .clickable { showWordMarkerColorWheel = true }
                     )
                 }

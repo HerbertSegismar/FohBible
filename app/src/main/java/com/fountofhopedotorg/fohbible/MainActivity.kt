@@ -48,6 +48,7 @@ import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.LinkOff
+import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.LooksOne
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
@@ -1670,7 +1671,7 @@ fun ReaderAppBar(
                                             .size(22.dp)
                                             .clip(CircleShape)
                                             .background(if (viewModel.darkTheme) viewModel.darkOverlayColor else viewModel.lightOverlayColor)
-                                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                                            .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
                                     )
                                 },
                                 onClick = {
@@ -1691,7 +1692,7 @@ fun ReaderAppBar(
                                                 .size(22.dp)
                                                 .clip(CircleShape)
                                                 .background(viewModel.verseMarkerColor)
-                                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                                                .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
                                         )
                                     }
                                 },
@@ -1714,7 +1715,7 @@ fun ReaderAppBar(
                                                 .size(22.dp)
                                                 .clip(CircleShape)
                                                 .background(viewModel.wordMarkerColor)
-                                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                                                .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
                                         )
                                     }
                                 },
@@ -1733,7 +1734,7 @@ fun ReaderAppBar(
                                 },
                                 leadingIcon = {
                                     Icon(
-                                        Icons.AutoMirrored.Filled.Label,
+                                        if (viewModel.isDictionaryMode) Icons.AutoMirrored.Filled.Label else Icons.Filled.LocalFireDepartment,
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.primary
                                     )
@@ -1963,7 +1964,7 @@ fun ReaderAppBar(
                                     .size(20.dp)
                                     .clip(CircleShape)
                                     .background(if (viewModel.darkTheme) viewModel.darkOverlayColor else viewModel.lightOverlayColor)
-                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
                             )
                         },
                         onClick = {
@@ -1985,7 +1986,7 @@ fun ReaderAppBar(
                                         .size(20.dp)
                                         .clip(CircleShape)
                                         .background(viewModel.verseMarkerColor)
-                                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                                        .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
                                 )
                             }
                         },
@@ -2008,7 +2009,7 @@ fun ReaderAppBar(
                                         .size(20.dp)
                                         .clip(CircleShape)
                                         .background(viewModel.wordMarkerColor)
-                                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                                        .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
                                 )
                             }
                         },
@@ -2028,7 +2029,7 @@ fun ReaderAppBar(
                         },
                         leadingIcon = {
                             Icon(
-                                Icons.AutoMirrored.Filled.Label,
+                                if (viewModel.isDictionaryMode) Icons.AutoMirrored.Filled.Label else Icons.Filled.LocalFireDepartment,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary
                             )
