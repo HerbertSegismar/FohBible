@@ -1850,7 +1850,7 @@ fun ChapterView(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(themeColors.primary)
-                        .padding(14.dp),
+                        .padding(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Button(
@@ -1863,8 +1863,8 @@ fun ChapterView(
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                         shape = RoundedCornerShape(4.dp),
-                        contentPadding = PaddingValues(4.dp),
-                        modifier = Modifier.height(30.dp).weight(0.7f).padding(end = 4.dp)
+                        contentPadding = PaddingValues(horizontal = 4.dp),
+                        modifier = Modifier.height(20.dp).weight(0.7f).padding(end = 4.dp)
                     ) {
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Text(
@@ -1893,8 +1893,8 @@ fun ChapterView(
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                         shape = RoundedCornerShape(4.dp),
-                        contentPadding = PaddingValues(4.dp),
-                        modifier = Modifier.height(30.dp).weight(0.5f)
+                        contentPadding = PaddingValues(horizontal = 4.dp),
+                        modifier = Modifier.height(20.dp).weight(0.5f)
                     ) {
                         Text(
                             text = versionAbbr,
