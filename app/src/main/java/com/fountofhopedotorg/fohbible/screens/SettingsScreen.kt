@@ -463,7 +463,11 @@ fun SettingsScreen() {
                 }
                 SettingsItem(
                     title = "Study Mode",
-                    subtitle = "Turn this off to remove the extra buttons for cross-references and commentaries at the end of each verse"
+                    subtitle = if (viewModel.isStudyMode) {
+                        "Turn this off to remove the extra buttons for cross-references and commentaries at the end of each verse"
+                    } else {
+                        "Turn this on to add the extra buttons for cross-references and commentaries at the end of each verse"
+                    }
                 ) {
                     Switch(
                         checked = viewModel.isStudyMode,
