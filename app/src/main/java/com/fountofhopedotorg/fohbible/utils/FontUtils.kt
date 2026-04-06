@@ -9,7 +9,7 @@ import androidx.compose.ui.text.font.FontFamily
 
 val availableFontFamilies = listOf(
     "system", "oswald", "rubikglitch", "rubiklines", "poppins",
-    "cookie", "emilyscandy", "googlesanscode", "pirataone",
+    "cookie", "emilyscandy", "googlesanscode", "ptserif", "pirataone",
     "quintessential", "rougescript", "sairastencilone",
     "shadowsintolight", "smoochsans", "truculenta", "honk"
 )
@@ -28,6 +28,7 @@ object Fonts {
                 "cookie" -> Typeface.createFromAsset(context.assets, "fonts/Cookie.ttf")
                 "emilyscandy" -> Typeface.createFromAsset(context.assets, "fonts/EmilysCandy.ttf")
                 "googlesanscode" -> Typeface.createFromAsset(context.assets, "fonts/GoogleSansCode.ttf")
+                "ptserif" -> Typeface.createFromAsset(context.assets, "fonts/PTSerif.ttf")
                 "pirataone" -> Typeface.createFromAsset(context.assets, "fonts/PirataOne.ttf")
                 "quintessential" -> Typeface.createFromAsset(context.assets, "fonts/Quintessential.ttf")
                 "rougescript" -> Typeface.createFromAsset(context.assets, "fonts/RougeScript.ttf")

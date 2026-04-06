@@ -1995,7 +1995,7 @@ fun ChapterView(
                                                 if (onVerseCommentaryClick != null) {
                                                     put("commentary_${verse.verseNumber}", InlineTextContent(
                                                         Placeholder(
-                                                            width = (viewModel.fontSize * 1.5f).sp,
+                                                            width = (viewModel.fontSize * 1.4f).sp,
                                                             height = (viewModel.fontSize).sp,
                                                             placeholderVerticalAlign = PlaceholderVerticalAlign.TextCenter
                                                         )
@@ -2014,11 +2014,10 @@ fun ChapterView(
                                                         ) {
                                                             Text(
                                                                 text = "*",
-                                                                fontSize = (viewModel.fontSize).sp,
+                                                                fontSize = (viewModel.fontSize * 1.2f).sp,
                                                                 color = themeColors.verseNumber,
                                                                 fontWeight = FontWeight.Bold,
-                                                                style = TextStyle(lineHeight = (viewModel.fontSize).sp),
-                                                                fontFamily = currentFontFamily
+                                                                style = TextStyle(lineHeight = (viewModel.fontSize).sp)
                                                             )
                                                         }
                                                     })
