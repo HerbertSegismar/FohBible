@@ -1164,7 +1164,7 @@ fun InteractiveModal(
                                                     Text(
                                                         text = "$refCount",
                                                         fontSize = (viewModel.fontSize * 0.6f).sp,
-                                                        color = themeColors.primary,
+                                                        color = themeColors.verseNumber,
                                                         fontWeight = FontWeight.Bold,
                                                         style = TextStyle(
                                                             lineHeight = (viewModel.fontSize).sp
@@ -1193,11 +1193,12 @@ fun InteractiveModal(
                                                     },
                                                 contentAlignment = Alignment.Center
                                             ) {
-                                                Icon(
-                                                    imageVector = Icons.Filled.ChevronRight,
-                                                    contentDescription = "View Verse Commentaries",
-                                                    tint = themeColors.verseNumber,
-                                                    modifier = Modifier.size((viewModel.fontSize).dp)
+                                                Text(
+                                                    text = "*",
+                                                    fontSize = (viewModel.fontSize * 1.5f).sp,
+                                                    color = themeColors.verseNumber,
+                                                    fontWeight = FontWeight.Bold,
+                                                    style = TextStyle(lineHeight = (viewModel.fontSize).sp)
                                                 )
                                             }
                                         })
