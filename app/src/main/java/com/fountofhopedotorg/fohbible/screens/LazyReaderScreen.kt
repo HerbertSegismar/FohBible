@@ -2065,7 +2065,7 @@ fun ChapterView(
                                                         ) {
                                                             Text(
                                                                 text = "*",
-                                                                fontSize = (viewModel.fontSize * 1.5f).sp,
+                                                                fontSize = (viewModel.fontSize).sp,
                                                                 color = themeColors.verseNumber,
                                                                 fontWeight = FontWeight.Bold,
                                                                 style = TextStyle(lineHeight = (viewModel.fontSize).sp),
