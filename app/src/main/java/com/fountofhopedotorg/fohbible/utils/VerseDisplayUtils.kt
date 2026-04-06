@@ -451,7 +451,7 @@ class VerseTextProcessor {
                 if (addSpaceAfterPunct && word.firstOrNull()?.isLetter() == true) {
                     builder.append(" ")
                 }
-                if (isWord(word) && word.length > 1) {
+                if (isWord(word)) {
                     val bgColor = if (highlight != null && word.contains(highlight, ignoreCase = true)) {
                         themeColors.searchHighlightBg
                     } else if (wordHighlights != null && word.lowercase() in wordHighlights) {
@@ -613,7 +613,7 @@ class VerseTextProcessor {
     }
 
     private fun isWord(text: String): Boolean {
-        return text.matches(Regex("""[a-zA-ZÀ-ÿ'][a-zA-ZÀ-ÿ']+"""))
+        return text.matches(Regex("""[a-zA-ZÀ-ÿ']+"""))
     }
 
     private fun escapeRegex(string: String): String {
