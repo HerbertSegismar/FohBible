@@ -34,7 +34,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Note
 import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material3.Button
@@ -141,11 +140,11 @@ fun ReaderScreen(
     val themeColors = remember(colorScheme, viewModel.darkTheme) {
         ThemeColors(
             textColor = colorScheme.onBackground,
-            verseNumber = colorScheme.primary,
+            verseNumber = colorScheme.primary.copy(0.8f),
             primary = colorScheme.primary,
             tagColor = colorScheme.secondary,
             tagBg = colorScheme.secondary.copy(alpha = 0.1f),
-            wordsOfJesus = Color(0xFFDA4227),
+            wordsOfJesus = Color(0xFFDA4227).copy(0.8f),
             searchHighlightBg = colorScheme.primary.copy(alpha = 0.3f),
             highlightIcon = colorScheme.primary
         )
@@ -1951,7 +1950,8 @@ fun ChapterView(
                                         refCount,
                                         isNote,
                                         isBookmarked,
-                                        viewModel.fontSize
+                                        viewModel.fontSize,
+                                        themeColors
                                     ) {
                                         buildMap {
                                             if (isBookmarked) put("bookmark", bookmarkInlineContent)
@@ -1985,7 +1985,7 @@ fun ChapterView(
                                                             Text(
                                                                 text = "$refCount",
                                                                 fontSize = (viewModel.fontSize * 0.7f).sp,
-                                                                color = themeColors.primary,
+                                                                color = themeColors.verseNumber,
                                                                 fontWeight = FontWeight.Bold,
                                                                 style = TextStyle(lineHeight = (viewModel.fontSize).sp)
                                                             )
@@ -2012,11 +2012,12 @@ fun ChapterView(
                                                                 },
                                                             contentAlignment = Alignment.Center
                                                         ) {
-                                                            Icon(
-                                                                imageVector = Icons.Filled.ChevronRight,
-                                                                contentDescription = "View Verse Commentaries",
-                                                                tint = themeColors.verseNumber,
-                                                                modifier = Modifier.size((viewModel.fontSize * 1.5f).dp)
+                                                            Text(
+                                                                text = "*",
+                                                                fontSize = (viewModel.fontSize * 1.5f).sp,
+                                                                color = themeColors.verseNumber,
+                                                                fontWeight = FontWeight.Bold,
+                                                                style = TextStyle(lineHeight = (viewModel.fontSize).sp)
                                                             )
                                                         }
                                                     })
