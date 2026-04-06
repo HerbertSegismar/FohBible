@@ -2206,7 +2206,7 @@ fun ChapterView(
 }
 fun lazyGetPreviousChapter(current: PassageSelection, currentBook: BibleBook?): PassageSelection {
     if (currentBook == null) return current
-    if (currentBook.chapters <= 2 && current.chapter == 1) return current
+    if (currentBook.chapters == 1 && current.chapter == 1) return current
     return if (current.chapter == 1) {
         current.copy(chapter = currentBook.chapters, verse = null)
     } else {
@@ -2216,7 +2216,7 @@ fun lazyGetPreviousChapter(current: PassageSelection, currentBook: BibleBook?): 
 
 fun lazyGetNextChapter(current: PassageSelection, currentBook: BibleBook?): PassageSelection {
     if (currentBook == null) return current
-    if (currentBook.chapters <= 2 && current.chapter == currentBook.chapters) return current
+    if (currentBook.chapters == 1 && current.chapter == 1) return current
     return if (current.chapter == currentBook.chapters) {
         current.copy(chapter = 1, verse = null)
     } else {
