@@ -2017,7 +2017,8 @@ fun ChapterView(
                                                                 fontSize = (viewModel.fontSize * 1.5f).sp,
                                                                 color = themeColors.verseNumber,
                                                                 fontWeight = FontWeight.Bold,
-                                                                style = TextStyle(lineHeight = (viewModel.fontSize).sp)
+                                                                style = TextStyle(lineHeight = (viewModel.fontSize).sp),
+                                                                fontFamily = currentFontFamily
                                                             )
                                                         }
                                                     })
