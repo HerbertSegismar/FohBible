@@ -823,7 +823,6 @@ private fun SingleVersionReader(
                     isPrimary = true,
                     state = primaryState,
                     modifier = Modifier.fillMaxSize(),
-                    isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
                     onWordPress = onWordPress,
                     onStrongsPress = onStrongsPress,
                     onTagPress = onTagPress,
@@ -1068,7 +1067,6 @@ private fun SyncedMultiVersionReader(
                             isPrimary = true,
                             state = primaryState,
                             modifier = Modifier.weight(1f),
-                            isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
                             onInitialScrollComplete = {
                                 completedScrolls++
                                 if (completedScrolls == 2) {
@@ -1102,7 +1100,6 @@ private fun SyncedMultiVersionReader(
                             isPrimary = false,
                             state = secondaryState,
                             modifier = Modifier.weight(1f),
-                            isKjvPlus = secondaryDatabaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
                             onInitialScrollComplete = {
                                 completedScrolls++
                                 if (completedScrolls == 2) {
@@ -1139,7 +1136,6 @@ private fun SyncedMultiVersionReader(
                             isPrimary = true,
                             state = primaryState,
                             modifier = Modifier.weight(1f),
-                            isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
                             onInitialScrollComplete = {
                                 completedScrolls++
                                 if (completedScrolls == 2) {
@@ -1173,7 +1169,6 @@ private fun SyncedMultiVersionReader(
                             isPrimary = false,
                             state = secondaryState,
                             modifier = Modifier.weight(1f),
-                            isKjvPlus = secondaryDatabaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
                             onInitialScrollComplete = {
                                 completedScrolls++
                                 if (completedScrolls == 2) {
@@ -1479,7 +1474,6 @@ private fun IndependentMultiVersionReader(
                             isPrimary = true,
                             state = state,
                             modifier = Modifier.fillMaxSize(),
-                            isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
                             onWordPress = onWordPress,
                             onStrongsPress = onStrongsPress,
                             onTagPress = onTagPress,
@@ -1525,7 +1519,6 @@ private fun IndependentMultiVersionReader(
                             isPrimary = false,
                             state = state,
                             modifier = Modifier.fillMaxSize(),
-                            isKjvPlus = secondaryDatabaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
                             onWordPress = onWordPress,
                             onStrongsPress = onStrongsPress,
                             onTagPress = onTagPress,
@@ -1574,7 +1567,6 @@ private fun IndependentMultiVersionReader(
                             isPrimary = true,
                             state = state,
                             modifier = Modifier.fillMaxSize(),
-                            isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
                             onWordPress = onWordPress,
                             onStrongsPress = onStrongsPress,
                             onTagPress = onTagPress,
@@ -1620,7 +1612,6 @@ private fun IndependentMultiVersionReader(
                             isPrimary = false,
                             state = state,
                             modifier = Modifier.fillMaxSize(),
-                            isKjvPlus = secondaryDatabaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false,
                             onWordPress = onWordPress,
                             onStrongsPress = onStrongsPress,
                             onTagPress = onTagPress,
@@ -1668,7 +1659,6 @@ fun ChapterView(
     isPrimary: Boolean,
     state: ScrollState,
     modifier: Modifier = Modifier,
-    isKjvPlus: Boolean = false,
     onInitialScrollComplete: () -> Unit = {},
     onWordPress: ((String, Boolean) -> Unit)? = null,
     onStrongsPress: ((String, Int, Boolean) -> Unit)? = null,
@@ -1689,7 +1679,6 @@ fun ChapterView(
         content,
         viewModel.fontSize,
         themeColors,
-        isKjvPlus,
         refreshKey,
         isOldTestamentForThisVersion
     ) {
@@ -1717,7 +1706,6 @@ fun ChapterView(
                     onWordPress = onWordLocal,
                     onStrongsPress = onStrongsLocal,
                     isHighlighted = isPersistentHighlighted,
-                    isKjvPlus = isKjvPlus,
                     isOldTestament = isOldTestamentForThisVersion
                 )
                 result[verse.verseNumber] = processed

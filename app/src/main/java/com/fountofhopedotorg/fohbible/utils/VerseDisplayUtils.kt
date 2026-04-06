@@ -36,7 +36,6 @@ class VerseTextProcessor {
         onWordPress: ((String) -> Unit)? = null,
         onStrongsPress: ((String) -> Unit)? = null,
         isHighlighted: Boolean = false,
-        isKjvPlus: Boolean = false,
         isOldTestament: Boolean,
         options: ProcessingOptions = ProcessingOptions(),
         wordHighlights: Set<String>? = null
@@ -49,7 +48,7 @@ class VerseTextProcessor {
         }
 
         val cacheKey = buildCacheKey(
-            verseText, baseFontSize, textColor, isKjvPlus, isOldTestament,
+            verseText, baseFontSize, textColor, isOldTestament,
             highlight, isHighlighted, options, themeColors, wordHighlights
         )
         verseCache[cacheKey]?.let { cached ->
@@ -71,7 +70,7 @@ class VerseTextProcessor {
         val (header, body) = traverseTree(
             tree, initialContext, highlight, themeColors,
             onTagPress, onWordPress, onStrongsPress,
-            isHighlighted, isKjvPlus, options, wordHighlights
+            isHighlighted, options, wordHighlights
         )
 
         val result = ProcessedVerse(
@@ -86,7 +85,6 @@ class VerseTextProcessor {
         verseText: String,
         baseFontSize: TextUnit,
         textColor: Color?,
-        isKjvPlus: Boolean,
         isOldTestament: Boolean,
         highlight: String?,
         isHighlighted: Boolean,
@@ -100,8 +98,6 @@ class VerseTextProcessor {
             .append(baseFontSize.value)
             .append("|")
             .append(textColor?.value ?: 0)
-            .append("|")
-            .append(isKjvPlus)
             .append("|")
             .append(isOldTestament)
             .append("|")
@@ -214,7 +210,6 @@ class VerseTextProcessor {
         onWordPress: ((String) -> Unit)?,
         onStrongsPress: ((String) -> Unit)?,
         isHighlighted: Boolean,
-        isKjvPlus: Boolean,
         options: ProcessingOptions,
         wordHighlights: Set<String>?
     ): Pair<AnnotatedString?, AnnotatedString> {
@@ -223,7 +218,7 @@ class VerseTextProcessor {
         traverseChildren(
             tree, headerBuilder, bodyBuilder, initialContext,
             highlight, themeColors, onTagPress, onWordPress, onStrongsPress,
-            isHighlighted, isKjvPlus, options, wordHighlights
+            isHighlighted, options, wordHighlights
         )
         val header = if (headerBuilder.length > 0) headerBuilder.toAnnotatedString() else null
         val body = bodyBuilder.toAnnotatedString()
@@ -241,7 +236,6 @@ class VerseTextProcessor {
         onWordPress: ((String) -> Unit)?,
         onStrongsPress: ((String) -> Unit)?,
         isHighlighted: Boolean,
-        isKjvPlus: Boolean,
         options: ProcessingOptions,
         wordHighlights: Set<String>?
     ) {
@@ -253,7 +247,7 @@ class VerseTextProcessor {
             traverseNode(
                 children[i], headerBuilder, bodyBuilder, context,
                 highlight, themeColors, onTagPress, onWordPress, onStrongsPress,
-                isHighlighted, isKjvPlus, options, wordHighlights
+                isHighlighted,  options, wordHighlights
             )
         }
     }
@@ -269,7 +263,6 @@ class VerseTextProcessor {
         onWordPress: ((String) -> Unit)?,
         onStrongsPress: ((String) -> Unit)?,
         isHighlighted: Boolean,
-        isKjvPlus: Boolean,
         options: ProcessingOptions,
         wordHighlights: Set<String>?
     ) {
@@ -288,12 +281,9 @@ class VerseTextProcessor {
             }
             is TreeNode.Element -> {
                 val newContext = when (node.tag) {
-                    "n" -> context.copy(
-                        isHeader = !isKjvPlus && options.showHeaders,
-                        textColor = themeColors.primary,
-                        currentTag = node.tag,
-                        fontSizeMultiplier = 0.9f
-                    )
+                    "n" -> {
+                        return
+                    }
                     "J" -> context.copy(
                         isTextContainer = true,
                         textColor = if (!isHighlighted) themeColors.wordsOfJesus else context.textColor,
@@ -319,7 +309,7 @@ class VerseTextProcessor {
                 traverseChildren(
                     node.children, headerBuilder, bodyBuilder, newContext,
                     highlight, themeColors, onTagPress, onWordPress, onStrongsPress,
-                    isHighlighted, isKjvPlus, options, wordHighlights
+                    isHighlighted, options, wordHighlights
                 )
             }
         }

@@ -1068,8 +1068,7 @@ fun InteractiveModal(
                     val verses = currentPage.verses ?: emptyList()
                     val passage = currentPage.passage ?: return@AlertDialog
                     val processor = remember(verses) { VerseTextProcessor() }
-                    val isKjvPlus = databaseHelper?.databaseName?.contains("kjv+", ignoreCase = true) ?: false
-                    val processedVerses = remember(verses, themeColors, isKjvPlus) {
+                    val processedVerses = remember(verses, themeColors) {
                         val result = mutableMapOf<Int, ProcessedVerse>()
                         for (verse in verses) {
                             val processed = processor.processVerse(
@@ -1081,7 +1080,6 @@ fun InteractiveModal(
                                 onWordPress = onWordPress,
                                 onStrongsPress = { strong -> onStrongsPress(strong, passage.bookNumber) },
                                 isHighlighted = false,
-                                isKjvPlus = isKjvPlus,
                                 isOldTestament = currentPage.isOldTestament
                             )
                             result[verse.verseNumber] = processed
