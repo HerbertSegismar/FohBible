@@ -1653,7 +1653,7 @@ fun ReaderAppBar(
                                             .size(22.dp)
                                             .clip(CircleShape)
                                             .background(if (viewModel.darkTheme) viewModel.darkOverlayColor else viewModel.lightOverlayColor)
-                                            .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(0.3f), CircleShape)
                                     )
                                 },
                                 onClick = {
@@ -1674,7 +1674,7 @@ fun ReaderAppBar(
                                                 .size(22.dp)
                                                 .clip(CircleShape)
                                                 .background(viewModel.verseMarkerColor)
-                                                .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(0.3f), CircleShape)
                                         )
                                     }
                                 },
@@ -1697,7 +1697,7 @@ fun ReaderAppBar(
                                                 .size(22.dp)
                                                 .clip(CircleShape)
                                                 .background(viewModel.wordMarkerColor)
-                                                .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(0.3f), CircleShape)
                                         )
                                     }
                                 },
@@ -1946,7 +1946,7 @@ fun ReaderAppBar(
                                     .size(20.dp)
                                     .clip(CircleShape)
                                     .background(if (viewModel.darkTheme) viewModel.darkOverlayColor else viewModel.lightOverlayColor)
-                                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(0.3f), CircleShape)
                             )
                         },
                         onClick = {
@@ -1968,7 +1968,7 @@ fun ReaderAppBar(
                                         .size(20.dp)
                                         .clip(CircleShape)
                                         .background(viewModel.verseMarkerColor)
-                                        .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(0.3f), CircleShape)
                                 )
                             }
                         },
@@ -1991,7 +1991,7 @@ fun ReaderAppBar(
                                         .size(20.dp)
                                         .clip(CircleShape)
                                         .background(viewModel.wordMarkerColor)
-                                        .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(0.3f), CircleShape)
                                 )
                             }
                         },
