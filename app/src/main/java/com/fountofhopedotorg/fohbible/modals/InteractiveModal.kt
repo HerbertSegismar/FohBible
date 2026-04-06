@@ -460,14 +460,27 @@ fun InteractiveModal(
                 "definition" -> {
                     val dbDisplayName = dictionaryDisplayNames[viewModel.selectedDictionary] ?: viewModel.selectedDictionary
                     val capitalizedWord = word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
+
                     if (definition.isNotBlank() && !definition.contains("not found", ignoreCase = true)) {
+                        val pairs = listOf(Pair(word, definition))
+                        val isOxford = viewModel.selectedDictionary == "oxford"
+                        val isTopical = viewModel.selectedDictionary == "topical"
+
+                        val newContent = buildDefinitionContent(
+                            originalWord = word,
+                            pairs = pairs,
+                            isOxford = isOxford,
+                            isTopical = isTopical
+                        )
+
                         val title = "Definition of $capitalizedWord"
-                        val sanitizedDefinition = sanitizeHtmlContent(definition)
-                        stack.add(ModalPage(title, "definition", sanitizedDefinition, word = word, description = dbDisplayName, isOldTestament = isOldTestament))
+                        stack.add(ModalPage(title, "definition", newContent, word = word, description = dbDisplayName, isOldTestament = isOldTestament))
                     } else {
                         val loadingPage = ModalPage("Searching for $capitalizedWord...", "definition", "Loading...", word = word, description = dbDisplayName, isOldTestament = isOldTestament)
                         stack.add(loadingPage)
+
                         val pairs = getDefinitionOrClosest(dictionaryDbHelper, word) ?: emptyList()
+
                         if (pairs.isNotEmpty()) {
                             val isExact = pairs.size == 1 && pairs[0].first.equals(word, ignoreCase = true)
                             val isTopical = viewModel.selectedDictionary == "topical"
@@ -476,16 +489,18 @@ fun InteractiveModal(
                             } else if (isExact) {
                                 "Definition of ${pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }}"
                             } else if (pairs.size == 1) {
-                                "Closest match for $capitalizedWord"
+                                "Closest match for ${pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }}"
                             } else {
-                                "Matches for $capitalizedWord"
+                                "Matches for \"$capitalizedWord\""
                             }
+
                             val newContent = buildDefinitionContent(
                                 originalWord = word,
                                 pairs = pairs,
                                 isOxford = viewModel.selectedDictionary == "oxford",
-                                isTopical = viewModel.selectedDictionary == "topical"
+                                isTopical = isTopical
                             )
+
                             stack[0] = loadingPage.copy(title = newTitle, content = newContent)
                         } else {
                             stack[0] = loadingPage.copy(title = "Definition not found", content = "No results for \"$word\".")
@@ -553,20 +568,31 @@ fun InteractiveModal(
         if (trimmed.isEmpty() || trimmed.matches(Regex(".*\\d.*"))) {
             return@Unit
         }
+
         val dbDisplayName = dictionaryDisplayNames[viewModel.selectedDictionary] ?: viewModel.selectedDictionary
         val capitalizedWord = trimmed.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
+
         val currentIsOld = stack.last().isOldTestament
         val loadingTitle = "Loading Definition of $capitalizedWord"
-        val loadingPage = ModalPage(loadingTitle, "definition", "Loading...", word = trimmed, description = dbDisplayName, isOldTestament = currentIsOld)
+        val loadingPage = ModalPage(
+            loadingTitle,
+            "definition",
+            "Loading...",
+            word = trimmed,
+            description = dbDisplayName,
+            isOldTestament = currentIsOld
+        )
         stack.add(loadingPage)
+
         scope.launch {
             val pairs: List<Pair<String, String>> = getDefinitionOrClosest(dictionaryDbHelper, trimmed) ?: emptyList()
-            val newContent: String
-            val newTitle: String
-            if (pairs.isNotEmpty()) {
+
+            val isOxford = viewModel.selectedDictionary == "oxford"
+            val isTopical = viewModel.selectedDictionary == "topical"
+
+            val newTitle = if (pairs.isNotEmpty()) {
                 val isExact = pairs.size == 1 && pairs[0].first.equals(trimmed, ignoreCase = true)
-                val isTopical = viewModel.selectedDictionary == "topical"
-                newTitle = if (isTopical) {
+                if (isTopical) {
                     "References for $capitalizedWord"
                 } else if (isExact) {
                     "Definition of ${pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }}"
@@ -575,17 +601,21 @@ fun InteractiveModal(
                 } else {
                     "Matches for \"$capitalizedWord\""
                 }
-                newContent = if (isExact) {
-                    sanitizeHtmlContent(pairs[0].second)
-                } else if (pairs.size == 1) {
-                    cleanDefinition(pairs[0].first, pairs[0].second)
-                } else {
-                    pairs.joinToString("<br><hr><br>") { p -> sanitizeHtmlContent(p.second) }
-                }
             } else {
-                newTitle = "Definition of $capitalizedWord not found"
-                newContent = "No definition found."
+                "Definition of $capitalizedWord not found"
             }
+
+            val newContent = if (pairs.isNotEmpty()) {
+                buildDefinitionContent(
+                    originalWord = trimmed,
+                    pairs = pairs,
+                    isOxford = isOxford,
+                    isTopical = isTopical
+                )
+            } else {
+                "No definition found."
+            }
+
             val index = stack.indexOf(loadingPage)
             if (index != -1) {
                 stack[index] = loadingPage.copy(title = newTitle, content = newContent)

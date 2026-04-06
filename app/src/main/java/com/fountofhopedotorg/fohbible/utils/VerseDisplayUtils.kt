@@ -291,7 +291,8 @@ class VerseTextProcessor {
                     "n" -> context.copy(
                         isHeader = !isKjvPlus && options.showHeaders,
                         textColor = themeColors.primary,
-                        currentTag = node.tag
+                        currentTag = node.tag,
+                        fontSizeMultiplier = 0.9f
                     )
                     "J" -> context.copy(
                         isTextContainer = true,
