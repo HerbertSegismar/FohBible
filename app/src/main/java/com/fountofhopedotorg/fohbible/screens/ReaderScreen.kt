@@ -146,7 +146,7 @@ fun ReaderScreen(
             tagColor = colorScheme.secondary,
             tagBg = colorScheme.secondary.copy(alpha = 0.1f),
             wordsOfJesus = Color(0xFFDA4227),
-            searchHighlightBg = if (viewModel.darkTheme) Color(0xFF26EC2E).copy(alpha = 0.2f) else Color.Yellow.copy(alpha = 0.3f),
+            searchHighlightBg = colorScheme.primary.copy(alpha = 0.3f),
             highlightIcon = colorScheme.primary
         )
     }

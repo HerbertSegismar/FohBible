@@ -450,7 +450,7 @@ fun SettingsScreen() {
 
                 SettingsItem(
                     title = "Lazy Reader Mode",
-                    subtitle = "Toggle between partial or full chapter loading. Lazy reader only loads the visible verses at least and is ideal for slower devices"
+                    subtitle = "Toggle between dynamic or full chapter loading. Lazy reader only loads the visible verses and is ideal for slower devices"
                 ) {
                     Switch(
                         checked = viewModel.isLazyReader,
@@ -653,7 +653,6 @@ fun SettingsScreen() {
             },
             onColorSelected = { color ->
                 if (viewModel.editingHighlightColorIndex != -1) {
-                    // Update the color at the edited index
                     viewModel.updateHighlightColor(viewModel.editingHighlightColorIndex, color)
                     viewModel.showHighlightColorEditor = false
                     viewModel.editingHighlightColorIndex = -1
@@ -684,7 +683,7 @@ fun SettingsScreen() {
                     Spacer(modifier = Modifier.height(12.dp))
                     Text("• Font size, theme, colors", style = MaterialTheme.typography.bodyMedium)
                     Text("• Bible versions, layout, sync", style = MaterialTheme.typography.bodyMedium)
-                    Text("• Background, overlay, markers", style = MaterialTheme.typography.bodyMedium)
+                    Text("• Background, overlay, palette colors,", style = MaterialTheme.typography.bodyMedium)
                     Text("• Study mode, lazy reader, etc.", style = MaterialTheme.typography.bodyMedium)
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
@@ -863,10 +862,10 @@ fun SettingsScreen() {
                 Column {
                     Text("This action will:")
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("• Recopy ALL Bible versions from assets")
+                    Text("• Recopy all Bible versions from assets")
                     Text("• Recopy dictionary databases")
                     Text("• Recopy commentary databases")
-                    Text("• Note: Your bookmarks and settings will NOT be affected")
+                    Text("• Note: Your bookmarks and settings will not be affected")
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         "This may take a few moments. Continue?",

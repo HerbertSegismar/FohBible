@@ -39,7 +39,10 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -67,6 +70,7 @@ import com.fountofhopedotorg.fohbible.data.SearchOptions
 import com.fountofhopedotorg.fohbible.data.SearchScope
 import com.fountofhopedotorg.fohbible.data.SearchVerse
 import com.fountofhopedotorg.fohbible.data.Testament
+import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.data.getBookInfo
 import com.fountofhopedotorg.fohbible.data.getBookNumberFromScope
 import com.fountofhopedotorg.fohbible.data.getScopeConfig
@@ -74,7 +78,6 @@ import com.fountofhopedotorg.fohbible.data.isBookScope
 import com.fountofhopedotorg.fohbible.data.scopeColors
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
-import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -90,23 +93,27 @@ fun getScopeForBookNumber(bookNumber: Int): String? {
     return null
 }
 
-fun DatabaseHelper.searchVerses(query: String, options: SearchOptions? = null): List<SearchVerse> {
+fun DatabaseHelper.searchVerses(query: String, options: SearchOptions? = null, inverse: Boolean = false): List<SearchVerse> {
     val verses = mutableListOf<SearchVerse>()
     try {
         if (database == null || !database!!.isOpen) return verses
         var whereClause = ""
         val args = mutableListOf<String>()
+
         query.trim().split("\\s+".toRegex()).filter { it.isNotBlank() }.forEach { word ->
             if (whereClause.isNotEmpty()) whereClause += " AND "
-            whereClause += "text LIKE ?"
+            val operator = if (inverse) "NOT LIKE" else "LIKE"
+            whereClause += "text $operator ?"
             args.add("%$word%")
         }
+
         if (options?.bookRange != null) {
             if (whereClause.isNotEmpty()) whereClause += " AND "
             whereClause += "book_number BETWEEN ? AND ?"
             args.add(options.bookRange.first.toString())
             args.add(options.bookRange.second.toString())
         }
+
         val cursor = database?.query(
             "verses",
             arrayOf("book_number", "chapter", "verse", "text"),
@@ -139,7 +146,8 @@ fun generateColorFromString(str: String): String {
         hash = char.code + ((hash shl 5) - hash)
     }
     val colors = listOf(
-        "#3B82F6", "#EF4444", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4", "#84CC16", "#F97316", "#6366F1"
+        "#3B82F6", "#EF4444", "#10B981", "#F59E0B", "#8B5CF6",
+        "#EC4899", "#06B6D4", "#84CC16", "#F97316", "#6366F1"
     )
     return colors[abs(hash) % colors.size]
 }
@@ -173,7 +181,9 @@ suspend fun enhanceSearchResultsWithColors(
             }
         }
     }
-    return results.map { result -> result.copy(bookColor = colorMap[result.bookNumber]) }
+    return results.map { result ->
+        result.copy(bookColor = colorMap[result.bookNumber])
+    }
 }
 
 @Composable
@@ -192,6 +202,7 @@ fun SearchScreen(
         "card" to if (isDark) Color(0xFF1E293B) else Color.White,
         "border" to if (isDark) Color(0xFF374151) else Color(0xFFE5E7EB),
     )
+
     var hasSearched by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     val results = remember { mutableStateListOf<SearchVerse>() }
@@ -200,9 +211,16 @@ fun SearchScreen(
     var scope by remember { mutableStateOf("whole") }
     var showScopeDropdown by remember { mutableStateOf(false) }
     var showResultsStats by remember { mutableStateOf(false) }
+    var inverseSearch by remember { mutableStateOf(false) }
+
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
-    val showBackToTop by remember { derivedStateOf { listState.firstVisibleItemScrollOffset > 300 || listState.firstVisibleItemIndex > 0 } }
+
+    val showBackToTop by remember {
+        derivedStateOf {
+            listState.firstVisibleItemScrollOffset > 300 || listState.firstVisibleItemIndex > 0
+        }
+    }
 
     val handleQueryChange: (String) -> Unit = { text ->
         query = text
@@ -220,6 +238,7 @@ fun SearchScreen(
         try {
             loading = true
             error = null
+
             val searchOptions = SearchOptions(
                 bookRange = if (isBookScope(scope)) {
                     getBookNumberFromScope(scope)?.let { Pair(it, it) }
@@ -227,8 +246,9 @@ fun SearchScreen(
                     SCOPE_RANGES[scope]?.let { Pair(it.start, it.end) }
                 }
             )
+
             val searchResults = withContext(Dispatchers.IO) {
-                databaseHelper?.searchVerses(actualQuery, searchOptions) ?: emptyList()
+                databaseHelper?.searchVerses(actualQuery, searchOptions, inverseSearch) ?: emptyList()
             }
             val enhancedResults = enhanceSearchResultsWithColors(searchResults, databaseHelper)
             results.clear()
@@ -246,7 +266,9 @@ fun SearchScreen(
 
     val handlePopularSearch: (String) -> Unit = { term ->
         query = term
-        coroutineScope.launch { handleSearch(term) }
+        coroutineScope.launch {
+            handleSearch(term)
+        }
     }
 
     val handleScopeChange: (SearchScope) -> Unit = { newScope ->
@@ -274,23 +296,31 @@ fun SearchScreen(
         results.clear()
         hasSearched = false
         showResultsStats = false
+        inverseSearch = false
     }
 
     val getResultStats: () -> String = {
+        val config = getScopeConfig(scope)
         if (!hasSearched || loading || !showResultsStats) {
-            val config = getScopeConfig(scope)
-            "Search ${config.label}"
+            val mode = if (inverseSearch) " (opposite)" else ""
+            "Search ${config.label}$mode"
         } else if (results.isEmpty()) {
-            val config = getScopeConfig(scope)
-            "No results found for \"$query\" in ${config.label}"
+            if (inverseSearch) {
+                "No results found without \"$query\" in ${config.label}"
+            } else {
+                "No results found for \"$query\" in ${config.label}"
+            }
         } else {
             val bookCount = results.map { it.bookNumber }.toSet().size
-            val config = getScopeConfig(scope)
-            if (isBookScope(scope)) {
-                "Found ${results.size} result${if (results.size != 1) "s" else ""} in ${config.label}"
+            val foundStr = "Found ${results.size} result${if (results.size != 1) "s" else ""}"
+            val termStr = if (inverseSearch) " without \"$query\"" else " for \"$query\""
+            val scopeStr = if (isBookScope(scope)) {
+                " in ${config.label}"
             } else {
-                "Found ${results.size} result${if (results.size != 1) "s" else ""} in $bookCount book${if (bookCount != 1) "s" else ""} for \"$query\""
+                " in $bookCount book${if (bookCount != 1) "s" else ""}"
             }
+            val queryStr = if (inverseSearch || !isBookScope(scope)) termStr else ""
+            "$foundStr$queryStr$scopeStr"
         }
     }
 
@@ -333,6 +363,7 @@ fun SearchScreen(
                     colors = colors
                 )
             }
+
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
@@ -343,12 +374,47 @@ fun SearchScreen(
                         onValueChange = handleQueryChange,
                         placeholder = { Text("Search ${getScopeConfig(scope).label.lowercase()}...") },
                         trailingIcon = if (query.isNotEmpty()) {
-                            { IconButton(onClick = clearSearch) { Icon(Icons.Default.Clear, null) } }
+                            {
+                                IconButton(onClick = clearSearch) {
+                                    Icon(Icons.Default.Clear, null)
+                                }
+                            }
                         } else null,
                         modifier = Modifier.weight(1f)
                     )
                 }
             }
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Toggle inverse search",
+                        color = colors["muted"] as Color,
+                        fontSize = 14.sp
+                    )
+                    Switch(
+                        checked = inverseSearch,
+                        onCheckedChange = { newValue ->
+                            inverseSearch = newValue
+                            if (hasSearched && query.trim().isNotEmpty() && !loading) {
+                                coroutineScope.launch {
+                                    handleSearch(null)
+                                }
+                            }
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = colorScheme.primary,
+                            checkedTrackColor = colorScheme.primary.copy(alpha = 0.5f)
+                        )
+                    )
+                }
+            }
+
             item {
                 Button(
                     onClick = { coroutineScope.launch { handleSearch(query) } },
@@ -359,6 +425,7 @@ fun SearchScreen(
                     Text(getResultStats(), color = Color.White, fontWeight = FontWeight.SemiBold)
                 }
             }
+
             if (results.isEmpty()) {
                 item {
                     EmptyStates(
@@ -366,7 +433,8 @@ fun SearchScreen(
                         query = query,
                         loading = loading,
                         onPopularSearch = handlePopularSearch,
-                        colors = colors
+                        colors = colors,
+                        inverse = inverseSearch
                     )
                 }
             } else {
@@ -375,6 +443,7 @@ fun SearchScreen(
                 }
             }
         }
+
         AnimatedVisibility(
             visible = showBackToTop && results.size > 10,
             enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
@@ -402,7 +471,7 @@ fun ScopeDropdown(
 ) {
     val currentConfig = getScopeConfig(scope)
     Card(
-        modifier = Modifier.fillMaxWidth().padding(8.dp).clickable(onClick = onToggle),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).clickable(onClick = onToggle),
         colors = CardDefaults.cardColors(containerColor = colors["primary"] as Color),
         shape = RoundedCornerShape(8.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -418,6 +487,7 @@ fun ScopeDropdown(
             Text(if (isOpen) "↑" else "↓", color = Color.White, fontSize = 20.sp)
         }
     }
+
     if (isOpen) {
         Dialog(onDismissRequest = onToggle) {
             Card(
@@ -456,7 +526,9 @@ fun ScopeDropdown(
                                 val config = getScopeConfig(scopeKey)
                                 val isSelected = scope == scopeKey
                                 Column(
-                                    modifier = Modifier.fillMaxWidth().background(if (isSelected) (colors["primary"] as Color).copy(alpha = 0.1f) else colors["card"] as Color).clickable { onScopeChange(scopeKey) }.padding(16.dp)
+                                    modifier = Modifier.fillMaxWidth().background(if (isSelected) (colors["primary"] as Color).copy(alpha = 0.1f) else colors["card"] as Color).clickable {
+                                        onScopeChange(scopeKey)
+                                    }.padding(16.dp)
                                 ) {
                                     Text(
                                         config.label,
@@ -506,7 +578,8 @@ fun EmptyStates(
     query: String,
     loading: Boolean,
     onPopularSearch: (String) -> Unit,
-    colors: Map<String, Color>
+    colors: Map<String, Color>,
+    inverse: Boolean = false   // NEW: support opposite mode message
 ) {
     if (loading) return
     Column(
@@ -528,7 +601,12 @@ fun EmptyStates(
                 }
             }
         } else if (hasSearched && query.isNotEmpty()) {
-            Text("No results found for \"$query\"", fontSize = 18.sp, color = colors["text"] as Color, modifier = Modifier.padding(bottom = 8.dp))
+            Text(
+                if (inverse) "No verses without \"$query\" found" else "No results found for \"$query\"",
+                fontSize = 18.sp,
+                color = colors["text"] as Color,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
             Text("Try different keywords or check spelling", fontSize = 14.sp, color = colors["muted"] as Color, modifier = Modifier.padding(bottom = 24.dp))
             Card(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
@@ -563,7 +641,7 @@ fun SearchResultItem(
         tagColor = colors["muted"] as Color,
         tagBg = colors["card"] as Color,
         wordsOfJesus = Color(0xFFDA4227),
-        searchHighlightBg = if (viewModel.darkTheme) Color(0xFF81D4FA).copy(alpha = 0.3f) else Color.Yellow.copy(alpha = 0.3f),
+        searchHighlightBg = colorScheme.primary.copy(alpha = 0.2f),
         highlightIcon = colors["primary"] as Color
     )
     val processed = processor.processVerse(
@@ -573,6 +651,7 @@ fun SearchResultItem(
         highlight = query,
         isOldTestament = viewModel.isOldTestament
     )
+
     Card(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable { onVersePress(verse) },
         colors = CardDefaults.cardColors(containerColor = colors["card"] as Color),
