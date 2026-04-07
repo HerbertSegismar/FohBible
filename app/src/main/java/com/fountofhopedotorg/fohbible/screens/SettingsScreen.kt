@@ -1300,14 +1300,6 @@ fun HighlightColorSquare(
 
 @Composable
 fun AboutDialog(onDismiss: () -> Unit) {
-    val context = LocalContext.current
-    val versionName = remember {
-        try {
-            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.1"
-        } catch (_: Exception) {
-            "Unknown"
-        }
-    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1321,7 +1313,7 @@ fun AboutDialog(onDismiss: () -> Unit) {
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    "Version: $versionName",
+                    "Version: 1.0.1",
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium
                 )
