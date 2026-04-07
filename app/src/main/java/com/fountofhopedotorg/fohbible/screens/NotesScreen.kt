@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Note
 import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
@@ -90,6 +91,7 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.fountofhopedotorg.fohbible.modals.VersionSelectionModal
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -111,6 +113,7 @@ fun NotesScreen(
     var sortOrder by remember { mutableStateOf(NoteSortOrder.DATE_NEWEST) }
     var showNotesModal by remember { mutableStateOf(false) }
     var selectedNoteForEdit by remember { mutableStateOf<Note?>(null) }
+    var showVersionModal by remember { mutableStateOf(false) } // New state for version modal
     val viewModel = viewModel<AppViewModel>()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -239,15 +242,42 @@ fun NotesScreen(
 
             if (!searchActive) {
                 Column(modifier = Modifier.fillMaxWidth().padding(18.dp)) {
-                    BibleVersionSelector(
-                        title = "Bible Version",
-                        currentAbbr = selectedVersionAbbr,
-                        description = BibleVersionUtils.descriptionMap[selectedDbName] ?: "Bible translation",
-                        onVersionSelected = { file, abbr ->
-                            selectedDbName = file
-                            selectedVersionAbbr = abbr
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showVersionModal = true },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Bible Version",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = "$selectedVersionAbbr - ${BibleVersionUtils.descriptionMap[selectedDbName] ?: "Bible translation"}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Icon(
+                                Icons.Default.ArrowDropDown,
+                                contentDescription = "Change version",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
                         }
-                    )
+                    }
                 }
             }
 
@@ -382,6 +412,24 @@ fun NotesScreen(
                     appViewModel = viewModel
                 )
             }
+        }
+        if (showVersionModal) {
+            VersionSelectionModal(
+                currentVersionKey = selectedDbName,
+                onVersionSelected = { file ->
+                    selectedDbName = file
+                    selectedVersionAbbr = BibleVersionUtils.versionMap[file] ?: "Bible"
+                    showVersionModal = false
+                },
+                onDismiss = { showVersionModal = false },
+                colors = mapOf(
+                    "primary" to MaterialTheme.colorScheme.primary,
+                    "card" to if (appViewModel.darkTheme) appViewModel.darkModalBackgroundColor else appViewModel.lightModalBackgroundColor,
+                    "text" to MaterialTheme.colorScheme.onSurface,
+                    "muted" to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    "border" to MaterialTheme.colorScheme.surfaceVariant
+                )
+            )
         }
     }
 }

@@ -1,5 +1,4 @@
 @file:OptIn(ExperimentalMaterial3Api::class)
-
 package com.fountofhopedotorg.fohbible.screens
 
 import android.content.Context
@@ -30,6 +29,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -87,6 +87,7 @@ import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
 import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
 import kotlinx.coroutines.launch
+import com.fountofhopedotorg.fohbible.modals.VersionSelectionModal
 
 @Composable
 fun BookmarksScreen(
@@ -105,6 +106,7 @@ fun BookmarksScreen(
     var searchActive by remember { mutableStateOf(false) }
     var showSortOptions by remember { mutableStateOf(false) }
     var sortOrder by remember { mutableStateOf(SortOrder.DATE_ADDED) }
+    var showVersionModal by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -215,15 +217,42 @@ fun BookmarksScreen(
             }
             if (!searchActive) {
                 Column(modifier = Modifier.fillMaxWidth().padding(18.dp)) {
-                    BibleVersionSelector(
-                        title = "Bible Version",
-                        currentAbbr = selectedVersionAbbr,
-                        description = BibleVersionUtils.descriptionMap[selectedDbName] ?: "Bible translation",
-                        onVersionSelected = { file, abbr ->
-                            selectedDbName = file
-                            selectedVersionAbbr = abbr
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showVersionModal = true },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Bible Version",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = "$selectedVersionAbbr - ${BibleVersionUtils.descriptionMap[selectedDbName] ?: "Bible translation"}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Icon(
+                                Icons.Default.ArrowDropDown,
+                                contentDescription = "Change version",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
                         }
-                    )
+                    }
                 }
             }
 
@@ -328,9 +357,26 @@ fun BookmarksScreen(
                 onDismiss = { showDeleteConfirmation = false }
             )
         }
+        if (showVersionModal) {
+            VersionSelectionModal(
+                currentVersionKey = selectedDbName,
+                onVersionSelected = { file ->
+                    selectedDbName = file
+                    selectedVersionAbbr = BibleVersionUtils.versionMap[file] ?: "Bible"
+                    showVersionModal = false
+                },
+                onDismiss = { showVersionModal = false },
+                colors = mapOf(
+                    "primary" to MaterialTheme.colorScheme.primary,
+                    "card" to if (appViewModel.darkTheme) appViewModel.darkModalBackgroundColor else appViewModel.lightModalBackgroundColor,
+                    "text" to MaterialTheme.colorScheme.onSurface,
+                    "muted" to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    "border" to MaterialTheme.colorScheme.surfaceVariant
+                )
+            )
+        }
     }
 }
-
 @Composable
 fun NormalTopBar(
     bookmarksCount: Int,

@@ -37,10 +37,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -70,6 +67,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.fountofhopedotorg.fohbible.ColorWheelDialog
 import com.fountofhopedotorg.fohbible.modals.FontModal
+import com.fountofhopedotorg.fohbible.modals.VersionSelectionModal
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.ui.theme.DefaultPrimaryColor
 import com.fountofhopedotorg.fohbible.ui.theme.PredefinedColorThemes
@@ -107,6 +105,10 @@ fun SettingsScreen() {
     var showResetConfirmDialog by remember { mutableStateOf(false) }
     var showHighlightColorWheel by remember { mutableStateOf(false) }
     var showResetHighlightColorsDialog by remember { mutableStateOf(false) }
+
+    // New state variables for version selection modals
+    var showPrimaryVersionModal by remember { mutableStateOf(false) }
+    var showSecondaryVersionModal by remember { mutableStateOf(false) }
 
     LaunchedEffect(viewModel.isCustomColor, viewModel.customColor) {
         isUsingCustomColor = viewModel.isCustomColor
@@ -181,15 +183,49 @@ fun SettingsScreen() {
 
         item {
             SettingsSection(title = "Reader Settings", subtitle = "Customize your Bible reading experience") {
-                BibleVersionSelector(
-                    title = "Primary Bible Version",
-                    currentAbbr = viewModel.currentVersionAbbr,
-                    description = BibleVersionUtils.descriptionMap[viewModel.currentDbName] ?: "Bible translation",
-                    onVersionSelected = { file, abbr ->
-                        viewModel.currentDbName = file
-                        viewModel.currentVersionAbbr = abbr
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showPrimaryVersionModal = true },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Primary Bible Version",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            )
+                            Text(
+                                text = viewModel.currentVersionAbbr,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = BibleVersionUtils.descriptionMap[viewModel.currentDbName] ?: "Bible translation",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
+                        }
+                        Icon(
+                            Icons.Default.ArrowDropDown,
+                            contentDescription = "Change version",
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
-                )
+                }
 
                 SettingsItem(
                     title = "Multi-Version Display",
@@ -207,23 +243,56 @@ fun SettingsScreen() {
 
                 if (viewModel.multiVersion) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    BibleVersionSelector(
-                        title = "Secondary Bible Version",
-                        currentAbbr = viewModel.secondaryVersionAbbr.ifEmpty { "Select version" },
-                        description = if (viewModel.secondaryVersionAbbr.isNotEmpty()) {
-                            BibleVersionUtils.versionMap.entries
-                                .find { it.value == viewModel.secondaryVersionAbbr }
-                                ?.let { BibleVersionUtils.descriptionMap[it.key] }
-                                ?: "Bible translation"
-                        } else {
-                            "Select a secondary version"
-                        },
-                        onVersionSelected = { file, abbr ->
-                            viewModel.secondaryDbName = file
-                            viewModel.secondaryVersionAbbr = abbr
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showSecondaryVersionModal = true },
+                        shape = RoundedCornerShape(8.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Secondary Bible Version",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.padding(bottom = 4.dp)
+                                )
+                                Text(
+                                    text = viewModel.secondaryVersionAbbr.ifEmpty { "Select version" },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = if (viewModel.secondaryVersionAbbr.isNotEmpty()) {
+                                        BibleVersionUtils.descriptionMap[viewModel.secondaryDbName] ?: "Bible translation"
+                                    } else {
+                                        "Select a secondary version"
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1
+                                )
+                            }
+                            Icon(
+                                Icons.Default.ArrowDropDown,
+                                contentDescription = "Change version",
+                                modifier = Modifier.size(24.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-                    )
+                    }
+
                     Spacer(modifier = Modifier.height(8.dp))
+
                     SettingsItem(
                         title = "Multi-View Layout",
                         subtitle = "Horizontal or vertical arrangement"
@@ -267,9 +336,7 @@ fun SettingsScreen() {
                         )
                     }
                 }
-
                 Spacer(Modifier.height(8.dp))
-
                 Column {
                     Text("Font Family", style = MaterialTheme.typography.labelLarge)
                     Spacer(Modifier.height(8.dp))
@@ -283,7 +350,6 @@ fun SettingsScreen() {
                         }
                     }
                 }
-
                 SettingsItem(
                     title = "Font Size",
                     subtitle = "Adjust text size for better readability",
@@ -329,7 +395,6 @@ fun SettingsScreen() {
                 ) {
                     Icon(Icons.Default.ChevronRight, contentDescription = null)
                 }
-
                 SettingsItem(
                     title = "Overlay Opacity",
                     subtitle = "Adjust the overlay transparency"
@@ -351,7 +416,6 @@ fun SettingsScreen() {
                         },
                     )
                 }
-
                 SettingsItem(
                     title = "Light Overlay Color",
                     subtitle = "Overlay color for light theme"
@@ -365,7 +429,6 @@ fun SettingsScreen() {
                             .clickable { showLightOverlayColorWheel = true }
                     )
                 }
-
                 SettingsItem(
                     title = "Dark Overlay Color",
                     subtitle = "Overlay color for dark theme"
@@ -392,7 +455,6 @@ fun SettingsScreen() {
                             .clickable { showVerseMarkerColorWheel = true }
                     )
                 }
-
                 SettingsItem(
                     title = "Light Modal Background Color",
                     subtitle = "Modal background color for light theme"
@@ -406,7 +468,6 @@ fun SettingsScreen() {
                             .clickable { showLightModalColorWheel = true }
                     )
                 }
-
                 SettingsItem(
                     title = "Dark Modal Background Color",
                     subtitle = "Modal background color for dark theme"
@@ -433,7 +494,6 @@ fun SettingsScreen() {
                             .clickable { showWordMarkerColorWheel = true }
                     )
                 }
-
                 SettingsItem(
                     title = "Dictionary Mode",
                     subtitle = "Toggle between dictionary or highlight mode on word tap"
@@ -447,7 +507,6 @@ fun SettingsScreen() {
                         )
                     )
                 }
-
                 SettingsItem(
                     title = "Lazy Reader Mode",
                     subtitle = "Toggle between dynamic or full chapter loading. Lazy reader only loads the visible verses and is ideal for slower devices"
@@ -480,7 +539,6 @@ fun SettingsScreen() {
                 }
             }
         }
-
         item {
             SettingsSection(
                 title = "Word Marker Palette Colors",
@@ -518,7 +576,6 @@ fun SettingsScreen() {
                 }
             }
         }
-
         item {
             SettingsSection(
                 title = "Database Management",
@@ -610,6 +667,44 @@ fun SettingsScreen() {
                 }
             }
         }
+    }
+
+    if (showPrimaryVersionModal) {
+        VersionSelectionModal(
+            currentVersionKey = viewModel.currentDbName,
+            onVersionSelected = { file ->
+                viewModel.currentDbName = file
+                viewModel.currentVersionAbbr = BibleVersionUtils.versionMap[file] ?: "Bible"
+                showPrimaryVersionModal = false
+            },
+            onDismiss = { showPrimaryVersionModal = false },
+            colors = mapOf(
+                "primary" to MaterialTheme.colorScheme.primary,
+                "card" to if (viewModel.darkTheme) viewModel.darkModalBackgroundColor else viewModel.lightModalBackgroundColor,
+                "text" to MaterialTheme.colorScheme.onSurface,
+                "muted" to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                "border" to MaterialTheme.colorScheme.surfaceVariant
+            )
+        )
+    }
+
+    if (showSecondaryVersionModal) {
+        VersionSelectionModal(
+            currentVersionKey = viewModel.secondaryDbName,
+            onVersionSelected = { file ->
+                viewModel.secondaryDbName = file
+                viewModel.secondaryVersionAbbr = BibleVersionUtils.versionMap[file] ?: "Bible"
+                showSecondaryVersionModal = false
+            },
+            onDismiss = { showSecondaryVersionModal = false },
+            colors = mapOf(
+                "primary" to MaterialTheme.colorScheme.primary,
+                "card" to if (viewModel.darkTheme) viewModel.darkModalBackgroundColor else viewModel.lightModalBackgroundColor,
+                "text" to MaterialTheme.colorScheme.onSurface,
+                "muted" to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                "border" to MaterialTheme.colorScheme.surfaceVariant
+            )
+        )
     }
 
     if (showResetHighlightColorsDialog) {
@@ -963,106 +1058,6 @@ fun SettingsScreen() {
 
     if (showAboutDialog) {
         AboutDialog(onDismiss = { showAboutDialog = false })
-    }
-}
-
-@Composable
-fun BibleVersionSelector(
-    title: String,
-    currentAbbr: String,
-    description: String,
-    onVersionSelected: (String, String) -> Unit,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(bottom = 4.dp)
-        )
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = !expanded }
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor(enabled = true, type = ExposedDropdownMenuAnchorType.PrimaryEditable)
-                    .clip(RoundedCornerShape(8.dp))
-                    .border(
-                        1.dp,
-                        MaterialTheme.colorScheme.outline,
-                        RoundedCornerShape(8.dp)
-                    )
-                    .clickable { expanded = true }
-                    .padding(horizontal = 12.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = currentAbbr,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1
-                    )
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.ArrowDropDown,
-                        contentDescription = if (expanded) "Collapse" else "Expand",
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
-            ) {
-                BibleVersionUtils.versionMap.forEach { (file, abbr) ->
-                    val versionDesc = BibleVersionUtils.descriptionMap[file] ?: "Bible translation"
-                    DropdownMenuItem(
-                        text = {
-                            Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                                Text(
-                                    text = abbr,
-                                    fontWeight = if (abbr == currentAbbr) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (abbr == currentAbbr) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = versionDesc,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 2
-                                )
-                            }
-                        },
-                        onClick = {
-                            onVersionSelected(file, abbr)
-                            expanded = false
-                        },
-                        modifier = Modifier.background(
-                            if (abbr == currentAbbr) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent
-                        )
-                    )
-                    if (file != BibleVersionUtils.versionMap.keys.last()) {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(horizontal = 8.dp),
-                            thickness = 0.5.dp,
-                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                        )
-                    }
-                }
-            }
-        }
     }
 }
 

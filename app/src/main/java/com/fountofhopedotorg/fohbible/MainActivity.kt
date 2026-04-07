@@ -1,4 +1,3 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
 package com.fountofhopedotorg.fohbible
 
 import android.content.res.Configuration
@@ -117,6 +116,7 @@ import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.modals.FontModal
 import com.fountofhopedotorg.fohbible.modals.NavigationModal
+import com.fountofhopedotorg.fohbible.modals.VersionSelectionModal
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.screens.BgModal
 import com.fountofhopedotorg.fohbible.screens.BookmarksScreen
@@ -132,7 +132,6 @@ import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
 import com.fountofhopedotorg.fohbible.ui.theme.PredefinedColorThemes
 import com.fountofhopedotorg.fohbible.ui.theme.ThemeManager
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
-import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils.descriptionMap
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
@@ -560,34 +559,42 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                         )
                     }
                     if (viewModel.showPrimaryVersionDropdown) {
-                        Dialog(onDismissRequest = { viewModel.showPrimaryVersionDropdown = false }) {
-                            VersionSelectionDialog(
-                                onDismiss = { viewModel.showPrimaryVersionDropdown = false },
-                                onVersionSelected = { file, abbr ->
-                                    viewModel.currentDbName = file
-                                    viewModel.currentVersionAbbr = abbr
-                                },
-                                currentAbbr = viewModel.currentVersionAbbr,
-                                versionMap = BibleVersionUtils.versionMap,
-                                descriptionMap = descriptionMap,
-                                appViewModel = viewModel
+                        VersionSelectionModal(
+                            currentVersionKey = viewModel.currentDbName,
+                            onVersionSelected = { file ->
+                                val abbr = BibleVersionUtils.versionMap[file] ?: "Bible"
+                                viewModel.currentDbName = file
+                                viewModel.currentVersionAbbr = abbr
+                                viewModel.showPrimaryVersionDropdown = false
+                            },
+                            onDismiss = { viewModel.showPrimaryVersionDropdown = false },
+                            colors = mapOf(
+                                "primary" to MaterialTheme.colorScheme.primary,
+                                "card" to if (viewModel.darkTheme) viewModel.darkModalBackgroundColor else viewModel.lightModalBackgroundColor,
+                                "text" to MaterialTheme.colorScheme.onSurface,
+                                "muted" to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                "border" to MaterialTheme.colorScheme.surfaceVariant
                             )
-                        }
+                        )
                     }
                     if (viewModel.showSecondaryVersionDropdown) {
-                        Dialog(onDismissRequest = { viewModel.showSecondaryVersionDropdown = false }) {
-                            VersionSelectionDialog(
-                                onDismiss = { viewModel.showSecondaryVersionDropdown = false },
-                                onVersionSelected = { file, abbr ->
-                                    viewModel.secondaryDbName = file
-                                    viewModel.secondaryVersionAbbr = abbr
-                                },
-                                currentAbbr = viewModel.secondaryVersionAbbr,
-                                versionMap = BibleVersionUtils.versionMap,
-                                descriptionMap = descriptionMap,
-                                appViewModel = viewModel
+                        VersionSelectionModal(
+                            currentVersionKey = viewModel.secondaryDbName,
+                            onVersionSelected = { file ->
+                                val abbr = BibleVersionUtils.versionMap[file] ?: "Bible"
+                                viewModel.secondaryDbName = file
+                                viewModel.secondaryVersionAbbr = abbr
+                                viewModel.showSecondaryVersionDropdown = false
+                            },
+                            onDismiss = { viewModel.showSecondaryVersionDropdown = false },
+                            colors = mapOf(
+                                "primary" to MaterialTheme.colorScheme.primary,
+                                "card" to if (viewModel.darkTheme) viewModel.darkModalBackgroundColor else viewModel.lightModalBackgroundColor,
+                                "text" to MaterialTheme.colorScheme.onSurface,
+                                "muted" to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                "border" to MaterialTheme.colorScheme.surfaceVariant
                             )
-                        }
+                        )
                     }
                     if (viewModel.showColorThemeDialog) {
                         Dialog(
@@ -667,117 +674,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             initialColor = viewModel.verseMarkerColor
                         )
                     }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun VersionSelectionDialog(
-    onDismiss: () -> Unit,
-    onVersionSelected: (String, String) -> Unit,
-    currentAbbr: String,
-    versionMap: Map<String, String>,
-    descriptionMap: Map<String, String>,
-    appViewModel: AppViewModel
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(450.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (appViewModel.darkTheme)
-                appViewModel.darkModalBackgroundColor
-            else
-                appViewModel.lightModalBackgroundColor
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Choose Bible Version",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
-                )
-                IconButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Icon(
-                        Icons.Filled.Close,
-                        contentDescription = "Close",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(versionMap.entries.toList()) { entry ->
-                    val file = entry.key
-                    val abbr = entry.value
-                    val desc = descriptionMap[file] ?: "Bible translation"
-                    val isActive = abbr == currentAbbr
-                    val backgroundColor by animateColorAsState(
-                        if (isActive) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                        animationSpec = tween(durationMillis = 200)
-                    )
-                    val textColor by animateColorAsState(
-                        if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                        animationSpec = tween(durationMillis = 200)
-                    )
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                onVersionSelected(file, abbr)
-                                onDismiss()
-                            },
-                        colors = CardDefaults.cardColors(containerColor = backgroundColor)
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Text(
-                                text = abbr,
-                                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-                                color = textColor
-                            )
-                            Text(
-                                text = desc,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                            )
-                        }
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                Button(
-                    onClick = onDismiss,
-                    modifier = Modifier.padding(end = 8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = Color.White
-                    )
-                ) {
-                    Text("Close")
                 }
             }
         }
@@ -983,6 +879,7 @@ fun ColorOptionItem(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeAppBar(
     currentScreen: Screen,
