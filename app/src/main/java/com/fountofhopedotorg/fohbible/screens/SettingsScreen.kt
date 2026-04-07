@@ -1303,7 +1303,7 @@ fun AboutDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current
     val versionName = remember {
         try {
-            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.0"
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.1"
         } catch (_: Exception) {
             "Unknown"
         }
