@@ -517,6 +517,11 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                         viewModel.goBack()
                                         viewModel.navigateTo(Screen.Reader(passage))
                                     }
+                                },
+                                currentVersionKey = viewModel.currentDbName,
+                                onVersionChange = { newVersionKey ->
+                                    viewModel.currentDbName = newVersionKey
+                                    viewModel.currentVersionAbbr = BibleVersionUtils.versionMap[newVersionKey] ?: "Bible"
                                 }
                             )
                         }
