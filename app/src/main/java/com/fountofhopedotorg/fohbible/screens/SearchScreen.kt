@@ -93,51 +93,6 @@ fun getScopeForBookNumber(bookNumber: Int): String? {
     return null
 }
 
-fun DatabaseHelper.searchVerses(query: String, options: SearchOptions? = null, inverse: Boolean = false): List<SearchVerse> {
-    val verses = mutableListOf<SearchVerse>()
-    try {
-        if (database == null || !database!!.isOpen) return verses
-        var whereClause = ""
-        val args = mutableListOf<String>()
-
-        query.trim().split("\\s+".toRegex()).filter { it.isNotBlank() }.forEach { word ->
-            if (whereClause.isNotEmpty()) whereClause += " AND "
-            val operator = if (inverse) "NOT LIKE" else "LIKE"
-            whereClause += "text $operator ?"
-            args.add("%$word%")
-        }
-
-        if (options?.bookRange != null) {
-            if (whereClause.isNotEmpty()) whereClause += " AND "
-            whereClause += "book_number BETWEEN ? AND ?"
-            args.add(options.bookRange.first.toString())
-            args.add(options.bookRange.second.toString())
-        }
-
-        val cursor = database?.query(
-            "verses",
-            arrayOf("book_number", "chapter", "verse", "text"),
-            whereClause.ifEmpty { null },
-            if (args.isEmpty()) null else args.toTypedArray(),
-            null,
-            null,
-            null
-        )
-        cursor?.use {
-            while (it.moveToNext()) {
-                val bookNumber = it.getInt(it.getColumnIndexOrThrow("book_number"))
-                val chapter = it.getInt(it.getColumnIndexOrThrow("chapter"))
-                val verseNum = it.getInt(it.getColumnIndexOrThrow("verse"))
-                val text = it.getString(it.getColumnIndexOrThrow("text"))
-                val bookName = getBookInfo(bookNumber)?.name
-                verses.add(SearchVerse(verseNum, text, bookNumber, chapter, bookName))
-            }
-        }
-    } catch (_: Exception) {
-    }
-    return verses
-}
-
 val BOOK_COLORS: Map<String, String> = mapOf()
 
 fun generateColorFromString(str: String): String {
@@ -212,6 +167,7 @@ fun SearchScreen(
     var showScopeDropdown by remember { mutableStateOf(false) }
     var showResultsStats by remember { mutableStateOf(false) }
     var inverseSearch by remember { mutableStateOf(false) }
+    var exactPhrase by remember { mutableStateOf(false) }
 
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
@@ -248,12 +204,19 @@ fun SearchScreen(
             )
 
             val searchResults = withContext(Dispatchers.IO) {
-                databaseHelper?.searchVerses(actualQuery, searchOptions, inverseSearch) ?: emptyList()
+                databaseHelper?.searchVerses(
+                    actualQuery,
+                    searchOptions,
+                    inverseSearch,
+                    exactPhrase
+                ) ?: emptyList()
             }
+
             val enhancedResults = enhanceSearchResultsWithColors(searchResults, databaseHelper)
             results.clear()
             results.addAll(enhancedResults)
             showResultsStats = true
+
             coroutineScope.launch {
                 listState.animateScrollToItem(0)
             }
@@ -297,29 +260,42 @@ fun SearchScreen(
         hasSearched = false
         showResultsStats = false
         inverseSearch = false
+        exactPhrase = false
     }
 
     val getResultStats: () -> String = {
         val config = getScopeConfig(scope)
         if (!hasSearched || loading || !showResultsStats) {
-            val mode = if (inverseSearch) " (opposite)" else ""
+            val mode = when {
+                exactPhrase && inverseSearch -> " (exact phrase & opposite)"
+                exactPhrase -> " (exact phrase)"
+                inverseSearch -> " (opposite)"
+                else -> ""
+            }
             "Search ${config.label}$mode"
         } else if (results.isEmpty()) {
-            if (inverseSearch) {
-                "No results found without \"$query\" in ${config.label}"
-            } else {
-                "No results found for \"$query\" in ${config.label}"
+            val desc = when {
+                inverseSearch && exactPhrase -> "without the exact phrase \"$query\""
+                inverseSearch -> "without \"$query\""
+                exactPhrase -> "for the exact phrase \"$query\""
+                else -> "for \"$query\""
             }
+            "No results found $desc in ${config.label}"
         } else {
             val bookCount = results.map { it.bookNumber }.toSet().size
             val foundStr = "Found ${results.size} result${if (results.size != 1) "s" else ""}"
-            val termStr = if (inverseSearch) " without \"$query\"" else " for \"$query\""
+            val termStr = when {
+                inverseSearch && exactPhrase -> " without the exact phrase \"$query\""
+                inverseSearch -> " without \"$query\""
+                exactPhrase -> " for the exact phrase \"$query\""
+                else -> " for \"$query\""
+            }
             val scopeStr = if (isBookScope(scope)) {
                 " in ${config.label}"
             } else {
                 " in $bookCount book${if (bookCount != 1) "s" else ""}"
             }
-            val queryStr = if (inverseSearch || !isBookScope(scope)) termStr else ""
+            val queryStr = if (inverseSearch || exactPhrase || !isBookScope(scope)) termStr else ""
             "$foundStr$queryStr$scopeStr"
         }
     }
@@ -366,7 +342,7 @@ fun SearchScreen(
 
             item {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     OutlinedTextField(
@@ -384,11 +360,12 @@ fun SearchScreen(
                     )
                 }
             }
+
             item {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 8.dp),
+                        .padding(vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -402,9 +379,35 @@ fun SearchScreen(
                         onCheckedChange = { newValue ->
                             inverseSearch = newValue
                             if (hasSearched && query.trim().isNotEmpty() && !loading) {
-                                coroutineScope.launch {
-                                    handleSearch(null)
-                                }
+                                coroutineScope.launch { handleSearch(null) }
+                            }
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = colorScheme.primary,
+                            checkedTrackColor = colorScheme.primary.copy(alpha = 0.5f)
+                        )
+                    )
+                }
+            }
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Exact phrase match",
+                        color = colors["muted"] as Color,
+                        fontSize = 14.sp
+                    )
+                    Switch(
+                        checked = exactPhrase,
+                        onCheckedChange = { newValue ->
+                            exactPhrase = newValue
+                            if (hasSearched && query.trim().isNotEmpty() && !loading) {
+                                coroutineScope.launch { handleSearch(null) }
                             }
                         },
                         colors = SwitchDefaults.colors(
@@ -419,7 +422,7 @@ fun SearchScreen(
                 Button(
                     onClick = { coroutineScope.launch { handleSearch(query) } },
                     enabled = query.trim().isNotEmpty(),
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = colors["primary"] as Color)
                 ) {
                     Text(getResultStats(), color = Color.White, fontWeight = FontWeight.SemiBold)
@@ -434,7 +437,8 @@ fun SearchScreen(
                         loading = loading,
                         onPopularSearch = handlePopularSearch,
                         colors = colors,
-                        inverse = inverseSearch
+                        inverse = inverseSearch,
+                        exactPhrase = exactPhrase
                     )
                 }
             } else {
@@ -451,7 +455,11 @@ fun SearchScreen(
             modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp)
         ) {
             FloatingActionButton(
-                onClick = { coroutineScope.launch { listState.animateScrollToItem(0) } },
+                onClick = {
+                    coroutineScope.launch {
+                        listState.animateScrollToItem(0)
+                    }
+                },
                 containerColor = colors["primary"] as Color,
                 shape = CircleShape
             ) {
@@ -511,6 +519,7 @@ fun ScopeDropdown(
                             Icon(Icons.Default.Close, null, tint = Color.White)
                         }
                     }
+
                     LazyColumn(modifier = Modifier.height(500.dp)) {
                         SCOPE_CATEGORIES.forEach { (category, scopes) ->
                             item {
@@ -526,9 +535,10 @@ fun ScopeDropdown(
                                 val config = getScopeConfig(scopeKey)
                                 val isSelected = scope == scopeKey
                                 Column(
-                                    modifier = Modifier.fillMaxWidth().background(if (isSelected) (colors["primary"] as Color).copy(alpha = 0.1f) else colors["card"] as Color).clickable {
-                                        onScopeChange(scopeKey)
-                                    }.padding(16.dp)
+                                    modifier = Modifier.fillMaxWidth()
+                                        .background(if (isSelected) (colors["primary"] as Color).copy(alpha = 0.1f) else colors["card"] as Color)
+                                        .clickable { onScopeChange(scopeKey) }
+                                        .padding(16.dp)
                                 ) {
                                     Text(
                                         config.label,
@@ -579,9 +589,11 @@ fun EmptyStates(
     loading: Boolean,
     onPopularSearch: (String) -> Unit,
     colors: Map<String, Color>,
-    inverse: Boolean = false   // NEW: support opposite mode message
+    inverse: Boolean = false,
+    exactPhrase: Boolean = false
 ) {
     if (loading) return
+
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
@@ -601,21 +613,61 @@ fun EmptyStates(
                 }
             }
         } else if (hasSearched && query.isNotEmpty()) {
+            val noResultsText = when {
+                inverse && exactPhrase -> "No verses without the exact phrase \"$query\" found"
+                inverse -> "No verses without \"$query\" found"
+                exactPhrase -> "No verses with the exact phrase \"$query\" found"
+                else -> "No results found for \"$query\""
+            }
+
             Text(
-                if (inverse) "No verses without \"$query\" found" else "No results found for \"$query\"",
+                noResultsText,
                 fontSize = 18.sp,
                 color = colors["text"] as Color,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
-            Text("Try different keywords or check spelling", fontSize = 14.sp, color = colors["muted"] as Color, modifier = Modifier.padding(bottom = 24.dp))
+
+            Text(
+                "Try different keywords or check spelling",
+                fontSize = 14.sp,
+                color = colors["muted"] as Color,
+                modifier = Modifier.padding(bottom = 24.dp)
+            )
+
             Card(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 colors = CardDefaults.cardColors(containerColor = colors["card"] as Color),
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Search tips:", color = colors["text"] as Color, fontSize = 14.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 8.dp))
-                    Text("• Try simpler or more common words\n• Check for typos\n• Search for single words first", color = colors["muted"] as Color, fontSize = 12.sp, textAlign = TextAlign.Center)
+                    Text(
+                        "Search tips:",
+                        color = colors["text"] as Color,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp)
+                    )
+
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf(
+                            "Try simpler or more common words",
+                            "Check for typos",
+                            "Search for single words first"
+                        ).forEach { tip ->
+                            Text(
+                                text = "• $tip",
+                                color = colors["muted"] as Color,
+                                fontSize = 12.sp,
+                                textAlign = TextAlign.Start,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
                 }
             }
         }

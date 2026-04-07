@@ -414,6 +414,71 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
         }
         return verses
     }
+    fun searchVerses(
+        query: String,
+        options: SearchOptions? = null,
+        inverse: Boolean = false,
+        exactPhrase: Boolean = false
+    ): List<SearchVerse> {
+        val verses = mutableListOf<SearchVerse>()
+        try {
+            if (database == null || !database!!.isOpen) return verses
+
+            val trimmedQuery = query.trim()
+            if (trimmedQuery.isEmpty()) return verses
+
+            var whereClause = ""
+            val args = mutableListOf<String>()
+            val searchTerms = if (exactPhrase) {
+                listOf(query)
+            } else {
+                trimmedQuery.split("\\s+".toRegex()).filter { it.isNotBlank() }
+            }
+
+            searchTerms.forEach { term ->
+                if (whereClause.isNotEmpty()) whereClause += " AND "
+                val operator = if (inverse) "NOT LIKE" else "LIKE"
+                whereClause += "text $operator ?"
+                args.add("%$term%")
+            }
+
+            if (options?.bookRange != null) {
+                if (whereClause.isNotEmpty()) whereClause += " AND "
+                whereClause += "book_number BETWEEN ? AND ?"
+                args.add(options.bookRange.first.toString())
+                args.add(options.bookRange.second.toString())
+            }
+
+            val cursor = database?.query(
+                VERSES_TABLE,
+                arrayOf(
+                    COLUMN_BOOK_NUMBER,
+                    COLUMN_CHAPTER,
+                    COLUMN_VERSE,
+                    COLUMN_TEXT
+                ),
+                whereClause.ifEmpty { null },
+                if (args.isEmpty()) null else args.toTypedArray(),
+                null,
+                null,
+                null
+            )
+
+            cursor?.use {
+                while (it.moveToNext()) {
+                    val bookNumber = it.getInt(it.getColumnIndexOrThrow(COLUMN_BOOK_NUMBER))
+                    val chapter = it.getInt(it.getColumnIndexOrThrow(COLUMN_CHAPTER))
+                    val verseNum = it.getInt(it.getColumnIndexOrThrow(COLUMN_VERSE))
+                    val text = it.getString(it.getColumnIndexOrThrow(COLUMN_TEXT))
+                    val bookName = getBookInfo(bookNumber)?.name
+
+                    verses.add(SearchVerse(verseNum, text, bookNumber, chapter, bookName))
+                }
+            }
+        } catch (_: Exception) {
+        }
+        return verses
+    }
 
     fun addBookmark(verse: Verse) {
         try {
@@ -775,5 +840,3 @@ fun getVersesWithSubheadings(
     }
     return contentMap.toSortedMap().flatMap { it.value }
 }
-
-
