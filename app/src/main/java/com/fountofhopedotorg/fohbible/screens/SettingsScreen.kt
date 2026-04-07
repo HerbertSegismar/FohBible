@@ -1,4 +1,3 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
 package com.fountofhopedotorg.fohbible.screens
 
 import android.content.Intent
@@ -85,8 +84,6 @@ fun SettingsScreen() {
     val viewModel: AppViewModel = viewModel()
     val context = LocalContext.current
 
-    var showVersionInfoDialog by remember { mutableStateOf(false) }
-    var selectedVersionInfo by remember { mutableStateOf<Pair<String, String>?>(null) }
     var showBgModal by remember { mutableStateOf(false) }
     var showFontModal by remember { mutableStateOf(false) }
     var tempFontSize by remember { mutableStateOf(viewModel.fontSize.toString()) }
@@ -105,8 +102,6 @@ fun SettingsScreen() {
     var showResetConfirmDialog by remember { mutableStateOf(false) }
     var showHighlightColorWheel by remember { mutableStateOf(false) }
     var showResetHighlightColorsDialog by remember { mutableStateOf(false) }
-
-    // New state variables for version selection modals
     var showPrimaryVersionModal by remember { mutableStateOf(false) }
     var showSecondaryVersionModal by remember { mutableStateOf(false) }
 
@@ -832,14 +827,6 @@ fun SettingsScreen() {
         )
     }
 
-    if (showVersionInfoDialog && selectedVersionInfo != null) {
-        VersionInfoDialog(
-            versionName = selectedVersionInfo!!.first,
-            versionDescription = selectedVersionInfo!!.second,
-            onDismiss = { showVersionInfoDialog = false; selectedVersionInfo = null }
-        )
-    }
-
     if (showBgModal) {
         BgModal(
             currentIndex = viewModel.bgImageIndex,
@@ -1059,56 +1046,6 @@ fun SettingsScreen() {
     if (showAboutDialog) {
         AboutDialog(onDismiss = { showAboutDialog = false })
     }
-}
-
-@Composable
-fun VersionInfoDialog(
-    versionName: String,
-    versionDescription: String,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = versionName,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column {
-                Text(
-                    text = "Description:",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
-                Text(
-                    text = versionDescription,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "About Bible Versions:",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
-                Text(
-                    text = "Different translations balance word-for-word accuracy with thought-for-thought clarity. Choose based on your study needs.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Close")
-            }
-        }
-    )
 }
 
 @Composable
