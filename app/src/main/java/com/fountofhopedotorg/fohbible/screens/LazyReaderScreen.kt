@@ -1070,31 +1070,27 @@ private fun SyncedMultiVersionReader(
 
                 if (viewModel.scrollSync && !suppressSync) {
                     var isSyncing by remember { mutableStateOf(false) }
-
                     LaunchedEffect(primaryState) {
-                        snapshotFlow {
-                            primaryState.firstVisibleItemIndex to primaryState.firstVisibleItemScrollOffset
-                        }.collect { (index, offset) ->
-                            if (!isSyncing && primaryState.isScrollInProgress) {
-                                isSyncing = true
-                                secondaryState.scrollToItem(index, offset)
-                                isSyncing = false
+                        snapshotFlow { primaryState.firstVisibleItemIndex to primaryState.firstVisibleItemScrollOffset }
+                            .collect { (index, offset) ->
+                                if (!isSyncing && primaryState.isScrollInProgress) {
+                                    isSyncing = true
+                                    secondaryState.scrollToItem(index, offset)
+                                    isSyncing = false
+                                }
                             }
-                        }
                     }
                     LaunchedEffect(secondaryState) {
-                        snapshotFlow {
-                            secondaryState.firstVisibleItemIndex to secondaryState.firstVisibleItemScrollOffset
-                        }.collect { (index, offset) ->
-                            if (!isSyncing && secondaryState.isScrollInProgress) {
-                                isSyncing = true
-                                primaryState.scrollToItem(index, offset)
-                                isSyncing = false
+                        snapshotFlow { secondaryState.firstVisibleItemIndex to secondaryState.firstVisibleItemScrollOffset }
+                            .collect { (index, offset) ->
+                                if (!isSyncing && secondaryState.isScrollInProgress && !primaryState.isScrollInProgress) {
+                                    isSyncing = true
+                                    primaryState.scrollToItem(index, offset)
+                                    isSyncing = false
+                                }
                             }
-                        }
                     }
                 }
-
                 if (viewModel.multiViewLayout == "horizontal") {
                     Row(modifier = Modifier.fillMaxSize()) {
                         ChapterView(

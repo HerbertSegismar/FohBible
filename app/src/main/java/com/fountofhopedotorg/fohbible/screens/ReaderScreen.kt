@@ -1025,31 +1025,51 @@ private fun SyncedMultiVersionReader(
                 val primaryState = rememberScrollState()
                 val secondaryState = rememberScrollState()
                 if (viewModel.scrollSync && !suppressSync) {
+                    var isSyncing by remember { mutableStateOf(false) }
                     LaunchedEffect(primaryState) {
-                        snapshotFlow { primaryState.value }.collect { _ ->
-                            val pMax = primaryState.maxValue.coerceAtLeast(1)
-                            val sMax = secondaryState.maxValue.coerceAtLeast(1)
-                            val fraction = primaryState.value.toFloat() / pMax
-                            val targetS = (fraction * sMax).roundToInt()
-                            val currentS = secondaryState.value
-                            val deltaS = targetS - currentS
-                            if (abs(deltaS) > 5) {
-                                secondaryState.scrollBy(deltaS.toFloat())
+                        snapshotFlow { primaryState.value }
+                            .collect { _ ->
+                                if (!isSyncing && primaryState.isScrollInProgress) {
+                                    isSyncing = true
+
+                                    val pMax = primaryState.maxValue.coerceAtLeast(1)
+                                    val sMax = secondaryState.maxValue.coerceAtLeast(1)
+                                    val fraction = primaryState.value.toFloat() / pMax
+                                    val targetS = (fraction * sMax).roundToInt()
+                                    val currentS = secondaryState.value
+                                    val deltaS = targetS - currentS
+
+                                    if (abs(deltaS) > 5) {
+                                        secondaryState.scrollBy(deltaS.toFloat())
+                                    }
+
+                                    isSyncing = false
+                                }
                             }
-                        }
                     }
                     LaunchedEffect(secondaryState) {
-                        snapshotFlow { secondaryState.value }.collect { _ ->
-                            val pMax = primaryState.maxValue.coerceAtLeast(1)
-                            val sMax = secondaryState.maxValue.coerceAtLeast(1)
-                            val fraction = secondaryState.value.toFloat() / sMax
-                            val targetP = (fraction * pMax).roundToInt()
-                            val currentP = primaryState.value
-                            val deltaP = targetP - currentP
-                            if (abs(deltaP) > 5) {
-                                primaryState.scrollBy(deltaP.toFloat())
+                        snapshotFlow { secondaryState.value }
+                            .collect { _ ->
+                                if (!isSyncing &&
+                                    secondaryState.isScrollInProgress &&
+                                    !primaryState.isScrollInProgress) {
+
+                                    isSyncing = true
+
+                                    val pMax = primaryState.maxValue.coerceAtLeast(1)
+                                    val sMax = secondaryState.maxValue.coerceAtLeast(1)
+                                    val fraction = secondaryState.value.toFloat() / sMax
+                                    val targetP = (fraction * pMax).roundToInt()
+                                    val currentP = primaryState.value
+                                    val deltaP = targetP - currentP
+
+                                    if (abs(deltaP) > 5) {
+                                        primaryState.scrollBy(deltaP.toFloat())
+                                    }
+
+                                    isSyncing = false
+                                }
                             }
-                        }
                     }
                 }
                 if (viewModel.multiViewLayout == "horizontal") {
