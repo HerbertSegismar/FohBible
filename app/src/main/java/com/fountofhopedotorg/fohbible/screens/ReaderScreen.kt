@@ -112,7 +112,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.roundToInt
-
 private fun createCommentaryHelperIfExists(
     context: Context,
     baseDbName: String?
@@ -127,7 +126,6 @@ private fun createCommentaryHelperIfExists(
         null
     }
 }
-
 @Composable
 fun ReaderScreen(
     passage: PassageSelection,
@@ -657,7 +655,6 @@ fun ReaderScreen(
         appViewModel = viewModel
     )
 }
-
 @Composable
 private fun SingleVersionReader(
     primaryCurrent: PassageSelection,
@@ -839,7 +836,6 @@ private fun SingleVersionReader(
         }
     }
 }
-
 @Composable
 private fun SyncedMultiVersionReader(
     primaryCurrent: PassageSelection,
@@ -1043,16 +1039,13 @@ private fun SyncedMultiVersionReader(
                                 !secondaryState.isScrollInProgress
                             ) {
                                 syncSource = 1
-
                                 val pMax = primaryState.maxValue.coerceAtLeast(1)
                                 val sMax = secondaryState.maxValue.coerceAtLeast(1)
                                 val fraction = pValue.toFloat() / pMax
                                 val targetS = (fraction * sMax).roundToInt()
-
                                 if (abs(targetS - secondaryState.value) > 5) {
                                     secondaryState.scrollTo(targetS)
                                 }
-
                                 syncSource = 0
                             }
                         }
@@ -1064,16 +1057,13 @@ private fun SyncedMultiVersionReader(
                                 !primaryState.isScrollInProgress
                             ) {
                                 syncSource = 2
-
                                 val pMax = primaryState.maxValue.coerceAtLeast(1)
                                 val sMax = secondaryState.maxValue.coerceAtLeast(1)
                                 val fraction = sValue.toFloat() / sMax
                                 val targetP = (fraction * pMax).roundToInt()
-
                                 if (abs(targetP - primaryState.value) > 5) {
                                     primaryState.scrollTo(targetP)
                                 }
-
                                 syncSource = 0
                             }
                         }
@@ -1081,13 +1071,11 @@ private fun SyncedMultiVersionReader(
                     LaunchedEffect(primaryState.isScrollInProgress, secondaryState.isScrollInProgress) {
                         val primaryScrolling = primaryState.isScrollInProgress
                         val secondaryScrolling = secondaryState.isScrollInProgress
-
                         if (!primaryScrolling && !secondaryScrolling) {
                             val pMax = primaryState.maxValue.coerceAtLeast(1)
                             val sMax = secondaryState.maxValue.coerceAtLeast(1)
                             val pValue = primaryState.value
                             val sValue = secondaryState.value
-
                             if (pValue != sValue) {
                                 if (lastActiveList == 1) {
                                     syncSource = 1
@@ -1253,7 +1241,6 @@ private fun SyncedMultiVersionReader(
         }
     }
 }
-
 @Composable
 private fun IndependentMultiVersionReader(
     primaryCurrent: PassageSelection,
@@ -1689,7 +1676,6 @@ private fun IndependentMultiVersionReader(
         }
     }
 }
-
 @Composable
 private fun LoadingIndicator() {
     Column(
@@ -1702,7 +1688,6 @@ private fun LoadingIndicator() {
         Text("Loading verses...")
     }
 }
-
 @Composable
 fun ChapterView(
     passage: PassageSelection,
@@ -1730,7 +1715,6 @@ fun ChapterView(
     onWordHighlightAction: (() -> Unit)? = null
 ) {
     val isOldTestamentForThisVersion = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
-
     val processor = remember(content) { VerseTextProcessor() }
     val processedVerses = remember(
         content,
@@ -1770,7 +1754,6 @@ fun ChapterView(
         }
         result
     }
-
     var highlightedVerse by remember { mutableStateOf<Int?>(null) }
     val offsets = remember { mutableStateMapOf<Int, Float>() }
     val bookmarkIconSize = viewModel.fontSize
@@ -2206,7 +2189,6 @@ fun ChapterView(
         }
     }
 }
-
 fun getPreviousChapter(current: PassageSelection, currentBook: BibleBook?): PassageSelection {
     if (currentBook == null) return current
     if (currentBook.chapters == 1 && current.chapter == 1) return current
@@ -2216,7 +2198,6 @@ fun getPreviousChapter(current: PassageSelection, currentBook: BibleBook?): Pass
         current.copy(chapter = current.chapter - 1, verse = null)
     }
 }
-
 fun getNextChapter(current: PassageSelection, currentBook: BibleBook?): PassageSelection {
     if (currentBook == null) return current
     if (currentBook.chapters == 1 && current.chapter == 1) return current
