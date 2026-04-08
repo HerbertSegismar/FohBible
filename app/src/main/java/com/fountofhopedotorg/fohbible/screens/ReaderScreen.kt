@@ -11,7 +11,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -1025,51 +1024,90 @@ private fun SyncedMultiVersionReader(
                 val primaryState = rememberScrollState()
                 val secondaryState = rememberScrollState()
                 if (viewModel.scrollSync && !suppressSync) {
-                    var isSyncing by remember { mutableStateOf(false) }
+                    var syncSource by remember { mutableIntStateOf(0) }
+                    var lastActiveList by remember { mutableIntStateOf(1) }
+                    LaunchedEffect(primaryState.isScrollInProgress) {
+                        if (primaryState.isScrollInProgress) {
+                            lastActiveList = 1
+                        }
+                    }
+                    LaunchedEffect(secondaryState.isScrollInProgress) {
+                        if (secondaryState.isScrollInProgress) {
+                            lastActiveList = 2
+                        }
+                    }
                     LaunchedEffect(primaryState) {
-                        snapshotFlow { primaryState.value }
-                            .collect { _ ->
-                                if (!isSyncing && primaryState.isScrollInProgress) {
-                                    isSyncing = true
+                        snapshotFlow { primaryState.value }.collect { pValue ->
+                            if (syncSource != 2 &&
+                                primaryState.isScrollInProgress &&
+                                !secondaryState.isScrollInProgress
+                            ) {
+                                syncSource = 1
 
-                                    val pMax = primaryState.maxValue.coerceAtLeast(1)
-                                    val sMax = secondaryState.maxValue.coerceAtLeast(1)
-                                    val fraction = primaryState.value.toFloat() / pMax
-                                    val targetS = (fraction * sMax).roundToInt()
-                                    val currentS = secondaryState.value
-                                    val deltaS = targetS - currentS
+                                val pMax = primaryState.maxValue.coerceAtLeast(1)
+                                val sMax = secondaryState.maxValue.coerceAtLeast(1)
+                                val fraction = pValue.toFloat() / pMax
+                                val targetS = (fraction * sMax).roundToInt()
 
-                                    if (abs(deltaS) > 5) {
-                                        secondaryState.scrollBy(deltaS.toFloat())
-                                    }
-
-                                    isSyncing = false
+                                if (abs(targetS - secondaryState.value) > 5) {
+                                    secondaryState.scrollTo(targetS)
                                 }
+
+                                syncSource = 0
                             }
+                        }
                     }
                     LaunchedEffect(secondaryState) {
-                        snapshotFlow { secondaryState.value }
-                            .collect { _ ->
-                                if (!isSyncing &&
-                                    secondaryState.isScrollInProgress &&
-                                    !primaryState.isScrollInProgress) {
+                        snapshotFlow { secondaryState.value }.collect { sValue ->
+                            if (syncSource != 1 &&
+                                secondaryState.isScrollInProgress &&
+                                !primaryState.isScrollInProgress
+                            ) {
+                                syncSource = 2
 
-                                    isSyncing = true
+                                val pMax = primaryState.maxValue.coerceAtLeast(1)
+                                val sMax = secondaryState.maxValue.coerceAtLeast(1)
+                                val fraction = sValue.toFloat() / sMax
+                                val targetP = (fraction * pMax).roundToInt()
 
-                                    val pMax = primaryState.maxValue.coerceAtLeast(1)
-                                    val sMax = secondaryState.maxValue.coerceAtLeast(1)
-                                    val fraction = secondaryState.value.toFloat() / sMax
-                                    val targetP = (fraction * pMax).roundToInt()
-                                    val currentP = primaryState.value
-                                    val deltaP = targetP - currentP
+                                if (abs(targetP - primaryState.value) > 5) {
+                                    primaryState.scrollTo(targetP)
+                                }
 
-                                    if (abs(deltaP) > 5) {
-                                        primaryState.scrollBy(deltaP.toFloat())
+                                syncSource = 0
+                            }
+                        }
+                    }
+                    LaunchedEffect(primaryState.isScrollInProgress, secondaryState.isScrollInProgress) {
+                        val primaryScrolling = primaryState.isScrollInProgress
+                        val secondaryScrolling = secondaryState.isScrollInProgress
+
+                        if (!primaryScrolling && !secondaryScrolling) {
+                            val pMax = primaryState.maxValue.coerceAtLeast(1)
+                            val sMax = secondaryState.maxValue.coerceAtLeast(1)
+                            val pValue = primaryState.value
+                            val sValue = secondaryState.value
+
+                            if (pValue != sValue) {
+                                if (lastActiveList == 1) {
+                                    syncSource = 1
+                                    val fraction = pValue.toFloat() / pMax
+                                    val targetS = (fraction * sMax).roundToInt()
+                                    if (abs(targetS - sValue) > 5) {
+                                        secondaryState.scrollTo(targetS)
                                     }
-
-                                    isSyncing = false
+                                    syncSource = 0
+                                } else {
+                                    syncSource = 2
+                                    val fraction = sValue.toFloat() / sMax
+                                    val targetP = (fraction * pMax).roundToInt()
+                                    if (abs(targetP - pValue) > 5) {
+                                        primaryState.scrollTo(targetP)
+                                    }
+                                    syncSource = 0
                                 }
                             }
+                        }
                     }
                 }
                 if (viewModel.multiViewLayout == "horizontal") {

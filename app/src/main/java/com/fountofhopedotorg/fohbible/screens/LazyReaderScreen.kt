@@ -1069,28 +1069,69 @@ private fun SyncedMultiVersionReader(
                 val secondaryState = rememberLazyListState()
 
                 if (viewModel.scrollSync && !suppressSync) {
-                    var isSyncing by remember { mutableStateOf(false) }
+                    var syncSource by remember { mutableIntStateOf(0) }
+                    var lastActiveList by remember { mutableIntStateOf(1) }
+                    LaunchedEffect(primaryState.isScrollInProgress) {
+                        if (primaryState.isScrollInProgress) {
+                            lastActiveList = 1
+                        }
+                    }
+                    LaunchedEffect(secondaryState.isScrollInProgress) {
+                        if (secondaryState.isScrollInProgress) {
+                            lastActiveList = 2
+                        }
+                    }
                     LaunchedEffect(primaryState) {
                         snapshotFlow { primaryState.firstVisibleItemIndex to primaryState.firstVisibleItemScrollOffset }
                             .collect { (index, offset) ->
-                                if (!isSyncing && primaryState.isScrollInProgress) {
-                                    isSyncing = true
+                                if (syncSource != 2 &&
+                                    primaryState.isScrollInProgress &&
+                                    !secondaryState.isScrollInProgress
+                                ) {
+                                    syncSource = 1
                                     secondaryState.scrollToItem(index, offset)
-                                    isSyncing = false
+                                    syncSource = 0
                                 }
                             }
                     }
                     LaunchedEffect(secondaryState) {
                         snapshotFlow { secondaryState.firstVisibleItemIndex to secondaryState.firstVisibleItemScrollOffset }
                             .collect { (index, offset) ->
-                                if (!isSyncing && secondaryState.isScrollInProgress && !primaryState.isScrollInProgress) {
-                                    isSyncing = true
+                                if (syncSource != 1 &&
+                                    secondaryState.isScrollInProgress &&
+                                    !primaryState.isScrollInProgress
+                                ) {
+                                    syncSource = 2
                                     primaryState.scrollToItem(index, offset)
-                                    isSyncing = false
+                                    syncSource = 0
                                 }
                             }
                     }
+                    LaunchedEffect(primaryState.isScrollInProgress, secondaryState.isScrollInProgress) {
+                        val primaryScrolling = primaryState.isScrollInProgress
+                        val secondaryScrolling = secondaryState.isScrollInProgress
+
+                        if (!primaryScrolling && !secondaryScrolling) {
+                            val pIndex = primaryState.firstVisibleItemIndex
+                            val pOffset = primaryState.firstVisibleItemScrollOffset
+                            val sIndex = secondaryState.firstVisibleItemIndex
+                            val sOffset = secondaryState.firstVisibleItemScrollOffset
+
+                            if (pIndex != sIndex || pOffset != sOffset) {
+                                if (lastActiveList == 1) {
+                                    syncSource = 1
+                                    secondaryState.scrollToItem(pIndex, pOffset)
+                                    syncSource = 0
+                                } else {
+                                    syncSource = 2
+                                    primaryState.scrollToItem(sIndex, sOffset)
+                                    syncSource = 0
+                                }
+                            }
+                        }
+                    }
                 }
+
                 if (viewModel.multiViewLayout == "horizontal") {
                     Row(modifier = Modifier.fillMaxSize()) {
                         ChapterView(
