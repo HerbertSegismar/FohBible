@@ -684,6 +684,7 @@ fun ChapterView(
                             }
                         }
                     }
+                    Spacer(modifier = Modifier.height(100.dp))
                 }
             }
         }
