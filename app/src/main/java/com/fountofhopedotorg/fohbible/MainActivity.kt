@@ -121,7 +121,6 @@ import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.screens.BgModal
 import com.fountofhopedotorg.fohbible.screens.BookmarksScreen
 import com.fountofhopedotorg.fohbible.screens.HomeScreen
-import com.fountofhopedotorg.fohbible.screens.LazyReaderScreen
 import com.fountofhopedotorg.fohbible.screens.NotesScreen
 import com.fountofhopedotorg.fohbible.screens.ReaderScreen
 import com.fountofhopedotorg.fohbible.screens.SearchScreen
@@ -468,19 +467,11 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 }
                             }
 
-                            if (viewModel.isLazyReader) {
-                                LazyReaderScreen(
-                                    passage = passage,
-                                    databaseHelper = dbHelper,
-                                    onPassageChange = onPassageChange
-                                )
-                            } else {
-                                ReaderScreen(
-                                    passage = passage,
-                                    databaseHelper = dbHelper,
-                                    onPassageChange = onPassageChange
-                                )
-                            }
+                            ReaderScreen(
+                                passage = passage,
+                                databaseHelper = dbHelper,
+                                onPassageChange = onPassageChange
+                            )
                         }
                         Screen.Bookmarks -> BookmarksScreen(
                             onNavigateToReader = { passage ->
