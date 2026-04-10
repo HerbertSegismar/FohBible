@@ -167,7 +167,6 @@ private val OVERLAY_OPACITY_KEY = floatPreferencesKey("overlay_opacity")
 private val LIGHT_OVERLAY_COLOR_KEY = intPreferencesKey("light_overlay_color")
 private val DARK_OVERLAY_COLOR_KEY = intPreferencesKey("dark_overlay_color")
 private val IS_STUDY_MODE_KEY = booleanPreferencesKey("is_study_mode")
-private val IS_LAZY_READER_KEY = booleanPreferencesKey("is_lazy_reader")
 private val IS_DICTIONARY_MODE_KEY = booleanPreferencesKey("is_dictionary_mode")
 private val VERSE_MARKER_COLOR_KEY = intPreferencesKey("verse_marker_color")
 private val LIGHT_MODAL_BG_COLOR_KEY = intPreferencesKey("light_modal_bg_color")
@@ -221,7 +220,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
         viewModel.darkOverlayColor = Color(prefs[DARK_OVERLAY_COLOR_KEY] ?: Color(0xFF100F21).toArgb())
         viewModel.wordMarkerColor = Color(prefs[MARKER_COLOR_KEY] ?: Color(0xDDAC95E1).toArgb())
         viewModel.isStudyMode = prefs[IS_STUDY_MODE_KEY] ?: true
-        viewModel.isLazyReader = prefs[IS_LAZY_READER_KEY] ?: true
         viewModel.isDictionaryMode = prefs[IS_DICTIONARY_MODE_KEY] ?: true
         viewModel.verseMarkerColor = Color(prefs[VERSE_MARKER_COLOR_KEY] ?: Color(0xFF95F198).toArgb())
         viewModel.lightModalBackgroundColor = Color(prefs[LIGHT_MODAL_BG_COLOR_KEY] ?: Color(0xFFEAE7E3).toArgb())
@@ -331,9 +329,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
 
     LaunchedEffect(Unit) {
         snapshotFlow { viewModel.isStudyMode }.collectLatest { dataStore.edit { prefs -> prefs[IS_STUDY_MODE_KEY] = it } }
-    }
-    LaunchedEffect(Unit) {
-        snapshotFlow { viewModel.isLazyReader }.collectLatest { dataStore.edit { prefs -> prefs[IS_LAZY_READER_KEY] = it } }
     }
     LaunchedEffect(Unit) {
         snapshotFlow { viewModel.isDictionaryMode }.collectLatest { dataStore.edit { prefs -> prefs[IS_DICTIONARY_MODE_KEY] = it } }

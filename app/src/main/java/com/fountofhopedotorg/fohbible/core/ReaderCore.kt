@@ -1,7 +1,6 @@
 package com.fountofhopedotorg.fohbible.core
 
 import android.content.Context
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -21,7 +20,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Note
 import androidx.compose.material.icons.filled.Bookmark
@@ -48,8 +46,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
@@ -104,8 +100,7 @@ fun ChapterView(
     versionAbbr: String,
     isPrimary: Boolean,
     modifier: Modifier = Modifier,
-    scrollState: ScrollState? = null,
-    lazyState: LazyListState? = null,
+    lazyState: LazyListState,
     onInitialScrollComplete: () -> Unit = {},
     onWordPress: ((String, Boolean) -> Unit)? = null,
     onStrongsPress: ((String, Int, Boolean) -> Unit)? = null,
@@ -119,64 +114,16 @@ fun ChapterView(
     markerColor: Color,
     onWordHighlightAction: (() -> Unit)? = null
 ) {
-    val useLazy = lazyState != null
-    require((useLazy && scrollState == null) || (!useLazy && scrollState != null)) {
-        "Provide exactly one of scrollState (for non-lazy Column) or lazyState (for LazyColumn)"
-    }
-
     val isOldTestamentForThisVersion = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
-
-    val processedVerses: Map<Int, ProcessedVerse> = if (useLazy) {
-        produceState(
-            initialValue = emptyMap(),
-            content,
-            viewModel.fontSize,
-            themeColors,
-            refreshKey,
-            isOldTestamentForThisVersion
-        ) {
-            value = withContext(Dispatchers.Default) {
-                val result = mutableMapOf<Int, ProcessedVerse>()
-                val processor = VerseTextProcessor()
-                content.forEach { item ->
-                    if (item is VerseContent.VerseVal) {
-                        val verse = item.verse
-                        val fullVerse = verse.copy(bookName = passage.bookName, chapter = passage.chapter)
-                        val isPersistentHighlighted = databaseHelper?.isHighlighted(fullVerse) ?: false
-                        val onStrongsLocal: ((String) -> Unit)? = onStrongsPress?.let { callback ->
-                            { strong -> callback(strong, passage.bookNumber, isPrimary) }
-                        }
-                        val onTagLocal: ((String) -> Unit)? = onTagPress?.let { callback ->
-                            { marker -> callback(marker, passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary) }
-                        }
-                        val onWordLocal: ((String) -> Unit)? = onWordPress?.let { callback ->
-                            { word -> callback(word, isPrimary) }
-                        }
-                        val processed = processor.processVerse(
-                            verseText = verse.text,
-                            baseFontSize = viewModel.fontSize.sp,
-                            themeColors = themeColors,
-                            textColor = themeColors.textColor,
-                            onTagPress = onTagLocal,
-                            onWordPress = onWordLocal,
-                            onStrongsPress = onStrongsLocal,
-                            isHighlighted = isPersistentHighlighted,
-                            isOldTestament = isOldTestamentForThisVersion
-                        )
-                        result[verse.verseNumber] = processed
-                    }
-                }
-                result
-            }
-        }.value
-    } else {
-        remember(
-            content,
-            viewModel.fontSize,
-            themeColors,
-            refreshKey,
-            isOldTestamentForThisVersion
-        ) {
+    val processedVerses: Map<Int, ProcessedVerse> = produceState(
+        initialValue = emptyMap(),
+        content,
+        viewModel.fontSize,
+        themeColors,
+        refreshKey,
+        isOldTestamentForThisVersion
+    ) {
+        value = withContext(Dispatchers.Default) {
             val result = mutableMapOf<Int, ProcessedVerse>()
             val processor = VerseTextProcessor()
             content.forEach { item ->
@@ -184,6 +131,7 @@ fun ChapterView(
                     val verse = item.verse
                     val fullVerse = verse.copy(bookName = passage.bookName, chapter = passage.chapter)
                     val isPersistentHighlighted = databaseHelper?.isHighlighted(fullVerse) ?: false
+
                     val onStrongsLocal: ((String) -> Unit)? = onStrongsPress?.let { callback ->
                         { strong -> callback(strong, passage.bookNumber, isPrimary) }
                     }
@@ -193,6 +141,7 @@ fun ChapterView(
                     val onWordLocal: ((String) -> Unit)? = onWordPress?.let { callback ->
                         { word -> callback(word, isPrimary) }
                     }
+
                     val processed = processor.processVerse(
                         verseText = verse.text,
                         baseFontSize = viewModel.fontSize.sp,
@@ -209,10 +158,9 @@ fun ChapterView(
             }
             result
         }
-    }
+    }.value
 
     var highlightedVerse by remember { mutableStateOf<Int?>(null) }
-    val offsets = if (!useLazy) remember { mutableStateMapOf<Int, Float>() } else null
 
     val bookmarkIconSize = viewModel.fontSize
     val bookmarkInlineContent = InlineTextContent(
@@ -229,6 +177,7 @@ fun ChapterView(
             modifier = Modifier.fillMaxSize()
         )
     }
+
     val noteInlineContent = InlineTextContent(
         Placeholder(
             width = bookmarkIconSize.sp,
@@ -271,7 +220,9 @@ fun ChapterView(
             }
         )
     }
+
     val groupedHighlights = remember(selectedWords) { selectedWords.groupBy { it.verseNumber } }
+
     @Composable
     fun VerseItem(verseContent: VerseContent.VerseVal) {
         val verse = verseContent.verse
@@ -282,6 +233,7 @@ fun ChapterView(
         val persistentHighlightColor = if (isPersistentHighlighted) {
             databaseHelper.getHighlightColor(fullVerse) ?: themeColors.searchHighlightBg
         } else null
+
         val isBookmarked = databaseHelper?.isBookmarked(fullVerse) ?: false
         val isNote = databaseHelper?.hasNote(fullVerse) ?: false
         val refCount = crossRefCounts[verse.verseNumber] ?: 0
@@ -302,13 +254,6 @@ fun ChapterView(
                     .fillMaxWidth()
                     .padding(vertical = 4.dp)
                     .then(backgroundModifier)
-                    .let {
-                        if (!useLazy && offsets != null) {
-                            it.onGloballyPositioned { coords ->
-                                offsets[verse.verseNumber] = coords.positionInParent().y
-                            }
-                        } else it
-                    }
             ) {
                 processedVerse?.header?.let { header ->
                     if (header.text.isNotEmpty()) {
@@ -532,6 +477,7 @@ fun ChapterView(
             34 -> if (viewModel.customTextureUri != null) viewModel.customTextureUri else null
             else -> "file:///android_asset/textures/${viewModel.bgImageIndex}.jpg"
         }
+
         if (texture != null) {
             AsyncImage(
                 model = texture,
@@ -605,85 +551,42 @@ fun ChapterView(
                     }
                 }
             }
-
-            if (useLazy) {
-                LazyColumn(
-                    state = lazyState,
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 4.dp)
-                ) {
-                    items(
-                        items = content,
-                        key = { item ->
-                            when (item) {
-                                is VerseContent.SubheadingVal -> "sub_${item.subheading.text.hashCode()}"
-                                is VerseContent.VerseVal -> "verse_${item.verse.verseNumber}"
-                            }
-                        }
-                    ) { item ->
+            LazyColumn(
+                state = lazyState,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 4.dp)
+            ) {
+                items(
+                    items = content,
+                    key = { item ->
                         when (item) {
-                            is VerseContent.SubheadingVal -> {
-                                Text(
-                                    text = item.subheading.text,
-                                    fontWeight = FontWeight.Bold,
-                                    color = themeColors.primary,
-                                    fontSize = (viewModel.fontSize + 1).sp,
-                                    lineHeight = ((viewModel.fontSize + 1) * 1.2f).sp,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 2.dp),
-                                    textAlign = TextAlign.Left,
-                                    fontFamily = currentFontFamily
-                                )
-                            }
-                            is VerseContent.VerseVal -> {
-                                VerseItem(item)
-                            }
+                            is VerseContent.SubheadingVal -> "sub_${item.subheading.text.hashCode()}"
+                            is VerseContent.VerseVal -> "verse_${item.verse.verseNumber}"
                         }
                     }
-                    item(key = "bottom_spacer") {
-                        Spacer(modifier = Modifier.height(100.dp))
+                ) { item ->
+                    when (item) {
+                        is VerseContent.SubheadingVal -> {
+                            Text(
+                                text = item.subheading.text,
+                                fontWeight = FontWeight.Bold,
+                                color = themeColors.primary,
+                                fontSize = (viewModel.fontSize + 1).sp,
+                                lineHeight = ((viewModel.fontSize + 1) * 1.2f).sp,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 2.dp),
+                                textAlign = TextAlign.Left,
+                                fontFamily = currentFontFamily
+                            )
+                        }
+                        is VerseContent.VerseVal -> {
+                            VerseItem(item)
+                        }
                     }
                 }
-            } else {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .verticalScroll(scrollState!!)
-                        .padding(horizontal = 4.dp)
-                ) {
-                    if (processedVerses.isEmpty() && content.isNotEmpty()) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            LoadingIndicator()
-                        }
-                        return@Column
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    content.forEach { item ->
-                        when (item) {
-                            is VerseContent.SubheadingVal -> {
-                                Text(
-                                    text = item.subheading.text,
-                                    fontWeight = FontWeight.Bold,
-                                    color = themeColors.primary,
-                                    fontSize = (viewModel.fontSize + 1).sp,
-                                    lineHeight = ((viewModel.fontSize + 1) * 1.2f).sp,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 2.dp),
-                                    textAlign = TextAlign.Left,
-                                    fontFamily = currentFontFamily
-                                )
-                            }
-                            is VerseContent.VerseVal -> {
-                                VerseItem(item)
-                            }
-                        }
-                    }
+                item(key = "bottom_spacer") {
                     Spacer(modifier = Modifier.height(100.dp))
                 }
             }
@@ -692,23 +595,10 @@ fun ChapterView(
     if (isCurrentPage) {
         LaunchedEffect(targetVerse, content) {
             if (targetVerse != null && content.isNotEmpty() && targetVerse > 0) {
-                if (useLazy) {
-                    delay(100)
-                    val targetIndex = content.indexOfFirst { it is VerseContent.VerseVal && it.verse.verseNumber == targetVerse }
-                    if (targetIndex >= 0) {
-                        lazyState.animateScrollToItem(targetIndex)
-                        highlightedVerse = targetVerse
-                        delay(2000)
-                        highlightedVerse = null
-                    }
-                } else {
-                    delay(200)
-                    val offset = offsets?.get(targetVerse)
-                    if (offset == null) {
-                        onInitialScrollComplete()
-                        return@LaunchedEffect
-                    }
-                    scrollState!!.animateScrollTo(offset.toInt())
+                delay(100)
+                val targetIndex = content.indexOfFirst { it is VerseContent.VerseVal && it.verse.verseNumber == targetVerse }
+                if (targetIndex >= 0) {
+                    lazyState.animateScrollToItem(targetIndex)
                     highlightedVerse = targetVerse
                     delay(2000)
                     highlightedVerse = null

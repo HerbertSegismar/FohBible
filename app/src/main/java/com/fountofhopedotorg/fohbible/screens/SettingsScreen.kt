@@ -503,19 +503,6 @@ fun SettingsScreen() {
                     )
                 }
                 SettingsItem(
-                    title = "Lazy Reader Mode",
-                    subtitle = "Toggle between dynamic or full chapter loading. Lazy reader only loads the visible verses and is ideal for slower devices"
-                ) {
-                    Switch(
-                        checked = viewModel.isLazyReader,
-                        onCheckedChange = { viewModel.isLazyReader = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.primary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                        )
-                    )
-                }
-                SettingsItem(
                     title = "Study Mode",
                     subtitle = if (viewModel.isStudyMode) {
                         "Turn this off to remove the extra buttons for cross-references and commentaries at the end of each verse"
@@ -808,7 +795,6 @@ fun SettingsScreen() {
                         viewModel.wordMarkerColor = Color(0xDDAC95E1)
                         viewModel.verseMarkerColor = Color(0xFF95F198)
                         viewModel.isDictionaryMode = true
-                        viewModel.isLazyReader = true
                         viewModel.isStudyMode = true
                         viewModel.resetHighlightColorsToDefault()
 

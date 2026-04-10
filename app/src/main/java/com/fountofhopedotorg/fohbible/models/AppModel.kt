@@ -40,7 +40,6 @@ class AppViewModel : ViewModel() {
     var showHighlightColorEditor by mutableStateOf(false)
 
     var isStudyMode by mutableStateOf(true)
-    var isLazyReader by mutableStateOf(true)
     var wordMarkerColor by mutableStateOf(Color(0xDDAC95E1))
     var showWordMarkerColorWheelDialog by mutableStateOf(false)
     var isDictionaryMode by mutableStateOf(true)
