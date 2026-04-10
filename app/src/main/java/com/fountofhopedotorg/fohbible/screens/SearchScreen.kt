@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -35,6 +36,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -42,8 +44,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -407,59 +407,56 @@ fun SearchScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 2.dp),
+                        .padding(5.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
-                        text = "Toggle inverse search",
-                        color = colors["muted"] as Color,
-                        fontSize = 14.sp
-                    )
-                    Switch(
-                        checked = inverseSearch,
-                        onCheckedChange = { newValue ->
-                            inverseSearch = newValue
-                            if (hasSearched && query.trim().isNotEmpty() && !loading) {
-                                coroutineScope.launch { handleSearch(null) }
-                            }
-                        },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = colorScheme.primary,
-                            checkedTrackColor = colorScheme.primary.copy(alpha = 0.5f)
+                    Row(
+                        modifier = Modifier.padding(start = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Start
+                    ) {
+                        Text(
+                            text = "Inverse search",
+                            color = colors["muted"] as Color,
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(end = 8.dp)
                         )
-                    )
+                        Checkbox(
+                            checked = inverseSearch,
+                            onCheckedChange = { newValue ->
+                                inverseSearch = newValue
+                                if (hasSearched && query.trim().isNotEmpty() && !loading) {
+                                    coroutineScope.launch { handleSearch(null) }
+                                }
+                            },
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.padding(end = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        Text(
+                            text = "Exact match",
+                            color = colors["muted"] as Color,
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                        Checkbox(
+                            checked = exactPhrase,
+                            onCheckedChange = { newValue ->
+                                exactPhrase = newValue
+                                if (hasSearched && query.trim().isNotEmpty() && !loading) {
+                                    coroutineScope.launch { handleSearch(null) }
+                                }
+                            },
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Exact phrase match",
-                        color = colors["muted"] as Color,
-                        fontSize = 14.sp
-                    )
-                    Switch(
-                        checked = exactPhrase,
-                        onCheckedChange = { newValue ->
-                            exactPhrase = newValue
-                            if (hasSearched && query.trim().isNotEmpty() && !loading) {
-                                coroutineScope.launch { handleSearch(null) }
-                            }
-                        },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = colorScheme.primary,
-                            checkedTrackColor = colorScheme.primary.copy(alpha = 0.5f)
-                        )
-                    )
-                }
-            }
-
             item {
                 Button(
                     onClick = { coroutineScope.launch { handleSearch(query) } },
