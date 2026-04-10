@@ -1,5 +1,4 @@
 package com.fountofhopedotorg.fohbible
-
 import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
@@ -136,18 +135,15 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-
 private val MARKER_COLOR_KEY = intPreferencesKey("marker_color")
 private val PRIMARY_BOOK_NUMBER_KEY = intPreferencesKey("primary_book_number")
 private val PRIMARY_BOOK_NAME_KEY = stringPreferencesKey("primary_book_name")
 private val PRIMARY_CHAPTER_KEY = intPreferencesKey("primary_chapter")
 private val PRIMARY_VERSE_KEY = intPreferencesKey("primary_verse")
-
 private val SECONDARY_BOOK_NUMBER_KEY = intPreferencesKey("secondary_book_number")
 private val SECONDARY_BOOK_NAME_KEY = stringPreferencesKey("secondary_book_name")
 private val SECONDARY_CHAPTER_KEY = intPreferencesKey("secondary_chapter")
 private val SECONDARY_VERSE_KEY = intPreferencesKey("secondary_verse")
-
 private val FONT_SIZE_KEY = intPreferencesKey("font_size")
 private val DARK_THEME_KEY = booleanPreferencesKey("dark_theme")
 private val SELECTED_COLOR_KEY = intPreferencesKey("selected_color")
@@ -191,12 +187,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     val currentScreen = viewModel.navigationStack.last()
-
     var isUsingCustomColor by remember { mutableStateOf(viewModel.isCustomColor) }
     var customColor by remember { mutableStateOf(viewModel.customColor) }
-
     val dataStore = remember { activity.appDataStore }
-
     LaunchedEffect(Unit) {
         val prefs = dataStore.data.first()
 
@@ -227,7 +220,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
         viewModel.selectedDictionary = prefs[SELECTED_DICTIONARY_KEY] ?: "atsbd"
         viewModel.selectedVerseCommentary = prefs[SELECTED_VERSE_COMMENTARY_KEY] ?: "cbsc"
         viewModel.selectedCrossReferenceDatabase = prefs[SELECTED_CROSS_REFERENCE_DB_KEY] ?: "obx"
-
         viewModel.primaryPassage = PassageSelection(
             bookNumber = prefs[PRIMARY_BOOK_NUMBER_KEY] ?: 10,
             bookName = prefs[PRIMARY_BOOK_NAME_KEY] ?: "Genesis",
@@ -254,7 +246,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
             viewModel.resetHighlightColorsToDefault()
         }
     }
-
     LaunchedEffect(Unit) { snapshotFlow { viewModel.fontSize }.collectLatest { dataStore.edit { prefs -> prefs[FONT_SIZE_KEY] = it } } }
     LaunchedEffect(Unit) { snapshotFlow { viewModel.darkTheme }.collectLatest { dataStore.edit { prefs -> prefs[DARK_THEME_KEY] = it } } }
     LaunchedEffect(Unit) { snapshotFlow { viewModel.selectedColor }.collectLatest { dataStore.edit { prefs -> prefs[SELECTED_COLOR_KEY] = it?.toArgb() ?: DefaultPrimaryColor.toArgb() } } }
@@ -275,7 +266,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     LaunchedEffect(Unit) { snapshotFlow { viewModel.overlayOpacity }.collectLatest { dataStore.edit { prefs -> prefs[OVERLAY_OPACITY_KEY] = it } } }
     LaunchedEffect(Unit) { snapshotFlow { viewModel.lightOverlayColor.toArgb() }.collectLatest { dataStore.edit { prefs -> prefs[LIGHT_OVERLAY_COLOR_KEY] = it } } }
     LaunchedEffect(Unit) { snapshotFlow { viewModel.darkOverlayColor.toArgb() }.collectLatest { dataStore.edit { prefs -> prefs[DARK_OVERLAY_COLOR_KEY] = it } } }
-
     LaunchedEffect(Unit) {
         snapshotFlow { viewModel.primaryPassage }.collectLatest { passage ->
             dataStore.edit { prefs ->
@@ -296,7 +286,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
             }
         }
     }
-
     LaunchedEffect(viewModel.selectedColor, viewModel.darkTheme, viewModel.isCustomColor, viewModel.customColor) {
         viewModel.selectedColor?.let {
             ThemeManager.primaryColor = it
@@ -306,13 +295,11 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
         isUsingCustomColor = viewModel.isCustomColor
         customColor = viewModel.customColor
     }
-
     val themeState = AppThemeState(
         darkTheme = viewModel.darkTheme,
         primaryColor = viewModel.selectedColor ?: DefaultPrimaryColor,
         isCustomColor = viewModel.isCustomColor
     )
-
     LaunchedEffect(Unit) {
         snapshotFlow { viewModel.wordMarkerColor.toArgb() }
             .collectLatest { dataStore.edit { prefs -> prefs[MARKER_COLOR_KEY] = it } }
@@ -326,7 +313,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                 }
             }
     }
-
     LaunchedEffect(Unit) {
         snapshotFlow { viewModel.isStudyMode }.collectLatest { dataStore.edit { prefs -> prefs[IS_STUDY_MODE_KEY] = it } }
     }
@@ -351,7 +337,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     LaunchedEffect(Unit) {
         snapshotFlow { viewModel.selectedCrossReferenceDatabase }.collectLatest { dataStore.edit { prefs -> prefs[SELECTED_CROSS_REFERENCE_DB_KEY] = it } }
     }
-
     var dbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     LaunchedEffect(viewModel.currentDbName) {
         dbHelper?.close()
@@ -360,7 +345,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     DisposableEffect(Unit) {
         onDispose { dbHelper?.close() }
     }
-
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -369,7 +353,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
             viewModel.bgImageIndex = 34
         }
     }
-
     CompositionLocalProvider(LocalAppTheme provides themeState) {
         FohBibleTheme(darkTheme = viewModel.darkTheme) {
             Scaffold(
@@ -428,7 +411,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                     BackHandler(enabled = viewModel.navigationStack.size > 1) {
                         viewModel.goBack()
                     }
-
                     when (currentScreen) {
                         Screen.Home -> {
                             HomeScreen(
@@ -451,7 +433,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 databaseHelper = dbHelper
                             )
                         }
-
                         is Screen.Reader -> {
                             val passage = currentScreen.passage ?: viewModel.primaryPassage
                             val onPassageChange: (PassageSelection) -> Unit = { newPassage ->
@@ -461,7 +442,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                     viewModel.secondaryPassage = newPassage
                                 }
                             }
-
                             ReaderScreen(
                                 passage = passage,
                                 databaseHelper = dbHelper,
@@ -511,7 +491,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             )
                         }
                     }
-
                     if (viewModel.showNavigationModal) {
                         NavigationModal(
                             onDismissRequest = { viewModel.showNavigationModal = false },
@@ -1137,7 +1116,6 @@ fun ReaderAppBar(
         animationSpec = tween(durationMillis = 300),
         label = "syncRotation"
     )
-
     val minFontSize = 1
     val maxFontSize = 100
 
@@ -1336,7 +1314,6 @@ fun ReaderAppBar(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
-
                 createItem("Single") { viewModel.multiVersion = false }
                 createItem("Horizontal") {
                     viewModel.multiVersion = true
@@ -1418,14 +1395,12 @@ fun ReaderAppBar(
                                     }
                                 )
                             }
-
                             val isHomeActive = false
                             val isReaderActive = true
                             val isBookmarksActive = false
                             val isNotesActive = false
                             val isSearchActive = false
                             val isSettingsActive = false
-
                             createDropdownItem("Home", Icons.Filled.Home, isHomeActive) {
                                 onScreenChange(Screen.Home)
                                 showNavigationDropdown = false
@@ -1714,14 +1689,12 @@ fun ReaderAppBar(
                             }
                         )
                     }
-
                     val isHomeActive = false
                     val isReaderActive = true
                     val isBookmarksActive = false
                     val isNotesActive = false
                     val isSearchActive = false
                     val isSettingsActive = false
-
                     createDropdownItem("Home", Icons.Filled.Home, isHomeActive) {
                         onScreenChange(Screen.Home)
                         showNavigationDropdown = false
@@ -1746,9 +1719,7 @@ fun ReaderAppBar(
                         onScreenChange(Screen.Settings)
                         showNavigationDropdown = false
                     }
-
                     HorizontalDivider()
-
                     DropdownMenuItem(
                         text = { Text("Background Texture", modifier = Modifier.fillMaxWidth()) },
                         leadingIcon = {
@@ -1764,9 +1735,7 @@ fun ReaderAppBar(
                         },
                         modifier = Modifier.fillMaxWidth()
                     )
-
                     HorizontalDivider()
-
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1971,7 +1940,6 @@ fun ReaderAppBar(
             }
         }
     )
-
     if (showFontSizeDialog) {
         FontModal(
             tempSize = tempFontSize,
