@@ -67,6 +67,7 @@ import com.fountofhopedotorg.fohbible.data.SelectedWord
 import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.data.Verse
 import com.fountofhopedotorg.fohbible.data.VerseContent
+import com.fountofhopedotorg.fohbible.data.getVersesWithSubheadings
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import kotlinx.coroutines.Dispatchers
@@ -466,5 +467,20 @@ fun getNextChapter(current: PassageSelection, currentBook: BibleBook?): PassageS
         current.copy(chapter = 1, verse = null)
     } else {
         current.copy(chapter = current.chapter + 1, verse = null)
+    }
+}
+
+suspend fun preloadChapter(
+    passage: PassageSelection,
+    loadedMap: MutableMap<Pair<Int, Int>, List<VerseContent>>,
+    dbHelper: DatabaseHelper?,
+    subheadingsDbHelper: DatabaseHelper
+) {
+    val key = passage.bookNumber to passage.chapter
+    if (key !in loadedMap) {
+        loadedMap[key] = withContext(Dispatchers.IO) {
+            dbHelper?.let { getVersesWithSubheadings(it, subheadingsDbHelper, passage.bookNumber, passage.chapter) }
+                ?: emptyList()
+        }
     }
 }
