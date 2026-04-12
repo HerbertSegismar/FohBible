@@ -48,8 +48,18 @@ class VerseTextProcessor {
         }
 
         val cacheKey = buildCacheKey(
-            verseText, baseFontSize, textColor, isOldTestament,
-            highlight, isHighlighted, options, themeColors, wordHighlights
+            verseText = verseText,
+            baseFontSize = baseFontSize,
+            textColor = textColor,
+            isOldTestament = isOldTestament,
+            highlight = highlight,
+            isHighlighted = isHighlighted,
+            options = options,
+            themeColors = themeColors,
+            wordHighlights = wordHighlights,
+            enableTagClick = options.enableTagClick && onTagPress != null,
+            enableStrongsClick = options.enableStrongsClick && onStrongsPress != null,
+            enableWordClick = options.enableWordClick && onWordPress != null
         )
         verseCache[cacheKey]?.let { cached ->
             return cached
@@ -90,7 +100,10 @@ class VerseTextProcessor {
         isHighlighted: Boolean,
         options: ProcessingOptions,
         themeColors: ThemeColors,
-        wordHighlights: Set<String>?
+        wordHighlights: Set<String>?,
+        enableTagClick: Boolean,
+        enableStrongsClick: Boolean,
+        enableWordClick: Boolean
     ): String {
         return StringBuilder()
             .append(verseText.hashCode())
@@ -110,6 +123,9 @@ class VerseTextProcessor {
             .append(themeColors.hashCode())
             .append("|")
             .append(wordHighlights?.hashCode() ?: 0)
+            .append("|enableTagClick=$enableTagClick")
+            .append("|enableStrongsClick=$enableStrongsClick")
+            .append("|enableWordClick=$enableWordClick")
             .toString()
     }
 

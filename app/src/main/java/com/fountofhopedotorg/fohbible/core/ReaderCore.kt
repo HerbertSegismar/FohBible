@@ -34,7 +34,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -62,7 +61,6 @@ import coil.compose.AsyncImage
 import com.fountofhopedotorg.fohbible.data.BibleBook
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
-import com.fountofhopedotorg.fohbible.data.ProcessedVerse
 import com.fountofhopedotorg.fohbible.data.SelectedWord
 import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.data.Verse
@@ -113,50 +111,8 @@ fun ChapterView(
     markerColor: Color,
     onWordHighlightAction: (() -> Unit)? = null
 ) {
+    val verseProcessor = remember { VerseTextProcessor() }
     val isOldTestamentForThisVersion = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
-    val processedVerses by produceState(
-        initialValue = emptyMap(),
-        content,
-        viewModel.fontSize,
-        themeColors,
-        refreshKey,
-        isOldTestamentForThisVersion
-    ) {
-        value = withContext(Dispatchers.Default) {
-            val result = mutableMapOf<Int, ProcessedVerse>()
-            val processor = VerseTextProcessor()
-            content.forEach { item ->
-                if (item is VerseContent.VerseVal) {
-                    val verse = item.verse
-                    val fullVerse = verse.copy(bookName = passage.bookName, chapter = passage.chapter)
-                    val isPersistentHighlighted = databaseHelper?.isHighlighted(fullVerse) ?: false
-
-                    val onStrongsLocal: ((String) -> Unit)? = onStrongsPress?.let { callback ->
-                        { strong -> callback(strong, passage.bookNumber, isPrimary) }
-                    }
-                    val onTagLocal: ((String) -> Unit)? = onTagPress?.let { callback ->
-                        { marker -> callback(marker, passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary) }
-                    }
-                    val onWordLocal: ((String) -> Unit)? = onWordPress?.let { callback ->
-                        { word -> callback(word, isPrimary) }
-                    }
-                    val processed = processor.processVerse(
-                        verseText = verse.text,
-                        baseFontSize = viewModel.fontSize.sp,
-                        themeColors = themeColors,
-                        textColor = themeColors.textColor,
-                        onTagPress = onTagLocal,
-                        onWordPress = onWordLocal,
-                        onStrongsPress = onStrongsLocal,
-                        isHighlighted = isPersistentHighlighted,
-                        isOldTestament = isOldTestamentForThisVersion
-                    )
-                    result[verse.verseNumber] = processed
-                }
-            }
-            result
-        }
-    }
     var highlightedVerse by remember { mutableStateOf<Int?>(null) }
     val bookmarkIconSize = viewModel.fontSize
     val bookmarkInlineContent = InlineTextContent(
@@ -195,24 +151,57 @@ fun ChapterView(
     @Composable
     fun VerseItem(verseContent: VerseContent.VerseVal) {
         val verse = verseContent.verse
-        val processedVerse = processedVerses[verse.verseNumber]
-        val isTemporaryHighlighted = verse.verseNumber == highlightedVerse
         val fullVerse = verse.copy(bookName = passage.bookName, chapter = passage.chapter)
         val isPersistentHighlighted = databaseHelper?.isHighlighted(fullVerse) ?: false
         val persistentHighlightColor = if (isPersistentHighlighted) {
             databaseHelper.getHighlightColor(fullVerse) ?: themeColors.searchHighlightBg
         } else null
+        val processedVerse = remember(
+            verse.text,
+            viewModel.fontSize,
+            themeColors,
+            isPersistentHighlighted,
+            isOldTestamentForThisVersion,
+            refreshKey
+        ) {
+            val onStrongsLocal: ((String) -> Unit)? = onStrongsPress?.let { callback ->
+                { strong -> callback(strong, passage.bookNumber, isPrimary) }
+            }
+            val onTagLocal: ((String) -> Unit)? = onTagPress?.let { callback ->
+                { marker -> callback(marker, passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary) }
+            }
+            val onWordLocal: ((String) -> Unit)? = onWordPress?.let { callback ->
+                { word -> callback(word, isPrimary) }
+            }
+
+            verseProcessor.processVerse(
+                verseText = verse.text,
+                baseFontSize = viewModel.fontSize.sp,
+                themeColors = themeColors,
+                textColor = themeColors.textColor,
+                onTagPress = onTagLocal,
+                onWordPress = onWordLocal,
+                onStrongsPress = onStrongsLocal,
+                isHighlighted = isPersistentHighlighted,
+                isOldTestament = isOldTestamentForThisVersion
+            )
+        }
+
+        val isTemporaryHighlighted = verse.verseNumber == highlightedVerse
         val isBookmarked = databaseHelper?.isBookmarked(fullVerse) ?: false
         val isNote = databaseHelper?.hasNote(fullVerse) ?: false
         val refCount = crossRefCounts[verse.verseNumber] ?: 0
+
         val backgroundModifier = when {
             persistentHighlightColor != null -> Modifier.background(persistentHighlightColor)
             isTemporaryHighlighted -> Modifier.background(themeColors.searchHighlightBg)
             else -> Modifier
         }
+
         val currentMarkerColor by rememberUpdatedState(markerColor)
         val wordHighlightsForVerse = groupedHighlights[verse.verseNumber] ?: emptyList()
         val highlightsHash = wordHighlightsForVerse.hashCode()
+
         key("verse_${verse.verseNumber}_${isPersistentHighlighted}_${isBookmarked}_${isNote}_$highlightsHash") {
             Column(
                 modifier = Modifier
@@ -220,7 +209,7 @@ fun ChapterView(
                     .padding(vertical = 4.dp)
                     .then(backgroundModifier)
             ) {
-                processedVerse?.header?.let { header ->
+                processedVerse.header?.let { header ->
                     if (header.text.isNotEmpty()) {
                         Text(
                             text = header,
@@ -232,11 +221,12 @@ fun ChapterView(
                         )
                     }
                 }
+
                 val annotatedString = buildAnnotatedString {
                     withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = themeColors.verseNumber, fontSize = bookmarkIconSize.sp * 0.8f)) {
                         append("${verse.verseNumber} ")
                     }
-                    append(processedVerse?.body ?: verse.text)
+                    append(processedVerse.body)          // ← always processed, never raw
                     if (isBookmarked) appendInlineContent("bookmark", "[bookmark]")
                     if (isNote) appendInlineContent("note", "[note]")
                     if (viewModel.isStudyMode) {
@@ -249,6 +239,7 @@ fun ChapterView(
                         }
                     }
                 }
+
                 val inlineContentMap = remember(verse.verseNumber, refCount, isNote, isBookmarked, viewModel.fontSize, themeColors) {
                     buildMap {
                         if (isBookmarked) put("bookmark", bookmarkInlineContent)
@@ -284,7 +275,7 @@ fun ChapterView(
                         }
                     }
                 }
-                var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+
                 val finalAnnotatedString = remember(annotatedString, wordHighlightsForVerse) {
                     if (wordHighlightsForVerse.isEmpty()) annotatedString
                     else {
@@ -297,6 +288,9 @@ fun ChapterView(
                         builder.toAnnotatedString()
                     }
                 }
+
+                var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+
                 Text(
                     text = finalAnnotatedString,
                     modifier = Modifier

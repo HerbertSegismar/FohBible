@@ -237,16 +237,15 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
         val commentaries = mutableListOf<VerseCommentary>()
         try {
             val cursor = database?.rawQuery(
-                """
+                """ 
             SELECT text, chapter_number_from, verse_number_from, chapter_number_to, verse_number_to 
             FROM commentaries 
             WHERE book_number = ? 
-            AND chapter_number_from <= ? 
-            AND (chapter_number_to IS NULL OR chapter_number_to >= ?)
+              AND chapter_number_from <= ? 
+              AND (chapter_number_to IS NULL OR chapter_number_to >= ?) 
             """.trimIndent(),
                 arrayOf(bookNumber.toString(), chapter.toString(), chapter.toString())
             )
-
             cursor?.use { it ->
                 val textIdx = it.getColumnIndexOrThrow("text")
                 val chFromIdx = it.getColumnIndexOrThrow("chapter_number_from")
@@ -257,17 +256,18 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                 while (it.moveToNext()) {
                     val chapterFrom = it.getInt(chFromIdx)
                     val safeChapterFrom = if (chapterFrom <= 0) 1 else chapterFrom
-
                     val verseFrom = if (it.isNull(vFromIdx) || it.getInt(vFromIdx) <= 0) 1 else it.getInt(vFromIdx)
                     val chapterToRaw = if (it.isNull(chToIdx)) null else it.getInt(chToIdx)
                     val verseToRaw = if (it.isNull(vToIdx)) null else it.getInt(vToIdx)
-
                     val chapterTo = if (chapterToRaw != null && chapterToRaw <= 0) null else chapterToRaw
                     val verseTo = if (verseToRaw != null && verseToRaw <= 0) null else verseToRaw
+
                     if (chapterTo == null && verseTo == null) {
                         if (chapter == safeChapterFrom && verse == verseFrom) {
                             var text = it.getString(textIdx)
                             text = text.replace(Regex("<script[\\s\\S]*?</script>"), "")
+                            text = text.replace(Regex("</i>(\\w)", RegexOption.IGNORE_CASE), "</i> $1")
+                            text = text.replace(Regex("</em>(\\w)", RegexOption.IGNORE_CASE), "</em> $1")
                             commentaries.add(VerseCommentary(text, safeChapterFrom, verseFrom, null, null))
                         }
                         continue
@@ -281,15 +281,15 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                     if (lowerMet && upperMet) {
                         var text = it.getString(textIdx)
                         text = text.replace(Regex("<script[\\s\\S]*?</script>"), "")
+                        text = text.replace(Regex("</i>(\\w)", RegexOption.IGNORE_CASE), "</i> $1")
+                        text = text.replace(Regex("</em>(\\w)", RegexOption.IGNORE_CASE), "</em> $1")
                         commentaries.add(VerseCommentary(text, safeChapterFrom, verseFrom, chapterTo, verseTo))
                     }
                 }
             }
-        } catch (_: Exception) {
-        }
+        } catch (_: Exception) { }
         return commentaries
     }
-
     fun getVerseCount(bookNumber: Int, chapter: Int): Int {
         var count = 0
         try {
