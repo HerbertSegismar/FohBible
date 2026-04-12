@@ -572,7 +572,6 @@ fun SettingsScreen() {
                 )
             }
         }
-
         item {
             SettingsSection(title = "More Options", subtitle = "Additional preferences") {
                 SettingsItem(
@@ -587,9 +586,7 @@ fun SettingsScreen() {
                 ) {
                     Icon(Icons.Default.ChevronRight, contentDescription = null)
                 }
-
                 HorizontalDivider()
-
                 SettingsItem(
                     title = "About",
                     subtitle = "App version and information",
@@ -599,7 +596,6 @@ fun SettingsScreen() {
                 }
             }
         }
-
         item {
             SettingsSection(title = "Quick Actions", subtitle = "Common tasks") {
                 Row(
@@ -618,7 +614,6 @@ fun SettingsScreen() {
                         Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
                         Text("Reset All")
                     }
-
                     Button(
                         onClick = {
                             val intent = Intent(Intent.ACTION_SENDTO).apply {
@@ -637,7 +632,6 @@ fun SettingsScreen() {
             }
         }
     }
-
     if (showPrimaryVersionModal) {
         VersionSelectionModal(
             currentVersionKey = viewModel.currentDbName,
@@ -656,7 +650,6 @@ fun SettingsScreen() {
             )
         )
     }
-
     if (showSecondaryVersionModal) {
         VersionSelectionModal(
             currentVersionKey = viewModel.secondaryDbName,
@@ -675,7 +668,6 @@ fun SettingsScreen() {
             )
         )
     }
-
     if (showResetHighlightColorsDialog) {
         AlertDialog(
             onDismissRequest = { showResetHighlightColorsDialog = false },
@@ -707,7 +699,6 @@ fun SettingsScreen() {
             }
         )
     }
-
     if (showHighlightColorWheel) {
         ColorWheelDialog(
             onDismissRequest = {
@@ -730,7 +721,6 @@ fun SettingsScreen() {
             }
         )
     }
-
     if (showResetConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showResetConfirmDialog = false },
@@ -799,7 +789,6 @@ fun SettingsScreen() {
             }
         )
     }
-
     if (showBgModal) {
         BgModal(
             currentIndex = viewModel.bgImageIndex,
@@ -813,7 +802,6 @@ fun SettingsScreen() {
             onRemoveCustom = { viewModel.customTextureUri = null }
         )
     }
-
     if (showFontModal) {
         FontModal(
             tempSize = tempFontSize,
@@ -827,7 +815,6 @@ fun SettingsScreen() {
             appViewModel = viewModel
         )
     }
-
     if (showColorWheel) {
         ColorWheelDialog(
             onDismissRequest = { showColorWheel = false },
@@ -842,7 +829,6 @@ fun SettingsScreen() {
             initialColor = customColor ?: viewModel.selectedColor ?: DefaultPrimaryColor
         )
     }
-
     if (showLightOverlayColorWheel) {
         ColorWheelDialog(
             onDismissRequest = { showLightOverlayColorWheel = false },
@@ -853,7 +839,6 @@ fun SettingsScreen() {
             initialColor = viewModel.lightOverlayColor
         )
     }
-
     if (showDarkOverlayColorWheel) {
         ColorWheelDialog(
             onDismissRequest = { showDarkOverlayColorWheel = false },
@@ -864,7 +849,6 @@ fun SettingsScreen() {
             initialColor = viewModel.darkOverlayColor
         )
     }
-
     if (showWordMarkerColorWheel) {
         ColorWheelDialog(
             onDismissRequest = { showWordMarkerColorWheel = false },
@@ -875,7 +859,6 @@ fun SettingsScreen() {
             initialColor = viewModel.wordMarkerColor
         )
     }
-
     if (showVerseMarkerColorWheel) {
         ColorWheelDialog(
             onDismissRequest = { showVerseMarkerColorWheel = false },
@@ -886,7 +869,6 @@ fun SettingsScreen() {
             initialColor = viewModel.verseMarkerColor
         )
     }
-
     if (showLightModalColorWheel) {
         ColorWheelDialog(
             onDismissRequest = { showLightModalColorWheel = false },
@@ -897,7 +879,6 @@ fun SettingsScreen() {
             initialColor = viewModel.lightModalBackgroundColor
         )
     }
-
     if (showDarkModalColorWheel) {
         ColorWheelDialog(
             onDismissRequest = { showDarkModalColorWheel = false },
@@ -908,7 +889,6 @@ fun SettingsScreen() {
             initialColor = viewModel.darkModalBackgroundColor
         )
     }
-
     if (showRefreshConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showRefreshConfirmDialog = false },
@@ -948,7 +928,6 @@ fun SettingsScreen() {
             }
         )
     }
-
     if (showRefreshResultDialog) {
         AlertDialog(
             onDismissRequest = {
@@ -1015,12 +994,10 @@ fun SettingsScreen() {
             }
         )
     }
-
     if (showAboutDialog) {
         AboutDialog(onDismiss = { showAboutDialog = false })
     }
 }
-
 @Composable
 fun SettingsSection(title: String, subtitle: String? = null, content: @Composable () -> Unit) {
     Card(
@@ -1049,7 +1026,6 @@ fun SettingsSection(title: String, subtitle: String? = null, content: @Composabl
         }
     }
 }
-
 @Composable
 fun SettingsItem(
     title: String,
@@ -1082,7 +1058,6 @@ fun SettingsItem(
         content()
     }
 }
-
 @Composable
 fun ColorButton(color: Color, name: String, isSelected: Boolean, onClick: () -> Unit) {
     Column(
@@ -1115,7 +1090,6 @@ fun ColorButton(color: Color, name: String, isSelected: Boolean, onClick: () -> 
         )
     }
 }
-
 @Composable
 fun FontButton(family: String, isSelected: Boolean, onClick: () -> Unit) {
     Text(
@@ -1133,7 +1107,6 @@ fun FontButton(family: String, isSelected: Boolean, onClick: () -> Unit) {
         color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
     )
 }
-
 @Composable
 fun BgModal(
     currentIndex: Int,
@@ -1209,7 +1182,6 @@ fun BgModal(
                         }
                     }
                 }
-
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = onPickCustom,
@@ -1229,7 +1201,6 @@ fun BgModal(
                         Text("Remove Custom Image")
                     }
                 }
-
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1243,7 +1214,6 @@ fun BgModal(
         }
     }
 }
-
 @Composable
 fun HighlightColorSquare(
     color: Color,
@@ -1270,7 +1240,6 @@ fun HighlightColorSquare(
         )
     }
 }
-
 @Composable
 fun AboutDialog(onDismiss: () -> Unit) {
     AlertDialog(
@@ -1285,7 +1254,7 @@ fun AboutDialog(onDismiss: () -> Unit) {
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    "Version: 1.0.7",
+                    "Version: 1.0.7a",
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium
                 )

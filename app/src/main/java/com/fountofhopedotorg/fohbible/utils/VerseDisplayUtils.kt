@@ -67,7 +67,6 @@ class VerseTextProcessor {
 
         val nodes = parseXmlTags(verseText)
         val tree = buildTree(nodes)
-
         val initialContext = TraversalContext(
             textColor = textColor ?: themeColors.textColor,
             isTextContainer = false,
@@ -76,13 +75,11 @@ class VerseTextProcessor {
             baseFontSize = baseFontSize,
             isOldTestament = isOldTestament
         )
-
         val (header, body) = traverseTree(
             tree, initialContext, highlight, themeColors,
             onTagPress, onWordPress, onStrongsPress,
             isHighlighted, options, wordHighlights
         )
-
         val result = ProcessedVerse(
             header = if (options.showHeaders) header else null,
             body = body
@@ -343,16 +340,10 @@ class VerseTextProcessor {
         options: ProcessingOptions,
         wordHighlights: Set<String>?
     ) {
-        val effectiveMultiplier = if (context.currentTag == "f" && isEncircled(node.content)) {
-            1.25f
-        } else {
-            context.fontSizeMultiplier
-        }
+        val effectiveMultiplier = if (context.currentTag == "f" && isEncircled(node.content)) { 1.25f } else { context.fontSizeMultiplier }
         val textContext = context.copy(fontSizeMultiplier = effectiveMultiplier)
-
         val rawText = if (options.preserveWhitespace) node.content else node.content.trim()
         if (rawText.isEmpty()) return
-
         when (context.currentTag) {
             "S" -> if (options.enableStrongsClick && onStrongsPress != null) {
                 val trimmed = rawText.trim()
@@ -368,13 +359,10 @@ class VerseTextProcessor {
                     ) {
                         builder.append(rawText)
                     }
-                    builder.pop()
-                } else {
+                    builder.pop() } else {
                     processNormalText(rawText, builder, textContext, highlight, themeColors, onWordPress, options, wordHighlights)
                 }
-            } else {
-                processNormalText(rawText, builder, textContext, highlight, themeColors, onWordPress, options, wordHighlights)
-            }
+            } else { processNormalText(rawText, builder, textContext, highlight, themeColors, onWordPress, options, wordHighlights) }
 
             "f" -> {
                 val trimmed = rawText.trim()
@@ -383,7 +371,6 @@ class VerseTextProcessor {
                     fontSize = textContext.baseFontSize * textContext.fontSizeMultiplier,
                     baselineShift = textContext.baselineShift ?: BaselineShift.None
                 )
-
                 if (options.enableTagClick && onTagPress != null) {
                     if (isEncircled(node.content) && trimmed.isNotEmpty()) {
                         builder.pushStringAnnotation("tag", trimmed)
@@ -400,7 +387,6 @@ class VerseTextProcessor {
                         ) {
                             builder.append("\u200B")
                         }
-
                         builder.pop()
                     } else if (trimmed.isNotEmpty()) {
                         builder.pushStringAnnotation("tag", trimmed)
@@ -417,7 +403,6 @@ class VerseTextProcessor {
                     processNormalText(rawText, builder, textContext, highlight, themeColors, onWordPress, options, wordHighlights)
                 }
             }
-
             else -> {
                 processNormalText(rawText, builder, textContext, highlight, themeColors, onWordPress, options, wordHighlights)
             }
@@ -472,10 +457,7 @@ class VerseTextProcessor {
                         themeColors.searchHighlightBg
                     } else if (wordHighlights != null && word.lowercase() in wordHighlights) {
                         themeColors.wordHighlightBg
-                    } else {
-                        Color.Transparent
-                    }
-
+                    } else { Color.Transparent }
                     builder.pushStringAnnotation("word", word.lowercase())
                     builder.withStyle(
                         SpanStyle(
@@ -502,9 +484,7 @@ class VerseTextProcessor {
                 val trimmedWord = word.trim()
                 addSpaceAfterPunct = (trimmedWord == "." || trimmedWord == "," || trimmedWord == ":" || trimmedWord == ";" || trimmedWord == "?" || trimmedWord == "!")
             }
-        } else {
-            processTextWithoutWordClick(text, builder, context, highlight, themeColors, wordHighlights)
-        }
+        } else { processTextWithoutWordClick(text, builder, context, highlight, themeColors, wordHighlights) }
     }
 
     private fun processTextWithoutWordClick(
@@ -519,9 +499,7 @@ class VerseTextProcessor {
             val escapedHighlight = escapeRegex(highlight)
             val regex = try {
                 Regex(escapedHighlight, RegexOption.IGNORE_CASE)
-            } catch (_: Exception) {
-                return
-            }
+            } catch (_: Exception) { return }
             var lastIndex = 0
             for (match in regex.findAll(text)) {
                 if (match.range.first > lastIndex) {
@@ -544,9 +522,7 @@ class VerseTextProcessor {
                 val remaining = text.substring(lastIndex)
                 appendWithWordHighlights(remaining, builder, context, wordHighlights, themeColors)
             }
-        } else {
-            appendWithWordHighlights(text, builder, context, wordHighlights, themeColors)
-        }
+        } else { appendWithWordHighlights(text, builder, context, wordHighlights, themeColors) }
     }
 
     private fun appendWithWordHighlights(
@@ -563,19 +539,13 @@ class VerseTextProcessor {
                     fontSize = context.baseFontSize * context.fontSizeMultiplier,
                     baselineShift = context.baselineShift ?: BaselineShift.None
                 )
-            ) {
-                builder.append(text)
-            }
+            ) { builder.append(text) }
             return
         }
 
         val words = splitIntoWords(text, preserveWhitespace = false)
         for (word in words) {
-            val bgColor = if (isWord(word) && word.lowercase() in wordHighlights) {
-                themeColors.wordHighlightBg
-            } else {
-                Color.Transparent
-            }
+            val bgColor = if (isWord(word) && word.lowercase() in wordHighlights) { themeColors.wordHighlightBg } else { Color.Transparent }
             builder.withStyle(
                 SpanStyle(
                     color = context.textColor,
@@ -583,9 +553,7 @@ class VerseTextProcessor {
                     fontSize = context.baseFontSize * context.fontSizeMultiplier,
                     baselineShift = context.baselineShift ?: BaselineShift.None
                 )
-            ) {
-                builder.append(word)
-            }
+            ) { builder.append(word) }
             val trimmedWord = word.trim()
             if (trimmedWord != "." && trimmedWord != "," && trimmedWord != ":" && trimmedWord != ";" && trimmedWord != "?" && trimmedWord != "!" && trimmedWord != word) {
                 builder.append(" ")
@@ -627,11 +595,9 @@ class VerseTextProcessor {
                 .filter { it.isNotEmpty() }
         }
     }
-
     private fun isWord(text: String): Boolean {
         return text.matches(Regex("""[a-zA-ZÀ-ÿ']+"""))
     }
-
     private fun escapeRegex(string: String): String {
         return string.replace(ESCAPE_REGEX_PATTERN, "\\$0")
     }
@@ -653,7 +619,6 @@ object SimpleVerseProcessor {
         processedText = processedText.replace(Regex("""\s+"""), " ")
         return processedText.trim()
     }
-
     fun extractVerseReference(verses: List<com.fountofhopedotorg.fohbible.data.Verse>): String {
         if (verses.isEmpty()) return ""
         val first = verses.first()

@@ -1,5 +1,4 @@
 package com.fountofhopedotorg.fohbible.modals
-
 import android.content.res.Configuration
 import android.text.SpannableString
 import android.text.method.LinkMovementMethod
@@ -112,7 +111,6 @@ fun sanitizeHtmlContent(content: String?): String {
     sanitized = sanitized.replace(Regex("<meta[^>]*http-equiv\\s*=\\s*['\"]?refresh['\"]?[^>]*>", RegexOption.IGNORE_CASE), "")
     return sanitized.trim()
 }
-
 fun prepareStrongContent(rawDefinition: String): String {
     val sanitized = sanitizeHtmlContent(rawDefinition)
     val searchTerm = "Derivation"
@@ -122,7 +120,6 @@ fun prepareStrongContent(rawDefinition: String): String {
     }
     return sanitized
 }
-
 fun cleanDefinition(topic: String, rawDef: String): String {
     val sanitized = sanitizeHtmlContent(rawDef)
     val upperTopic = topic.uppercase(Locale.ROOT)
@@ -147,7 +144,6 @@ fun cleanDefinition(topic: String, rawDef: String): String {
     }
     return cleaned
 }
-
 fun formatDefinitionContent(word: String, content: String, isOxford: Boolean): String {
     return if (isOxford) {
         "<b>${word.uppercase(Locale.ROOT)}</b><br>$content"
@@ -155,7 +151,6 @@ fun formatDefinitionContent(word: String, content: String, isOxford: Boolean): S
         content
     }
 }
-
 fun buildDefinitionContent(
     originalWord: String,
     pairs: List<Pair<String, String>>,
@@ -186,7 +181,6 @@ fun buildDefinitionContent(
         if (isTopical) rawContent else formatDefinitionContent(originalWord, rawContent, false)
     }
 }
-
 fun parseVerseLink(href: String, linkText: String): PassageSelection? {
     try {
         val parts = href.substringAfter("B:").trim().split(" ")
@@ -229,7 +223,6 @@ fun parseVerseLink(href: String, linkText: String): PassageSelection? {
         return null
     }
 }
-
 fun fetchVerses(passage: PassageSelection, db: DatabaseHelper?): List<Verse> {
     if (db == null) return emptyList()
     val verses = mutableListOf<Verse>()
@@ -251,7 +244,6 @@ fun fetchVerses(passage: PassageSelection, db: DatabaseHelper?): List<Verse> {
     }
     return verses
 }
-
 fun levenshteinDistance(s1: String, s2: String): Int {
     val len1 = s1.length
     val len2 = s2.length
@@ -270,7 +262,6 @@ fun levenshteinDistance(s1: String, s2: String): Int {
     }
     return cost[len1][len2]
 }
-
 fun customDistance(word: String, topic: String): Int {
     if (topic.equals(word, ignoreCase = true)) return 0
     val w = word.lowercase(Locale.ROOT)
@@ -294,7 +285,6 @@ fun customDistance(word: String, topic: String): Int {
     }
     return 100 + levenshteinDistance(w, t)
 }
-
 suspend fun getDefinitionOrClosest(dbHelper: DatabaseHelper?, originalWord: String): List<Pair<String, String>>? {
     return withContext(Dispatchers.IO) {
         if (dbHelper == null) return@withContext null
@@ -332,7 +322,6 @@ suspend fun getDefinitionOrClosest(dbHelper: DatabaseHelper?, originalWord: Stri
         result.sortedBy { levenshteinDistance(lowerWord, it.first.lowercase(Locale.ROOT)) }
     }
 }
-
 suspend fun getVerseCommentaries(
     dbHelper: DatabaseHelper?,
     bookNumber: Int,
@@ -347,7 +336,6 @@ suspend fun getVerseCommentaries(
         null
     }
 }
-
 @Composable
 fun InteractiveModal(
     show: Boolean,
@@ -381,13 +369,11 @@ fun InteractiveModal(
     )
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val currentFontFamily = getFontFamily(viewModel.selectedFontFamily)
-
     var dictionaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var strongDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var commentaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var verseCommentaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var crossRefDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
-
     val dictionaries = listOf("atsbd", "cbtel", "isbe", "noah", "oxford", "topical", "tcr")
     val dictionaryDisplayNames = mapOf(
         "atsbd" to "ATSBD",
@@ -415,7 +401,6 @@ fun InteractiveModal(
         "niv11" to "References from NIV",
         "obx" to "References from OpenBible Project"
     )
-
     DisposableEffect(Unit) {
         onDispose {
             crossRefDbHelper?.close()
@@ -425,7 +410,6 @@ fun InteractiveModal(
             verseCommentaryDbHelper?.close()
         }
     }
-
     LaunchedEffect(show, viewModel.selectedDictionary, viewModel.selectedVerseCommentary, viewModel.selectedCrossReferenceDatabase, databaseHelper?.databaseName) {
         dictionaryDbHelper?.close()
         dictionaryDbHelper = DatabaseHelper(context, "${viewModel.selectedDictionary}.dictionary.sqlite3")
@@ -440,10 +424,8 @@ fun InteractiveModal(
         crossRefDbHelper?.close()
         crossRefDbHelper = DatabaseHelper(context, "${viewModel.selectedCrossReferenceDatabase}.crossreferences.sqlite3")
     }
-
     val stack = remember { mutableStateListOf<ModalPage>() }
     val scrollStates = remember { mutableStateMapOf<ModalPage, ScrollState>() }
-
     LaunchedEffect(show) {
         if (show) {
             stack.clear()
@@ -553,14 +535,10 @@ fun InteractiveModal(
             }
         }
     }
-
     val scope = rememberCoroutineScope()
-
     val onWordPress: (String) -> Unit = Unit@{ w ->
         val trimmed = w.trim()
-        if (trimmed.isEmpty() || trimmed.matches(Regex(".*\\d.*"))) {
-            return@Unit
-        }
+        if (trimmed.isEmpty() || trimmed.matches(Regex(".*\\d.*"))) { return@Unit }
         val dbDisplayName = dictionaryDisplayNames[viewModel.selectedDictionary] ?: viewModel.selectedDictionary
         val capitalizedWord = trimmed.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
         val currentIsOld = stack.last().isOldTestament
@@ -580,18 +558,12 @@ fun InteractiveModal(
             val isTopical = viewModel.selectedDictionary == "topical"
             val newTitle = if (pairs.isNotEmpty()) {
                 val isExact = pairs.size == 1 && pairs[0].first.equals(trimmed, ignoreCase = true)
-                if (isTopical) {
-                    "References for $capitalizedWord"
-                } else if (isExact) {
+                if (isTopical) { "References for $capitalizedWord" } else if (isExact) {
                     "Definition of ${pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }}"
                 } else if (pairs.size == 1) {
                     "Closest match for ${pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }}"
-                } else {
-                    "Matches for \"$capitalizedWord\""
-                }
-            } else {
-                "Definition of $capitalizedWord not found"
-            }
+                } else { "Matches for \"$capitalizedWord\"" }
+            } else { "Definition of $capitalizedWord not found" }
             val newContent = if (pairs.isNotEmpty()) {
                 buildDefinitionContent(
                     originalWord = trimmed,
@@ -599,13 +571,9 @@ fun InteractiveModal(
                     isOxford = isOxford,
                     isTopical = isTopical
                 )
-            } else {
-                "No definition found."
-            }
+            } else { "No definition found." }
             val index = stack.indexOf(loadingPage)
-            if (index != -1) {
-                stack[index] = loadingPage.copy(title = newTitle, content = newContent)
-            }
+            if (index != -1) { stack[index] = loadingPage.copy(title = newTitle, content = newContent) }
         }
     }
 
@@ -613,14 +581,9 @@ fun InteractiveModal(
         val trimmed = strongNumber.trim()
         if (trimmed.isEmpty()) return@Unit
         val currentIsOld = stack.last().isOldTestament
-        val prefixed = if (trimmed.firstOrNull()?.isLetter() ?: false) {
-            trimmed.uppercase()
-        } else {
-            (if (currentIsOld) "H" else "G") + trimmed
-        }
-        if (!prefixed.matches(Regex("^[HG]\\d+"))) {
-            return@Unit
-        }
+        val prefixed = if (trimmed.firstOrNull()?.isLetter() ?: false) { trimmed.uppercase() } else {
+            (if (currentIsOld) "H" else "G") + trimmed }
+        if (!prefixed.matches(Regex("^[HG]\\d+"))) { return@Unit }
         val title = "Strong's Definition for $prefixed"
         val loadingPage = ModalPage(title, "strong", "Loading...", strongNumber = prefixed, isOldTestament = currentIsOld)
         stack.add(loadingPage)
@@ -630,12 +593,9 @@ fun InteractiveModal(
             }
             val prepared = prepareStrongContent(definition)
             val index = stack.indexOf(loadingPage)
-            if (index != -1) {
-                stack[index] = loadingPage.copy(content = prepared)
-            }
+            if (index != -1) { stack[index] = loadingPage.copy(content = prepared) }
         }
     }
-
     val onTagPress: (String, PassageSelection) -> Unit = Unit@{ marker, passage ->
         val bookNumber = passage.bookNumber
         val chapter = passage.chapter
@@ -654,8 +614,7 @@ fun InteractiveModal(
                 if (text?.isNotBlank() == true) "Verse $verseNum: \n$text" else null
             }
             val combined = if (commentaries.isNotEmpty()) {
-                commentaries.joinToString("\n\n────────────────────────\n\n")
-            } else {
+                commentaries.joinToString("\n\n────────────────────────\n\n") } else {
                 "No commentary found for marker \"$marker\" in this passage."
             }
             val sanitizedCombined = sanitizeHtmlContent(combined)
@@ -667,7 +626,6 @@ fun InteractiveModal(
             }
         }
     }
-
     val onCrossRefClick: (Int, Int, Int, Boolean) -> Unit = { book, chap, verseNum, isOld ->
         scope.launch {
             val refs = withContext(Dispatchers.IO) {
@@ -694,7 +652,6 @@ fun InteractiveModal(
             stack.add(newPage)
         }
     }
-
     val onVerseCommentaryClick: (bookNumber: Int, chapter: Int, verseNumber: Int, isOldTestament: Boolean) -> Unit = { book, chap, verseNum, isOld ->
         val displayName = verseCommentaryDisplayNames[viewModel.selectedVerseCommentary] ?: viewModel.selectedVerseCommentary
         val bookName = BibleData.getBookByCustomNumber(book)?.name ?: "Book"
@@ -725,7 +682,6 @@ fun InteractiveModal(
             }
         }
     }
-
     if (show) {
         if (stack.isEmpty()) return
         val currentPage = stack.last()
@@ -738,7 +694,6 @@ fun InteractiveModal(
         var commentaryDropdownExpanded by remember { mutableStateOf(false) }
         var crossRefDropdownExpanded by remember { mutableStateOf(false) }
         var showEditWordDialog by remember { mutableStateOf(false) }
-
         fun switchToDictionary(newDict: String) {
             if (viewModel.selectedDictionary == newDict) return
             val currentWord = currentPage.word ?: return
@@ -760,15 +715,11 @@ fun InteractiveModal(
                 val capitalizedWord = currentWord.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
                 val isExact = pairs.size == 1 && pairs[0].first.equals(currentWord, ignoreCase = true)
                 val isTopical = newDict == "topical"
-                val newTitle = if (isTopical) {
-                    "References for $capitalizedWord"
-                } else if (isExact) {
+                val newTitle = if (isTopical) { "References for $capitalizedWord" } else if (isExact) {
                     "Definition of ${pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }}"
                 } else if (pairs.size == 1) {
                     "Closest match for ${pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }}"
-                } else {
-                    "Matches for \"$capitalizedWord\""
-                }
+                } else { "Matches for \"$capitalizedWord\"" }
                 val newContent = buildDefinitionContent(
                     originalWord = word,
                     pairs = pairs,
@@ -776,25 +727,17 @@ fun InteractiveModal(
                     isTopical = viewModel.selectedDictionary == "topical"
                 )
                 val updateIndex = stack.indexOf(loadingPage)
-                if (updateIndex != -1) {
-                    stack[updateIndex] = loadingPage.copy(title = newTitle, content = newContent)
-                }
-                withContext(Dispatchers.IO) {
-                    tempDbHelper.close()
-                }
+                if (updateIndex != -1) { stack[updateIndex] = loadingPage.copy(title = newTitle, content = newContent) }
+                withContext(Dispatchers.IO) { tempDbHelper.close() }
             }
         }
-
         fun switchToVerseCommentary(newComKey: String) {
             if (viewModel.selectedVerseCommentary == newComKey) return
             val bookNum = currentPage.bookNumber ?: return
             val chap = currentPage.chapter ?: return
             val vers = currentPage.verse ?: return
             val newDisplayName = verseCommentaryDisplayNames[newComKey] ?: newComKey
-            val loadingPage = currentPage.copy(
-                description = newDisplayName,
-                content = "Loading..."
-            )
+            val loadingPage = currentPage.copy( description = newDisplayName, content = "Loading..." )
             val index = stack.lastIndex
             stack[index] = loadingPage
             viewModel.selectedVerseCommentary = newComKey
@@ -803,29 +746,18 @@ fun InteractiveModal(
                     DatabaseHelper(context, "${newComKey}.commentaries.sqlite3")
                 }
                 val commentaries = getVerseCommentaries(tempDbHelper, bookNum, chap, vers)
-                val newContent = if (commentaries.isNullOrEmpty()) {
-                    "No commentaries found."
-                } else {
-                    commentaries.joinToString("<br><br>──────────<br><br>") { commentary ->
-                        commentary.text
-                    }
+                val newContent = if (commentaries.isNullOrEmpty()) { "No commentaries found." } else {
+                    commentaries.joinToString("<br><br>──────────<br><br>") { commentary -> commentary.text }
                 }
                 val updateIndex = stack.indexOf(loadingPage)
-                if (updateIndex != -1) {
-                    stack[updateIndex] = loadingPage.copy(content = newContent)
-                }
-                withContext(Dispatchers.IO) {
-                    tempDbHelper.close()
-                }
+                if (updateIndex != -1) { stack[updateIndex] = loadingPage.copy(content = newContent) }
+                withContext(Dispatchers.IO) { tempDbHelper.close() }
             }
         }
 
         fun switchToCrossReference(newDbKey: String) {
             if (viewModel.selectedCrossReferenceDatabase == newDbKey) return
-            val loadingPage = currentPage.copy(
-                description = crossReferenceDatabaseDisplayNames[newDbKey] ?: newDbKey,
-                content = "Loading..."
-            )
+            val loadingPage = currentPage.copy( description = crossReferenceDatabaseDisplayNames[newDbKey] ?: newDbKey, content = "Loading..." )
             stack[stack.lastIndex] = loadingPage
             viewModel.selectedCrossReferenceDatabase = newDbKey
             scope.launch {
@@ -836,9 +768,7 @@ fun InteractiveModal(
                 val refs = withContext(Dispatchers.IO) {
                     temp.getCrossReferences(b, c, v)
                 }
-                val html = if (refs.isEmpty()) {
-                    "No references available."
-                } else {
+                val html = if (refs.isEmpty()) { "No references available." } else {
                     sanitizeHtmlContent(
                         refs.joinToString("<br>") { ref ->
                             val toBook = BibleData.getBookByCustomNumber(ref.bookTo)?.name ?: ref.bookTo.toString()
@@ -849,31 +779,24 @@ fun InteractiveModal(
                     )
                 }
                 val idx = stack.indexOf(loadingPage)
-                if (idx != -1) {
-                    stack[idx] = loadingPage.copy(content = html)
-                }
+                if (idx != -1) { stack[idx] = loadingPage.copy(content = html) }
                 temp.close()
             }
         }
-
         val lightModalColor = if (viewModel.lightModalBackgroundColor != Color.Unspecified) {
-            viewModel.lightModalBackgroundColor
-        } else {
+            viewModel.lightModalBackgroundColor } else {
             MaterialTheme.colorScheme.surface
         }
         val darkModalColor = if (viewModel.darkModalBackgroundColor != Color.Unspecified) {
-            viewModel.darkModalBackgroundColor
-        } else {
+            viewModel.darkModalBackgroundColor } else {
             MaterialTheme.colorScheme.surface
         }
         val modalBackgroundColor = if (isDark) {
-            darkModalColor
-        } else {
+            darkModalColor } else {
             lightModalColor
         }
         val configuration = LocalConfiguration.current
         val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-
         AlertDialog(
             modifier = if (isLandscape) Modifier.fillMaxWidth(0.9f) else Modifier,
             properties = if (isLandscape) DialogProperties(usePlatformDefaultWidth = false) else DialogProperties(),
@@ -1546,7 +1469,6 @@ fun InteractiveModal(
             },
             containerColor = modalBackgroundColor
         )
-
         if (showModalColorWheel) {
             ColorWheelDialog(
                 onDismissRequest = { showModalColorWheel = false },
@@ -1561,7 +1483,6 @@ fun InteractiveModal(
                 initialColor = modalBackgroundColor
             )
         }
-
         if (showEditWordDialog) {
             var newWord by remember { mutableStateOf(currentPage.word ?: "") }
             AlertDialog(

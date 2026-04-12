@@ -360,8 +360,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                     }
                 }
             }
-        } catch (_: Exception) {
-        }
+        } catch (_: Exception) { }
         return subheadings
     }
 
@@ -410,8 +409,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                     }
                 }
             }
-        } catch (_: Exception) {
-        }
+        } catch (_: Exception) { }
         return verses
     }
     fun searchVerses(
@@ -537,8 +535,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                     verses.add(Verse(verseNumber, text, bookName, chapter))
                 }
             }
-        } catch (_: Exception) {
-        }
+        } catch (_: Exception) { }
         return verses
     }
 
@@ -581,8 +578,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                 "$COLUMN_BOOK_NAME = ? AND $COLUMN_CHAPTER = ? AND $COLUMN_VERSE_NUMBER = ?",
                 arrayOf(verse.bookName, verse.chapter.toString(), verse.verseNumber.toString())
             )
-        } catch (_: Exception) {
-        }
+        } catch (_: Exception) { }
     }
 
     fun isHighlighted(verse: Verse): Boolean {
@@ -600,8 +596,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             cursor?.use {
                 exists = it.count > 0
             }
-        } catch (_: Exception) {
-        }
+        } catch (_: Exception) { }
         return exists
     }
     fun addOrUpdateNote(book: String, chapter: Int, startVerse: Int, endVerse: Int, note: String) {
@@ -620,8 +615,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                 values,
                 SQLiteDatabase.CONFLICT_REPLACE
             )
-        } catch (_: Exception) {
-        }
+        } catch (_: Exception) { }
     }
 
     fun getNote(book: String, chapter: Int, startVerse: Int, endVerse: Int): String? {
@@ -641,8 +635,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                     note = it.getString(it.getColumnIndexOrThrow(COLUMN_NOTE))
                 }
             }
-        } catch (_: Exception) {
-        }
+        } catch (_: Exception) { }
         return note
     }
 
@@ -653,8 +646,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                 "$COLUMN_BOOK_NAME = ? AND $COLUMN_CHAPTER = ? AND $COLUMN_START_VERSE = ? AND $COLUMN_END_VERSE = ?",
                 arrayOf(book, chapter.toString(), startVerse.toString(), endVerse.toString())
             )
-        } catch (_: Exception) {
-        }
+        } catch (_: Exception) { }
     }
 
     fun getAllNotes(): List<Note> {
@@ -675,8 +667,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                     notes.add(Note(bookName, chapter, startVerse, endVerse, note, timestamp))
                 }
             }
-        } catch (_: Exception) {
-        }
+        } catch (_: Exception) { }
         return notes
     }
     fun hasNote(verse: Verse): Boolean {
@@ -699,8 +690,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             cursor?.use {
                 exists = it.count > 0
             }
-        } catch (_: Exception) {
-        }
+        } catch (_: Exception) { }
         return exists
     }
 
@@ -716,8 +706,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                     definition = it.getString(it.getColumnIndexOrThrow("definition"))
                 }
             }
-        } catch (_: Exception) {
-        }
+        } catch (_: Exception) { }
         return definition
     }
 
@@ -733,8 +722,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                     result = it.getString(it.getColumnIndexOrThrow("definition"))
                 }
             }
-        } catch (_: Exception) {
-        }
+        } catch (_: Exception) { }
         return result
     }
 
@@ -751,8 +739,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                     commentary = commentary?.replace(Regex("<script[\\s\\S]*?</script>"), "")
                 }
             }
-        } catch (_: Exception) {
-        }
+        } catch (_: Exception) { }
         return commentary
     }
 
