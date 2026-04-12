@@ -184,7 +184,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
 @Composable
 fun <T> SavePreference(
     getValue: () -> T,
@@ -197,7 +196,6 @@ fun <T> SavePreference(
         }
     }
 }
-
 @Composable
 fun SaveNullableStringPreference(
     getValue: () -> String?,
@@ -213,16 +211,12 @@ fun SaveNullableStringPreference(
         }
     }
 }
-
-
 @Composable
 fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     val currentScreen = viewModel.navigationStack.last()
     var isUsingCustomColor by remember { mutableStateOf(viewModel.isCustomColor) }
     var customColor by remember { mutableStateOf(viewModel.customColor) }
     val dataStore = remember { activity.appDataStore }
-
-    // Load all preferences once
     LaunchedEffect(Unit) {
         val prefs = dataStore.data.first()
         with(viewModel) {
@@ -275,7 +269,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
             if (predefinedHighlightColors.isEmpty()) resetHighlightColorsToDefault()
         }
     }
-
     SavePreference({ viewModel.fontSize }, FONT_SIZE_KEY, dataStore)
     SavePreference({ viewModel.darkTheme }, DARK_THEME_KEY, dataStore)
     SavePreference({ viewModel.selectedColor?.toArgb() ?: DefaultPrimaryColor.toArgb() }, SELECTED_COLOR_KEY, dataStore)
@@ -308,7 +301,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
         dataStore
     )
     SaveNullableStringPreference({ viewModel.customTextureUri }, CUSTOM_TEXTURE_KEY, dataStore)
-
     LaunchedEffect(Unit) {
         snapshotFlow { viewModel.primaryPassage }.collectLatest { passage ->
             dataStore.edit { prefs ->
@@ -329,8 +321,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
             }
         }
     }
-
-
     LaunchedEffect(viewModel.selectedColor, viewModel.darkTheme, viewModel.isCustomColor, viewModel.customColor) {
         viewModel.selectedColor?.let {
             ThemeManager.primaryColor = it
@@ -340,13 +330,11 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
         isUsingCustomColor = viewModel.isCustomColor
         customColor = viewModel.customColor
     }
-
     val themeState = AppThemeState(
         darkTheme = viewModel.darkTheme,
         primaryColor = viewModel.selectedColor ?: DefaultPrimaryColor,
         isCustomColor = viewModel.isCustomColor
     )
-
     var dbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     LaunchedEffect(viewModel.currentDbName) {
         dbHelper?.close()
@@ -355,7 +343,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     DisposableEffect(Unit) {
         onDispose { dbHelper?.close() }
     }
-
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -364,7 +351,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
             viewModel.bgImageIndex = 34
         }
     }
-
     CompositionLocalProvider(LocalAppTheme provides themeState) {
         FohBibleTheme(darkTheme = viewModel.darkTheme) {
             Scaffold(
@@ -630,7 +616,6 @@ fun AnimatedIconButton(
         Icon(icon, contentDescription, tint = tint, modifier = Modifier.rotate(animatedRotation))
     }
 }
-
 @Composable
 fun ColorPickerRow(
     label: String,
@@ -653,14 +638,12 @@ fun ColorPickerRow(
         modifier = modifier.fillMaxWidth()
     )
 }
-
 @Composable
 fun FontSizeControls(viewModel: AppViewModel) {
     val minFontSize = 1
     val maxFontSize = 100
     var showFontSizeDialog by remember { mutableStateOf(false) }
     var tempFontSize by remember { mutableStateOf(viewModel.fontSize.toString()) }
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -709,7 +692,6 @@ fun FontSizeControls(viewModel: AppViewModel) {
         )
     }
 }
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OverlayOpacitySlider(viewModel: AppViewModel) {
@@ -745,7 +727,6 @@ fun OverlayOpacitySlider(viewModel: AppViewModel) {
         )
     }
 }
-
 @Composable
 fun DropdownMenuItemWithIcon(
     title: String,
@@ -779,7 +760,6 @@ fun DropdownMenuItemWithIcon(
         }
     )
 }
-
 val allScreens = listOf(
     "Home" to Icons.Filled.Home,
     "Reader" to Icons.Filled.Book,
@@ -867,7 +847,6 @@ fun HomeAppBar(
         }
     )
 }
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReaderAppBar(
@@ -884,13 +863,10 @@ fun ReaderAppBar(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val coroutineScope = rememberCoroutineScope()
-
     var showNavigationDropdown by remember { mutableStateOf(false) }
     var showMultiDropdown by remember { mutableStateOf(false) }
-
     val rotation by animateFloatAsState(targetValue = if (showNavigationDropdown) 180f else 0f, animationSpec = tween(300), label = "menuIconRotation")
     val multiRotation by animateFloatAsState(targetValue = if (showMultiDropdown) 180f else 0f, animationSpec = tween(300), label = "multiIconRotation")
-
     TopAppBar(
         title = {
             if (!viewModel.multiVersion) {
@@ -989,7 +965,6 @@ fun ReaderAppBar(
         }
     )
 }
-
 @Composable
 fun ReaderDropdownContent(
     isLandscape: Boolean,
@@ -1051,7 +1026,6 @@ fun ReaderDropdownContent(
         HorizontalDivider()
         FontSizeControls(viewModel)
     }
-
     if (isLandscape) {
         Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.SpaceEvenly) {
             Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
@@ -1067,7 +1041,6 @@ fun ReaderDropdownContent(
         Column { commonItems() }
     }
 }
-
 @Composable
 fun ExtraReaderControls(viewModel: AppViewModel, coroutineScope: kotlinx.coroutines.CoroutineScope) {
     OverlayOpacitySlider(viewModel)
@@ -1089,9 +1062,6 @@ fun ExtraReaderControls(viewModel: AppViewModel, coroutineScope: kotlinx.corouti
     HorizontalDivider()
     FontSizeControls(viewModel)
 }
-// endregion
-
-// region Color Theme Dialog
 @Composable
 fun UpdatedColorThemeDialog(
     onDismiss: () -> Unit,
@@ -1148,7 +1118,6 @@ fun UpdatedColorThemeDialog(
         }
     }
 }
-
 @Composable
 fun ColorOptionItem(theme: ColorTheme, onClick: () -> Unit) {
     Card(
