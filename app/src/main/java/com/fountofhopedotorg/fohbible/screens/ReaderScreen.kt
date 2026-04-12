@@ -919,7 +919,6 @@ private fun IndependentMultiVersionReaderLazy(
                     }
                 }
             }
-
             ChapterPager(config = secondaryConfig, modifier = Modifier.weight(1f), scheduleFade = scheduleFade, onPassageChange = onSecondaryPassageChange) { _, passage, isCurrentPage ->
                 val content = secondaryLoadedVerses[passage.bookNumber to passage.chapter] ?: emptyList()
                 Box(modifier = Modifier.fillMaxSize()) {
@@ -965,7 +964,6 @@ private fun IndependentMultiVersionReaderLazy(
                     }
                 }
             }
-
             ChapterPager(config = secondaryConfig, modifier = Modifier.weight(1f), scheduleFade = scheduleFade, onPassageChange = onSecondaryPassageChange) { _, passage, isCurrentPage ->
                 val content = secondaryLoadedVerses[passage.bookNumber to passage.chapter] ?: emptyList()
                 Box(modifier = Modifier.fillMaxSize()) {

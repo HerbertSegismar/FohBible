@@ -1,6 +1,5 @@
 @file:OptIn(ExperimentalMaterial3Api::class)
 package com.fountofhopedotorg.fohbible.screens
-
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
@@ -107,12 +106,10 @@ fun BookmarksScreen(
     var showSortOptions by remember { mutableStateOf(false) }
     var sortOrder by remember { mutableStateOf(SortOrder.DATE_ADDED) }
     var showVersionModal by remember { mutableStateOf(false) }
-
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val lazyListState = rememberLazyListState()
     val dbHelper = remember(selectedDbName) { DatabaseHelper(context as MainActivity, selectedDbName) }
-
     LaunchedEffect(selectedDbName, multiSelectMode) {
         if (!multiSelectMode) {
             loadBookmarks(context, databaseHelper, selectedDbName) { verses ->
@@ -120,7 +117,6 @@ fun BookmarksScreen(
             }
         }
     }
-
     LaunchedEffect(sortOrder) {
         if (!multiSelectMode) {
             bookmarkedVerses = sortVerses(bookmarkedVerses, sortOrder)
@@ -138,7 +134,6 @@ fun BookmarksScreen(
             }
         }
     }
-
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -255,9 +250,7 @@ fun BookmarksScreen(
                     }
                 }
             }
-
             Spacer(modifier = Modifier.height(8.dp))
-
             if (filteredVerses.isEmpty()) {
                 EmptyBookmarksScreen(searchQuery.isNotEmpty())
             } else {
@@ -327,7 +320,6 @@ fun BookmarksScreen(
                 onDismiss = { showSortOptions = false }
             )
         }
-
         if (showDeleteConfirmation) {
             DeleteConfirmationDialog(
                 count = selectedVerses.size,
@@ -445,7 +437,6 @@ fun NormalTopBar(
         }
     }
 }
-
 @Composable
 fun SwipeToDeleteBookmarkItem(
     verse: Verse,
@@ -583,7 +574,6 @@ fun SwipeToDeleteBookmarkItem(
         }
     }
 }
-
 @Composable
 fun SortOptionsDialog(
     currentSortOrder: SortOrder,
@@ -636,7 +626,6 @@ fun SortOptionsDialog(
         }
     }
 }
-
 @Composable
 fun DeleteConfirmationDialog(
     count: Int,
@@ -701,7 +690,6 @@ fun DeleteConfirmationDialog(
         }
     }
 }
-
 @Composable
 fun EmptyBookmarksScreen(isSearching: Boolean) {
     Box(
@@ -735,7 +723,6 @@ fun EmptyBookmarksScreen(isSearching: Boolean) {
         }
     }
 }
-
 private fun shareVerses(context: Context, verses: List<Verse>) {
     val text = verses.joinToString("\n\n") { verse ->
         "${verse.bookName} ${verse.chapter}:${verse.verseNumber}\n${SimpleVerseProcessor.stripXmlTags(verse.text)}"
@@ -748,7 +735,6 @@ private fun shareVerses(context: Context, verses: List<Verse>) {
     val shareIntent = android.content.Intent.createChooser(sendIntent, null)
     context.startActivity(shareIntent)
 }
-
 private fun sortVerses(verses: List<Verse>, sortOrder: SortOrder): List<Verse> {
     return when (sortOrder) {
         SortOrder.BOOK -> verses.sortedWith(
@@ -764,7 +750,6 @@ private fun sortVerses(verses: List<Verse>, sortOrder: SortOrder): List<Verse> {
         SortOrder.DATE_ADDED -> verses
     }
 }
-
 enum class SortOrder(val displayName: String) {
     BOOK("By Book"),
     CHAPTER("By Chapter"),
@@ -797,7 +782,6 @@ private fun loadBookmarks(
         }.start()
     }
 }
-
 private fun removeBookmark(verse: Verse, databaseHelper: DatabaseHelper) {
     Thread {
         databaseHelper.removeBookmark(verse)

@@ -437,7 +437,6 @@ fun ChapterView(
         }
     }
 }
-
 fun createCommentaryHelperIfExists(context: Context, baseDbName: String?): DatabaseHelper? {
     if (baseDbName.isNullOrEmpty()) return null
     val comName = baseDbName.replace(".sqlite3", "com.sqlite3")
@@ -449,7 +448,6 @@ fun createCommentaryHelperIfExists(context: Context, baseDbName: String?): Datab
         null
     }
 }
-
 fun getPreviousChapter(current: PassageSelection, currentBook: BibleBook?): PassageSelection {
     if (currentBook == null) return current
     if (currentBook.chapters == 1 && current.chapter == 1) return current
@@ -459,7 +457,6 @@ fun getPreviousChapter(current: PassageSelection, currentBook: BibleBook?): Pass
         current.copy(chapter = current.chapter - 1, verse = null)
     }
 }
-
 fun getNextChapter(current: PassageSelection, currentBook: BibleBook?): PassageSelection {
     if (currentBook == null) return current
     if (currentBook.chapters == 1 && current.chapter == 1) return current
@@ -469,7 +466,6 @@ fun getNextChapter(current: PassageSelection, currentBook: BibleBook?): PassageS
         current.copy(chapter = current.chapter + 1, verse = null)
     }
 }
-
 suspend fun preloadChapter(
     passage: PassageSelection,
     loadedMap: MutableMap<Pair<Int, Int>, List<VerseContent>>,

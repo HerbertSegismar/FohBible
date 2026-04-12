@@ -1,5 +1,4 @@
 package com.fountofhopedotorg.fohbible.modals
-
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -85,7 +84,6 @@ fun VersionSelectionModal(
             }
         }
     }
-
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -144,7 +142,6 @@ fun VersionSelectionModal(
                             }
                         }
                     }
-
                     Spacer(modifier = Modifier.height(12.dp))
                     OutlinedTextField(
                         value = searchQuery,
@@ -196,7 +193,6 @@ fun VersionSelectionModal(
                         ),
                         singleLine = true
                     )
-
                     Spacer(modifier = Modifier.height(8.dp))
                     LazyColumn(
                         modifier = Modifier.weight(1f)
@@ -282,7 +278,6 @@ fun VersionSelectionModal(
                             }
                         }
                     }
-
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             }

@@ -1,5 +1,4 @@
 package com.fountofhopedotorg.fohbible.modals
-
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -93,11 +92,9 @@ fun VerseOptionsModal(
     var currentEnd by remember { mutableIntStateOf(verse.verseNumber) }
     var isBookmarked by remember { mutableStateOf(false) }
     var isHighlighted by remember { mutableStateOf(false) }
-
     val minV = min(currentStart, currentEnd)
     val maxV = max(currentStart, currentEnd)
     val currentVerses = chapterVerses.filter { it.verseNumber in minV..maxV }.sortedBy { it.verseNumber }
-
     LaunchedEffect(currentVerses) {
         isBookmarked = currentVerses.all {
             databaseHelper?.isBookmarked(it.copy(bookName = passage.bookName, chapter = passage.chapter)) ?: false
@@ -106,13 +103,11 @@ fun VerseOptionsModal(
             databaseHelper?.isHighlighted(it.copy(bookName = passage.bookName, chapter = passage.chapter)) ?: false
         }
     }
-
     val displayText = if (currentVerses.isNotEmpty()) {
         currentVerses.joinToString("\n") { "${it.verseNumber} ${SimpleVerseProcessor.stripXmlTags(it.text)}" }
     } else {
         SimpleVerseProcessor.stripXmlTags(verse.text)
     }
-
     val rangeString = if (minV == maxV) "$minV" else "$minV-$maxV"
     val maxVerse = remember(chapterVerses) { chapterVerses.maxOfOrNull { it.verseNumber } ?: verse.verseNumber }
 
@@ -162,7 +157,6 @@ fun VerseOptionsModal(
                                 fontWeight = FontWeight.Medium
                             )
                         }
-
                         IconButton(
                             onClick = onDismiss,
                             modifier = Modifier
@@ -174,7 +168,6 @@ fun VerseOptionsModal(
                             Icon(Icons.Default.Close, contentDescription = "Close")
                         }
                     }
-
                     if (chapterVerses.isNotEmpty()) {
                         Text(
                             text = "Edit Range",
@@ -198,8 +191,6 @@ fun VerseOptionsModal(
                             modifier = Modifier.padding(start = 20.dp, top = 8.dp, bottom = 8.dp)
                         )
                     }
-
-                    // Verse preview
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -268,7 +259,6 @@ fun VerseOptionsModal(
                                 }
                             }
                         )
-
                         ActionButton(
                             icon = Icons.Outlined.Share,
                             title = if (currentStart == currentEnd) "Share Verse" else "Share Verses",
@@ -278,7 +268,6 @@ fun VerseOptionsModal(
                                 onDismiss()
                             }
                         )
-
                         ActionButton(
                             icon = Icons.AutoMirrored.Filled.Note,
                             title = if (currentStart == currentEnd) "Add Note" else "Add Notes",
@@ -289,7 +278,6 @@ fun VerseOptionsModal(
                             }
                         )
                     }
-
                     TextButton(
                         onClick = onDismiss,
                         modifier = Modifier
@@ -309,8 +297,6 @@ fun VerseOptionsModal(
         }
     }
 }
-
-// RangeSliderWithControls and ActionButton functions remain unchanged (same as before)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RangeSliderWithControls(
@@ -362,7 +348,6 @@ private fun RangeSliderWithControls(
         }
     }
 }
-
 @Composable
 private fun ActionButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,

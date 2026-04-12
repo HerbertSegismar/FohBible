@@ -1,5 +1,4 @@
 package com.fountofhopedotorg.fohbible.modals
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -305,7 +304,6 @@ fun NavigationModal(
             }
         }
     }
-
     val onBackspace = {
         val isChapter = focusedInput == "chapter"
         val current = if (isChapter) chapterInput else verseInput
@@ -313,7 +311,6 @@ fun NavigationModal(
             if (isChapter) chapterInput = current.dropLast(1) else verseInput = current.dropLast(1)
         }
     }
-
     val onClear = {
         chapterInput = ""
         verseInput = ""
@@ -525,7 +522,6 @@ fun NavigationModal(
         }
     }
 }
-
 @Composable
 fun BookInputsSection(
     book: BookUi,
@@ -609,7 +605,6 @@ fun BookInputsSection(
         )
     }
 }
-
 @Composable
 fun CustomInputDisplay(
     value: String,
@@ -653,7 +648,6 @@ fun CustomInputDisplay(
         }
     }
 }
-
 @Composable
 fun NumPad(
     onDigit: (String) -> Unit,
@@ -731,7 +725,6 @@ fun NumPad(
         }
     }
 }
-
 @Composable
 fun NumButton(
     digit: String,
@@ -751,7 +744,6 @@ fun NumButton(
         Text(text = digit, fontSize = 24.sp, fontWeight = FontWeight.Medium)
     }
 }
-
 @Composable
 fun ActionButton(
     icon: ImageVector? = null,
@@ -795,7 +787,6 @@ fun ActionButton(
         }
     }
 }
-
 @Composable
 fun BookHeader(book: BookUi) {
     val chapCount = book.totalChapters
@@ -847,7 +838,6 @@ fun BookHeader(book: BookUi) {
         }
     }
 }
-
 @Composable
 fun TestamentSection(
     title: String,
@@ -887,7 +877,6 @@ fun TestamentSection(
         }
     }
 }
-
 @Composable
 fun BookCard(
     book: BookUi,

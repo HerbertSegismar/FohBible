@@ -1,5 +1,4 @@
 package com.fountofhopedotorg.fohbible.core
-
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -38,7 +37,6 @@ fun rememberChapterPagerConfig(current: PassageSelection): ChapterPagerConfig {
     }
     val hasPrev by remember(prev) { derivedStateOf { prev != current } }
     val hasNext by remember(next) { derivedStateOf { next != current } }
-
     val passages by remember(current, prev, next, hasPrev, hasNext) {
         derivedStateOf {
             buildList {
@@ -48,10 +46,8 @@ fun rememberChapterPagerConfig(current: PassageSelection): ChapterPagerConfig {
             }
         }
     }
-
     val currentOffset by remember(hasPrev) { derivedStateOf { if (hasPrev) 1 else 0 } }
     val pageCount by remember(passages) { derivedStateOf { passages.size } }
-
     return ChapterPagerConfig(passages, currentOffset, pageCount, hasPrev, hasNext)
 }
 
@@ -65,11 +61,9 @@ fun ChapterPager(
 ) {
     val pagerState = rememberPagerState(initialPage = config.currentOffset, pageCount = { config.pageCount })
     val scope = rememberCoroutineScope()
-
     var isUserSwiping by remember { mutableStateOf(false) }
     var swipeCompleted by remember { mutableStateOf(false) }
     var pendingPassageChange by remember { mutableStateOf<PassageSelection?>(null) }
-
     LaunchedEffect(pagerState.currentPage, pagerState.isScrollInProgress) {
         if (pagerState.isScrollInProgress) {
             isUserSwiping = true
@@ -92,13 +86,11 @@ fun ChapterPager(
             }
         }
     }
-
     LaunchedEffect(config.passages[config.currentOffset]) {
         if (!isUserSwiping) {
             scope.launch { pagerState.scrollToPage(config.currentOffset) }
         }
     }
-
     HorizontalPager(
         state = pagerState,
         modifier = modifier.pointerInput(Unit) { detectTapGestures { scheduleFade() } },

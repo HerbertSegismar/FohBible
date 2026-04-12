@@ -1,5 +1,4 @@
 package com.fountofhopedotorg.fohbible.screens
-
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
@@ -119,7 +118,6 @@ fun NotesScreen(
     val scope = rememberCoroutineScope()
     val lazyListState = rememberLazyListState()
     val dbHelper = remember(selectedDbName) { DatabaseHelper(context as MainActivity, selectedDbName) }
-
     LaunchedEffect(selectedNoteForEdit) {
         if (selectedNoteForEdit != null) {
             editVerses = null
@@ -134,7 +132,6 @@ fun NotesScreen(
             editVerses = null
         }
     }
-
     LaunchedEffect(selectedDbName, multiSelectMode) {
         if (!multiSelectMode) {
             loadNotes(dbHelper) { loadedNotes ->
@@ -142,13 +139,11 @@ fun NotesScreen(
             }
         }
     }
-
     LaunchedEffect(sortOrder) {
         if (!multiSelectMode) {
             notes = sortNotes(notes, sortOrder)
         }
     }
-
     val filteredNotes = remember(notes, searchQuery) {
         if (searchQuery.isEmpty()) {
             notes
@@ -162,7 +157,6 @@ fun NotesScreen(
             }
         }
     }
-
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -239,7 +233,6 @@ fun NotesScreen(
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) { }
             }
-
             if (!searchActive) {
                 Column(modifier = Modifier.fillMaxWidth().padding(18.dp)) {
                     Card(
@@ -280,9 +273,7 @@ fun NotesScreen(
                     }
                 }
             }
-
             Spacer(modifier = Modifier.height(8.dp))
-
             if (filteredNotes.isEmpty()) {
                 EmptyNotesScreen(isSearching = searchQuery.isNotEmpty())
             } else {
@@ -346,7 +337,6 @@ fun NotesScreen(
                 }
             }
         }
-
         if (showSortOptions) {
             NoteSortOptionsDialog(
                 currentSortOrder = sortOrder,
@@ -357,7 +347,6 @@ fun NotesScreen(
                 onDismiss = { showSortOptions = false }
             )
         }
-
         if (showDeleteConfirmation) {
             NoteDeleteConfirmationDialog(
                 count = selectedNotes.size,
@@ -433,7 +422,6 @@ fun NotesScreen(
         }
     }
 }
-
 @Composable
 fun NormalTopBar(
     title: String,
@@ -503,7 +491,6 @@ fun NormalTopBar(
         }
     }
 }
-
 @Composable
 fun NoteItem(
     note: Note,
@@ -519,7 +506,6 @@ fun NoteItem(
     val formattedDate = dateFormat.format(Date(note.timestamp * 1000))
     val formattedTime = timeFormat.format(Date(note.timestamp * 1000))
     val rangeString = if (note.startVerse == note.endVerse) "${note.startVerse}" else "${note.startVerse}-${note.endVerse}"
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -653,7 +639,6 @@ fun NoteItem(
         }
     }
 }
-
 @Composable
 fun MultiSelectTopBar(
     selectedCount: Int,
@@ -709,7 +694,6 @@ fun MultiSelectTopBar(
         }
     }
 }
-
 @Composable
 fun NoteSortOptionsDialog(
     currentSortOrder: NoteSortOrder,
@@ -762,7 +746,6 @@ fun NoteSortOptionsDialog(
         }
     }
 }
-
 @Composable
 fun NoteDeleteConfirmationDialog(
     count: Int,
@@ -827,7 +810,6 @@ fun NoteDeleteConfirmationDialog(
         }
     }
 }
-
 @Composable
 fun EmptyNotesScreen(isSearching: Boolean) {
     Box(
@@ -861,7 +843,6 @@ fun EmptyNotesScreen(isSearching: Boolean) {
         }
     }
 }
-
 private fun shareNotes(context: Context, notes: List<Note>) {
     val text = notes.joinToString("\n\n") { note ->
         val range = if (note.startVerse == note.endVerse) "${note.startVerse}" else "${note.startVerse}-${note.endVerse}"
@@ -875,7 +856,6 @@ private fun shareNotes(context: Context, notes: List<Note>) {
     val shareIntent = android.content.Intent.createChooser(sendIntent, null)
     context.startActivity(shareIntent)
 }
-
 private fun loadNotes(dbHelper: DatabaseHelper, onComplete: (List<Note>) -> Unit) {
     Thread {
         val notes = dbHelper.getAllNotes()
@@ -884,13 +864,11 @@ private fun loadNotes(dbHelper: DatabaseHelper, onComplete: (List<Note>) -> Unit
         }
     }.start()
 }
-
 private fun removeNote(note: Note, dbHelper: DatabaseHelper) {
     Thread {
         dbHelper.deleteNote(note.bookName, note.chapter, note.startVerse, note.endVerse)
     }.start()
 }
-
 private fun sortNotes(notes: List<Note>, sortOrder: NoteSortOrder): List<Note> {
     return when (sortOrder) {
         NoteSortOrder.DATE_NEWEST -> notes.sortedByDescending { it.timestamp }
@@ -907,11 +885,9 @@ private fun sortNotes(notes: List<Note>, sortOrder: NoteSortOrder): List<Note> {
         )
     }
 }
-
 enum class NoteSortOrder(val displayName: String) {
     DATE_NEWEST("Newest First"),
     DATE_OLDEST("Oldest First"),
     BOOK("By Book"),
     CHAPTER("By Chapter")
 }
-

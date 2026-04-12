@@ -1,5 +1,4 @@
 package com.fountofhopedotorg.fohbible.modals
-
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -71,7 +70,6 @@ fun NotesModal(
     val startVerse = verses.minOfOrNull { it.verseNumber } ?: 0
     val endVerse = verses.maxOfOrNull { it.verseNumber } ?: 0
     val rangeString = if (startVerse == endVerse) "$startVerse" else "$startVerse-$endVerse"
-
     val displayText = remember(verses) {
         if (verses.isNotEmpty()) {
             verses.sortedBy { it.verseNumber }.joinToString("\n") {
@@ -81,10 +79,8 @@ fun NotesModal(
             ""
         }
     }
-
     var noteText by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(true) }
-
     LaunchedEffect(show, book, chapter, startVerse, endVerse) {
         if (show && databaseHelper != null && book.isNotBlank() && chapter > 0 && startVerse > 0) {
             isLoading = true
@@ -92,7 +88,6 @@ fun NotesModal(
             isLoading = false
         }
     }
-
     fun saveNote() {
         if (databaseHelper != null && book.isNotBlank() && chapter > 0 && startVerse > 0) {
             if (noteText.isBlank()) {
@@ -104,7 +99,6 @@ fun NotesModal(
         }
         onDismiss()
     }
-
     fun deleteNote() {
         if (databaseHelper != null && book.isNotBlank() && chapter > 0 && startVerse > 0) {
             databaseHelper.deleteNote(book, chapter, startVerse, endVerse)
@@ -112,7 +106,6 @@ fun NotesModal(
         }
         onDismiss()
     }
-
     AnimatedVisibility(
         visible = show,
         enter = fadeIn() + scaleIn(initialScale = 0.9f),
@@ -167,7 +160,6 @@ fun NotesModal(
                                 fontWeight = FontWeight.Medium
                             )
                         }
-
                         IconButton(
                             onClick = onDismiss,
                             modifier = Modifier
@@ -178,7 +170,6 @@ fun NotesModal(
                             Icon(Icons.Default.Close, contentDescription = "Close")
                         }
                     }
-
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -197,7 +188,6 @@ fun NotesModal(
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
-
                     OutlinedTextField(
                         value = noteText,
                         onValueChange = { noteText = it },
@@ -212,9 +202,7 @@ fun NotesModal(
                         ),
                         placeholder = { Text("Add your personal thoughts or insights...") }
                     )
-
                     Spacer(modifier = Modifier.height(24.dp))
-
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -238,7 +226,6 @@ fun NotesModal(
                                 Text("Delete")
                             }
                         }
-
                         Button(
                             onClick = { saveNote() },
                             modifier = Modifier.weight(if (noteText.isNotBlank()) 1f else 2f),
@@ -247,7 +234,6 @@ fun NotesModal(
                             Text("Save")
                         }
                     }
-
                     TextButton(
                         onClick = onDismiss,
                         modifier = Modifier

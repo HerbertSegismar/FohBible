@@ -1,5 +1,4 @@
 package com.fountofhopedotorg.fohbible.screens
-
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -83,7 +82,6 @@ const val MIN_FONT_SIZE = 1
 fun SettingsScreen() {
     val viewModel: AppViewModel = viewModel()
     val context = LocalContext.current
-
     var showBgModal by remember { mutableStateOf(false) }
     var showFontModal by remember { mutableStateOf(false) }
     var tempFontSize by remember { mutableStateOf(viewModel.fontSize.toString()) }
@@ -104,18 +102,15 @@ fun SettingsScreen() {
     var showResetHighlightColorsDialog by remember { mutableStateOf(false) }
     var showPrimaryVersionModal by remember { mutableStateOf(false) }
     var showSecondaryVersionModal by remember { mutableStateOf(false) }
-
     LaunchedEffect(viewModel.isCustomColor, viewModel.customColor) {
         isUsingCustomColor = viewModel.isCustomColor
         customColor = viewModel.customColor
     }
-
     LaunchedEffect(viewModel.isRefreshingDatabases) {
         if (viewModel.isRefreshingDatabases && !showRefreshResultDialog) {
             showRefreshResultDialog = true
         }
     }
-
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -146,7 +141,6 @@ fun SettingsScreen() {
                         )
                     )
                 }
-
                 Column {
                     Text("Color Scheme", style = MaterialTheme.typography.labelLarge)
                     Spacer(Modifier.height(8.dp))
@@ -175,7 +169,6 @@ fun SettingsScreen() {
                 }
             }
         }
-
         item {
             SettingsSection(title = "Reader Settings", subtitle = "Customize your Bible reading experience") {
                 Card(
@@ -221,7 +214,6 @@ fun SettingsScreen() {
                         )
                     }
                 }
-
                 SettingsItem(
                     title = "Multi-Version Display",
                     subtitle = "Show two Bible versions side by side"
@@ -235,7 +227,6 @@ fun SettingsScreen() {
                         )
                     )
                 }
-
                 if (viewModel.multiVersion) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Card(
@@ -285,9 +276,7 @@ fun SettingsScreen() {
                             )
                         }
                     }
-
                     Spacer(modifier = Modifier.height(8.dp))
-
                     SettingsItem(
                         title = "Multi-View Layout",
                         subtitle = "Horizontal or vertical arrangement"
@@ -370,7 +359,6 @@ fun SettingsScreen() {
                         }
                     }
                 }
-
                 SettingsItem(
                     title = "Custom Background",
                     subtitle = "Add your own photo as background"
@@ -382,7 +370,6 @@ fun SettingsScreen() {
                         Icon(Icons.Default.AddCircleOutline, contentDescription = "Add custom background")
                     }
                 }
-
                 SettingsItem(
                     title = "Background Texture",
                     subtitle = "Choose from built-in textures",
@@ -1286,7 +1273,6 @@ fun HighlightColorSquare(
 
 @Composable
 fun AboutDialog(onDismiss: () -> Unit) {
-
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {

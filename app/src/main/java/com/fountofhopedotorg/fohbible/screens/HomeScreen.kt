@@ -1,5 +1,4 @@
 package com.fountofhopedotorg.fohbible.screens
-
 import android.content.Context
 import android.content.Intent
 import android.os.Handler
@@ -90,7 +89,6 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     var dailyVerses by remember { mutableStateOf<List<Verse>?>(null) }
-
     LaunchedEffect(Unit) {
         if (dailyVerses == null) {
             loadRandomVerses(context, databaseHelper) { verses ->
@@ -98,15 +96,12 @@ fun HomeScreen(
             }
         }
     }
-
     var popularDevotionals by remember { mutableStateOf<List<PopularDevotional>>(emptyList()) }
-
     LaunchedEffect(Unit) {
         if (popularDevotionals.isEmpty()) {
             popularDevotionals = getRandomDevotionals()
         }
     }
-
     val quickActions = listOf(
         QuickAction(
             title = "Reader",
@@ -139,8 +134,6 @@ fun HomeScreen(
             onClick = { onNavigateToScreen(Screen.Settings) }
         )
     )
-
-
     LazyColumn(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -162,7 +155,6 @@ fun HomeScreen(
                         .padding(8.dp),
                     fontFamily = getFontFamily("rubikglitch")
                 )
-
                 Image(
                     painter = painterResource(id = R.drawable.foh),
                     contentDescription = "Fount of Hope Logo",
@@ -171,7 +163,6 @@ fun HomeScreen(
                         .clip(RoundedCornerShape(8.dp)),
                     contentScale = ContentScale.Fit
                 )
-
                 Text(
                     text = "Study Bible",
                     fontSize = 30.sp,
@@ -182,7 +173,6 @@ fun HomeScreen(
                         .padding(8.dp),
                     fontFamily = getFontFamily("rubikglitch")
                 )
-
                 Text(
                     text = "Your Daily Source of Inspiration",
                     fontSize = 20.sp,
@@ -196,7 +186,6 @@ fun HomeScreen(
             }
             Spacer(modifier = Modifier.height(30.dp))
         }
-
         item {
             DailyVerseCard(
                 verses = dailyVerses,
@@ -221,7 +210,6 @@ fun HomeScreen(
                 databaseHelper = databaseHelper ?: DatabaseHelper(context as MainActivity, "kj2.sqlite3")
             )
         }
-
         item {
             Text(
                 text = "Quick Access",
@@ -231,16 +219,13 @@ fun HomeScreen(
             )
             QuickAccessCarousel(actions = quickActions)
         }
-
         item {
             PopularDevotionalsSection(
                 devotionals = popularDevotionals,
                 onNavigateToReader = onNavigateToReader
             )
         }
-
         item { Spacer(modifier = Modifier.height(40.dp)) }
-
         item {
             val isMatrixVisible by remember { mutableStateOf(true) }
             if (isMatrixVisible) {
@@ -251,15 +236,11 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
-
         item { Spacer(modifier = Modifier.height(40.dp)) }
-
         item { Footer() }
-
         item { Spacer(modifier = Modifier.height(80.dp)) }
     }
 }
-
 @Composable
 fun QuickAccessCarousel(actions: List<QuickAction>) {
     LazyRow(
@@ -272,7 +253,6 @@ fun QuickAccessCarousel(actions: List<QuickAction>) {
         }
     }
 }
-
 @Composable
 fun QuickActionCarouselItem(action: QuickAction) {
     Card(
@@ -321,16 +301,13 @@ fun DailyVerseCard(
     val viewModel = viewModel<AppViewModel>()
     val isLoading = remember { mutableStateOf(false) }
     var isBookmarked by remember(verses) { mutableStateOf(false) }
-
     val currentFontFamily = getFontFamily(viewModel.selectedFontFamily)
-
     LaunchedEffect(verses) {
         if (!verses.isNullOrEmpty()) {
             val isSaved = checkIfBookmarked(verses.first(), databaseHelper)
             isBookmarked = isSaved
         }
     }
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -381,9 +358,7 @@ fun DailyVerseCard(
                     }
                 }
             }
-
             Spacer(modifier = Modifier.height(12.dp))
-
             if (!verses.isNullOrEmpty()) {
                 Box(
                     modifier = Modifier
@@ -399,9 +374,7 @@ fun DailyVerseCard(
                             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
                             fontFamily = currentFontFamily
                         )
-
                         Spacer(modifier = Modifier.height(8.dp))
-
                         verses.forEach { verse ->
                             val annotatedText = buildAnnotatedString {
                                 withStyle(
@@ -415,7 +388,6 @@ fun DailyVerseCard(
                                 }
                                 append(SimpleVerseProcessor.stripXmlTags(verse.text))
                             }
-
                             Text(
                                 text = annotatedText,
                                 fontSize = 18.sp,
@@ -442,9 +414,7 @@ fun DailyVerseCard(
                     }
                 }
             }
-
             Spacer(modifier = Modifier.height(16.dp))
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -469,7 +439,6 @@ fun DailyVerseCard(
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
-
                 Text(
                     text = "Share",
                     color = MaterialTheme.colorScheme.primary,
@@ -498,7 +467,6 @@ fun DailyVerseCard(
         }
     }
 }
-
 @Composable
 fun PopularDevotionalsSection(
     devotionals: List<PopularDevotional>,
@@ -520,22 +488,18 @@ fun PopularDevotionalsSection(
                 fontWeight = FontWeight.Bold
             )
         }
-
         Spacer(modifier = Modifier.height(12.dp))
-
         devotionals.forEachIndexed { index, devotional ->
             DevotionalItem(
                 devotional = devotional,
                 onNavigateToReader = onNavigateToReader
             )
-
             if (index < devotionals.lastIndex) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             }
         }
     }
 }
-
 @Composable
 fun DevotionalItem(
     devotional: PopularDevotional,
@@ -579,7 +543,6 @@ fun DevotionalItem(
                 modifier = Modifier.size(24.dp)
             )
         }
-
         Column(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -589,7 +552,6 @@ fun DevotionalItem(
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
-
             Text(
                 text = devotional.preview,
                 style = MaterialTheme.typography.bodySmall,
@@ -598,7 +560,6 @@ fun DevotionalItem(
                 overflow = TextOverflow.Ellipsis
             )
         }
-
         IconButton(onClick = {}) {
             Icon(
                 Icons.Filled.BookmarkBorder,
@@ -608,7 +569,6 @@ fun DevotionalItem(
         }
     }
 }
-
 fun loadRandomVerses(
     context: Context,
     databaseHelper: DatabaseHelper?,
@@ -635,7 +595,6 @@ fun loadRandomVerses(
         }.start()
     }
 }
-
 fun getRandomDevotionals(): List<PopularDevotional> {
     val allDevotionals = listOf(
         PopularDevotional("Psalm 23", "The Lord is my shepherd...", "Psalms", 23, 1),
@@ -659,7 +618,6 @@ fun getRandomDevotionals(): List<PopularDevotional> {
         PopularDevotional("Come to Me", "Come to me, all who labor and are heavy laden...", "Matthew", 11, 28),
         PopularDevotional("Rejoice Always", "Rejoice always, pray without ceasing...", "1 Thessalonians", 5, 16),
         PopularDevotional("The Alpha & Omega", "Behold, He comes with clouds...", "Revelation", 1, 7),
-
         PopularDevotional("The Armor of God", "Put on the whole armor of God...", "Ephesians", 6, 11),
         PopularDevotional("The Fruit of the Spirit", "But the fruit of the Spirit is love, joy, peace...", "Galatians", 5, 22),
         PopularDevotional("The Great Commission", "Go therefore and make disciples of all nations...", "Matthew", 28, 19),
@@ -684,7 +642,6 @@ fun getRandomDevotionals(): List<PopularDevotional> {
         PopularDevotional("The Resurrection and Life", "Jesus said to her, 'I am the resurrection...'", "John", 11, 25),
         PopularDevotional("The Transfiguration", "And he was transfigured before them...", "Matthew", 17, 2),
         PopularDevotional("The Widow's Offering", "And he called his disciples to him...", "Mark", 12, 43),
-
         PopularDevotional("The Suffering Servant", "He was despised and rejected by men, a man of sorrows...", "Isaiah", 53, 3),
         PopularDevotional("The Crucifixion Psalm", "My God, my God, why have you forsaken me?", "Psalms", 22, 1),
         PopularDevotional("The First Gospel", "He will crush your head, and you will strike his heel.", "Genesis", 3, 15),
@@ -700,7 +657,6 @@ fun getRandomDevotionals(): List<PopularDevotional> {
     )
     return allDevotionals.shuffled(Random).take(5)
 }
-
 private fun saveToBookmarks(verses: List<Verse>, databaseHelper: DatabaseHelper) {
     Thread {
         verses.forEach { verse ->
@@ -708,7 +664,6 @@ private fun saveToBookmarks(verses: List<Verse>, databaseHelper: DatabaseHelper)
         }
     }.start()
 }
-
 private fun removeFromBookmarks(verses: List<Verse>, databaseHelper: DatabaseHelper) {
     Thread {
         verses.forEach { verse ->
@@ -716,7 +671,6 @@ private fun removeFromBookmarks(verses: List<Verse>, databaseHelper: DatabaseHel
         }
     }.start()
 }
-
 private fun checkIfBookmarked(verse: Verse, databaseHelper: DatabaseHelper): Boolean {
     return databaseHelper.isBookmarked(verse)
 }

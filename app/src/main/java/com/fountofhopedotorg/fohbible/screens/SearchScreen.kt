@@ -1,5 +1,4 @@
 package com.fountofhopedotorg.fohbible.screens
-
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -95,7 +94,6 @@ fun getScopeForBookNumber(bookNumber: Int): String? {
     }
     return null
 }
-
 val BOOK_COLORS: Map<String, String> = mapOf()
 
 fun generateColorFromString(str: String): String {
@@ -109,7 +107,6 @@ fun generateColorFromString(str: String): String {
     )
     return colors[abs(hash) % colors.size]
 }
-
 fun getBookColor(bookName: String, verse: SearchVerse? = null): String {
     verse?.bookColor?.let { return it }
     val normalizedBookName = bookName.lowercase().trim()
@@ -119,7 +116,6 @@ fun getBookColor(bookName: String, verse: SearchVerse? = null): String {
     val hex = scope?.let { scopeColors[it] } ?: if (getBookInfo(bookNumber)?.testament == Testament.OLD) "#DC2626" else "#059669"
     return hex
 }
-
 suspend fun enhanceSearchResultsWithColors(
     results: List<SearchVerse>,
     dbHelper: DatabaseHelper?
@@ -143,7 +139,6 @@ suspend fun enhanceSearchResultsWithColors(
         result.copy(bookColor = colorMap[result.bookNumber])
     }
 }
-
 @Composable
 fun SearchScreen(
     databaseHelper: DatabaseHelper?,
@@ -162,7 +157,6 @@ fun SearchScreen(
         "card" to if (isDark) Color(0xFF1E293B) else Color.White,
         "border" to if (isDark) Color(0xFF374151) else Color(0xFFE5E7EB),
     )
-
     var hasSearched by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     val results = remember { mutableStateListOf<SearchVerse>() }
@@ -174,20 +168,16 @@ fun SearchScreen(
     var inverseSearch by remember { mutableStateOf(false) }
     var exactPhrase by remember { mutableStateOf(false) }
     var showVersionDropdown by remember { mutableStateOf(false) }
-
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
-
     val showBackToTop by remember {
         derivedStateOf {
             listState.firstVisibleItemScrollOffset > 300 || listState.firstVisibleItemIndex > 0
         }
     }
-
     val currentVersionDisplay = remember(currentVersionKey) {
         BibleVersionUtils.versionMap[currentVersionKey] ?: "Bible"
     }
-
     val handleVersionChange: (String) -> Unit = { newVersionKey ->
         onVersionChange(newVersionKey)
         showVersionDropdown = false
@@ -197,12 +187,10 @@ fun SearchScreen(
         query = ""
         error = null
     }
-
     val handleQueryChange: (String) -> Unit = { text ->
         query = text
         showResultsStats = false
     }
-
     val handleSearch: suspend (String?) -> Unit = Unit@{ searchQuery ->
         val actualQuery = searchQuery ?: query
         hasSearched = true
@@ -222,7 +210,6 @@ fun SearchScreen(
                     SCOPE_RANGES[scope]?.let { Pair(it.start, it.end) }
                 }
             )
-
             val searchResults = withContext(Dispatchers.IO) {
                 databaseHelper?.searchVerses(
                     actualQuery,
@@ -231,12 +218,10 @@ fun SearchScreen(
                     exactPhrase
                 ) ?: emptyList()
             }
-
             val enhancedResults = enhanceSearchResultsWithColors(searchResults, databaseHelper)
             results.clear()
             results.addAll(enhancedResults)
             showResultsStats = true
-
             coroutineScope.launch {
                 listState.animateScrollToItem(0)
             }
@@ -246,14 +231,12 @@ fun SearchScreen(
             loading = false
         }
     }
-
     val handlePopularSearch: (String) -> Unit = { term ->
         query = term
         coroutineScope.launch {
             handleSearch(term)
         }
     }
-
     val handleScopeChange: (SearchScope) -> Unit = { newScope ->
         scope = newScope
         showScopeDropdown = false
@@ -261,7 +244,6 @@ fun SearchScreen(
         hasSearched = false
         showResultsStats = false
     }
-
     val handleVersePress: (SearchVerse) -> Unit = { verse ->
         val bookName = verse.bookName ?: "Unknown Book"
         onPassageSelected(
@@ -273,7 +255,6 @@ fun SearchScreen(
             )
         )
     }
-
     val clearSearch: () -> Unit = {
         query = ""
         results.clear()
@@ -282,7 +263,6 @@ fun SearchScreen(
         inverseSearch = false
         exactPhrase = false
     }
-
     val getResultStats: () -> String = {
         val config = getScopeConfig(scope)
         if (!hasSearched || loading || !showResultsStats) {
@@ -319,7 +299,6 @@ fun SearchScreen(
             "$foundStr$queryStr$scopeStr"
         }
     }
-
     if (loading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -330,7 +309,6 @@ fun SearchScreen(
         }
         return
     }
-
     if (error != null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -343,7 +321,6 @@ fun SearchScreen(
         }
         return
     }
-
     Box(modifier = Modifier.fillMaxSize().background(colors["background"] as Color)) {
         LazyColumn(
             state = listState,
@@ -359,7 +336,6 @@ fun SearchScreen(
                     colors = colors
                 )
             }
-
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
@@ -402,7 +378,6 @@ fun SearchScreen(
                     )
                 }
             }
-
             item {
                 Row(
                     modifier = Modifier
@@ -467,7 +442,6 @@ fun SearchScreen(
                     Text(getResultStats(), color = Color.White, fontWeight = FontWeight.SemiBold)
                 }
             }
-
             if (results.isEmpty()) {
                 item {
                     EmptyStates(
@@ -486,7 +460,6 @@ fun SearchScreen(
                 }
             }
         }
-
         AnimatedVisibility(
             visible = showBackToTop && results.size > 10,
             enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
@@ -505,7 +478,6 @@ fun SearchScreen(
                 Icon(Icons.Default.ArrowUpward, null, tint = Color.White)
             }
         }
-
         if (showVersionDropdown) {
             VersionSelectionModal(
                 currentVersionKey = currentVersionKey,
@@ -516,7 +488,6 @@ fun SearchScreen(
         }
     }
 }
-
 @Composable
 fun ScopeDropdown(
     scope: SearchScope,
@@ -543,7 +514,6 @@ fun ScopeDropdown(
             Text(if (isOpen) "↑" else "↓", color = Color.White, fontSize = 20.sp)
         }
     }
-
     if (isOpen) {
         Dialog(onDismissRequest = onToggle) {
             Card(
@@ -567,7 +537,6 @@ fun ScopeDropdown(
                             Icon(Icons.Default.Close, null, tint = Color.White)
                         }
                     }
-
                     LazyColumn(modifier = Modifier.height(500.dp)) {
                         SCOPE_CATEGORIES.forEach { (category, scopes) ->
                             item {
@@ -604,7 +573,6 @@ fun ScopeDropdown(
         }
     }
 }
-
 @Composable
 fun PopularSearchTerms(
     onSearch: (String) -> Unit,
@@ -629,7 +597,6 @@ fun PopularSearchTerms(
         }
     }
 }
-
 @Composable
 fun EmptyStates(
     hasSearched: Boolean,
@@ -641,7 +608,6 @@ fun EmptyStates(
     exactPhrase: Boolean = false
 ) {
     if (loading) return
-
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
@@ -667,21 +633,18 @@ fun EmptyStates(
                 exactPhrase -> "No verses with the exact phrase \"$query\" found"
                 else -> "No results found for \"$query\""
             }
-
             Text(
                 noResultsText,
                 fontSize = 18.sp,
                 color = colors["text"] as Color,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
-
             Text(
                 "Try different keywords or check spelling",
                 fontSize = 14.sp,
                 color = colors["muted"] as Color,
                 modifier = Modifier.padding(bottom = 24.dp)
             )
-
             Card(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 colors = CardDefaults.cardColors(containerColor = colors["card"] as Color),
@@ -698,7 +661,6 @@ fun EmptyStates(
                             .fillMaxWidth()
                             .padding(bottom = 12.dp)
                     )
-
                     Column(
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
@@ -721,7 +683,6 @@ fun EmptyStates(
         }
     }
 }
-
 @Composable
 fun SearchResultItem(
     verse: SearchVerse,
@@ -751,7 +712,6 @@ fun SearchResultItem(
         highlight = query,
         isOldTestament = viewModel.isOldTestament
     )
-
     Card(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable { onVersePress(verse) },
         colors = CardDefaults.cardColors(containerColor = colors["card"] as Color),

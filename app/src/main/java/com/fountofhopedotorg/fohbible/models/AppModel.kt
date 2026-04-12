@@ -1,5 +1,4 @@
 package com.fountofhopedotorg.fohbible.models
-
 import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -22,7 +21,6 @@ import kotlinx.coroutines.withContext
 import java.io.IOException
 
 class AppViewModel : ViewModel() {
-
     val predefinedHighlightColors = mutableStateListOf<Color>().apply {
         addAll(
             listOf(
@@ -35,18 +33,14 @@ class AppViewModel : ViewModel() {
             )
         )
     }
-
     var editingHighlightColorIndex by mutableIntStateOf(-1)
     var showHighlightColorEditor by mutableStateOf(false)
-
     var isStudyMode by mutableStateOf(true)
     var wordMarkerColor by mutableStateOf(Color(0xDDAC95E1))
     var showWordMarkerColorWheelDialog by mutableStateOf(false)
     var isDictionaryMode by mutableStateOf(true)
-
     var verseMarkerColor by mutableStateOf(Color(0xFF95F198))
     var showVerseMarkerColorWheelDialog by mutableStateOf(false)
-
     var showSecondaryNavigationModal by mutableStateOf(false)
     var lightModalBackgroundColor by mutableStateOf(Color(0xFFEAE7E3))
     var darkModalBackgroundColor by mutableStateOf(Color(0xFF121523))
@@ -79,21 +73,15 @@ class AppViewModel : ViewModel() {
     var lightOverlayColor by mutableStateOf(Color(0xFFF5F5DC))
     var darkOverlayColor by mutableStateOf(Color(0xFF100F21))
     var selectedDictionary by mutableStateOf("atsbd")
-
     var selectedVerseCommentary by mutableStateOf("cbsc")
-
     var selectedCrossReferenceDatabase by mutableStateOf("obx")
-
     val isOldTestament: Boolean
         get() = BibleData.getBookByCustomNumber(primaryPassage.bookNumber)?.testament == Testament.OLD
-
     val isSecondaryOldTestament: Boolean
         get() = BibleData.getBookByCustomNumber(secondaryPassage.bookNumber)?.testament == Testament.OLD
-
     var isRefreshingDatabases by mutableStateOf(false)
     var lastRefreshMessage by mutableStateOf("")
     var lastRefreshSuccess by mutableStateOf(false)
-
     var showReaderOverlayColorWheel by mutableStateOf(false)
 
     fun updateHighlightColor(index: Int, newColor: Color) {
@@ -101,7 +89,6 @@ class AppViewModel : ViewModel() {
             predefinedHighlightColors[index] = newColor
         }
     }
-
     fun resetHighlightColorsToDefault() {
         predefinedHighlightColors.clear()
         predefinedHighlightColors.addAll(
@@ -115,19 +102,16 @@ class AppViewModel : ViewModel() {
             )
         )
     }
-
     fun refreshDatabases(context: Context) {
         isRefreshingDatabases = true
         lastRefreshMessage = "Starting database refresh..."
         lastRefreshSuccess = false
-
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val databaseFiles = mutableListOf<String>()
                 var successCount = 0
                 var totalCount: Int
                 val assetDirs = listOf("databases", "dictionaries", "commentaries", "cross-references", "subheadings", "topical")
-
                 assetDirs.forEach { dir ->
                     try {
                         val files = context.assets.list(dir)
@@ -146,14 +130,12 @@ class AppViewModel : ViewModel() {
                 if (!allDatabases.contains(secondaryDbName) && secondaryDbName.isNotEmpty()) {
                     allDatabases.add(secondaryDbName)
                 }
-
                 totalCount = allDatabases.size
                 allDatabases.forEachIndexed { index, dbName ->
                     try {
                         withContext(Dispatchers.Main) {
                             lastRefreshMessage = "Refreshing database ${index + 1}/$totalCount: $dbName"
                         }
-
                         val dbHelper = DatabaseHelper(context, dbName)
                         if (dbHelper.refreshDatabase()) {
                             successCount++
@@ -162,7 +144,6 @@ class AppViewModel : ViewModel() {
                     } catch (_: Exception) {
                     }
                 }
-
                 withContext(Dispatchers.Main) {
                     isRefreshingDatabases = false
                     if (successCount == totalCount) {
@@ -173,7 +154,6 @@ class AppViewModel : ViewModel() {
                         lastRefreshSuccess = false
                     }
                 }
-
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     isRefreshingDatabases = false
@@ -183,17 +163,14 @@ class AppViewModel : ViewModel() {
             }
         }
     }
-
     fun navigateTo(screen: Screen) {
         navigationStack.add(screen)
     }
-
     fun goBack() {
         if (navigationStack.size > 1) {
             navigationStack.removeAt(navigationStack.lastIndex)
         }
     }
-
     fun updateCurrentScreen(newScreen: Screen) {
         if (navigationStack.isNotEmpty()) {
             navigationStack[navigationStack.lastIndex] = newScreen
