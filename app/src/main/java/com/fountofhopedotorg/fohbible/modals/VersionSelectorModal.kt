@@ -219,7 +219,6 @@ fun VersionSelectionModal(
                                     .padding(horizontal = 20.dp, vertical = 14.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                // Text column takes remaining space (now on the left)
                                 Column(
                                     modifier = Modifier.weight(1f)
                                 ) {
@@ -242,10 +241,8 @@ fun VersionSelectionModal(
                                         overflow = TextOverflow.Ellipsis
                                     )
                                 }
-
-                                // Selection indicator (checkmark or empty spacer) on the right
                                 Box(
-                                    modifier = Modifier.size(36.dp), // Fixed width for consistent alignment
+                                    modifier = Modifier.size(36.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     if (isSelected) {
@@ -258,16 +255,14 @@ fun VersionSelectionModal(
                                     }
                                 }
                             }
-
                             if (filteredVersions.lastOrNull() != (key to shortName)) {
                                 HorizontalDivider(
-                                    modifier = Modifier.padding(start = 20.dp), // Aligns with text start
+                                    modifier = Modifier.padding(start = 20.dp),
                                     color = borderColor,
                                     thickness = 0.5.dp
                                 )
                             }
                         }
-
                         if (filteredVersions.isEmpty()) {
                             item {
                                 Box(

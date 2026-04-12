@@ -202,8 +202,8 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
         viewModel.currentDbName = prefs[PRIMARY_DB_KEY] ?: "kj2.sqlite3"
         viewModel.currentVersionAbbr = prefs[PRIMARY_ABBR_KEY] ?: BibleVersionUtils.versionMap["kj2.sqlite3"]!!
         viewModel.multiVersion = prefs[MULTI_VERSION_KEY] ?: false
-        viewModel.secondaryDbName = prefs[SECONDARY_DB_KEY] ?: "esv.sqlite3"
-        viewModel.secondaryVersionAbbr = prefs[SECONDARY_ABBR_KEY] ?: BibleVersionUtils.versionMap["esv.sqlite3"]!!
+        viewModel.secondaryDbName = prefs[SECONDARY_DB_KEY] ?: "kjv+.sqlite3"
+        viewModel.secondaryVersionAbbr = prefs[SECONDARY_ABBR_KEY] ?: BibleVersionUtils.versionMap["kjv+.sqlite3"]!!
         viewModel.multiViewLayout = prefs[MULTI_LAYOUT_KEY] ?: "horizontal"
         viewModel.scrollSync = prefs[SCROLL_SYNC_KEY] ?: true
         viewModel.bgImageIndex = prefs[BG_INDEX_KEY] ?: 0
