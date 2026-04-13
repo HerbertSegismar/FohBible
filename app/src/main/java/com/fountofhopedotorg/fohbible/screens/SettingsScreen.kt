@@ -1254,7 +1254,7 @@ fun AboutDialog(onDismiss: () -> Unit) {
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    "Version: 1.0.7a",
+                    "Version: 1.0.8a",
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium
                 )
