@@ -58,6 +58,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 @Composable
 fun ReaderScreen(
@@ -693,7 +694,6 @@ private fun SyncedMultiVersionReaderLazy(
     onWordHighlightAction: (() -> Unit)?
 ) {
     val config = rememberChapterPagerConfig(primaryCurrent)
-
     LaunchedEffect(primaryCurrent, databaseHelper, secondaryDatabaseHelper) {
         val loadBoth = suspend { p: PassageSelection ->
             preloadChapter(p, primaryLoadedVerses, databaseHelper, subheadingsDbHelper)
@@ -703,14 +703,12 @@ private fun SyncedMultiVersionReaderLazy(
         if (config.hasPrev) loadBoth(config.passages.first())
         if (config.hasNext) loadBoth(config.passages.last())
     }
-
     var suppressSync by remember { mutableStateOf(false) }
     var completedScrolls by remember { mutableIntStateOf(0) }
     LaunchedEffect(targetVerse) {
         suppressSync = true
         completedScrolls = 0
     }
-
     ChapterPager(
         config = config,
         modifier = Modifier.fillMaxSize(),
@@ -731,8 +729,8 @@ private fun SyncedMultiVersionReaderLazy(
             if (viewModel.scrollSync && !suppressSync) {
                 var driver by remember { mutableIntStateOf(0) }
                 val heightCache = remember { mutableMapOf<Int, Int>() }
-                var primaryAvgHeight by remember { mutableFloatStateOf(200f) }
-                var secondaryAvgHeight by remember { mutableFloatStateOf(200f) }
+                var primaryAvgHeight by remember { mutableFloatStateOf(150f) }
+                var secondaryAvgHeight by remember { mutableFloatStateOf(150f) }
 
                 fun getStableHeight(state: LazyListState, index: Int, isPrimary: Boolean): Int {
                     val measured = state.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }?.size
@@ -744,10 +742,7 @@ private fun SyncedMultiVersionReaderLazy(
                     }
                     return heightCache[index] ?: (if (isPrimary) primaryAvgHeight else secondaryAvgHeight).toInt()
                 }
-
                 LaunchedEffect(primaryState) {
-                    var lastIdx = 0
-                    var lastOff = 0
                     var isDown = false
 
                     snapshotFlow {
@@ -762,21 +757,29 @@ private fun SyncedMultiVersionReaderLazy(
                     }.filterNotNull().collect { (firstData, viewportHeight) ->
                         if (driver == 1) {
                             val (fIndex, fOff, items) = firstData
-                            if (fIndex > lastIdx || (fIndex == lastIdx && fOff > lastOff)) isDown = true
-                            else if (fIndex < lastIdx || (fOff < lastOff)) isDown = false
-                            lastIdx = fIndex
-                            lastOff = fOff
+                            if (fIndex != 0 || abs(fOff) > 2) {
+                                isDown = fIndex < 0 || (fIndex == 0 && fOff < 0)
+                            }
 
                             val maxIndex = minOf(primarySize, secondarySize) - 1
                             if (maxIndex < 0) return@collect
+                            if (fIndex == 0 && fOff == 0) {
+                                secondaryState.scrollToItem(0, 0)
+                                return@collect
+                            }
 
                             if (isDown) {
                                 val validLast = items.lastOrNull { it.first <= maxIndex } ?: items.first()
-                                val distFromBottom = viewportHeight - (validLast.second + validLast.third)
-                                val ratio = distFromBottom.toFloat() / validLast.third.coerceAtLeast(1)
-                                val sSize = getStableHeight(secondaryState, validLast.first, false)
-                                val targetTop = (secondaryState.layoutInfo.viewportEndOffset - secondaryState.layoutInfo.viewportStartOffset) - (sSize * ratio) - sSize
-                                secondaryState.scrollToItem(validLast.first, -targetTop.toInt())
+                                if (validLast.first == maxIndex) {
+                                    val ratio = (-fOff).toFloat() / items.first().third.coerceAtLeast(1)
+                                    secondaryState.scrollToItem(fIndex, (getStableHeight(secondaryState, fIndex, false) * ratio).toInt())
+                                } else {
+                                    val distFromBottom = viewportHeight - (validLast.second + validLast.third)
+                                    val ratio = (distFromBottom.toFloat()) / validLast.third.coerceAtLeast(1)
+                                    val sSize = getStableHeight(secondaryState, validLast.first, false)
+                                    val targetTop = (secondaryState.layoutInfo.viewportEndOffset - secondaryState.layoutInfo.viewportStartOffset) - (sSize * ratio) - sSize
+                                    secondaryState.scrollToItem(validLast.first, -targetTop.toInt())
+                                }
                             } else {
                                 val validFirst = items.firstOrNull { it.first <= maxIndex } ?: items.last()
                                 val ratio = (-validFirst.second).toFloat() / validFirst.third.coerceAtLeast(1)
@@ -786,7 +789,6 @@ private fun SyncedMultiVersionReaderLazy(
                         }
                     }
                 }
-
                 LaunchedEffect(secondaryState) {
                     var lastIdx = 0
                     var lastOff = 0
@@ -804,14 +806,12 @@ private fun SyncedMultiVersionReaderLazy(
                     }.filterNotNull().collect { (firstData, viewportHeight) ->
                         if (driver == 2) {
                             val (fIndex, fOff, items) = firstData
-                            if (fIndex > lastIdx || (fIndex == lastIdx && fOff > lastOff)) isDown = true
-                            else if (fIndex < lastIdx || (fOff < lastOff)) isDown = false
+                            if (fIndex < lastIdx || (fIndex == lastIdx && fOff < lastOff)) isDown = true
+                            else if (fIndex > lastIdx || (fOff > lastOff)) isDown = false
                             lastIdx = fIndex
                             lastOff = fOff
-
                             val maxIndex = minOf(primarySize, secondarySize) - 1
                             if (maxIndex < 0) return@collect
-
                             if (isDown) {
                                 val validLast = items.lastOrNull { it.first <= maxIndex } ?: items.first()
                                 val distFromBottom = viewportHeight - (validLast.second + validLast.third)
@@ -828,14 +828,12 @@ private fun SyncedMultiVersionReaderLazy(
                         }
                     }
                 }
-
                 LaunchedEffect(primaryState.isScrollInProgress, secondaryState.isScrollInProgress) {
                     if (!primaryState.isScrollInProgress && !secondaryState.isScrollInProgress) driver = 0
                     else if (primaryState.isScrollInProgress && driver == 0) driver = 1
                     else if (secondaryState.isScrollInProgress && driver == 0) driver = 2
                 }
             }
-
             @Composable
             fun RenderChapter(isPrimary: Boolean, state: LazyListState, helper: DatabaseHelper?, modifier: Modifier) {
                 ChapterView(
@@ -867,7 +865,6 @@ private fun SyncedMultiVersionReaderLazy(
                     onWordHighlightAction = onWordHighlightAction
                 )
             }
-
             if (viewModel.multiViewLayout == "horizontal") {
                 Row(Modifier.fillMaxSize()) {
                     RenderChapter(true, primaryState, databaseHelper, Modifier.weight(1f))
