@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -55,6 +56,7 @@ import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
 import com.fountofhopedotorg.fohbible.utils.getFontFamily
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
 @Composable
@@ -693,7 +695,7 @@ private fun SyncedMultiVersionReaderLazy(
     val config = rememberChapterPagerConfig(primaryCurrent)
 
     LaunchedEffect(primaryCurrent, databaseHelper, secondaryDatabaseHelper) {
-        val loadBoth = suspend { p: PassageSelection ->          // ← FIXED: added "suspend"
+        val loadBoth = suspend { p: PassageSelection ->
             preloadChapter(p, primaryLoadedVerses, databaseHelper, subheadingsDbHelper)
             preloadChapter(p, secondaryLoadedVerses, secondaryDatabaseHelper, subheadingsDbHelper)
         }
@@ -723,131 +725,158 @@ private fun SyncedMultiVersionReaderLazy(
         } else {
             val primaryState = rememberLazyListState()
             val secondaryState = rememberLazyListState()
+            val primarySize by rememberUpdatedState(primaryContent.size)
+            val secondarySize by rememberUpdatedState(secondaryContent.size)
 
             if (viewModel.scrollSync && !suppressSync) {
-                var syncSource by remember { mutableIntStateOf(0) }
-                var lastActiveList by remember { mutableIntStateOf(1) }
+                var driver by remember { mutableIntStateOf(0) }
+                val heightCache = remember { mutableMapOf<Int, Int>() }
+                var primaryAvgHeight by remember { mutableFloatStateOf(200f) }
+                var secondaryAvgHeight by remember { mutableFloatStateOf(200f) }
 
-                LaunchedEffect(primaryState.isScrollInProgress) { if (primaryState.isScrollInProgress) lastActiveList = 1 }
-                LaunchedEffect(secondaryState.isScrollInProgress) { if (secondaryState.isScrollInProgress) lastActiveList = 2 }
+                fun getStableHeight(state: LazyListState, index: Int, isPrimary: Boolean): Int {
+                    val measured = state.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }?.size
+                    if (measured != null) {
+                        heightCache[index] = measured
+                        if (isPrimary) primaryAvgHeight = (primaryAvgHeight * 0.9f) + (measured * 0.1f)
+                        else secondaryAvgHeight = (secondaryAvgHeight * 0.9f) + (measured * 0.1f)
+                        return measured
+                    }
+                    return heightCache[index] ?: (if (isPrimary) primaryAvgHeight else secondaryAvgHeight).toInt()
+                }
 
                 LaunchedEffect(primaryState) {
-                    snapshotFlow { primaryState.firstVisibleItemIndex to primaryState.firstVisibleItemScrollOffset }
-                        .collect { (index, offset) ->
-                            if (syncSource != 2 && primaryState.isScrollInProgress && !secondaryState.isScrollInProgress) {
-                                syncSource = 1
-                                secondaryState.scrollToItem(index, offset)
-                                syncSource = 0
-                            }
-                        }
-                }
+                    var lastIdx = 0
+                    var lastOff = 0
+                    var isDown = false
 
-                LaunchedEffect(secondaryState) {
-                    snapshotFlow { secondaryState.firstVisibleItemIndex to secondaryState.firstVisibleItemScrollOffset }
-                        .collect { (index, offset) ->
-                            if (syncSource != 1 && secondaryState.isScrollInProgress && !primaryState.isScrollInProgress) {
-                                syncSource = 2
-                                primaryState.scrollToItem(index, offset)
-                                syncSource = 0
-                            }
+                    snapshotFlow {
+                        val layoutInfo = primaryState.layoutInfo
+                        val first = layoutInfo.visibleItemsInfo.firstOrNull()
+                        if (first == null) null
+                        else {
+                            val items = layoutInfo.visibleItemsInfo.map { Triple(it.index, it.offset, it.size) }
+                            Triple(first.index, primaryState.firstVisibleItemScrollOffset, items) to
+                                    (layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset)
                         }
-                }
+                    }.filterNotNull().collect { (firstData, viewportHeight) ->
+                        if (driver == 1) {
+                            val (fIndex, fOff, items) = firstData
+                            if (fIndex > lastIdx || (fIndex == lastIdx && fOff > lastOff)) isDown = true
+                            else if (fIndex < lastIdx || (fOff < lastOff)) isDown = false
+                            lastIdx = fIndex
+                            lastOff = fOff
 
-                LaunchedEffect(primaryState.isScrollInProgress, secondaryState.isScrollInProgress) {
-                    val primaryScrolling = primaryState.isScrollInProgress
-                    val secondaryScrolling = secondaryState.isScrollInProgress
-                    if (!primaryScrolling && !secondaryScrolling) {
-                        val pIndex = primaryState.firstVisibleItemIndex
-                        val pOffset = primaryState.firstVisibleItemScrollOffset
-                        val sIndex = secondaryState.firstVisibleItemIndex
-                        val sOffset = secondaryState.firstVisibleItemScrollOffset
-                        if (pIndex != sIndex || pOffset != sOffset) {
-                            if (lastActiveList == 1) {
-                                syncSource = 1
-                                secondaryState.scrollToItem(pIndex, pOffset)
-                                syncSource = 0
+                            val maxIndex = minOf(primarySize, secondarySize) - 1
+                            if (maxIndex < 0) return@collect
+
+                            if (isDown) {
+                                val validLast = items.lastOrNull { it.first <= maxIndex } ?: items.first()
+                                val distFromBottom = viewportHeight - (validLast.second + validLast.third)
+                                val ratio = distFromBottom.toFloat() / validLast.third.coerceAtLeast(1)
+                                val sSize = getStableHeight(secondaryState, validLast.first, false)
+                                val targetTop = (secondaryState.layoutInfo.viewportEndOffset - secondaryState.layoutInfo.viewportStartOffset) - (sSize * ratio) - sSize
+                                secondaryState.scrollToItem(validLast.first, -targetTop.toInt())
                             } else {
-                                syncSource = 2
-                                primaryState.scrollToItem(sIndex, sOffset)
-                                syncSource = 0
+                                val validFirst = items.firstOrNull { it.first <= maxIndex } ?: items.last()
+                                val ratio = (-validFirst.second).toFloat() / validFirst.third.coerceAtLeast(1)
+                                val sSize = getStableHeight(secondaryState, validFirst.first, false)
+                                secondaryState.scrollToItem(validFirst.first, (sSize * ratio).toInt())
                             }
                         }
                     }
                 }
+
+                LaunchedEffect(secondaryState) {
+                    var lastIdx = 0
+                    var lastOff = 0
+                    var isDown = false
+
+                    snapshotFlow {
+                        val layoutInfo = secondaryState.layoutInfo
+                        val first = layoutInfo.visibleItemsInfo.firstOrNull()
+                        if (first == null) null
+                        else {
+                            val items = layoutInfo.visibleItemsInfo.map { Triple(it.index, it.offset, it.size) }
+                            Triple(first.index, secondaryState.firstVisibleItemScrollOffset, items) to
+                                    (layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset)
+                        }
+                    }.filterNotNull().collect { (firstData, viewportHeight) ->
+                        if (driver == 2) {
+                            val (fIndex, fOff, items) = firstData
+                            if (fIndex > lastIdx || (fIndex == lastIdx && fOff > lastOff)) isDown = true
+                            else if (fIndex < lastIdx || (fOff < lastOff)) isDown = false
+                            lastIdx = fIndex
+                            lastOff = fOff
+
+                            val maxIndex = minOf(primarySize, secondarySize) - 1
+                            if (maxIndex < 0) return@collect
+
+                            if (isDown) {
+                                val validLast = items.lastOrNull { it.first <= maxIndex } ?: items.first()
+                                val distFromBottom = viewportHeight - (validLast.second + validLast.third)
+                                val ratio = distFromBottom.toFloat() / validLast.third.coerceAtLeast(1)
+                                val pSize = getStableHeight(primaryState, validLast.first, true)
+                                val targetTop = (primaryState.layoutInfo.viewportEndOffset - primaryState.layoutInfo.viewportStartOffset) - (pSize * ratio) - pSize
+                                primaryState.scrollToItem(validLast.first, -targetTop.toInt())
+                            } else {
+                                val validFirst = items.firstOrNull { it.first <= maxIndex } ?: items.last()
+                                val ratio = (-validFirst.second).toFloat() / validFirst.third.coerceAtLeast(1)
+                                val pSize = getStableHeight(primaryState, validFirst.first, true)
+                                primaryState.scrollToItem(validFirst.first, (pSize * ratio).toInt())
+                            }
+                        }
+                    }
+                }
+
+                LaunchedEffect(primaryState.isScrollInProgress, secondaryState.isScrollInProgress) {
+                    if (!primaryState.isScrollInProgress && !secondaryState.isScrollInProgress) driver = 0
+                    else if (primaryState.isScrollInProgress && driver == 0) driver = 1
+                    else if (secondaryState.isScrollInProgress && driver == 0) driver = 2
+                }
             }
+
+            @Composable
+            fun RenderChapter(isPrimary: Boolean, state: LazyListState, helper: DatabaseHelper?, modifier: Modifier) {
+                ChapterView(
+                    passage = passage,
+                    content = if (isPrimary) primaryContent else secondaryContent,
+                    themeColors = themeColors,
+                    currentFontFamily = currentFontFamily,
+                    viewModel = viewModel,
+                    isCurrentPage = isCurrentPage,
+                    targetVerse = targetVerse,
+                    versionAbbr = if (isPrimary) viewModel.currentVersionAbbr else viewModel.secondaryVersionAbbr,
+                    isPrimary = isPrimary,
+                    lazyState = state,
+                    modifier = modifier,
+                    onInitialScrollComplete = {
+                        completedScrolls++
+                        if (completedScrolls == 2) { suppressSync = false; completedScrolls = 0 }
+                    },
+                    onWordPress = onWordPress,
+                    onStrongsPress = onStrongsPress,
+                    onTagPress = onTagPress,
+                    onVerseLongPress = { v, p -> onVerseLongPress(v, p, isPrimary) },
+                    databaseHelper = helper,
+                    crossRefHelper = crossRefHelper,
+                    onCrossRefClick = onCrossRefClick,
+                    refreshKey = refreshKey,
+                    onVerseCommentaryClick = onVerseCommentaryClick,
+                    markerColor = markerColor,
+                    onWordHighlightAction = onWordHighlightAction
+                )
+            }
+
             if (viewModel.multiViewLayout == "horizontal") {
                 Row(Modifier.fillMaxSize()) {
-                    ChapterView(
-                        passage = passage, content = primaryContent, themeColors = themeColors,
-                        currentFontFamily = currentFontFamily, viewModel = viewModel,
-                        isCurrentPage = isCurrentPage, targetVerse = targetVerse,
-                        versionAbbr = viewModel.currentVersionAbbr, isPrimary = true,
-                        lazyState = primaryState, modifier = Modifier.weight(1f),
-                        onInitialScrollComplete = {
-                            completedScrolls++
-                            if (completedScrolls == 2) { suppressSync = false; completedScrolls = 0 }
-                        },
-                        onWordPress = onWordPress, onStrongsPress = onStrongsPress, onTagPress = onTagPress,
-                        onVerseLongPress = { verse, p -> onVerseLongPress(verse, p, true) },
-                        databaseHelper = databaseHelper, crossRefHelper = crossRefHelper,
-                        onCrossRefClick = onCrossRefClick, refreshKey = refreshKey,
-                        onVerseCommentaryClick = onVerseCommentaryClick,
-                        markerColor = markerColor, onWordHighlightAction = onWordHighlightAction
-                    )
-                    ChapterView(
-                        passage = passage, content = secondaryContent, themeColors = themeColors,
-                        currentFontFamily = currentFontFamily, viewModel = viewModel,
-                        isCurrentPage = isCurrentPage, targetVerse = targetVerse,
-                        versionAbbr = viewModel.secondaryVersionAbbr, isPrimary = false,
-                        lazyState = secondaryState, modifier = Modifier.weight(1f),
-                        onInitialScrollComplete = {
-                            completedScrolls++
-                            if (completedScrolls == 2) { suppressSync = false; completedScrolls = 0 }
-                        },
-                        onWordPress = onWordPress, onStrongsPress = onStrongsPress, onTagPress = onTagPress,
-                        onVerseLongPress = { verse, p -> onVerseLongPress(verse, p, false) },
-                        databaseHelper = secondaryDatabaseHelper, crossRefHelper = crossRefHelper,
-                        onCrossRefClick = onCrossRefClick, refreshKey = refreshKey,
-                        onVerseCommentaryClick = onVerseCommentaryClick,
-                        markerColor = markerColor, onWordHighlightAction = onWordHighlightAction
-                    )
+                    RenderChapter(true, primaryState, databaseHelper, Modifier.weight(1f))
+                    RenderChapter(false, secondaryState, secondaryDatabaseHelper, Modifier.weight(1f))
                 }
             } else {
                 Column(Modifier.fillMaxSize()) {
-                    ChapterView(
-                        passage = passage, content = primaryContent, themeColors = themeColors,
-                        currentFontFamily = currentFontFamily, viewModel = viewModel,
-                        isCurrentPage = isCurrentPage, targetVerse = targetVerse,
-                        versionAbbr = viewModel.currentVersionAbbr, isPrimary = true,
-                        lazyState = primaryState, modifier = Modifier.weight(1f),
-                        onInitialScrollComplete = {
-                            completedScrolls++
-                            if (completedScrolls == 2) { suppressSync = false; completedScrolls = 0 }
-                        },
-                        onWordPress = onWordPress, onStrongsPress = onStrongsPress, onTagPress = onTagPress,
-                        onVerseLongPress = { verse, p -> onVerseLongPress(verse, p, true) },
-                        databaseHelper = databaseHelper, crossRefHelper = crossRefHelper,
-                        onCrossRefClick = onCrossRefClick, refreshKey = refreshKey,
-                        onVerseCommentaryClick = onVerseCommentaryClick,
-                        markerColor = markerColor, onWordHighlightAction = onWordHighlightAction
-                    )
-                    ChapterView(
-                        passage = passage, content = secondaryContent, themeColors = themeColors,
-                        currentFontFamily = currentFontFamily, viewModel = viewModel,
-                        isCurrentPage = isCurrentPage, targetVerse = targetVerse,
-                        versionAbbr = viewModel.secondaryVersionAbbr, isPrimary = false,
-                        lazyState = secondaryState, modifier = Modifier.weight(1f),
-                        onInitialScrollComplete = {
-                            completedScrolls++
-                            if (completedScrolls == 2) { suppressSync = false; completedScrolls = 0 }
-                        },
-                        onWordPress = onWordPress, onStrongsPress = onStrongsPress, onTagPress = onTagPress,
-                        onVerseLongPress = { verse, p -> onVerseLongPress(verse, p, false) },
-                        databaseHelper = secondaryDatabaseHelper, crossRefHelper = crossRefHelper,
-                        onCrossRefClick = onCrossRefClick, refreshKey = refreshKey,
-                        onVerseCommentaryClick = onVerseCommentaryClick,
-                        markerColor = markerColor, onWordHighlightAction = onWordHighlightAction
-                    )
+                    RenderChapter(true, primaryState, databaseHelper, Modifier.weight(1f))
+                    RenderChapter(false, secondaryState, secondaryDatabaseHelper, Modifier.weight(1f))
                 }
             }
         }
