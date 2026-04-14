@@ -58,7 +58,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
-import kotlin.math.abs
 
 @Composable
 fun ReaderScreen(
@@ -747,7 +746,6 @@ private fun SyncedMultiVersionReaderLazy(
                     return heightCache[index] ?: (if (isPrimary) primaryAvgHeight else secondaryAvgHeight).toInt()
                 }
 
-                // PRIMARY DRIVES SECONDARY
                 LaunchedEffect(primaryState) {
                     var lastIdx = 0
                     var lastOff = 0
@@ -768,18 +766,14 @@ private fun SyncedMultiVersionReaderLazy(
                             val (fIndex, fOff, items) = firstData
                             val maxIndex = minOf(primarySize, secondarySize) - 1
                             if (maxIndex < 0) return@collect
+                            if (!canBack) { secondaryState.animateScrollToItem(0, 0); return@collect }
+                            if (!canForward) { secondaryState.animateScrollToItem(secondarySize - 1, 0); return@collect }
 
-                            // Boundary Sync
-                            if (!canBack) { secondaryState.scrollToItem(0, 0); return@collect }
-                            if (!canForward) { secondaryState.scrollToItem(secondarySize - 1, 0); return@collect }
-
-                            // Direction: isDown = gesture downward (moving toward start of chapter)
                             val isDown = fIndex < lastIdx || (fIndex == lastIdx && fOff < lastOff)
                             lastIdx = fIndex
                             lastOff = fOff
 
                             if (isDown) {
-                                // BOTTOM ALIGNMENT
                                 val validLast = items.lastOrNull { it.first <= maxIndex } ?: items.first()
                                 val itemBottom = validLast.second + validLast.third
                                 val distFromBottom = viewportHeight - itemBottom
@@ -787,12 +781,9 @@ private fun SyncedMultiVersionReaderLazy(
                                 val ratio = distFromBottom.toFloat() / validLast.third.coerceAtLeast(1)
                                 val sSize = getStableHeight(secondaryState, validLast.first, false)
                                 val sViewport = secondaryState.layoutInfo.viewportSize.height
-
-                                // Offset is relative to the top of the item
                                 val targetOffset = sViewport - (sSize * ratio).toInt() - sSize
                                 secondaryState.scrollToItem(validLast.first, -targetOffset)
                             } else {
-                                // TOP ALIGNMENT
                                 val validFirst = items.firstOrNull { it.first <= maxIndex } ?: items.last()
                                 val ratio = (-validFirst.second).toFloat() / validFirst.third.coerceAtLeast(1)
                                 val sSize = getStableHeight(secondaryState, validFirst.first, false)
@@ -801,8 +792,6 @@ private fun SyncedMultiVersionReaderLazy(
                         }
                     }
                 }
-
-// SECONDARY DRIVES PRIMARY
                 LaunchedEffect(secondaryState) {
                     var lastIdx = 0
                     var lastOff = 0
@@ -824,15 +813,14 @@ private fun SyncedMultiVersionReaderLazy(
                             val maxIndex = minOf(primarySize, secondarySize) - 1
                             if (maxIndex < 0) return@collect
 
-                            if (!canBack) { primaryState.scrollToItem(0, 0); return@collect }
-                            if (!canForward) { primaryState.scrollToItem(primarySize - 1, 0); return@collect }
+                            if (!canBack) { primaryState.animateScrollToItem(0, 0); return@collect }
+                            if (!canForward) { primaryState.animateScrollToItem(primarySize - 1, 0); return@collect }
 
                             val isDown = fIndex < lastIdx || (fIndex == lastIdx && fOff < lastOff)
                             lastIdx = fIndex
                             lastOff = fOff
 
                             if (isDown) {
-                                // BOTTOM ALIGNMENT
                                 val validLast = items.lastOrNull { it.first <= maxIndex } ?: items.first()
                                 val itemBottom = validLast.second + validLast.third
                                 val distFromBottom = viewportHeight - itemBottom
@@ -844,7 +832,6 @@ private fun SyncedMultiVersionReaderLazy(
                                 val targetOffset = pViewport - (pSize * ratio).toInt() - pSize
                                 primaryState.scrollToItem(validLast.first, -targetOffset)
                             } else {
-                                // TOP ALIGNMENT
                                 val validFirst = items.firstOrNull { it.first <= maxIndex } ?: items.last()
                                 val ratio = (-validFirst.second).toFloat() / validFirst.third.coerceAtLeast(1)
                                 val pSize = getStableHeight(primaryState, validFirst.first, true)
