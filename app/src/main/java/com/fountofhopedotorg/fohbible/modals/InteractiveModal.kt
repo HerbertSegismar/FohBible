@@ -363,7 +363,7 @@ fun InteractiveModal(
         primary = MaterialTheme.colorScheme.primary,
         tagColor = MaterialTheme.colorScheme.secondary,
         tagBg = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f),
-        wordsOfJesus = Color(0xFFDA4227),
+        wordsOfJesus = viewModel.wordsOfJesus,
         searchHighlightBg = if (viewModel.darkTheme) Color(0xFF81D4FA).copy(alpha = 0.3f) else Color.Yellow.copy(alpha = 0.3f),
         highlightIcon = MaterialTheme.colorScheme.primary
     )

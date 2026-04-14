@@ -92,6 +92,7 @@ fun SettingsScreen() {
     var showDarkOverlayColorWheel by remember { mutableStateOf(false) }
     var showLightModalColorWheel by remember { mutableStateOf(false) }
     var showDarkModalColorWheel by remember { mutableStateOf(false) }
+    var showWordsOfJesusColorWheel by remember { mutableStateOf(false) }
     var showRefreshConfirmDialog by remember { mutableStateOf(false) }
     var showRefreshResultDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
@@ -399,30 +400,73 @@ fun SettingsScreen() {
                     )
                 }
                 SettingsItem(
-                    title = "Light Overlay Color",
-                    subtitle = "Overlay color for light theme"
+                    title = "Words of Jesus Color",
+                    subtitle = "Color for the words of the Lord Jesus"
                 ) {
                     Box(
                         modifier = Modifier
                             .size(30.dp)
                             .clip(CircleShape)
-                            .background(viewModel.lightOverlayColor)
+                            .background(viewModel.wordsOfJesus)
                             .border(1.dp, MaterialTheme.colorScheme.primary.copy(0.3f), CircleShape)
-                            .clickable { showLightOverlayColorWheel = true }
+                            .clickable { showWordsOfJesusColorWheel = true }
                     )
                 }
-                SettingsItem(
-                    title = "Dark Overlay Color",
-                    subtitle = "Overlay color for dark theme"
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(30.dp)
-                            .clip(CircleShape)
-                            .background(viewModel.darkOverlayColor)
-                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(0.3f), CircleShape)
-                            .clickable { showDarkOverlayColorWheel = true }
-                    )
+                if (viewModel.darkTheme) {
+                    SettingsItem(
+                        title = "Dark Theme Overlay Color",
+                        subtitle = "Overlay color for dark theme"
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clip(CircleShape)
+                                .background(viewModel.darkOverlayColor)
+                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(0.3f), CircleShape)
+                                .clickable { showDarkOverlayColorWheel = true }
+                        )
+                    }
+                    SettingsItem(
+                        title = "Dark Theme Modal Background Color",
+                        subtitle = "Modal background color for dark theme"
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clip(CircleShape)
+                                .background(viewModel.darkModalBackgroundColor)
+                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(0.3f), CircleShape)
+                                .clickable { showDarkModalColorWheel = true }
+                        )
+                    }
+                }
+                if (!viewModel.darkTheme) {
+                    SettingsItem(
+                        title = "Light Theme Overlay Color",
+                        subtitle = "Overlay color for light theme"
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clip(CircleShape)
+                                .background(viewModel.lightOverlayColor)
+                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(0.3f), CircleShape)
+                                .clickable { showLightOverlayColorWheel = true }
+                        )
+                    }
+                    SettingsItem(
+                        title = "Light Theme Modal Background Color",
+                        subtitle = "Modal background color for light theme"
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clip(CircleShape)
+                                .background(viewModel.lightModalBackgroundColor)
+                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(0.3f), CircleShape)
+                                .clickable { showLightModalColorWheel = true }
+                        )
+                    }
                 }
                 SettingsItem(
                     title = "Verse Marker Color",
@@ -435,32 +479,6 @@ fun SettingsScreen() {
                             .background(viewModel.verseMarkerColor)
                             .border(1.dp, MaterialTheme.colorScheme.primary.copy(0.3f), CircleShape)
                             .clickable { showVerseMarkerColorWheel = true }
-                    )
-                }
-                SettingsItem(
-                    title = "Light Modal Background Color",
-                    subtitle = "Modal background color for light theme"
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(30.dp)
-                            .clip(CircleShape)
-                            .background(viewModel.lightModalBackgroundColor)
-                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(0.3f), CircleShape)
-                            .clickable { showLightModalColorWheel = true }
-                    )
-                }
-                SettingsItem(
-                    title = "Dark Modal Background Color",
-                    subtitle = "Modal background color for dark theme"
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(30.dp)
-                            .clip(CircleShape)
-                            .background(viewModel.darkModalBackgroundColor)
-                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(0.3f), CircleShape)
-                            .clickable { showDarkModalColorWheel = true }
                     )
                 }
                 SettingsItem(
@@ -773,6 +791,7 @@ fun SettingsScreen() {
                         viewModel.verseMarkerColor = Color(0xFF95F198)
                         viewModel.isDictionaryMode = true
                         viewModel.isStudyMode = true
+                        viewModel.wordsOfJesus = Color(0xFFDA4227)
                         viewModel.resetHighlightColorsToDefault()
 
                         showResetConfirmDialog = false
@@ -887,6 +906,16 @@ fun SettingsScreen() {
                 showDarkModalColorWheel = false
             },
             initialColor = viewModel.darkModalBackgroundColor
+        )
+    }
+    if (showWordsOfJesusColorWheel) {
+        ColorWheelDialog(
+            onDismissRequest = { showWordsOfJesusColorWheel = false },
+            onColorSelected = { color ->
+                viewModel.wordsOfJesus = color
+                showWordsOfJesusColorWheel = false
+            },
+            initialColor = viewModel.wordsOfJesus
         )
     }
     if (showRefreshConfirmDialog) {
@@ -1254,7 +1283,7 @@ fun AboutDialog(onDismiss: () -> Unit) {
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    "Version: 1.0.9",
+                    "Version: 1.0.9a",
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium
                 )

@@ -168,6 +168,7 @@ private val IS_DICTIONARY_MODE_KEY = booleanPreferencesKey("is_dictionary_mode")
 private val VERSE_MARKER_COLOR_KEY = intPreferencesKey("verse_marker_color")
 private val LIGHT_MODAL_BG_COLOR_KEY = intPreferencesKey("light_modal_bg_color")
 private val DARK_MODAL_BG_COLOR_KEY = intPreferencesKey("dark_modal_bg_color")
+private val WORDS_OF_JESUS_KEY = intPreferencesKey("words_of_jesus")
 private val SELECTED_DICTIONARY_KEY = stringPreferencesKey("selected_dictionary")
 private val SELECTED_VERSE_COMMENTARY_KEY = stringPreferencesKey("selected_verse_commentary")
 private val SELECTED_CROSS_REFERENCE_DB_KEY = stringPreferencesKey("selected_cross_ref_db")
@@ -244,6 +245,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
             verseMarkerColor = Color(prefs[VERSE_MARKER_COLOR_KEY] ?: Color(0xFF95F198).toArgb())
             lightModalBackgroundColor = Color(prefs[LIGHT_MODAL_BG_COLOR_KEY] ?: Color(0xFFEAE7E3).toArgb())
             darkModalBackgroundColor = Color(prefs[DARK_MODAL_BG_COLOR_KEY] ?: Color(0xFF121523).toArgb())
+            wordsOfJesus = Color(prefs[WORDS_OF_JESUS_KEY] ?: Color(0xFFDA4227).toArgb())
             selectedDictionary = prefs[SELECTED_DICTIONARY_KEY] ?: "atsbd"
             selectedVerseCommentary = prefs[SELECTED_VERSE_COMMENTARY_KEY] ?: "cbsc"
             selectedCrossReferenceDatabase = prefs[SELECTED_CROSS_REFERENCE_DB_KEY] ?: "obx"
@@ -292,6 +294,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     SavePreference({ viewModel.verseMarkerColor.toArgb() }, VERSE_MARKER_COLOR_KEY, dataStore)
     SavePreference({ viewModel.lightModalBackgroundColor.toArgb() }, LIGHT_MODAL_BG_COLOR_KEY, dataStore)
     SavePreference({ viewModel.darkModalBackgroundColor.toArgb() }, DARK_MODAL_BG_COLOR_KEY, dataStore)
+    SavePreference({ viewModel.wordsOfJesus.toArgb() }, WORDS_OF_JESUS_KEY, dataStore)
     SavePreference({ viewModel.selectedDictionary }, SELECTED_DICTIONARY_KEY, dataStore)
     SavePreference({ viewModel.selectedVerseCommentary }, SELECTED_VERSE_COMMENTARY_KEY, dataStore)
     SavePreference({ viewModel.selectedCrossReferenceDatabase }, SELECTED_CROSS_REFERENCE_DB_KEY, dataStore)
@@ -647,7 +650,7 @@ fun FontSizeControls(viewModel: AppViewModel) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -668,7 +671,9 @@ fun FontSizeControls(viewModel: AppViewModel) {
             }
             Text(
                 text = "${viewModel.fontSize}",
-                modifier = Modifier.padding(horizontal = 16.dp).clickable { showFontSizeDialog = true },
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .clickable { showFontSizeDialog = true },
                 fontSize = 16.sp,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold
@@ -695,16 +700,21 @@ fun FontSizeControls(viewModel: AppViewModel) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OverlayOpacitySlider(viewModel: AppViewModel) {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
+    Column(modifier = Modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 15.dp, end = 15.dp, top = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Overlay Opacity", style = MaterialTheme.typography.bodyMedium, fontSize = 14.sp)
+            Text("BG Overlay Opacity", style = MaterialTheme.typography.bodyMedium, fontSize = 14.sp)
             Text("${(viewModel.overlayOpacity * 100).toInt()}%", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
         }
         Slider(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 5.dp),
             value = viewModel.overlayOpacity,
             onValueChange = { viewModel.overlayOpacity = it },
             valueRange = 0f..1f,
@@ -718,7 +728,7 @@ fun OverlayOpacitySlider(viewModel: AppViewModel) {
             thumb = {
                 Box(
                     modifier = Modifier
-                        .size(20.dp)
+                        .size(18.dp)
                         .shadow(2.dp, shape = CircleShape)
                         .background(MaterialTheme.colorScheme.primary, CircleShape)
                         .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape)
@@ -792,7 +802,9 @@ fun HomeAppBar(
         is Screen.Search -> "Search"
     }
     TopAppBar(
-        title = { Text(text = screenTitle, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth().padding(start = 0.dp), textAlign = TextAlign.Start) },
+        title = { Text(text = screenTitle, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 0.dp), textAlign = TextAlign.Start) },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
         modifier = modifier.background(Brush.verticalGradient(0.0f to LocalAppTheme.current.primaryColor, 0.7f to LocalAppTheme.current.primaryColor, 1.0f to Color.Transparent)),
         navigationIcon = {
@@ -870,13 +882,18 @@ fun ReaderAppBar(
     TopAppBar(
         title = {
             if (!viewModel.multiVersion) {
-                Row(modifier = Modifier.fillMaxWidth().padding(end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Button(
                         onClick = onBibleIconClick,
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.onBackground.copy(0.2f)),
                         shape = RoundedCornerShape(4.dp),
                         contentPadding = PaddingValues(horizontal = 8.dp),
-                        modifier = Modifier.height(25.dp).weight(0.7f).padding(end = 4.dp)
+                        modifier = Modifier
+                            .height(25.dp)
+                            .weight(0.7f)
+                            .padding(end = 4.dp)
                     ) {
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Text(text = currentScreen.passage?.bookName ?: "Reader", fontWeight = FontWeight.Bold, fontSize = 16.sp, overflow = TextOverflow.Ellipsis, maxLines = 1, color = Color.White, modifier = Modifier.weight(0.5f))
@@ -888,7 +905,10 @@ fun ReaderAppBar(
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.onBackground.copy(0.2f)),
                         shape = RoundedCornerShape(4.dp),
                         contentPadding = PaddingValues(horizontal = 8.dp),
-                        modifier = Modifier.height(25.dp).weight(0.5f).padding(end = if (onBack == null) 8.dp else 2.dp)
+                        modifier = Modifier
+                            .height(25.dp)
+                            .weight(0.5f)
+                            .padding(end = if (onBack == null) 8.dp else 2.dp)
                     ) {
                         Text(text = currentVersionAbbr, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White, maxLines = 1)
                     }
@@ -908,7 +928,9 @@ fun ReaderAppBar(
             if (viewModel.multiVersion) {
                 AnimatedIconButton(onClick = { viewModel.scrollSync = !viewModel.scrollSync }, icon = if (viewModel.scrollSync) Icons.Filled.Link else Icons.Filled.LinkOff, contentDescription = "Toggle Scroll Sync", rotation = 180f)
             }
-            IconButton(onClick = { showMultiDropdown = !showMultiDropdown }, modifier = Modifier.size(40.dp).rotate(multiRotation)) {
+            IconButton(onClick = { showMultiDropdown = !showMultiDropdown }, modifier = Modifier
+                .size(40.dp)
+                .rotate(multiRotation)) {
                 Crossfade(targetState = showMultiDropdown, animationSpec = tween(300), label = "multiIconCrossfade") { isOpen ->
                     Icon(imageVector = if (isOpen) Icons.Filled.Close else Icons.Filled.AutoAwesomeMosaic, contentDescription = if (isOpen) "Close MultiView" else "MultiView", tint = Color.White)
                 }
@@ -919,7 +941,9 @@ fun ReaderAppBar(
                 modifier = Modifier.background(if (viewModel.darkTheme) viewModel.darkModalBackgroundColor else viewModel.lightModalBackgroundColor),
                 offset = DpOffset(x = 100.dp, y = 0.dp),
             ) {
-                Text("Windows Layout", modifier = Modifier.fillMaxWidth().height(25.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text("Windows Layout", modifier = Modifier
+                    .fillMaxWidth()
+                    .height(25.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 HorizontalDivider()
                 listOf("Single", "Horizontal", "Vertical").forEach { layout ->
                     val isActive = when (layout.lowercase()) {
@@ -950,7 +974,9 @@ fun ReaderAppBar(
                     )
                 }
             }
-            IconButton(onClick = { showNavigationDropdown = !showNavigationDropdown }, modifier = Modifier.size(40.dp).rotate(rotation)) {
+            IconButton(onClick = { showNavigationDropdown = !showNavigationDropdown }, modifier = Modifier
+                .size(40.dp)
+                .rotate(rotation)) {
                 Crossfade(targetState = showNavigationDropdown, animationSpec = tween(300), label = "iconCrossfade") { isOpen ->
                     Icon(imageVector = if (isOpen) Icons.Filled.Close else Icons.Filled.Menu, contentDescription = if (isOpen) "Close Navigation" else "Open Navigation", tint = Color.White)
                 }
@@ -996,44 +1022,56 @@ fun ReaderDropdownContent(
                 }
             )
         }
-        HorizontalDivider()
+        if (!isLandscape) {
+            HorizontalDivider()
+        }
         DropdownMenuItem(
             text = { Text("Background Texture", modifier = Modifier.fillMaxWidth()) },
             leadingIcon = { Icon(Icons.Outlined.Texture, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
             onClick = { viewModel.showBgModal = true }
         )
-        HorizontalDivider()
-        OverlayOpacitySlider(viewModel)
-        HorizontalDivider()
-        ColorPickerRow(
-            label = if (viewModel.darkTheme) "Dark Overlay Color" else "Light Overlay Color",
-            color = if (viewModel.darkTheme) viewModel.darkOverlayColor else viewModel.lightOverlayColor,
-            onClick = { viewModel.showReaderOverlayColorWheel = true }
-        )
-        HorizontalDivider()
-        ColorPickerRow(label = "Verse Marker Color", color = viewModel.verseMarkerColor, onClick = { viewModel.showVerseMarkerColorWheelDialog = true })
-        HorizontalDivider()
-        ColorPickerRow(label = "Word Marker Color", color = viewModel.wordMarkerColor, onClick = { viewModel.showWordMarkerColorWheelDialog = true })
-        HorizontalDivider()
-        DropdownMenuItem(
-            text = { Text(text = if (viewModel.isDictionaryMode) "Dictionary Mode On" else "Highlight Mode On", modifier = Modifier.fillMaxWidth()) },
-            leadingIcon = { Icon(if (viewModel.isDictionaryMode) Icons.AutoMirrored.Filled.Label else Icons.Filled.LocalFireDepartment, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-            onClick = {
-                viewModel.isDictionaryMode = !viewModel.isDictionaryMode
-                coroutineScope.launch { delay(400) }
-            }
-        )
-        HorizontalDivider()
-        FontSizeControls(viewModel)
+        if (!isLandscape) {
+            HorizontalDivider()
+        }
+        if (!isLandscape) {
+            OverlayOpacitySlider(viewModel)
+            HorizontalDivider()
+            ColorPickerRow(
+                label = if (viewModel.darkTheme) "Dark Theme Overlay" else "Light Theme Overlay",
+                color = if (viewModel.darkTheme) viewModel.darkOverlayColor else viewModel.lightOverlayColor,
+                onClick = { viewModel.showReaderOverlayColorWheel = true }
+            )
+            HorizontalDivider()
+            ColorPickerRow(label = "Verse Marker Color", color = viewModel.verseMarkerColor, onClick = { viewModel.showVerseMarkerColorWheelDialog = true })
+            HorizontalDivider()
+            ColorPickerRow(label = "Word Marker Color", color = viewModel.wordMarkerColor, onClick = { viewModel.showWordMarkerColorWheelDialog = true })
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text(text = if (viewModel.isDictionaryMode) "Dictionary Mode On" else "Word Marker On", modifier = Modifier.fillMaxWidth()) },
+                leadingIcon = { Icon(if (viewModel.isDictionaryMode) Icons.AutoMirrored.Filled.Label else Icons.Filled.LocalFireDepartment, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                onClick = {
+                    viewModel.isDictionaryMode = !viewModel.isDictionaryMode
+                    coroutineScope.launch { delay(400) }
+                }
+            )
+            HorizontalDivider()
+            FontSizeControls(viewModel)
+        }
     }
     if (isLandscape) {
-        Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.SpaceEvenly) {
-            Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+        Row(modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min), horizontalArrangement = Arrangement.SpaceEvenly) {
+            Column(modifier = Modifier
+                .weight(1f)
+                .padding(end = 8.dp)) {
                 commonItems()
                 Spacer(modifier = Modifier.weight(1f))
             }
             VerticalDivider()
-            Column(modifier = Modifier.weight(1f).padding(start = 8.dp)) {
+            Column(modifier = Modifier
+                .weight(1f)
+                .padding(start = 8.dp)) {
                 ExtraReaderControls(viewModel, coroutineScope)
             }
         }
@@ -1045,14 +1083,14 @@ fun ReaderDropdownContent(
 fun ExtraReaderControls(viewModel: AppViewModel, coroutineScope: kotlinx.coroutines.CoroutineScope) {
     OverlayOpacitySlider(viewModel)
     HorizontalDivider()
-    ColorPickerRow(label = if (viewModel.darkTheme) "Dark Overlay Color" else "Light Overlay Color", color = if (viewModel.darkTheme) viewModel.darkOverlayColor else viewModel.lightOverlayColor, onClick = { viewModel.showReaderOverlayColorWheel = true })
+    ColorPickerRow(label = if (viewModel.darkTheme) "Dark Theme Overlay" else "Light Theme Overlay", color = if (viewModel.darkTheme) viewModel.darkOverlayColor else viewModel.lightOverlayColor, onClick = { viewModel.showReaderOverlayColorWheel = true })
     HorizontalDivider()
     ColorPickerRow(label = "Verse Marker Color", color = viewModel.verseMarkerColor, onClick = { viewModel.showVerseMarkerColorWheelDialog = true })
     HorizontalDivider()
     ColorPickerRow(label = "Word Marker Color", color = viewModel.wordMarkerColor, onClick = { viewModel.showWordMarkerColorWheelDialog = true })
     HorizontalDivider()
     DropdownMenuItem(
-        text = { Text(text = if (viewModel.isDictionaryMode) "Dictionary Mode On" else "Highlight Mode On", modifier = Modifier.fillMaxWidth()) },
+        text = { Text(text = if (viewModel.isDictionaryMode) "Dictionary Mode On" else "Word Marker On", modifier = Modifier.fillMaxWidth()) },
         leadingIcon = { Icon(if (viewModel.isDictionaryMode) Icons.AutoMirrored.Filled.Label else Icons.Filled.LocalFireDepartment, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
         onClick = {
             viewModel.isDictionaryMode = !viewModel.isDictionaryMode
@@ -1070,13 +1108,17 @@ fun UpdatedColorThemeDialog(
     appViewModel: AppViewModel
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth().height(450.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(450.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (appViewModel.darkTheme) appViewModel.darkModalBackgroundColor else appViewModel.lightModalBackgroundColor
         )
     ) {
-        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("Choose Theme Color", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 IconButton(onClick = onDismiss, modifier = Modifier.size(40.dp)) { Icon(Icons.Filled.Close, "Close") }
@@ -1090,15 +1132,34 @@ fun UpdatedColorThemeDialog(
                     Spacer(modifier = Modifier.height(16.dp))
                     Text("Custom Color", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
                     Card(
-                        modifier = Modifier.fillMaxWidth().height(80.dp).clickable(onClick = onCustomColorClick),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp)
+                            .clickable(onClick = onCustomColorClick),
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                     ) {
-                        Row(modifier = Modifier.fillMaxSize().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                             Box(
-                                modifier = Modifier.size(48.dp).clip(CircleShape).background(
-                                    Brush.sweepGradient(colors = listOf(Color.Red, Color.Yellow, Color.Green, Color.Cyan, Color.Blue, Color.Magenta, Color.Red))
-                                ).border(2.dp, Color.White, CircleShape)
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.sweepGradient(
+                                            colors = listOf(
+                                                Color.Red,
+                                                Color.Yellow,
+                                                Color.Green,
+                                                Color.Cyan,
+                                                Color.Blue,
+                                                Color.Magenta,
+                                                Color.Red
+                                            )
+                                        )
+                                    )
+                                    .border(2.dp, Color.White, CircleShape)
                             )
                             Spacer(modifier = Modifier.width(16.dp))
                             Column {
@@ -1121,16 +1182,29 @@ fun UpdatedColorThemeDialog(
 @Composable
 fun ColorOptionItem(theme: ColorTheme, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth().height(80.dp).clickable(onClick = onClick),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(80.dp)
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = theme.primaryColor.copy(alpha = 0.1f))
     ) {
-        Column(modifier = Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.Center) {
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .padding(12.dp), verticalArrangement = Arrangement.Center) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    modifier = Modifier.size(32.dp).clip(CircleShape).background(
-                        Brush.horizontalGradient(colors = listOf(theme.primaryColor, theme.secondaryColor))
-                    )
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(
+                                    theme.primaryColor,
+                                    theme.secondaryColor
+                                )
+                            )
+                        )
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {

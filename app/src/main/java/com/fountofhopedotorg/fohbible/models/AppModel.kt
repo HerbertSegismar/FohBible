@@ -33,6 +33,7 @@ class AppViewModel : ViewModel() {
             )
         )
     }
+    var wordsOfJesus by mutableStateOf(Color(0xFFDA4227))
     var editingHighlightColorIndex by mutableIntStateOf(-1)
     var showHighlightColorEditor by mutableStateOf(false)
     var isStudyMode by mutableStateOf(true)

@@ -74,7 +74,7 @@ fun ReaderScreen(
             primary = colorScheme.primary,
             tagColor = colorScheme.secondary,
             tagBg = colorScheme.secondary.copy(alpha = 0.1f),
-            wordsOfJesus = Color(0xFFDA4227).copy(0.8f),
+            wordsOfJesus = viewModel.wordsOfJesus.copy(0.8f),
             searchHighlightBg = colorScheme.primary.copy(alpha = 0.3f),
             highlightIcon = colorScheme.primary
         )
@@ -130,9 +130,7 @@ fun ReaderScreen(
         secondaryDatabaseHelper?.close()
         secondaryDatabaseHelper = if (viewModel.multiVersion && viewModel.secondaryDbName.isNotEmpty()) {
             DatabaseHelper(contextFont as MainActivity, viewModel.secondaryDbName)
-        } else {
-            null
-        }
+        } else { null }
     }
     LaunchedEffect(secondaryDatabaseHelper) {
         secondaryLoadedVerses.clear()
@@ -291,7 +289,7 @@ fun ReaderScreen(
         contentAlignment = Alignment.Center,
     ) {
         if (!multi) {
-            SingleVersionReaderLazy(
+            SingleVersionReader(
                 primaryCurrent = primaryCurrent,
                 targetVerse = targetVerse,
                 databaseHelper = databaseHelper,
@@ -318,7 +316,7 @@ fun ReaderScreen(
                 onWordHighlightAction = { activateWordHighlightMode() }
             )
         } else if (synced) {
-            SyncedMultiVersionReaderLazy(
+            SyncedMultiVersionReader(
                 primaryCurrent = primaryCurrent,
                 targetVerse = targetVerse,
                 databaseHelper = databaseHelper,
@@ -349,7 +347,7 @@ fun ReaderScreen(
                 onWordHighlightAction = { activateWordHighlightMode() }
             )
         } else {
-            IndependentMultiVersionReaderLazy(
+            IndependentMultiVersionReader(
                 primaryCurrent = primaryCurrent,
                 secondaryCurrent = secondaryCurrent,
                 targetVerse = targetVerse,
@@ -597,7 +595,7 @@ fun ReaderScreen(
     )
 }
 @Composable
-private fun SingleVersionReaderLazy(
+private fun SingleVersionReader(
     primaryCurrent: PassageSelection,
     targetVerse: Int?,
     databaseHelper: DatabaseHelper?,
@@ -668,7 +666,7 @@ private fun SingleVersionReaderLazy(
     }
 }
 @Composable
-private fun SyncedMultiVersionReaderLazy(
+private fun SyncedMultiVersionReader(
     primaryCurrent: PassageSelection,
     targetVerse: Int?,
     databaseHelper: DatabaseHelper?,
@@ -916,7 +914,7 @@ private fun SyncedMultiVersionReaderLazy(
     }
 }
 @Composable
-private fun IndependentMultiVersionReaderLazy(
+private fun IndependentMultiVersionReader(
     primaryCurrent: PassageSelection,
     secondaryCurrent: PassageSelection,
     targetVerse: Int?,
