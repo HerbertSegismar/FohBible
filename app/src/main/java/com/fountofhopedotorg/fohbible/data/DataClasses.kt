@@ -108,6 +108,8 @@ sealed class VerseContent {
     data class VerseVal(val verse: Verse) : VerseContent()
 }
 
+data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
+
 data class AppThemeState(
     val darkTheme: Boolean = false,
     val primaryColor: Color = DefaultPrimaryColor,
