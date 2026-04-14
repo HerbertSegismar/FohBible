@@ -747,6 +747,7 @@ private fun SyncedMultiVersionReaderLazy(
                 }
 
                 LaunchedEffect(primaryState) {
+                    val scope = this
                     var lastIdx = 0
                     var lastOff = 0
 
@@ -766,8 +767,8 @@ private fun SyncedMultiVersionReaderLazy(
                             val (fIndex, fOff, items) = firstData
                             val maxIndex = minOf(primarySize, secondarySize) - 1
                             if (maxIndex < 0) return@collect
-                            if (!canBack) { secondaryState.animateScrollToItem(0, 0); return@collect }
-                            if (!canForward) { secondaryState.animateScrollToItem(secondarySize - 1, 0); return@collect }
+                            if (!canBack) { scope.launch { secondaryState.animateScrollToItem(0, 0) }; return@collect }
+                            if (!canForward) { scope.launch { secondaryState.animateScrollToItem(secondarySize - 1, 0) }; return@collect }
 
                             val isDown = fIndex < lastIdx || (fIndex == lastIdx && fOff < lastOff)
                             lastIdx = fIndex
@@ -782,17 +783,25 @@ private fun SyncedMultiVersionReaderLazy(
                                 val sSize = getStableHeight(secondaryState, validLast.first, false)
                                 val sViewport = secondaryState.layoutInfo.viewportSize.height
                                 val targetOffset = sViewport - (sSize * ratio).toInt() - sSize
-                                secondaryState.scrollToItem(validLast.first, -targetOffset)
+
+                                scope.launch {
+                                    secondaryState.scrollToItem(validLast.first, -targetOffset)
+                                }
                             } else {
                                 val validFirst = items.firstOrNull { it.first <= maxIndex } ?: items.last()
                                 val ratio = (-validFirst.second).toFloat() / validFirst.third.coerceAtLeast(1)
                                 val sSize = getStableHeight(secondaryState, validFirst.first, false)
-                                secondaryState.scrollToItem(validFirst.first, (sSize * ratio).toInt())
+
+                                scope.launch {
+                                    secondaryState.scrollToItem(validFirst.first, (sSize * ratio).toInt())
+                                }
                             }
                         }
                     }
                 }
+
                 LaunchedEffect(secondaryState) {
+                    val scope = this
                     var lastIdx = 0
                     var lastOff = 0
 
@@ -813,8 +822,8 @@ private fun SyncedMultiVersionReaderLazy(
                             val maxIndex = minOf(primarySize, secondarySize) - 1
                             if (maxIndex < 0) return@collect
 
-                            if (!canBack) { primaryState.animateScrollToItem(0, 0); return@collect }
-                            if (!canForward) { primaryState.animateScrollToItem(primarySize - 1, 0); return@collect }
+                            if (!canBack) { scope.launch { primaryState.animateScrollToItem(0, 0) }; return@collect }
+                            if (!canForward) { scope.launch { primaryState.animateScrollToItem(primarySize - 1, 0) }; return@collect }
 
                             val isDown = fIndex < lastIdx || (fIndex == lastIdx && fOff < lastOff)
                             lastIdx = fIndex
@@ -830,21 +839,30 @@ private fun SyncedMultiVersionReaderLazy(
                                 val pViewport = primaryState.layoutInfo.viewportSize.height
 
                                 val targetOffset = pViewport - (pSize * ratio).toInt() - pSize
-                                primaryState.scrollToItem(validLast.first, -targetOffset)
+
+                                scope.launch {
+                                    primaryState.scrollToItem(validLast.first, -targetOffset)
+                                }
                             } else {
                                 val validFirst = items.firstOrNull { it.first <= maxIndex } ?: items.last()
                                 val ratio = (-validFirst.second).toFloat() / validFirst.third.coerceAtLeast(1)
                                 val pSize = getStableHeight(primaryState, validFirst.first, true)
-                                primaryState.scrollToItem(validFirst.first, (pSize * ratio).toInt())
+
+                                scope.launch {
+                                    primaryState.scrollToItem(validFirst.first, (pSize * ratio).toInt())
+                                }
                             }
                         }
                     }
                 }
-
                 LaunchedEffect(primaryState.isScrollInProgress, secondaryState.isScrollInProgress) {
-                    if (!primaryState.isScrollInProgress && !secondaryState.isScrollInProgress) driver = 0
-                    else if (primaryState.isScrollInProgress && driver == 0) driver = 1
-                    else if (secondaryState.isScrollInProgress && driver == 0) driver = 2
+                    if (!primaryState.isScrollInProgress && !secondaryState.isScrollInProgress) {
+                        driver = 0
+                    } else if (primaryState.isScrollInProgress && !secondaryState.isScrollInProgress) {
+                        driver = 1
+                    } else if (secondaryState.isScrollInProgress && !primaryState.isScrollInProgress) {
+                        driver = 2
+                    }
                 }
             }
 
@@ -897,7 +915,6 @@ private fun SyncedMultiVersionReaderLazy(
         }
     }
 }
-
 @Composable
 private fun IndependentMultiVersionReaderLazy(
     primaryCurrent: PassageSelection,
