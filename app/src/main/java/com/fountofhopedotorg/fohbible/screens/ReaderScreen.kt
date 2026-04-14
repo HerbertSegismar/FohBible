@@ -1,4 +1,5 @@
 package com.fountofhopedotorg.fohbible.screens
+
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -41,9 +42,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.MainActivity
 import com.fountofhopedotorg.fohbible.Screen
+import com.fountofhopedotorg.fohbible.composables.LoadingIndicator
 import com.fountofhopedotorg.fohbible.core.ChapterPager
 import com.fountofhopedotorg.fohbible.core.ChapterView
-import com.fountofhopedotorg.fohbible.core.LoadingIndicator
 import com.fountofhopedotorg.fohbible.core.createCommentaryHelperIfExists
 import com.fountofhopedotorg.fohbible.core.preloadChapter
 import com.fountofhopedotorg.fohbible.core.rememberChapterPagerConfig
@@ -594,6 +595,7 @@ fun ReaderScreen(
         appViewModel = viewModel
     )
 }
+
 @Composable
 private fun SingleVersionReader(
     primaryCurrent: PassageSelection,
@@ -659,12 +661,21 @@ private fun SingleVersionReader(
                     refreshKey = refreshKey,
                     onVerseCommentaryClick = onVerseCommentaryClick,
                     markerColor = markerColor,
-                    onWordHighlightAction = onWordHighlightAction
+                    onWordHighlightAction = onWordHighlightAction,
+                    onThemeToggle = { viewModel.darkTheme = !viewModel.darkTheme },
+                    onColorLensClick = { viewModel.showColorThemeDialog = true },
+                    onScreenChange = { screen ->
+                        val targetScreen = if (screen is Screen.Reader) Screen.Reader(viewModel.primaryPassage) else screen
+                        viewModel.navigateTo(targetScreen)
+                    },
+                    scrollSyncEnabled = viewModel.scrollSync,
+                    onScrollSyncToggle = { viewModel.scrollSync = !viewModel.scrollSync }
                 )
             }
         }
     }
 }
+
 @Composable
 private fun SyncedMultiVersionReader(
     primaryCurrent: PassageSelection,
@@ -895,7 +906,15 @@ private fun SyncedMultiVersionReader(
                     refreshKey = refreshKey,
                     onVerseCommentaryClick = onVerseCommentaryClick,
                     markerColor = markerColor,
-                    onWordHighlightAction = onWordHighlightAction
+                    onWordHighlightAction = onWordHighlightAction,
+                    onThemeToggle = { viewModel.darkTheme = !viewModel.darkTheme },
+                    onColorLensClick = { viewModel.showColorThemeDialog = true },
+                    onScreenChange = { screen ->
+                        val targetScreen = if (screen is Screen.Reader) Screen.Reader(viewModel.primaryPassage) else screen
+                        viewModel.navigateTo(targetScreen)
+                    },
+                    scrollSyncEnabled = viewModel.scrollSync,
+                    onScrollSyncToggle = { viewModel.scrollSync = !viewModel.scrollSync }
                 )
             }
 
@@ -913,6 +932,7 @@ private fun SyncedMultiVersionReader(
         }
     }
 }
+
 @Composable
 private fun IndependentMultiVersionReader(
     primaryCurrent: PassageSelection,
@@ -974,7 +994,15 @@ private fun IndependentMultiVersionReader(
                             databaseHelper = databaseHelper, crossRefHelper = crossRefHelper,
                             onCrossRefClick = onCrossRefClick, refreshKey = refreshKey,
                             onVerseCommentaryClick = onVerseCommentaryClick,
-                            markerColor = markerColor, onWordHighlightAction = onWordHighlightAction
+                            markerColor = markerColor, onWordHighlightAction = onWordHighlightAction,
+                            onThemeToggle = { viewModel.darkTheme = !viewModel.darkTheme },
+                            onColorLensClick = { viewModel.showColorThemeDialog = true },
+                            onScreenChange = { screen ->
+                                val targetScreen = if (screen is Screen.Reader) Screen.Reader(viewModel.primaryPassage) else screen
+                                viewModel.navigateTo(targetScreen)
+                            },
+                            scrollSyncEnabled = viewModel.scrollSync,
+                            onScrollSyncToggle = { viewModel.scrollSync = !viewModel.scrollSync }
                         )
                     }
                 }
@@ -995,7 +1023,15 @@ private fun IndependentMultiVersionReader(
                             databaseHelper = secondaryDatabaseHelper, crossRefHelper = crossRefHelper,
                             onCrossRefClick = onCrossRefClick, refreshKey = refreshKey,
                             onVerseCommentaryClick = onVerseCommentaryClick,
-                            markerColor = markerColor, onWordHighlightAction = onWordHighlightAction
+                            markerColor = markerColor, onWordHighlightAction = onWordHighlightAction,
+                            onThemeToggle = { viewModel.darkTheme = !viewModel.darkTheme },
+                            onColorLensClick = { viewModel.showColorThemeDialog = true },
+                            onScreenChange = { screen ->
+                                val targetScreen = if (screen is Screen.Reader) Screen.Reader(viewModel.primaryPassage) else screen
+                                viewModel.navigateTo(targetScreen)
+                            },
+                            scrollSyncEnabled = viewModel.scrollSync,
+                            onScrollSyncToggle = { viewModel.scrollSync = !viewModel.scrollSync }
                         )
                     }
                 }
@@ -1019,7 +1055,15 @@ private fun IndependentMultiVersionReader(
                             databaseHelper = databaseHelper, crossRefHelper = crossRefHelper,
                             onCrossRefClick = onCrossRefClick, refreshKey = refreshKey,
                             onVerseCommentaryClick = onVerseCommentaryClick,
-                            markerColor = markerColor, onWordHighlightAction = onWordHighlightAction
+                            markerColor = markerColor, onWordHighlightAction = onWordHighlightAction,
+                            onThemeToggle = { viewModel.darkTheme = !viewModel.darkTheme },
+                            onColorLensClick = { viewModel.showColorThemeDialog = true },
+                            onScreenChange = { screen ->
+                                val targetScreen = if (screen is Screen.Reader) Screen.Reader(viewModel.primaryPassage) else screen
+                                viewModel.navigateTo(targetScreen)
+                            },
+                            scrollSyncEnabled = viewModel.scrollSync,
+                            onScrollSyncToggle = { viewModel.scrollSync = !viewModel.scrollSync }
                         )
                     }
                 }
@@ -1040,7 +1084,15 @@ private fun IndependentMultiVersionReader(
                             databaseHelper = secondaryDatabaseHelper, crossRefHelper = crossRefHelper,
                             onCrossRefClick = onCrossRefClick, refreshKey = refreshKey,
                             onVerseCommentaryClick = onVerseCommentaryClick,
-                            markerColor = markerColor, onWordHighlightAction = onWordHighlightAction
+                            markerColor = markerColor, onWordHighlightAction = onWordHighlightAction,
+                            onThemeToggle = { viewModel.darkTheme = !viewModel.darkTheme },
+                            onColorLensClick = { viewModel.showColorThemeDialog = true },
+                            onScreenChange = { screen ->
+                                val targetScreen = if (screen is Screen.Reader) Screen.Reader(viewModel.primaryPassage) else screen
+                                viewModel.navigateTo(targetScreen)
+                            },
+                            scrollSyncEnabled = viewModel.scrollSync,
+                            onScrollSyncToggle = { viewModel.scrollSync = !viewModel.scrollSync }
                         )
                     }
                 }

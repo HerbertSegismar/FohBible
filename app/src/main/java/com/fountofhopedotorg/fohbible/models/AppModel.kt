@@ -1,5 +1,6 @@
 package com.fountofhopedotorg.fohbible.models
 import android.content.Context
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -20,6 +21,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
 
+@Stable
 class AppViewModel : ViewModel() {
     val predefinedHighlightColors = mutableStateListOf<Color>().apply {
         addAll(

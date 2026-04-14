@@ -1,9 +1,10 @@
 package com.fountofhopedotorg.fohbible.core
+
 import android.content.Context
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -24,7 +25,6 @@ import androidx.compose.material.icons.automirrored.filled.Note
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
@@ -58,6 +59,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.fountofhopedotorg.fohbible.Screen
 import com.fountofhopedotorg.fohbible.data.BibleBook
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
@@ -71,19 +73,6 @@ import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-
-@Composable
-fun LoadingIndicator() {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier.fillMaxSize()
-    ) {
-        CircularProgressIndicator()
-        Spacer(modifier = Modifier.height(16.dp))
-        Text("Loading verses...")
-    }
-}
 
 @Composable
 fun ChapterView(
@@ -109,11 +98,17 @@ fun ChapterView(
     refreshKey: Int = 0,
     onVerseCommentaryClick: ((Int, Int, Int) -> Unit)? = null,
     markerColor: Color,
-    onWordHighlightAction: (() -> Unit)? = null
+    onWordHighlightAction: (() -> Unit)? = null,
+    onThemeToggle: () -> Unit,
+    onColorLensClick: () -> Unit,
+    onScreenChange: (Screen) -> Unit,
+    scrollSyncEnabled: Boolean,
+    onScrollSyncToggle: () -> Unit
 ) {
     val verseProcessor = remember { VerseTextProcessor() }
     val isOldTestamentForThisVersion = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
     var highlightedVerse by remember { mutableStateOf<Int?>(null) }
+
     val bookmarkIconSize = viewModel.fontSize
     val bookmarkInlineContent = InlineTextContent(
         Placeholder(bookmarkIconSize.sp, bookmarkIconSize.sp, PlaceholderVerticalAlign.TextCenter)
@@ -125,55 +120,44 @@ fun ChapterView(
     ) {
         Icon(Icons.AutoMirrored.Filled.Note, "Has Note", tint = themeColors.verseNumber, modifier = Modifier.fillMaxSize().rotate(90f))
     }
+
     val crossRefCounts = remember { mutableStateMapOf<Int, Int>() }
     LaunchedEffect(passage.bookNumber, passage.chapter, crossRefHelper) {
         val counts = crossRefHelper?.getCrossReferenceCountsForChapter(passage.bookNumber, passage.chapter) ?: emptyMap()
         crossRefCounts.clear()
         crossRefCounts.putAll(counts)
     }
+
     var selectedWords by remember(passage.bookNumber, passage.chapter, refreshKey, databaseHelper?.databaseName) {
-        mutableStateOf(
-            buildSet {
-                if (databaseHelper != null) {
-                    content.forEach { item ->
-                        if (item is VerseContent.VerseVal) {
-                            val fullVerse = item.verse.copy(bookName = passage.bookName, chapter = passage.chapter)
-                            val highlights = databaseHelper.getWordHighlightsForVerse(fullVerse)
-                            addAll(highlights)
-                        }
-                    }
+        mutableStateOf(buildSet {
+            if (databaseHelper != null) content.forEach { item ->
+                if (item is VerseContent.VerseVal) {
+                    val fullVerse = item.verse.copy(bookName = passage.bookName, chapter = passage.chapter)
+                    addAll(databaseHelper.getWordHighlightsForVerse(fullVerse))
                 }
             }
-        )
+        })
     }
     val groupedHighlights = remember(selectedWords) { selectedWords.groupBy { it.verseNumber } }
+
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val isSingleView = !viewModel.multiVersion
+    val isPortraitHorizontalMulti = !isLandscape && viewModel.multiVersion && viewModel.multiViewLayout == "horizontal"
+    val isPortraitVerticalMulti = !isLandscape && viewModel.multiVersion && viewModel.multiViewLayout == "vertical"
+    val shouldShowFullHeader = (isPortraitVerticalMulti || (isLandscape && !isSingleView))
 
     @Composable
     fun VerseItem(verseContent: VerseContent.VerseVal) {
         val verse = verseContent.verse
         val fullVerse = verse.copy(bookName = passage.bookName, chapter = passage.chapter)
         val isPersistentHighlighted = databaseHelper?.isHighlighted(fullVerse) ?: false
-        val persistentHighlightColor = if (isPersistentHighlighted) {
-            databaseHelper.getHighlightColor(fullVerse) ?: themeColors.searchHighlightBg
-        } else null
-        val processedVerse = remember(
-            verse.text,
-            viewModel.fontSize,
-            themeColors,
-            isPersistentHighlighted,
-            isOldTestamentForThisVersion,
-            refreshKey
-        ) {
-            val onStrongsLocal: ((String) -> Unit)? = onStrongsPress?.let { callback ->
-                { strong -> callback(strong, passage.bookNumber, isPrimary) }
-            }
-            val onTagLocal: ((String) -> Unit)? = onTagPress?.let { callback ->
-                { marker -> callback(marker, passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary) }
-            }
-            val onWordLocal: ((String) -> Unit)? = onWordPress?.let { callback ->
-                { word -> callback(word, isPrimary) }
-            }
+        val persistentHighlightColor = if (isPersistentHighlighted) databaseHelper.getHighlightColor(fullVerse) ?: themeColors.searchHighlightBg else null
 
+        val processedVerse = remember(verse.text, viewModel.fontSize, themeColors, isPersistentHighlighted, isOldTestamentForThisVersion, refreshKey) {
+            val onStrongsLocal: ((String) -> Unit)? = onStrongsPress?.let { { strong -> it(strong, passage.bookNumber, isPrimary) } }
+            val onTagLocal: ((String) -> Unit)? = onTagPress?.let { { marker -> it(marker, passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary) } }
+            val onWordLocal: ((String) -> Unit)? = onWordPress?.let { { word -> it(word, isPrimary) } }
             verseProcessor.processVerse(
                 verseText = verse.text,
                 baseFontSize = viewModel.fontSize.sp,
@@ -203,12 +187,7 @@ fun ChapterView(
         val highlightsHash = wordHighlightsForVerse.hashCode()
 
         key("verse_${verse.verseNumber}_${isPersistentHighlighted}_${isBookmarked}_${isNote}_$highlightsHash") {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp)
-                    .then(backgroundModifier)
-            ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).then(backgroundModifier)) {
                 processedVerse.header?.let { header ->
                     if (header.text.isNotEmpty()) {
                         Text(
@@ -226,17 +205,12 @@ fun ChapterView(
                     withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = themeColors.verseNumber, fontSize = bookmarkIconSize.sp * 0.8f)) {
                         append("${verse.verseNumber} ")
                     }
-                    append(processedVerse.body)          // ← always processed, never raw
+                    append(processedVerse.body)
                     if (isBookmarked) appendInlineContent("bookmark", "[bookmark]")
                     if (isNote) appendInlineContent("note", "[note]")
                     if (viewModel.isStudyMode) {
-                        if (refCount > 0 && onCrossRefClick != null) {
-                            append(" ")
-                            appendInlineContent("crossref_${verse.verseNumber}", "[$refCount]")
-                        }
-                        if (onVerseCommentaryClick != null) {
-                            appendInlineContent("commentary_${verse.verseNumber}", "[C]")
-                        }
+                        if (refCount > 0 && onCrossRefClick != null) appendInlineContent("crossref_${verse.verseNumber}", "[$refCount]")
+                        if (onVerseCommentaryClick != null) appendInlineContent("commentary_${verse.verseNumber}", "[C]")
                     }
                 }
 
@@ -245,40 +219,36 @@ fun ChapterView(
                         if (isBookmarked) put("bookmark", bookmarkInlineContent)
                         if (isNote) put("note", noteInlineContent)
                         if (viewModel.isStudyMode) {
-                            if (refCount > 0 && onCrossRefClick != null) {
-                                put("crossref_${verse.verseNumber}", InlineTextContent(
-                                    Placeholder((viewModel.fontSize * 1.4).sp, viewModel.fontSize.sp, PlaceholderVerticalAlign.TextCenter)
+                            if (refCount > 0 && onCrossRefClick != null) put("crossref_${verse.verseNumber}", InlineTextContent(
+                                Placeholder((viewModel.fontSize * 1.4).sp, viewModel.fontSize.sp, PlaceholderVerticalAlign.TextCenter)
+                            ) {
+                                Box(
+                                    modifier = Modifier.clickable {
+                                        onCrossRefClick(passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary)
+                                    }.background(themeColors.primary.copy(alpha = 0.15f), RoundedCornerShape(2.dp)).fillMaxSize(),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .clickable { onCrossRefClick(passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary) }
-                                            .background(themeColors.primary.copy(alpha = 0.15f), RoundedCornerShape(2.dp))
-                                            .fillMaxSize(),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text("$refCount", fontSize = (viewModel.fontSize * 0.7f).sp, color = themeColors.verseNumber, fontWeight = FontWeight.Bold)
-                                    }
-                                })
-                            }
-                            if (onVerseCommentaryClick != null) {
-                                put("commentary_${verse.verseNumber}", InlineTextContent(
-                                    Placeholder((viewModel.fontSize * 1.4f).sp, viewModel.fontSize.sp, PlaceholderVerticalAlign.TextCenter)
+                                    Text("$refCount", fontSize = (viewModel.fontSize * 0.7f).sp, color = themeColors.verseNumber, fontWeight = FontWeight.Bold)
+                                }
+                            })
+                            if (onVerseCommentaryClick != null) put("commentary_${verse.verseNumber}", InlineTextContent(
+                                Placeholder((viewModel.fontSize * 1.4f).sp, viewModel.fontSize.sp, PlaceholderVerticalAlign.TextCenter)
+                            ) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize().clickable {
+                                        onVerseCommentaryClick(passage.bookNumber, passage.chapter, verse.verseNumber)
+                                    },
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Box(
-                                        modifier = Modifier.fillMaxSize().clickable { onVerseCommentaryClick(passage.bookNumber, passage.chapter, verse.verseNumber) },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text("*", fontSize = (viewModel.fontSize * 1.2f).sp, color = themeColors.verseNumber, fontWeight = FontWeight.Bold)
-                                    }
-                                })
-                            }
+                                    Text("*", fontSize = (viewModel.fontSize * 1.2f).sp, color = themeColors.verseNumber, fontWeight = FontWeight.Bold)
+                                }
+                            })
                         }
                     }
                 }
 
                 val finalAnnotatedString = remember(annotatedString, wordHighlightsForVerse) {
-                    if (wordHighlightsForVerse.isEmpty()) annotatedString
-                    else {
+                    if (wordHighlightsForVerse.isEmpty()) annotatedString else {
                         val builder = AnnotatedString.Builder().apply { append(annotatedString) }
                         wordHighlightsForVerse.sortedByDescending { it.start }.forEach { word ->
                             if (word.start in 0 until builder.length && word.end in word.start..builder.length) {
@@ -293,44 +263,37 @@ fun ChapterView(
 
                 Text(
                     text = finalAnnotatedString,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .pointerInput(viewModel.isDictionaryMode) {
-                            detectTapGestures(
-                                onTap = { offset ->
-                                    textLayoutResult?.let { layout ->
-                                        val position = layout.getOffsetForPosition(offset)
-                                        val annotations = finalAnnotatedString.getStringAnnotations(start = position, end = position)
-                                        val wordAnnotation = annotations.find { it.tag == "word" }
-                                        if (wordAnnotation != null) {
-                                            if (viewModel.isDictionaryMode) {
-                                                onWordPress?.invoke(wordAnnotation.item, isPrimary)
-                                            } else {
-                                                val word = SelectedWord(verse.verseNumber, wordAnnotation.start, wordAnnotation.end, currentMarkerColor)
-                                                val wasSelected = selectedWords.contains(word)
-                                                selectedWords = if (wasSelected) selectedWords - word else selectedWords + word
-                                                if (databaseHelper != null) {
-                                                    if (wasSelected) {
-                                                        databaseHelper.removeWordHighlight(fullVerse, word.start, word.end)
-                                                    } else {
-                                                        databaseHelper.addWordHighlight(fullVerse, word.start, word.end, currentMarkerColor.toArgb())
-                                                    }
-                                                }
-                                                onWordHighlightAction?.invoke()
+                    modifier = Modifier.fillMaxWidth().pointerInput(viewModel.isDictionaryMode) {
+                        detectTapGestures(
+                            onTap = { offset ->
+                                textLayoutResult?.let { layout ->
+                                    val position = layout.getOffsetForPosition(offset)
+                                    val annotations = finalAnnotatedString.getStringAnnotations(start = position, end = position)
+                                    val wordAnnotation = annotations.find { it.tag == "word" }
+                                    if (wordAnnotation != null) {
+                                        if (viewModel.isDictionaryMode) onWordPress?.invoke(wordAnnotation.item, isPrimary) else {
+                                            val word = SelectedWord(verse.verseNumber, wordAnnotation.start, wordAnnotation.end, currentMarkerColor)
+                                            val wasSelected = selectedWords.contains(word)
+                                            selectedWords = if (wasSelected) selectedWords - word else selectedWords + word
+                                            if (databaseHelper != null) {
+                                                if (wasSelected) databaseHelper.removeWordHighlight(fullVerse, word.start, word.end)
+                                                else databaseHelper.addWordHighlight(fullVerse, word.start, word.end, currentMarkerColor.toArgb())
                                             }
-                                        } else {
-                                            annotations.forEach { annotation ->
-                                                when (annotation.tag) {
-                                                    "strong" -> onStrongsPress?.invoke(annotation.item, passage.bookNumber, isPrimary)
-                                                    "tag" -> onTagPress?.invoke(annotation.item, passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary)
-                                                }
+                                            onWordHighlightAction?.invoke()
+                                        }
+                                    } else {
+                                        annotations.forEach { annotation ->
+                                            when (annotation.tag) {
+                                                "strong" -> onStrongsPress?.invoke(annotation.item, passage.bookNumber, isPrimary)
+                                                "tag" -> onTagPress?.invoke(annotation.item, passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary)
                                             }
                                         }
                                     }
-                                },
-                                onLongPress = { onVerseLongPress?.invoke(verse, passage) }
-                            )
-                        },
+                                }
+                            },
+                            onLongPress = { onVerseLongPress?.invoke(verse, passage) }
+                        )
+                    },
                     fontSize = viewModel.fontSize.sp,
                     lineHeight = (viewModel.fontSize * 1.333f).sp,
                     fontFamily = currentFontFamily,
@@ -340,72 +303,121 @@ fun ChapterView(
             }
         }
     }
+
     Box(modifier = modifier) {
         val texture = when (viewModel.bgImageIndex) {
             0 -> null
-            34 -> if (viewModel.customTextureUri != null) viewModel.customTextureUri else null
+            34 -> viewModel.customTextureUri
             else -> "file:///android_asset/textures/${viewModel.bgImageIndex}.jpg"
         }
         if (texture != null) {
-            AsyncImage(model = texture, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            AsyncImage(
+                model = texture,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
             val overlayColor = (if (viewModel.darkTheme) viewModel.darkOverlayColor else viewModel.lightOverlayColor).copy(alpha = viewModel.overlayOpacity)
             Box(modifier = Modifier.fillMaxSize().background(overlayColor))
         }
+
         Column {
-            if (viewModel.multiVersion) {
+            if (isPortraitHorizontalMulti) {
                 Row(
                     modifier = Modifier.fillMaxWidth().background(themeColors.primary).padding(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Button(
-                        onClick = { if (viewModel.scrollSync || isPrimary) viewModel.showNavigationModal = true else viewModel.showSecondaryNavigationModal = true },
+                        onClick = {
+                            if (scrollSyncEnabled || isPrimary) viewModel.showNavigationModal = true
+                            else viewModel.showSecondaryNavigationModal = true
+                        },
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.onBackground.copy(0.2f)),
                         shape = RoundedCornerShape(4.dp),
                         contentPadding = PaddingValues(horizontal = 4.dp),
                         modifier = Modifier.height(20.dp).weight(0.7f).padding(end = 4.dp)
                     ) {
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Text(text = passage.bookName, fontWeight = FontWeight.Bold, fontSize = 16.sp, overflow = TextOverflow.Ellipsis, maxLines = 1, color = Color.White, textAlign = TextAlign.Start, modifier = Modifier.weight(0.5f))
-                            Text(text = passage.chapter.toString(), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White)
+                            Text(
+                                text = passage.bookName,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                overflow = TextOverflow.Ellipsis,
+                                maxLines = 1,
+                                color = Color.White,
+                                textAlign = TextAlign.Start,
+                                modifier = Modifier.weight(0.5f)
+                            )
+                            Text(
+                                text = passage.chapter.toString(),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = Color.White
+                            )
                         }
                     }
                     Button(
-                        onClick = { if (isPrimary) viewModel.showPrimaryVersionDropdown = true else viewModel.showSecondaryVersionDropdown = true },
+                        onClick = {
+                            if (isPrimary) viewModel.showPrimaryVersionDropdown = true
+                            else viewModel.showSecondaryVersionDropdown = true
+                        },
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.onBackground.copy(0.2f)),
                         shape = RoundedCornerShape(4.dp),
                         contentPadding = PaddingValues(horizontal = 4.dp),
                         modifier = Modifier.height(20.dp).weight(0.5f)
                     ) {
-                        Text(text = versionAbbr, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White, maxLines = 1)
+                        Text(
+                            text = versionAbbr,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = Color.White,
+                            maxLines = 1
+                        )
                     }
                 }
+            }
+
+            if (shouldShowFullHeader) {
+                ChapterHeader(
+                    passage = passage,
+                    versionAbbr = versionAbbr,
+                    scrollSyncEnabled = scrollSyncEnabled,
+                    onBookChapterClick = {
+                        if (scrollSyncEnabled || isPrimary) viewModel.showNavigationModal = true
+                        else viewModel.showSecondaryNavigationModal = true
+                    },
+                    onVersionClick = {
+                        if (isPrimary) viewModel.showPrimaryVersionDropdown = true
+                        else viewModel.showSecondaryVersionDropdown = true
+                    },
+                    onThemeToggle = onThemeToggle,
+                    onColorLensClick = onColorLensClick,
+                    onScrollSyncToggle = onScrollSyncToggle,
+                    viewModel = viewModel,
+                    onScreenChange = onScreenChange,
+                    backgroundColor = themeColors.primary,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
             LazyColumn(
                 state = lazyState,
                 modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
             ) {
                 items(
-                    items = content,
-                    key = { item ->
-                        when (item) {
-                            is VerseContent.SubheadingVal -> "sub_${item.subheading.text.hashCode()}"
-                            is VerseContent.VerseVal -> "verse_${item.verse.verseNumber}"
-                        }
-                    }
+                    content,
+                    key = { if (it is VerseContent.SubheadingVal) "sub_${it.subheading.text.hashCode()}" else "verse_${(it as VerseContent.VerseVal).verse.verseNumber}" }
                 ) { item ->
                     when (item) {
-                        is VerseContent.SubheadingVal -> {
-                            Text(
-                                text = item.subheading.text,
-                                fontWeight = FontWeight.Bold,
-                                color = themeColors.primary,
-                                fontSize = (viewModel.fontSize + 1).sp,
-                                lineHeight = ((viewModel.fontSize + 1) * 1.2f).sp,
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                                textAlign = TextAlign.Left,
-                                fontFamily = currentFontFamily
-                            )
-                        }
+                        is VerseContent.SubheadingVal -> Text(
+                            text = item.subheading.text,
+                            fontWeight = FontWeight.Bold,
+                            color = themeColors.primary,
+                            fontSize = (viewModel.fontSize + 1).sp,
+                            lineHeight = ((viewModel.fontSize + 1) * 1.2f).sp,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                            textAlign = TextAlign.Left,
+                            fontFamily = currentFontFamily
+                        )
                         is VerseContent.VerseVal -> VerseItem(item)
                     }
                 }
@@ -415,6 +427,7 @@ fun ChapterView(
             }
         }
     }
+
     if (isCurrentPage) {
         LaunchedEffect(targetVerse, content) {
             if (targetVerse != null && content.isNotEmpty() && targetVerse > 0) {
@@ -431,6 +444,7 @@ fun ChapterView(
         }
     }
 }
+
 fun createCommentaryHelperIfExists(context: Context, baseDbName: String?): DatabaseHelper? {
     if (baseDbName.isNullOrEmpty()) return null
     val comName = baseDbName.replace(".sqlite3", "com.sqlite3")
@@ -442,6 +456,7 @@ fun createCommentaryHelperIfExists(context: Context, baseDbName: String?): Datab
         null
     }
 }
+
 fun getPreviousChapter(current: PassageSelection, currentBook: BibleBook?): PassageSelection {
     if (currentBook == null) return current
     if (currentBook.chapters == 1 && current.chapter == 1) return current
@@ -451,6 +466,7 @@ fun getPreviousChapter(current: PassageSelection, currentBook: BibleBook?): Pass
         current.copy(chapter = current.chapter - 1, verse = null)
     }
 }
+
 fun getNextChapter(current: PassageSelection, currentBook: BibleBook?): PassageSelection {
     if (currentBook == null) return current
     if (currentBook.chapters == 1 && current.chapter == 1) return current
@@ -460,6 +476,7 @@ fun getNextChapter(current: PassageSelection, currentBook: BibleBook?): PassageS
         current.copy(chapter = current.chapter + 1, verse = null)
     }
 }
+
 suspend fun preloadChapter(
     passage: PassageSelection,
     loadedMap: MutableMap<Pair<Int, Int>, List<VerseContent>>,
@@ -469,8 +486,7 @@ suspend fun preloadChapter(
     val key = passage.bookNumber to passage.chapter
     if (key !in loadedMap) {
         loadedMap[key] = withContext(Dispatchers.IO) {
-            dbHelper?.let { getVersesWithSubheadings(it, subheadingsDbHelper, passage.bookNumber, passage.chapter) }
-                ?: emptyList()
+            dbHelper?.let { getVersesWithSubheadings(it, subheadingsDbHelper, passage.bookNumber, passage.chapter) } ?: emptyList()
         }
     }
 }
