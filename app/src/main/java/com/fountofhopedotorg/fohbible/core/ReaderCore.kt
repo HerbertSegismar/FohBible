@@ -323,7 +323,7 @@ fun ChapterView(
         Column {
             if (isPortraitHorizontalMulti) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().background(themeColors.primary).padding(4.dp),
+                    modifier = Modifier.fillMaxWidth().background(themeColors.primary).padding(horizontal = 4.dp, vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Button(
