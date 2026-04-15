@@ -30,9 +30,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.fountofhopedotorg.fohbible.AnimatedIconButton
 import com.fountofhopedotorg.fohbible.Screen
-import com.fountofhopedotorg.fohbible.composables.ScrollSyncButton
+import com.fountofhopedotorg.fohbible.ScrollSyncButton
+import com.fountofhopedotorg.fohbible.AnimatedIconButton
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.dropdowns.ReaderAppBarMenu
 import com.fountofhopedotorg.fohbible.dropdowns.WindowsLayoutDropdown
@@ -42,12 +42,10 @@ import com.fountofhopedotorg.fohbible.models.AppViewModel
 fun ChapterHeader(
     passage: PassageSelection,
     versionAbbr: String,
-    scrollSyncEnabled: Boolean,
     onBookChapterClick: () -> Unit,
     onVersionClick: () -> Unit,
     onThemeToggle: () -> Unit,
     onColorLensClick: () -> Unit,
-    onScrollSyncToggle: () -> Unit,
     viewModel: AppViewModel,
     onScreenChange: (Screen) -> Unit,
     backgroundColor: Color,
@@ -132,11 +130,7 @@ fun ChapterHeader(
                 modifier = Modifier.size(20.dp)
             )
             if (viewModel.multiVersion) {
-                ScrollSyncButton(
-                    scrollSyncEnabled = scrollSyncEnabled,
-                    onToggle = onScrollSyncToggle,
-                    modifier = Modifier.size(24.dp)
-                )
+                ScrollSyncButton(viewModel = viewModel, modifier = Modifier.size(20.dp))
             }
             WindowsLayoutDropdown(
                 viewModel = viewModel,

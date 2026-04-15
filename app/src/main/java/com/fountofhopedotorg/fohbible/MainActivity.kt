@@ -75,6 +75,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -129,6 +130,7 @@ import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
 import com.fountofhopedotorg.fohbible.ui.theme.PredefinedColorThemes
 import com.fountofhopedotorg.fohbible.ui.theme.ThemeManager
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
@@ -807,16 +809,38 @@ fun HomeAppBar(
         modifier = modifier.background(Brush.verticalGradient(0.0f to LocalAppTheme.current.primaryColor, 0.7f to LocalAppTheme.current.primaryColor, 1.0f to Color.Transparent)),
         navigationIcon = {
             if (onBack != null) {
-                AnimatedIconButton(onClick = onBack, icon = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                AnimatedIconButton(
+                    onClick = onBack,
+                    icon = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                )
             }
         },
         actions = {
-            AnimatedIconButton(onClick = onBibleIconClick, icon = Icons.Filled.Book, contentDescription = "Bible Navigation", rotation = 360f, modifier = Modifier
-                .size(38.dp))
-            AnimatedIconButton(onClick = onThemeToggle, icon = if (viewModel.darkTheme) Icons.Filled.Brightness6 else Icons.Filled.Brightness2, contentDescription = "Toggle Theme", rotation = 180f, modifier = Modifier
-                .size(38.dp))
-            AnimatedIconButton(onClick = onColorLensClick, icon = Icons.Filled.ColorLens, contentDescription = "Color Scheme", rotation = 180f, modifier = Modifier
-                .size(38.dp))
+            AnimatedIconButton(
+                onClick = onBibleIconClick,
+                icon = Icons.Filled.Book,
+                contentDescription = "Bible Navigation",
+                modifier = Modifier
+                    .size(38.dp),
+                rotation = 360f,
+            )
+            AnimatedIconButton(
+                onClick = onThemeToggle,
+                icon = if (viewModel.darkTheme) Icons.Filled.Brightness6 else Icons.Filled.Brightness2,
+                contentDescription = "Toggle Theme",
+                modifier = Modifier
+                    .size(38.dp),
+                rotation = 180f,
+            )
+            AnimatedIconButton(
+                onClick = onColorLensClick,
+                icon = Icons.Filled.ColorLens,
+                contentDescription = "Color Scheme",
+                modifier = Modifier
+                    .size(38.dp),
+                rotation = 180f,
+            )
             IconButton(onClick = { showNavigationDropdown = !showNavigationDropdown }, modifier = Modifier.rotate(rotation).size(38.dp)) {
                 Crossfade(targetState = showNavigationDropdown, animationSpec = tween(300), label = "iconCrossfade") { isOpen ->
                     Icon(imageVector = if (isOpen) Icons.Filled.Close else Icons.Filled.Menu, contentDescription = if (isOpen) "Close Navigation" else "Open Navigation", tint = Color.White)
@@ -886,7 +910,6 @@ fun ReaderAppBar(
                         .padding(end = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Bible icon button (unchanged)
                     Button(
                         onClick = onBibleIconClick,
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.onBackground.copy(0.2f)),
@@ -915,7 +938,6 @@ fun ReaderAppBar(
                             )
                         }
                     }
-                    // Version button (unchanged)
                     Button(
                         onClick = { viewModel.showPrimaryVersionDropdown = true },
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.onBackground.copy(0.2f)),
@@ -950,36 +972,29 @@ fun ReaderAppBar(
                 AnimatedIconButton(
                     onClick = onBack,
                     icon = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back"
+                    contentDescription = "Back",
                 )
             }
         },
         actions = {
-            // Theme and color picker buttons (unchanged)
             AnimatedIconButton(
                 onClick = onThemeToggle,
                 icon = if (viewModel.darkTheme) Icons.Filled.Brightness6 else Icons.Filled.Brightness2,
                 contentDescription = "Toggle Theme",
+                modifier = Modifier.size(36.dp),
                 rotation = 180f,
-                modifier = Modifier.size(36.dp)
             )
             AnimatedIconButton(
                 onClick = onColorLensClick,
                 icon = Icons.Filled.ColorLens,
                 contentDescription = "Color Scheme",
+                modifier = Modifier.size(36.dp),
                 rotation = 180f,
-                modifier = Modifier.size(36.dp)
             )
-
-            // Scroll sync button (unchanged)
             if (viewModel.multiVersion) {
-                ScrollSyncButton(viewModel = viewModel)
+                ScrollSyncButton(viewModel = viewModel, modifier = Modifier.size(24.dp))
             }
-
-            // --- Reusable Windows Layout Dropdown ---
             WindowsLayoutDropdown(viewModel = viewModel)
-
-            // --- Reusable Navigation Menu Dropdown ---
             ReaderAppBarMenu(
                 isLandscape = isLandscape,
                 viewModel = viewModel,
@@ -989,15 +1004,30 @@ fun ReaderAppBar(
         }
     )
 }
+
 @Composable
-private fun ScrollSyncButton(viewModel: AppViewModel) {
-    val icon = if (viewModel.scrollSync) Icons.Filled.Link else Icons.Filled.LinkOff
-    AnimatedIconButton(
-        onClick = { viewModel.scrollSync = !viewModel.scrollSync },
-        icon = icon,
-        contentDescription = "Toggle Scroll Sync",
-        rotation = 180f
-    )
+fun ScrollSyncButton(viewModel: AppViewModel, modifier: Modifier) {
+    val scope = rememberCoroutineScope()
+    val pendingJob = remember { mutableStateOf<Job?>(null) }
+
+    key("ScrollSyncButton") {
+        val icon = if (viewModel.scrollSync) Icons.Filled.Link else Icons.Filled.LinkOff
+
+        AnimatedIconButton(
+            onClick = {
+                if (pendingJob.value?.isActive == true) return@AnimatedIconButton
+                pendingJob.value = scope.launch {
+                    delay(250L)
+                    viewModel.scrollSync = !viewModel.scrollSync
+                    pendingJob.value = null
+                }
+            },
+            icon = icon,
+            contentDescription = "Toggle Scroll Sync",
+            modifier = modifier,
+            rotation = 180f,
+        )
+    }
 }
 @Composable
 fun ReaderDropdownContent(

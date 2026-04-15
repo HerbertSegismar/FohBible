@@ -102,8 +102,7 @@ fun ChapterView(
     onThemeToggle: () -> Unit,
     onColorLensClick: () -> Unit,
     onScreenChange: (Screen) -> Unit,
-    scrollSyncEnabled: Boolean,
-    onScrollSyncToggle: () -> Unit
+    scrollSyncEnabled: Boolean
 ) {
     val verseProcessor = remember { VerseTextProcessor() }
     val isOldTestamentForThisVersion = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
@@ -381,7 +380,6 @@ fun ChapterView(
                 ChapterHeader(
                     passage = passage,
                     versionAbbr = versionAbbr,
-                    scrollSyncEnabled = scrollSyncEnabled,
                     onBookChapterClick = {
                         if (scrollSyncEnabled || isPrimary) viewModel.showNavigationModal = true
                         else viewModel.showSecondaryNavigationModal = true
@@ -392,7 +390,6 @@ fun ChapterView(
                     },
                     onThemeToggle = onThemeToggle,
                     onColorLensClick = onColorLensClick,
-                    onScrollSyncToggle = onScrollSyncToggle,
                     viewModel = viewModel,
                     onScreenChange = onScreenChange,
                     backgroundColor = themeColors.primary,
