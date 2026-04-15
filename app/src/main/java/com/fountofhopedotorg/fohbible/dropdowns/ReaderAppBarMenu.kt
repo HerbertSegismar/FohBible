@@ -4,6 +4,7 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
@@ -36,38 +37,38 @@ fun ReaderAppBarMenu(
         animationSpec = tween(300),
         label = "menuIconRotation"
     )
+    Box(modifier = modifier) {
+        IconButton(
+            onClick = { showMenu = !showMenu }
+        ) {
+            Crossfade(
+                targetState = showMenu,
+                animationSpec = tween(300),
+                label = "iconCrossfade"
+            ) { isOpen ->
+                Icon(
+                    imageVector = if (isOpen) Icons.Filled.Close else Icons.Filled.Menu,
+                    contentDescription = if (isOpen) "Close Navigation" else "Open Navigation",
+                    tint = Color.White,
+                    modifier = Modifier.rotate(rotation)
+                )
+            }
+        }
 
-    IconButton(
-        onClick = { showMenu = !showMenu },
-        modifier = modifier
-    ) {
-        Crossfade(
-            targetState = showMenu,
-            animationSpec = tween(300),
-            label = "iconCrossfade"
-        ) { isOpen ->
-            Icon(
-                imageVector = if (isOpen) Icons.Filled.Close else Icons.Filled.Menu,
-                contentDescription = if (isOpen) "Close Navigation" else "Open Navigation",
-                tint = Color.White,
-                modifier = Modifier.rotate(rotation)
+        DropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false },
+            modifier = Modifier.background(
+                if (viewModel.darkTheme) viewModel.darkModalBackgroundColor
+                else viewModel.lightModalBackgroundColor
+            )
+        ) {
+            ReaderDropdownContent(
+                isLandscape = isLandscape,
+                viewModel = viewModel,
+                onScreenChange = onScreenChange,
+                coroutineScope = coroutineScope
             )
         }
-    }
-
-    DropdownMenu(
-        expanded = showMenu,
-        onDismissRequest = { showMenu = false },
-        modifier = Modifier.background(
-            if (viewModel.darkTheme) viewModel.darkModalBackgroundColor
-            else viewModel.lightModalBackgroundColor
-        )
-    ) {
-        ReaderDropdownContent(
-            isLandscape = isLandscape,
-            viewModel = viewModel,
-            onScreenChange = onScreenChange,
-            coroutineScope = coroutineScope
-        )
     }
 }

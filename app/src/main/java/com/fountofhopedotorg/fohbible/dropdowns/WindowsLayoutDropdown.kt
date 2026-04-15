@@ -4,6 +4,7 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
@@ -36,78 +37,80 @@ fun WindowsLayoutDropdown(
         animationSpec = tween(300),
         label = "windowsLayoutIconRotation"
     )
-
-    IconButton(
-        onClick = { expanded = !expanded },
-        modifier = modifier
-    ) {
-        Crossfade(
-            targetState = expanded,
-            animationSpec = tween(300),
-            label = "windowsLayoutIconCrossfade"
-        ) { isOpen ->
-            Icon(
-                imageVector = if (isOpen) Icons.Filled.Close else Icons.Filled.AutoAwesomeMosaic,
-                contentDescription = if (isOpen) "Close MultiView" else "MultiView",
-                tint = Color.White,
-                modifier = Modifier.rotate(rotation)
-            )
+    Box(modifier = modifier) {
+        IconButton(
+            onClick = { expanded = !expanded }
+        ) {
+            Crossfade(
+                targetState = expanded,
+                animationSpec = tween(300),
+                label = "windowsLayoutIconCrossfade"
+            ) { isOpen ->
+                Icon(
+                    imageVector = if (isOpen) Icons.Filled.Close else Icons.Filled.AutoAwesomeMosaic,
+                    contentDescription = if (isOpen) "Close MultiView" else "MultiView",
+                    tint = Color.White,
+                    modifier = Modifier.rotate(rotation)
+                )
+            }
         }
-    }
 
-    DropdownMenu(
-        expanded = expanded,
-        onDismissRequest = { expanded = false },
-        modifier = Modifier.background(
-            if (viewModel.darkTheme) viewModel.darkModalBackgroundColor
-            else viewModel.lightModalBackgroundColor
-        ),
-        offset = DpOffset(x = 100.dp, y = 0.dp),
-    ) {
-        Text(
-            "Windows Layout",
-            modifier = Modifier.fillMaxWidth().height(25.dp),
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
-        HorizontalDivider()
-
-        listOf("Single", "Horizontal", "Vertical").forEach { layout ->
-            val isActive = when (layout.lowercase()) {
-                "single" -> !viewModel.multiVersion
-                "horizontal" -> viewModel.multiVersion && viewModel.multiViewLayout == "horizontal"
-                "vertical" -> viewModel.multiVersion && viewModel.multiViewLayout == "vertical"
-                else -> false
-            }
-            val icon = when (layout.lowercase()) {
-                "single" -> Icons.Default.LooksOne
-                "horizontal", "vertical" -> Icons.Default.ViewStream
-                else -> Icons.AutoMirrored.Filled.Label
-            }
-            val iconModifier = if (layout.lowercase() == "horizontal") Modifier.rotate(90f) else Modifier
-
-            DropdownMenuItemWithIcon(
-                title = layout,
-                icon = icon,
-                isActive = isActive,
-                onClick = {
-                    when (layout.lowercase()) {
-                        "single" -> viewModel.multiVersion = false
-                        "horizontal" -> {
-                            viewModel.multiVersion = true
-                            viewModel.multiViewLayout = "horizontal"
-                        }
-                        "vertical" -> {
-                            viewModel.multiVersion = true
-                            viewModel.multiViewLayout = "vertical"
-                        }
-                    }
-                    expanded = false
-                },
-                iconModifier = iconModifier
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(
+                if (viewModel.darkTheme) viewModel.darkModalBackgroundColor
+                else viewModel.lightModalBackgroundColor
+            ),
+            offset = DpOffset(x = 100.dp, y = 0.dp),
+        ) {
+            Text(
+                "Windows Layout",
+                modifier = Modifier.fillMaxWidth().height(25.dp),
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
             )
+            HorizontalDivider()
+
+            listOf("Single", "Horizontal", "Vertical").forEach { layout ->
+                val isActive = when (layout.lowercase()) {
+                    "single" -> !viewModel.multiVersion
+                    "horizontal" -> viewModel.multiVersion && viewModel.multiViewLayout == "horizontal"
+                    "vertical" -> viewModel.multiVersion && viewModel.multiViewLayout == "vertical"
+                    else -> false
+                }
+                val icon = when (layout.lowercase()) {
+                    "single" -> Icons.Default.LooksOne
+                    "horizontal", "vertical" -> Icons.Default.ViewStream
+                    else -> Icons.AutoMirrored.Filled.Label
+                }
+                val iconModifier =
+                    if (layout.lowercase() == "horizontal") Modifier.rotate(90f) else Modifier
+
+                DropdownMenuItemWithIcon(
+                    title = layout,
+                    icon = icon,
+                    isActive = isActive,
+                    onClick = {
+                        when (layout.lowercase()) {
+                            "single" -> viewModel.multiVersion = false
+                            "horizontal" -> {
+                                viewModel.multiVersion = true
+                                viewModel.multiViewLayout = "horizontal"
+                            }
+
+                            "vertical" -> {
+                                viewModel.multiVersion = true
+                                viewModel.multiViewLayout = "vertical"
+                            }
+                        }
+                        expanded = false
+                    },
+                    iconModifier = iconModifier
+                )
+            }
         }
     }
 }

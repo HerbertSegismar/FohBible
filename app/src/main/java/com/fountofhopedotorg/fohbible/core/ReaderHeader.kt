@@ -110,7 +110,7 @@ fun ChapterHeader(
                 maxLines = 1
             )
         }
-        Spacer(modifier = Modifier.weight(if (isLandscapeVerticalMulti) 2f else 0.25f))
+        Spacer(modifier = Modifier.weight(if (isLandscapeVerticalMulti) 2f else 0.2f))
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
