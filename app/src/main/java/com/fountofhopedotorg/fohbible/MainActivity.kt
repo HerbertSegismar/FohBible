@@ -899,7 +899,6 @@ fun ReaderAppBar(
     val viewModel: AppViewModel = viewModel()
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val coroutineScope = rememberCoroutineScope()
 
     TopAppBar(
         title = {
@@ -917,7 +916,7 @@ fun ReaderAppBar(
                         contentPadding = PaddingValues(horizontal = 8.dp),
                         modifier = Modifier
                             .height(25.dp)
-                            .weight(0.7f)
+                            .weight(if (isLandscape) 1.0f else 0.7f)
                             .padding(end = 4.dp)
                     ) {
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -945,7 +944,7 @@ fun ReaderAppBar(
                         contentPadding = PaddingValues(horizontal = 8.dp),
                         modifier = Modifier
                             .height(25.dp)
-                            .weight(0.5f)
+                            .weight(if (isLandscape) 0.8f else 0.5f)
                             .padding(end = if (onBack == null) 8.dp else 2.dp)
                     ) {
                         Text(
@@ -977,6 +976,9 @@ fun ReaderAppBar(
             }
         },
         actions = {
+            if (!viewModel.multiVersion) {
+                Spacer(modifier = Modifier.width(if (isLandscape) 350.dp else 12.dp))
+            }
             AnimatedIconButton(
                 onClick = onThemeToggle,
                 icon = if (viewModel.darkTheme) Icons.Filled.Brightness6 else Icons.Filled.Brightness2,
@@ -992,14 +994,18 @@ fun ReaderAppBar(
                 rotation = 180f,
             )
             if (viewModel.multiVersion) {
-                ScrollSyncButton(viewModel = viewModel, modifier = Modifier.size(24.dp))
+                ScrollSyncButton(viewModel = viewModel, modifier = Modifier.size(36.dp))
             }
-            WindowsLayoutDropdown(viewModel = viewModel)
+            WindowsLayoutDropdown(
+                viewModel = viewModel,
+                modifier = Modifier.size(36.dp)
+            )
             ReaderAppBarMenu(
                 isLandscape = isLandscape,
                 viewModel = viewModel,
                 onScreenChange = onScreenChange,
-                coroutineScope = coroutineScope
+                coroutineScope = rememberCoroutineScope(),
+                modifier = Modifier.size(36.dp)
             )
         }
     )
