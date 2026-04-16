@@ -149,29 +149,18 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     val activity = context as Activity
     val window = activity.window
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val insets = WindowInsets.systemBars.asPaddingValues()
 
+    val insets = WindowInsets.systemBars.asPaddingValues()
     val vInset = if (!isLandscape) insets.calculateBottomPadding() else 0.dp
+
     val systemRightPadding = WindowInsets.safeDrawing
         .asPaddingValues()
         .calculateRightPadding(LayoutDirection.Ltr)
     val systemLeftPadding = WindowInsets.safeDrawing
         .asPaddingValues()
-        .calculateLeftPadding(LayoutDirection.Rtl)
+        .calculateLeftPadding(LayoutDirection.Ltr)
+    val hInset = if (isLandscape) (systemRightPadding + systemLeftPadding) else 0.dp
 
-    val hInset = if (isLandscape) ((systemRightPadding + systemLeftPadding) * 0.75f) else 0.dp
-
-
-    LaunchedEffect(isLandscape) {
-        val insetsController = WindowCompat.getInsetsController(window, view)
-        if (isLandscape) {
-            insetsController.systemBarsBehavior =
-                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            insetsController.hide(WindowInsetsCompat.Type.systemBars())
-        } else {
-            insetsController.show(WindowInsetsCompat.Type.systemBars())
-        }
-    }
     val toggleFullscreen = {
         val insetsController = WindowCompat.getInsetsController(window, view)
         if (isLandscape) {
@@ -354,6 +343,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                         ) {
                             if (currentScreen is Screen.Reader) {
                                 ReaderAppBar(
+                                    modifier = Modifier,
                                     currentScreen = currentScreen,
                                     currentVersionAbbr = viewModel.currentVersionAbbr,
                                     onBibleIconClick = { viewModel.showNavigationModal = true },

@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -369,6 +368,9 @@ fun HomeAppBar(
     onBack: (() -> Unit)? = null,
     appViewModel: AppViewModel
 ) {
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val iconSize = if (isLandscape) 45.dp else 40.dp
     var showNavigationDropdown by remember { mutableStateOf(false) }
     val viewModel: AppViewModel = viewModel()
     val rotation by animateFloatAsState(targetValue = if (showNavigationDropdown) 180f else 0f, animationSpec = tween(300), label = "menuIconRotation")
@@ -396,33 +398,35 @@ fun HomeAppBar(
             }
         },
         actions = {
-            AnimatedIconButton(
-                onClick = onBibleIconClick,
-                icon = Icons.Filled.Book,
-                contentDescription = "Bible Navigation",
-                modifier = Modifier
-                    .size(38.dp),
-                rotation = 360f,
-            )
-            AnimatedIconButton(
-                onClick = onThemeToggle,
-                icon = if (viewModel.darkTheme) Icons.Filled.Brightness6 else Icons.Filled.Brightness2,
-                contentDescription = "Toggle Theme",
-                modifier = Modifier
-                    .size(38.dp),
-                rotation = 180f,
-            )
-            AnimatedIconButton(
-                onClick = onColorLensClick,
-                icon = Icons.Filled.ColorLens,
-                contentDescription = "Color Scheme",
-                modifier = Modifier
-                    .size(38.dp),
-                rotation = 180f,
-            )
-            IconButton(onClick = { showNavigationDropdown = !showNavigationDropdown }, modifier = Modifier.rotate(rotation).size(38.dp)) {
-                Crossfade(targetState = showNavigationDropdown, animationSpec = tween(300), label = "iconCrossfade") { isOpen ->
-                    Icon(imageVector = if (isOpen) Icons.Filled.Close else Icons.Filled.Menu, contentDescription = if (isOpen) "Close Navigation" else "Open Navigation", tint = Color.White)
+            Row(modifier = Modifier.padding(end = if (isLandscape) 30.dp else 8.dp)) {
+                AnimatedIconButton(
+                    onClick = onBibleIconClick,
+                    icon = Icons.Filled.Book,
+                    contentDescription = "Bible Navigation",
+                    modifier = Modifier
+                        .size(iconSize),
+                    rotation = 360f,
+                )
+                AnimatedIconButton(
+                    onClick = onThemeToggle,
+                    icon = if (viewModel.darkTheme) Icons.Filled.Brightness6 else Icons.Filled.Brightness2,
+                    contentDescription = "Toggle Theme",
+                    modifier = Modifier
+                        .size(iconSize),
+                    rotation = 180f,
+                )
+                AnimatedIconButton(
+                    onClick = onColorLensClick,
+                    icon = Icons.Filled.ColorLens,
+                    contentDescription = "Color Scheme",
+                    modifier = Modifier
+                        .size(iconSize),
+                    rotation = 180f,
+                )
+                IconButton(onClick = { showNavigationDropdown = !showNavigationDropdown }, modifier = Modifier.rotate(rotation).size(iconSize)) {
+                    Crossfade(targetState = showNavigationDropdown, animationSpec = tween(300), label = "iconCrossfade") { isOpen ->
+                        Icon(imageVector = if (isOpen) Icons.Filled.Close else Icons.Filled.Menu, contentDescription = if (isOpen) "Close Navigation" else "Open Navigation", tint = Color.White)
+                    }
                 }
             }
             DropdownMenu(
@@ -478,6 +482,7 @@ fun ReaderAppBar(
     val viewModel: AppViewModel = viewModel()
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val iconSize = if (isLandscape) 45.dp else 40.dp
 
     TopAppBar(
         title = {
@@ -495,7 +500,7 @@ fun ReaderAppBar(
                         contentPadding = PaddingValues(horizontal = 8.dp),
                         modifier = Modifier
                             .height(25.dp)
-                            .weight(if (isLandscape) 1.0f else 0.7f)
+                            .weight(if (isLandscape) 2f else 1f)
                             .padding(end = 4.dp)
                     ) {
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -523,7 +528,7 @@ fun ReaderAppBar(
                         contentPadding = PaddingValues(horizontal = 8.dp),
                         modifier = Modifier
                             .height(25.dp)
-                            .weight(if (isLandscape) 0.8f else 0.5f)
+                            .weight(if (isLandscape) 1f else 0.8f)
                             .padding(end = if (onBack == null) 8.dp else 2.dp)
                     ) {
                         Text(
@@ -547,46 +552,47 @@ fun ReaderAppBar(
         ),
         navigationIcon = {
             if (onBack != null) {
-                Box(modifier = Modifier.offset(x = (-12).dp)) {
                 AnimatedIconButton(
                     onClick = onBack,
                     icon = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                )}
+                    contentDescription = "Back"
+                )
             }
         },
         actions = {
             if (!viewModel.multiVersion) {
-                Spacer(modifier = Modifier.width(if (isLandscape) 350.dp else 12.dp))
+                Spacer(modifier = Modifier.width(if (isLandscape) 300.dp else 12.dp))
             }
-            AnimatedIconButton(
-                onClick = onThemeToggle,
-                icon = if (viewModel.darkTheme) Icons.Filled.Brightness6 else Icons.Filled.Brightness2,
-                contentDescription = "Toggle Theme",
-                modifier = Modifier.size(36.dp),
-                rotation = 180f,
-            )
-            AnimatedIconButton(
-                onClick = onColorLensClick,
-                icon = Icons.Filled.ColorLens,
-                contentDescription = "Color Scheme",
-                modifier = Modifier.size(36.dp),
-                rotation = 180f,
-            )
-            if (viewModel.multiVersion) {
-                ScrollSyncButton(viewModel = viewModel, modifier = Modifier.size(36.dp))
+            Row(modifier = Modifier.padding(end = 8.dp)) {
+                AnimatedIconButton(
+                    onClick = onThemeToggle,
+                    icon = if (viewModel.darkTheme) Icons.Filled.Brightness6 else Icons.Filled.Brightness2,
+                    contentDescription = "Toggle Theme",
+                    modifier = Modifier.size(iconSize),
+                    rotation = 180f,
+                )
+                AnimatedIconButton(
+                    onClick = onColorLensClick,
+                    icon = Icons.Filled.ColorLens,
+                    contentDescription = "Color Scheme",
+                    modifier = Modifier.size(iconSize),
+                    rotation = 180f,
+                )
+                if (viewModel.multiVersion) {
+                    ScrollSyncButton(viewModel = viewModel, modifier = Modifier.size(iconSize))
+                }
+                WindowsLayoutDropdown(
+                    viewModel = viewModel,
+                    modifier = Modifier.size(iconSize)
+                )
+                ReaderAppBarMenu(
+                    isLandscape = isLandscape,
+                    viewModel = viewModel,
+                    onScreenChange = onScreenChange,
+                    coroutineScope = rememberCoroutineScope(),
+                    modifier = Modifier.size(iconSize)
+                )
             }
-            WindowsLayoutDropdown(
-                viewModel = viewModel,
-                modifier = Modifier.size(36.dp)
-            )
-            ReaderAppBarMenu(
-                isLandscape = isLandscape,
-                viewModel = viewModel,
-                onScreenChange = onScreenChange,
-                coroutineScope = rememberCoroutineScope(),
-                modifier = Modifier.size(36.dp)
-            )
         }
     )
 }

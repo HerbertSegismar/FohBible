@@ -74,9 +74,18 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.platform.LocalConfiguration
 import android.content.res.Configuration
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import com.fountofhopedotorg.fohbible.data.BookUi
 
 fun BibleBook.toBookUi(): BookUi {
@@ -332,34 +341,49 @@ fun NavigationModal(
         ) {
             Scaffold(
                 modifier = Modifier.fillMaxSize(),
+                contentWindowInsets = WindowInsets.safeDrawing,
                 topBar = {
-                    TopAppBar(
-                        title = {
-                            Text(
-                                text = "Select Passage",
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 18.sp,
-                            )
-                        },
-                        navigationIcon = {
-                            IconButton(
-                                onClick = onDismissRequest,
-                                modifier = Modifier.size(45.dp)
-                            ) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Back",
-                                    modifier = Modifier.size(22.dp)
+                    val layoutDirection = LocalLayoutDirection.current
+                    val cutoutPaddingValues = WindowInsets.displayCutout.asPaddingValues()
+                    val cutoutLeft = cutoutPaddingValues.calculateLeftPadding(layoutDirection)
+                    val cutoutRight = cutoutPaddingValues.calculateRightPadding(layoutDirection)
+                    val paddingStart = if (layoutDirection == LayoutDirection.Ltr) cutoutRight else cutoutLeft
+                    val paddingEnd = if (layoutDirection == LayoutDirection.Ltr) cutoutLeft else cutoutRight
+
+                    Surface(
+                        modifier = Modifier
+                            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                            .padding(start = paddingStart, end = paddingEnd),
+                        color = Color.Transparent
+                    ) {
+                        TopAppBar(
+                            title = {
+                                Text(
+                                    text = "Select Passage",
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 18.sp,
                                 )
-                            }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            titleContentColor = Color.White,
-                            navigationIconContentColor = Color.White,
-                        ),
-                        modifier = Modifier.height(40.dp)
-                    )
+                            },
+                            navigationIcon = {
+                                IconButton(
+                                    onClick = onDismissRequest,
+                                    modifier = Modifier.size(45.dp)
+                                ) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = "Back",
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                            },
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                titleContentColor = Color.White,
+                                navigationIconContentColor = Color.White,
+                            ),
+                            modifier = Modifier.height(40.dp)
+                        )
+                    }
                 }
             ) { paddingValues ->
                 Box(
