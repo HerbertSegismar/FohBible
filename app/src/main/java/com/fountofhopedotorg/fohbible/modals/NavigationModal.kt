@@ -335,8 +335,8 @@ fun NavigationModal(
         )
     ) {
         Surface(
-            modifier = Modifier.fillMaxSize(),
-            shape = RoundedCornerShape(4.dp),
+            modifier = Modifier.fillMaxSize(if (isLandscape) 0.98f else 1f),
+            shape = RoundedCornerShape(30.dp),
             color = MaterialTheme.colorScheme.surface
         ) {
             Scaffold(
@@ -399,7 +399,7 @@ fun NavigationModal(
                                 modifier = Modifier
                                     .weight(1.78f)
                                     .fillMaxHeight()
-                                    .padding(horizontal = 10.dp),
+                                    .padding(start = 15.dp),
                                 contentPadding = PaddingValues(vertical = 8.dp)
                             ) {
                                 item {
@@ -440,7 +440,7 @@ fun NavigationModal(
                                 modifier = Modifier
                                     .weight(1.11f)
                                     .fillMaxHeight()
-                                    .padding(10.dp)
+                                    .padding(top = 15.dp, bottom = 15.dp, end = 15.dp)
                                     .verticalScroll(rememberScrollState())
                             ) {
                                 if (selectedBook != null) {

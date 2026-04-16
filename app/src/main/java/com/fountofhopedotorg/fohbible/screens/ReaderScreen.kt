@@ -42,6 +42,7 @@ import com.fountofhopedotorg.fohbible.composables.SingleVersionReader
 import com.fountofhopedotorg.fohbible.composables.SyncedMultiVersionReader
 import com.fountofhopedotorg.fohbible.core.createCommentaryHelperIfExists
 import com.fountofhopedotorg.fohbible.data.*
+import com.fountofhopedotorg.fohbible.modals.BgModal
 import com.fountofhopedotorg.fohbible.modals.InteractiveModal
 import com.fountofhopedotorg.fohbible.modals.NotesModal
 import com.fountofhopedotorg.fohbible.modals.VerseOptionsModal

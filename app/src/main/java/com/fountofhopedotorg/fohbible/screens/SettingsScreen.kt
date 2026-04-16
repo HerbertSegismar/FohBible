@@ -23,7 +23,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ChevronRight
@@ -59,11 +58,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
 import com.fountofhopedotorg.fohbible.ColorWheelDialog
+import com.fountofhopedotorg.fohbible.composables.AboutDialog
+import com.fountofhopedotorg.fohbible.composables.ColorButton
+import com.fountofhopedotorg.fohbible.composables.FontButton
+import com.fountofhopedotorg.fohbible.composables.HighlightColorSquare
+import com.fountofhopedotorg.fohbible.composables.SettingsItem
+import com.fountofhopedotorg.fohbible.composables.SettingsSection
+import com.fountofhopedotorg.fohbible.modals.BgModal
 import com.fountofhopedotorg.fohbible.modals.FontModal
 import com.fountofhopedotorg.fohbible.modals.VersionSelectionModal
 import com.fountofhopedotorg.fohbible.models.AppViewModel
@@ -71,8 +75,6 @@ import com.fountofhopedotorg.fohbible.ui.theme.DefaultPrimaryColor
 import com.fountofhopedotorg.fohbible.ui.theme.PredefinedColorThemes
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
 import com.fountofhopedotorg.fohbible.utils.availableFontFamilies
-import com.fountofhopedotorg.fohbible.utils.getFontFamily
-import java.util.Locale
 
 const val MAX_FONT_SIZE = 100
 const val MIN_FONT_SIZE = 1
@@ -1026,288 +1028,4 @@ fun SettingsScreen() {
     if (showAboutDialog) {
         AboutDialog(onDismiss = { showAboutDialog = false })
     }
-}
-@Composable
-fun SettingsSection(title: String, subtitle: String? = null, content: @Composable () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-        )
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold
-            )
-            subtitle?.let {
-                Text(
-                    it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-            }
-            Spacer(Modifier.height(12.dp))
-            content()
-        }
-    }
-}
-@Composable
-fun SettingsItem(
-    title: String,
-    subtitle: String? = null,
-    onClick: (() -> Unit)? = null,
-    content: @Composable () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = onClick != null) { onClick?.invoke() }
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium
-            )
-            subtitle?.let {
-                Text(
-                    it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-            }
-        }
-        content()
-    }
-}
-@Composable
-fun ColorButton(color: Color, name: String, isSelected: Boolean, onClick: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .clickable { onClick() }
-            .border(
-                if (isSelected) 2.dp else 1.dp,
-                if (isSelected) color else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                RoundedCornerShape(12.dp)
-            )
-            .padding(12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(color)
-                .border(
-                    1.dp,
-                    MaterialTheme.colorScheme.surfaceVariant,
-                    RoundedCornerShape(8.dp)
-                )
-        )
-        Text(
-            text = name,
-            style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.padding(top = 6.dp),
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-        )
-    }
-}
-@Composable
-fun FontButton(family: String, isSelected: Boolean, onClick: () -> Unit) {
-    Text(
-        text = family.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() },
-        modifier = Modifier
-            .clickable { onClick() }
-            .border(
-                if (isSelected) 2.dp else 1.dp,
-                if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                RoundedCornerShape(8.dp)
-            )
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        fontFamily = getFontFamily(family),
-        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-    )
-}
-@Composable
-fun BgModal(
-    currentIndex: Int,
-    customUri: String?,
-    onSelect: (Int) -> Unit,
-    onDismiss: () -> Unit,
-    onPickCustom: () -> Unit,
-    onRemoveCustom: () -> Unit
-) {
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    "Select Background",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .size(80.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (currentIndex == 0) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.Transparent)
-                                .clickable { onSelect(0) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("None")
-                        }
-                    }
-                    items(33) { i ->
-                        val index = i + 1
-                        Box(
-                            modifier = Modifier
-                                .size(80.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (currentIndex == index) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.Transparent)
-                                .clickable { onSelect(index) }
-                        ) {
-                            AsyncImage(
-                                model = "file:///android_asset/textures/$index.jpg",
-                                contentDescription = "Texture $index",
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                    }
-                    item {
-                        if (customUri != null) {
-                            Box(
-                                modifier = Modifier
-                                    .size(80.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(if (currentIndex == 34) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.Transparent)
-                                    .clickable { onSelect(34) }
-                            ) {
-                                AsyncImage(
-                                    model = customUri,
-                                    contentDescription = "Custom texture",
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-                        } else {
-                            IconButton(
-                                onClick = onPickCustom,
-                                modifier = Modifier.size(80.dp)
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = "Add custom")
-                            }
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(
-                    onClick = onPickCustom,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
-                    Text("Choose Custom Image")
-                }
-
-                if (customUri != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    TextButton(
-                        onClick = onRemoveCustom,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Remove Custom Image")
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Cancel")
-                    }
-                }
-            }
-        }
-    }
-}
-@Composable
-fun HighlightColorSquare(
-    color: Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier
-            .clickable { onClick() }
-            .padding(4.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(40.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(color)
-                .border(
-                    2.dp,
-                    if (color == Color.White) MaterialTheme.colorScheme.outline else color,
-                    RoundedCornerShape(10.dp)
-                )
-        )
-    }
-}
-@Composable
-fun AboutDialog(onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                "Fount of Hope Study Bible",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    "Version: 1.1.1a",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    "Developed by Fount of Hope Devotionals",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    "fountofhopedevotionals@gmail.com",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "Thank you for using Fount Of Hope Study Bible. Your support means a lot to us!",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Close")
-            }
-        }
-    )
 }

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -93,6 +94,7 @@ import com.fountofhopedotorg.fohbible.modals.FontModal
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
 import com.fountofhopedotorg.fohbible.ui.theme.PredefinedColorThemes
+import com.fountofhopedotorg.fohbible.ui.theme.ThemeManager.primaryColor
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -714,24 +716,39 @@ fun ColorThemeDialog(
     onCustomColorClick: () -> Unit,
     appViewModel: AppViewModel
 ) {
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .height(450.dp),
-        shape = RoundedCornerShape(16.dp),
+            .fillMaxWidth().fillMaxHeight(if (isLandscape) 1f else 0.75f),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (appViewModel.darkTheme) appViewModel.darkModalBackgroundColor else appViewModel.lightModalBackgroundColor
         )
     ) {
         Column(modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("Choose Theme Color", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                IconButton(onClick = onDismiss, modifier = Modifier.size(40.dp)) { Icon(Icons.Filled.Close, "Close") }
+        ) {
+            Box(modifier = Modifier
+                .fillMaxWidth()
+                .background(primaryColor)) {
+                Row(modifier = Modifier.fillMaxWidth().height(50.dp).padding(horizontal = 20.dp).background(LocalAppTheme.current.primaryColor),
+                    horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("Choose Theme Color",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        letterSpacing = 0.5.sp)
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(40.dp)) { Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Close",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    ) }
+                }
             }
             Spacer(modifier = Modifier.height(8.dp))
-            LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(PredefinedColorThemes) { theme ->
                     ColorOptionItem(theme = theme, onClick = { onColorSelected(theme.primaryColor); onDismiss() })
                 }
@@ -778,8 +795,8 @@ fun ColorThemeDialog(
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                Button(onClick = onDismiss, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.onSurface)) {
+            Row(modifier = Modifier.fillMaxWidth().padding(end = 20.dp, bottom = 20.dp), horizontalArrangement = Arrangement.End) {
+                Button(onClick = onDismiss, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = Color.White)) {
                     Text("Cancel")
                 }
             }

@@ -68,10 +68,10 @@ import com.fountofhopedotorg.fohbible.composables.ColorThemeDialog
 import com.fountofhopedotorg.fohbible.data.AppThemeState
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
+import com.fountofhopedotorg.fohbible.modals.BgModal
 import com.fountofhopedotorg.fohbible.modals.NavigationModal
 import com.fountofhopedotorg.fohbible.modals.VersionSelectionModal
 import com.fountofhopedotorg.fohbible.models.AppViewModel
-import com.fountofhopedotorg.fohbible.screens.BgModal
 import com.fountofhopedotorg.fohbible.screens.BookmarksScreen
 import com.fountofhopedotorg.fohbible.screens.HomeScreen
 import com.fountofhopedotorg.fohbible.screens.NotesScreen

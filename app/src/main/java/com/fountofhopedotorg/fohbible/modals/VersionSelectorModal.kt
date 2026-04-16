@@ -1,4 +1,5 @@
 package com.fountofhopedotorg.fohbible.modals
+import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -45,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -95,12 +98,15 @@ fun VersionSelectionModal(
             exit = fadeOut(animationSpec = tween(150)) +
                     scaleOut(targetScale = 0.9f, animationSpec = tween(150))
         ) {
+
+            val configuration = LocalConfiguration.current
+            val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
             Card(
                 modifier = Modifier
-                    .fillMaxWidth(0.92f)
-                    .height(620.dp)
+                    .fillMaxWidth(if (isLandscape) 0.4f else 0.8f)
+                    .fillMaxHeight(if (isLandscape) 0.97f else 0.75f)
                     .shadow(24.dp, RoundedCornerShape(10.dp), clip = false),
-                shape = RoundedCornerShape(10.dp),
+                shape = RoundedCornerShape(15.dp),
                 colors = CardDefaults.cardColors(containerColor = surfaceColor)
             ) {
                 Column(
@@ -148,7 +154,7 @@ fun VersionSelectionModal(
                         onValueChange = { searchQuery = it },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 4.dp),
+                            .padding(horizontal = 20.dp),
                         placeholder = {
                             Text(
                                 "Search version",

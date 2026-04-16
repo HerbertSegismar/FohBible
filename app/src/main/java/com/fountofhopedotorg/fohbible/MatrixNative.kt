@@ -77,7 +77,7 @@ val JesusAttributes = listOf(
     "The Angel of God", "The Angel of the Lord", "Yahweh", "Jehovah", "Elohim", "El Shaddai", "Adonai", "Jehovah Jireh",
     "Jehovah Rapha", "Jehovah Nissi", "Jehovah Shalom", "Jehovah Raah", "Jehovah Tsidkenu", "Jehovah Shammah", "El Elyon",
     "El Roi", "El Olam", "Yahweh Yireh", "Yahweh Rapha", "Yahweh Nissi", "Yahweh Shalom", "Yahweh Raah", "Yahweh Tsidkenu",
-    "Yahweh Shammah", "Yahweh Sabaoth", "God With Us", "The Great High Priest"
+    "Yahweh Shammah", "Yahweh Sabaoth", "God With Us", "The Great High Priest", "Prayer-answering God"
 )
 
 const val MATRIX_HEIGHT = 612f
