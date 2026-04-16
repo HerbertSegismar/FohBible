@@ -22,7 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import com.fountofhopedotorg.fohbible.DropdownMenuItemWithIcon
+import com.fountofhopedotorg.fohbible.composables.DropdownMenuItemWithIcon
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)

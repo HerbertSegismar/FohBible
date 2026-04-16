@@ -785,8 +785,8 @@ fun SettingsScreen() {
                         viewModel.overlayOpacity = 0.8f
                         viewModel.lightOverlayColor = Color(0xFFF5F5DC)
                         viewModel.darkOverlayColor = Color(0xFF100F21)
-                        viewModel.lightModalBackgroundColor = Color(0xFFE0E0E0)
-                        viewModel.darkModalBackgroundColor = Color(0xFF2D2D2D)
+                        viewModel.lightModalBackgroundColor = Color(0xFFEAE7E3)
+                        viewModel.darkModalBackgroundColor = Color(0xFF121523)
                         viewModel.wordMarkerColor = Color(0xDDAC95E1)
                         viewModel.verseMarkerColor = Color(0xFF95F198)
                         viewModel.isDictionaryMode = true

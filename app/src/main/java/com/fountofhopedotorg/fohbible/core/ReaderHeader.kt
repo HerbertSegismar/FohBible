@@ -31,8 +31,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fountofhopedotorg.fohbible.Screen
-import com.fountofhopedotorg.fohbible.ScrollSyncButton
-import com.fountofhopedotorg.fohbible.AnimatedIconButton
+import com.fountofhopedotorg.fohbible.composables.AnimatedIconButton
+import com.fountofhopedotorg.fohbible.composables.ScrollSyncButton
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.dropdowns.ReaderAppBarMenu
 import com.fountofhopedotorg.fohbible.dropdowns.WindowsLayoutDropdown

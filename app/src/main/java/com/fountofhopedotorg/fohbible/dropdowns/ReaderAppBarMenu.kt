@@ -19,8 +19,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import com.fountofhopedotorg.fohbible.ReaderDropdownContent
 import com.fountofhopedotorg.fohbible.Screen
+import com.fountofhopedotorg.fohbible.composables.ReaderDropdownContent
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 
 @Composable
