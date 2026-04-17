@@ -35,6 +35,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -87,6 +88,8 @@ import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 
+private val LIGHT_THEME_READER_FONT_COLOR_KEY = intPreferencesKey("light_theme_reader_font_color")
+private val DARK_THEME_READER_FONT_COLOR_KEY = intPreferencesKey("dark_theme_reader_font_color")
 private val MARKER_COLOR_KEY = intPreferencesKey("marker_color")
 private val PRIMARY_BOOK_NUMBER_KEY = intPreferencesKey("primary_book_number")
 private val PRIMARY_BOOK_NAME_KEY = stringPreferencesKey("primary_book_name")
@@ -193,6 +196,8 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
         val prefs = dataStore.data.first()
         with(viewModel) {
             fontSize = prefs[FONT_SIZE_KEY] ?: 18
+            lightThemeReaderFontColor = Color(prefs[LIGHT_THEME_READER_FONT_COLOR_KEY] ?: Color(0xFF101015).toArgb())
+            darkThemeReaderFontColor = Color(prefs[DARK_THEME_READER_FONT_COLOR_KEY] ?: Color(0xFFFFFFFF).toArgb())
             darkTheme = prefs[DARK_THEME_KEY] ?: false
             selectedColor = Color(prefs[SELECTED_COLOR_KEY] ?: DefaultPrimaryColor.toArgb())
             isCustomColor = prefs[IS_CUSTOM_COLOR_KEY] ?: false
@@ -244,6 +249,8 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
             if (predefinedHighlightColors.isEmpty()) resetHighlightColorsToDefault()
         }
     }
+    SavePreference({ viewModel.lightThemeReaderFontColor.toArgb() }, LIGHT_THEME_READER_FONT_COLOR_KEY, dataStore)
+    SavePreference({ viewModel.darkThemeReaderFontColor.toArgb() }, DARK_THEME_READER_FONT_COLOR_KEY, dataStore)
     SavePreference({ viewModel.fontSize }, FONT_SIZE_KEY, dataStore)
     SavePreference({ viewModel.darkTheme }, DARK_THEME_KEY, dataStore)
     SavePreference({ viewModel.selectedColor?.toArgb() ?: DefaultPrimaryColor.toArgb() }, SELECTED_COLOR_KEY, dataStore)
@@ -427,7 +434,16 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 viewModel.primaryPassage = newPassage
                                 if (viewModel.scrollSync) viewModel.secondaryPassage = newPassage
                             }
-                            ReaderScreen(passage = passage, databaseHelper = dbHelper, onPassageChange = onPassageChange)
+                            key(
+                                viewModel.darkTheme,
+                                if (viewModel.darkTheme) viewModel.darkThemeReaderFontColor else viewModel.lightThemeReaderFontColor
+                            ) {
+                                ReaderScreen(
+                                    passage = passage,
+                                    databaseHelper = dbHelper,
+                                    onPassageChange = onPassageChange
+                                )
+                            }
                         }
                         Screen.Bookmarks -> BookmarksScreen(onNavigateToReader = { passage ->
                             viewModel.primaryPassage = passage
@@ -580,6 +596,20 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             onDismissRequest = { viewModel.showWordMarkerColorWheelDialog = false },
                             onColorSelected = { color -> viewModel.wordMarkerColor = color; viewModel.showWordMarkerColorWheelDialog = false },
                             initialColor = viewModel.wordMarkerColor
+                        )
+                    }
+                    if (viewModel.showLightReaderFontColorWheelDialog) {
+                        ColorWheelDialog(
+                            onDismissRequest = { viewModel.showLightReaderFontColorWheelDialog = false },
+                            onColorSelected = { color ->  viewModel.lightThemeReaderFontColor = color; viewModel.showLightReaderFontColorWheelDialog = false },
+                            initialColor = viewModel.lightThemeReaderFontColor
+                        )
+                    }
+                    if (viewModel.showDarkReaderFontColorWheelDialog) {
+                        ColorWheelDialog(
+                            onDismissRequest = { viewModel.showDarkReaderFontColorWheelDialog = false },
+                            onColorSelected = { color ->  viewModel.darkThemeReaderFontColor = color; viewModel.showDarkReaderFontColorWheelDialog = false },
+                            initialColor = viewModel.darkThemeReaderFontColor
                         )
                     }
                     if (viewModel.showVerseMarkerColorWheelDialog) {

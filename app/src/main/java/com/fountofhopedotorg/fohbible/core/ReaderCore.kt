@@ -105,6 +105,10 @@ fun ChapterView(
     onScreenChange: (Screen) -> Unit,
     scrollSyncEnabled: Boolean
 ) {
+    val readerFontColor = if (viewModel.darkTheme)
+        viewModel.darkThemeReaderFontColor
+    else
+        viewModel.lightThemeReaderFontColor
     val verseProcessor = remember { VerseTextProcessor() }
     val isOldTestamentForThisVersion = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
     var highlightedVerse by remember { mutableStateOf<Int?>(null) }
@@ -162,7 +166,7 @@ fun ChapterView(
                 verseText = verse.text,
                 baseFontSize = viewModel.fontSize.sp,
                 themeColors = themeColors,
-                textColor = themeColors.textColor,
+                textColor = readerFontColor,
                 onTagPress = onTagLocal,
                 onWordPress = onWordLocal,
                 onStrongsPress = onStrongsLocal,

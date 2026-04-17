@@ -35,6 +35,8 @@ class AppViewModel : ViewModel() {
             )
         )
     }
+    var lightThemeReaderFontColor by mutableStateOf(Color(0xFF101015))
+    var darkThemeReaderFontColor by mutableStateOf(Color(0xFFFFFFFF))
     var renderOrbs by mutableStateOf(false)
     var orbsCount by mutableIntStateOf(3)
     var wordsOfJesus by mutableStateOf(Color(0xFFDA4227))
@@ -43,6 +45,8 @@ class AppViewModel : ViewModel() {
     var isStudyMode by mutableStateOf(true)
     var wordMarkerColor by mutableStateOf(Color(0xDDAC95E1))
     var showWordMarkerColorWheelDialog by mutableStateOf(false)
+    var showLightReaderFontColorWheelDialog by mutableStateOf(false)
+    var showDarkReaderFontColorWheelDialog by mutableStateOf(false)
     var isDictionaryMode by mutableStateOf(true)
     var verseMarkerColor by mutableStateOf(Color(0xFF95F198))
     var showVerseMarkerColorWheelDialog by mutableStateOf(false)

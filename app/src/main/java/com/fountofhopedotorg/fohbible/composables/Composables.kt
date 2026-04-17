@@ -644,16 +644,6 @@ fun ReaderDropdownContent(
         if (!isLandscape) {
             OverlayOpacitySlider(viewModel)
             HorizontalDivider()
-            ColorPickerRow(
-                label = if (viewModel.darkTheme) "Dark Theme Overlay" else "Light Theme Overlay",
-                color = if (viewModel.darkTheme) viewModel.darkOverlayColor else viewModel.lightOverlayColor,
-                onClick = { viewModel.showReaderOverlayColorWheel = true }
-            )
-            HorizontalDivider()
-            ColorPickerRow(label = "Verse Marker Color", color = viewModel.verseMarkerColor, onClick = { viewModel.showVerseMarkerColorWheelDialog = true })
-            HorizontalDivider()
-            ColorPickerRow(label = "Word Marker Color", color = viewModel.wordMarkerColor, onClick = { viewModel.showWordMarkerColorWheelDialog = true })
-            HorizontalDivider()
             DropdownMenuItem(
                 text = { Text(text = if (viewModel.isDictionaryMode) "Dictionary Mode On" else "Word Marker On", modifier = Modifier.fillMaxWidth()) },
                 leadingIcon = { Icon(if (viewModel.isDictionaryMode) Icons.AutoMirrored.Filled.Label else Icons.Filled.LocalFireDepartment, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
@@ -662,6 +652,25 @@ fun ReaderDropdownContent(
                     coroutineScope.launch { delay(400) }
                 }
             )
+            HorizontalDivider()
+            ColorPickerRow(label = "Verse Marker Color", color = viewModel.verseMarkerColor, onClick = { viewModel.showVerseMarkerColorWheelDialog = true })
+            HorizontalDivider()
+            ColorPickerRow(label = "Word Marker Color", color = viewModel.wordMarkerColor, onClick = { viewModel.showWordMarkerColorWheelDialog = true })
+            if (viewModel.darkTheme) {
+                ColorPickerRow(
+                    label = "Font Color",
+                    color = viewModel.darkThemeReaderFontColor,
+                    onClick = { viewModel.showDarkReaderFontColorWheelDialog= true }
+                )
+            }
+            else {
+                ColorPickerRow(
+                    label = "Font Color",
+                    color = viewModel.lightThemeReaderFontColor,
+                    onClick = { viewModel.showLightReaderFontColorWheelDialog= true }
+                )
+            }
+            HorizontalDivider()
             HorizontalDivider()
             FontSizeControls(viewModel)
         }
@@ -691,12 +700,6 @@ fun ReaderDropdownContent(
 fun ExtraReaderControls(viewModel: AppViewModel, coroutineScope: kotlinx.coroutines.CoroutineScope) {
     OverlayOpacitySlider(viewModel)
     HorizontalDivider()
-    ColorPickerRow(label = if (viewModel.darkTheme) "Dark Theme Overlay" else "Light Theme Overlay", color = if (viewModel.darkTheme) viewModel.darkOverlayColor else viewModel.lightOverlayColor, onClick = { viewModel.showReaderOverlayColorWheel = true })
-    HorizontalDivider()
-    ColorPickerRow(label = "Verse Marker Color", color = viewModel.verseMarkerColor, onClick = { viewModel.showVerseMarkerColorWheelDialog = true })
-    HorizontalDivider()
-    ColorPickerRow(label = "Word Marker Color", color = viewModel.wordMarkerColor, onClick = { viewModel.showWordMarkerColorWheelDialog = true })
-    HorizontalDivider()
     DropdownMenuItem(
         text = { Text(text = if (viewModel.isDictionaryMode) "Dictionary Mode On" else "Word Marker On", modifier = Modifier.fillMaxWidth()) },
         leadingIcon = { Icon(if (viewModel.isDictionaryMode) Icons.AutoMirrored.Filled.Label else Icons.Filled.LocalFireDepartment, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
@@ -705,6 +708,25 @@ fun ExtraReaderControls(viewModel: AppViewModel, coroutineScope: kotlinx.corouti
             coroutineScope.launch { delay(400) }
         }
     )
+    HorizontalDivider()
+    ColorPickerRow(label = "Verse Marker Color", color = viewModel.verseMarkerColor, onClick = { viewModel.showVerseMarkerColorWheelDialog = true })
+    HorizontalDivider()
+    ColorPickerRow(label = "Word Marker Color", color = viewModel.wordMarkerColor, onClick = { viewModel.showWordMarkerColorWheelDialog = true })
+    HorizontalDivider()
+    if (viewModel.darkTheme) {
+        ColorPickerRow(
+            label = "Font Color",
+            color = viewModel.darkThemeReaderFontColor,
+            onClick = { viewModel.showDarkReaderFontColorWheelDialog= true }
+        )
+    }
+    else {
+        ColorPickerRow(
+            label = "Font Color",
+            color = viewModel.lightThemeReaderFontColor,
+            onClick = { viewModel.showLightReaderFontColorWheelDialog= true }
+        )
+    }
     HorizontalDivider()
     FontSizeControls(viewModel)
 }

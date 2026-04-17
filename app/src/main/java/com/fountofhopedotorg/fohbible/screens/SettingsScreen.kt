@@ -106,6 +106,8 @@ fun SettingsScreen() {
     var showAboutDialog by remember { mutableStateOf(false) }
     var showWordMarkerColorWheel by remember { mutableStateOf(false) }
     var showVerseMarkerColorWheel by remember { mutableStateOf(false) }
+    var showLightThemeReaderFontColorWheel by remember { mutableStateOf(false) }
+    var showDarkThemeReaderFontColorWheel by remember { mutableStateOf(false) }
     var showResetConfirmDialog by remember { mutableStateOf(false) }
     var showHighlightColorWheel by remember { mutableStateOf(false) }
     var showResetHighlightColorsDialog by remember { mutableStateOf(false) }
@@ -447,8 +449,25 @@ fun SettingsScreen() {
                                 .clickable { showDarkModalColorWheel = true }
                         )
                     }
+                    SettingsItem(
+                        title = "Dark Theme Reader Font Color",
+                        subtitle = "Reader text color for dark theme"
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clip(CircleShape)
+                                .background(viewModel.darkThemeReaderFontColor)
+                                .border(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.primary.copy(0.3f),
+                                    CircleShape
+                                )
+                                .clickable { showDarkThemeReaderFontColorWheel = true }
+                        )
+                    }
                 }
-                if (!viewModel.darkTheme) {
+                else {
                     SettingsItem(
                         title = "Light Theme Overlay Color",
                         subtitle = "Overlay color for light theme"
@@ -473,6 +492,23 @@ fun SettingsScreen() {
                                 .background(viewModel.lightModalBackgroundColor)
                                 .border(1.dp, MaterialTheme.colorScheme.primary.copy(0.3f), CircleShape)
                                 .clickable { showLightModalColorWheel = true }
+                        )
+                    }
+                    SettingsItem(
+                        title = "Light Theme Reader Font Color",
+                        subtitle = "Reader text color for light theme"
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clip(CircleShape)
+                                .background(viewModel.lightThemeReaderFontColor)
+                                .border(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.primary.copy(0.3f),
+                                    CircleShape
+                                )
+                                .clickable { showLightThemeReaderFontColorWheel = true }
                         )
                     }
                 }
@@ -560,7 +596,7 @@ fun SettingsScreen() {
                                 onClick = { viewModel.orbsCount = maxOf(MIN_ORB_COUNT, viewModel.orbsCount - 1) },
                                 modifier = Modifier.size(40.dp)
                             ) {
-                                Text("-", fontWeight = FontWeight.Bold)
+                                Text("-", fontWeight = FontWeight.Bold, fontSize = 20.sp)
                             }
                             Text(
                                 "${viewModel.orbsCount}",
@@ -572,7 +608,7 @@ fun SettingsScreen() {
                                 onClick = { viewModel.orbsCount = minOf(MAX_ORB_COUNT, viewModel.orbsCount + 1) },
                                 modifier = Modifier.size(40.dp)
                             ) {
-                                Text("+", fontWeight = FontWeight.Bold)
+                                Text("+", fontWeight = FontWeight.Bold, fontSize = 20.sp)
                             }
                         }
                     }
@@ -840,6 +876,9 @@ fun SettingsScreen() {
                         viewModel.overlayOpacity = 0.8f
                         viewModel.lightOverlayColor = Color(0xFFFFFFFF)
                         viewModel.darkOverlayColor = Color(0xFF100F21)
+                        viewModel.darkThemeReaderFontColor = Color(0xFFFFFFFF)
+                        viewModel.lightThemeReaderFontColor = Color(0xFF101015)
+                        viewModel.darkOverlayColor = Color(0xFF100F21)
                         viewModel.lightModalBackgroundColor = Color(0xFFEAE7E3)
                         viewModel.darkModalBackgroundColor = Color(0xFF121523)
                         viewModel.wordMarkerColor = Color(0xDDAC95E1)
@@ -954,6 +993,26 @@ fun SettingsScreen() {
                 showVerseMarkerColorWheel = false
             },
             initialColor = viewModel.verseMarkerColor
+        )
+    }
+    if (showLightThemeReaderFontColorWheel) {
+        ColorWheelDialog(
+            onDismissRequest = { showLightThemeReaderFontColorWheel = false },
+            onColorSelected = { color ->
+                viewModel.lightThemeReaderFontColor = color
+                showLightThemeReaderFontColorWheel = false
+            },
+            initialColor = viewModel.lightThemeReaderFontColor
+        )
+    }
+    if (showDarkThemeReaderFontColorWheel) {
+        ColorWheelDialog(
+            onDismissRequest = { showDarkThemeReaderFontColorWheel = false },
+            onColorSelected = { color ->
+                viewModel.darkThemeReaderFontColor = color
+                showDarkThemeReaderFontColorWheel = false
+            },
+            initialColor = viewModel.darkThemeReaderFontColor
         )
     }
     if (showLightModalColorWheel) {
