@@ -812,6 +812,7 @@ fun InteractiveModal(
                                                     placeholderVerticalAlign = PlaceholderVerticalAlign.TextCenter
                                                 )
                                             ) {
+                                                //cross-ref button
                                                 Box(
                                                     modifier = Modifier
                                                         .clickable {

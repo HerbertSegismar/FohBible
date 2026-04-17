@@ -50,6 +50,7 @@ import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -226,13 +227,16 @@ fun ChapterView(
                             if (refCount > 0 && onCrossRefClick != null) put("crossref_${verse.verseNumber}", InlineTextContent(
                                 Placeholder((viewModel.fontSize * 1.4).sp, viewModel.fontSize.sp, PlaceholderVerticalAlign.TextCenter)
                             ) {
+                                //cross-ref button
                                 Box(
                                     modifier = Modifier.clickable {
                                         onCrossRefClick(passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary)
                                     }.background(themeColors.primary.copy(alpha = 0.15f), RoundedCornerShape(2.dp)).fillMaxSize(),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text("$refCount", fontSize = (viewModel.fontSize * 0.7f).sp, color = themeColors.verseNumber, fontWeight = FontWeight.Bold)
+                                    Text("$refCount", fontSize = (viewModel.fontSize * 0.7f).sp, color = themeColors.verseNumber, fontWeight = FontWeight.Bold, style = TextStyle(
+                                        lineHeight = (viewModel.fontSize).sp)
+                                    )
                                 }
                             })
                             if (onVerseCommentaryClick != null) put("commentary_${verse.verseNumber}", InlineTextContent(
@@ -244,7 +248,7 @@ fun ChapterView(
                                     },
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text("*", fontSize = (viewModel.fontSize * 1.2f).sp, color = themeColors.verseNumber, fontWeight = FontWeight.Bold)
+                                    Text("*", fontSize = (viewModel.fontSize * 1.2f).sp, color = themeColors.verseNumber, fontWeight = FontWeight.Bold, style = TextStyle(lineHeight = (viewModel.fontSize * 1.4f).sp))
                                 }
                             })
                         }

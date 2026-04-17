@@ -548,19 +548,6 @@ fun SettingsScreen() {
                     )
                 }
                 SettingsItem(
-                    title = "Word Marker Color",
-                    subtitle = "Color for highlighting individual words"
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(30.dp)
-                            .clip(CircleShape)
-                            .background(viewModel.wordMarkerColor)
-                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(0.3f), CircleShape)
-                            .clickable { showWordMarkerColorWheel = true }
-                    )
-                }
-                SettingsItem(
                     title = "Dictionary Mode",
                     subtitle = "Toggle between dictionary or highlight mode on word tap"
                 ) {
@@ -572,6 +559,21 @@ fun SettingsScreen() {
                             checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                         )
                     )
+                }
+                if (!viewModel.isDictionaryMode) {
+                    SettingsItem(
+                        title = "Word Marker Color",
+                        subtitle = "Color for highlighting individual words"
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clip(CircleShape)
+                                .background(viewModel.wordMarkerColor)
+                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(0.3f), CircleShape)
+                                .clickable { showWordMarkerColorWheel = true }
+                        )
+                    }
                 }
                 SettingsItem(
                     title = "Study Mode",
