@@ -69,6 +69,7 @@ import com.fountofhopedotorg.fohbible.composables.SettingsItem
 import com.fountofhopedotorg.fohbible.composables.SettingsSection
 import com.fountofhopedotorg.fohbible.modals.BgModal
 import com.fountofhopedotorg.fohbible.modals.FontModal
+import com.fountofhopedotorg.fohbible.modals.OrbsCountModal
 import com.fountofhopedotorg.fohbible.modals.VersionSelectionModal
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.ui.theme.DefaultPrimaryColor
@@ -79,14 +80,19 @@ import com.fountofhopedotorg.fohbible.utils.availableFontFamilies
 const val MAX_FONT_SIZE = 100
 const val MIN_FONT_SIZE = 1
 
+const val MAX_ORB_COUNT = 20
+const val MIN_ORB_COUNT = 1
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen() {
     val viewModel: AppViewModel = viewModel()
     val context = LocalContext.current
     var showBgModal by remember { mutableStateOf(false) }
+    var showOrbsCountModal by remember { mutableStateOf(false) }
     var showFontModal by remember { mutableStateOf(false) }
     var tempFontSize by remember { mutableStateOf(viewModel.fontSize.toString()) }
+    var tempOrbsCount by remember { mutableStateOf(viewModel.orbsCount.toString()) }
     var showColorWheel by remember { mutableStateOf(false) }
     var customColor by remember { mutableStateOf(viewModel.customColor) }
     var isUsingCustomColor by remember { mutableStateOf(viewModel.isCustomColor) }
@@ -526,6 +532,51 @@ fun SettingsScreen() {
                         )
                     )
                 }
+                SettingsItem(
+                    title = "Show Floating Orbs",
+                    subtitle = if (viewModel.renderOrbs) {
+                        "Turn this off to disable floating orbs"
+                    } else {
+                        "Turn this on to add floating orbs across the entire app"
+                    }
+                ) {
+                    Switch(
+                        checked = viewModel.renderOrbs,
+                        onCheckedChange = { viewModel.renderOrbs = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.primary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                        )
+                    )
+                }
+                if (viewModel.renderOrbs) {
+                    SettingsItem(
+                        title = "Orbs Count ($MIN_ORB_COUNT - $MAX_ORB_COUNT)",
+                        subtitle = "Adjust the number of orbs rendered",
+                        onClick = { showOrbsCountModal = true }
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(
+                                onClick = { viewModel.orbsCount = maxOf(MIN_ORB_COUNT, viewModel.orbsCount - 1) },
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Text("-", fontWeight = FontWeight.Bold)
+                            }
+                            Text(
+                                "${viewModel.orbsCount}",
+                                modifier = Modifier.padding(horizontal = 8.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                                fontSize = 18.sp
+                            )
+                            IconButton(
+                                onClick = { viewModel.orbsCount = minOf(MAX_ORB_COUNT, viewModel.orbsCount + 1) },
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Text("+", fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
             }
         }
         item {
@@ -770,6 +821,8 @@ fun SettingsScreen() {
             confirmButton = {
                 TextButton(
                     onClick = {
+                        viewModel.renderOrbs = false
+                        viewModel.orbsCount = 3
                         viewModel.fontSize = 18
                         viewModel.darkTheme = false
                         viewModel.selectedColor = DefaultPrimaryColor
@@ -785,7 +838,7 @@ fun SettingsScreen() {
                         viewModel.customTextureUri = null
                         viewModel.bgImageIndex = 0
                         viewModel.overlayOpacity = 0.8f
-                        viewModel.lightOverlayColor = Color(0xFFF5F5DC)
+                        viewModel.lightOverlayColor = Color(0xFFFFFFFF)
                         viewModel.darkOverlayColor = Color(0xFF100F21)
                         viewModel.lightModalBackgroundColor = Color(0xFFEAE7E3)
                         viewModel.darkModalBackgroundColor = Color(0xFF121523)
@@ -833,6 +886,19 @@ fun SettingsScreen() {
                 showFontModal = false
             },
             onDismiss = { showFontModal = false },
+            appViewModel = viewModel
+        )
+    }
+    if (showOrbsCountModal) {
+        OrbsCountModal(
+            tempSize = tempOrbsCount,
+            onChange = { tempOrbsCount = it },
+            onConfirm = {
+                val newSize = tempOrbsCount.toIntOrNull() ?: viewModel.orbsCount
+                viewModel.orbsCount = newSize.coerceIn(MIN_ORB_COUNT, MAX_ORB_COUNT)
+                showOrbsCountModal = false
+            },
+            onDismiss = { showOrbsCountModal = false },
             appViewModel = viewModel
         )
     }

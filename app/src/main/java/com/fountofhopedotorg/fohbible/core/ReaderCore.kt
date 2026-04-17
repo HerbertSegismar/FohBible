@@ -69,6 +69,7 @@ import com.fountofhopedotorg.fohbible.data.Verse
 import com.fountofhopedotorg.fohbible.data.VerseContent
 import com.fountofhopedotorg.fohbible.data.getVersesWithSubheadings
 import com.fountofhopedotorg.fohbible.models.AppViewModel
+import com.fountofhopedotorg.fohbible.orbs.FloatingOrbsBackground
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -319,7 +320,12 @@ fun ChapterView(
             val overlayColor = (if (viewModel.darkTheme) viewModel.darkOverlayColor else viewModel.lightOverlayColor).copy(alpha = viewModel.overlayOpacity)
             Box(modifier = Modifier.fillMaxSize().background(overlayColor))
         }
-
+        if (viewModel.renderOrbs) {
+            FloatingOrbsBackground(
+                modifier = Modifier.fillMaxSize(),
+                orbCount = viewModel.orbsCount
+            )
+        }
         Column {
             if (isPortraitHorizontalMulti) {
                 Row(

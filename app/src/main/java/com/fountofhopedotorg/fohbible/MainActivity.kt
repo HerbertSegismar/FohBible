@@ -72,6 +72,7 @@ import com.fountofhopedotorg.fohbible.modals.BgModal
 import com.fountofhopedotorg.fohbible.modals.NavigationModal
 import com.fountofhopedotorg.fohbible.modals.VersionSelectionModal
 import com.fountofhopedotorg.fohbible.models.AppViewModel
+import com.fountofhopedotorg.fohbible.orbs.FloatingOrbsBackground
 import com.fountofhopedotorg.fohbible.screens.BookmarksScreen
 import com.fountofhopedotorg.fohbible.screens.HomeScreen
 import com.fountofhopedotorg.fohbible.screens.NotesScreen
@@ -123,6 +124,8 @@ private val SELECTED_DICTIONARY_KEY = stringPreferencesKey("selected_dictionary"
 private val SELECTED_VERSE_COMMENTARY_KEY = stringPreferencesKey("selected_verse_commentary")
 private val SELECTED_CROSS_REFERENCE_DB_KEY = stringPreferencesKey("selected_cross_ref_db")
 private val PREDEFINED_HIGHLIGHT_COLORS_KEY = stringPreferencesKey("predefined_highlight_colors")
+private val RENDER_ORBS_KEY = booleanPreferencesKey("show_orbs")
+private val ORBS_COUNT_KEY = intPreferencesKey("orbs_count")
 val ComponentActivity.appDataStore: DataStore<Preferences> by preferencesDataStore(name = "app_preferences")
 
 class MainActivity : ComponentActivity() {
@@ -205,7 +208,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
             bgImageIndex = prefs[BG_INDEX_KEY] ?: 0
             customTextureUri = prefs[CUSTOM_TEXTURE_KEY]
             overlayOpacity = prefs[OVERLAY_OPACITY_KEY] ?: 0.8f
-            lightOverlayColor = Color(prefs[LIGHT_OVERLAY_COLOR_KEY] ?: Color(0xFFF5F5DC).toArgb())
+            lightOverlayColor = Color(prefs[LIGHT_OVERLAY_COLOR_KEY] ?: Color(0xFFFFFFFF).toArgb())
             darkOverlayColor = Color(prefs[DARK_OVERLAY_COLOR_KEY] ?: Color(0xFF100F21).toArgb())
             wordMarkerColor = Color(prefs[MARKER_COLOR_KEY] ?: Color(0xDDAC95E1).toArgb())
             isStudyMode = prefs[IS_STUDY_MODE_KEY] ?: true
@@ -217,6 +220,8 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
             selectedDictionary = prefs[SELECTED_DICTIONARY_KEY] ?: "atsbd"
             selectedVerseCommentary = prefs[SELECTED_VERSE_COMMENTARY_KEY] ?: "cbsc"
             selectedCrossReferenceDatabase = prefs[SELECTED_CROSS_REFERENCE_DB_KEY] ?: "obx"
+            renderOrbs = prefs[RENDER_ORBS_KEY] ?: false
+            orbsCount = prefs[ORBS_COUNT_KEY] ?: 6
             primaryPassage = PassageSelection(
                 bookNumber = prefs[PRIMARY_BOOK_NUMBER_KEY] ?: 10,
                 bookName = prefs[PRIMARY_BOOK_NAME_KEY] ?: "Genesis",
@@ -391,6 +396,12 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                     }
                 }
             ) { innerPadding ->
+                if (currentScreen !is Screen.Reader && viewModel.renderOrbs) {
+                    FloatingOrbsBackground(
+                        modifier = Modifier.fillMaxSize(),
+                        orbCount = viewModel.orbsCount
+                    )
+                }
                 Box(modifier = Modifier.padding(innerPadding)) {
                     BackHandler(enabled = viewModel.navigationStack.size > 1) { viewModel.goBack() }
                     when (currentScreen) {

@@ -76,6 +76,7 @@ import androidx.core.text.HtmlCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.ColorWheelDialog
 import com.fountofhopedotorg.fohbible.composables.InteractiveLoadingIndicator
+import com.fountofhopedotorg.fohbible.core.createCommentaryHelperIfExists
 import com.fountofhopedotorg.fohbible.data.BibleData
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.ModalPage
@@ -161,8 +162,7 @@ fun InteractiveModal(
         strongDbHelper = DatabaseHelper(context, "secedictionary.sqlite3")
         commentaryDbHelper?.close()
         val name = databaseHelper?.databaseName ?: return@LaunchedEffect
-        val comName = name.replace(".sqlite3", "com.sqlite3")
-        commentaryDbHelper = if (comName.isNotEmpty()) DatabaseHelper(context, comName) else null
+        commentaryDbHelper = createCommentaryHelperIfExists(context, name)
         verseCommentaryDbHelper?.close()
         verseCommentaryDbHelper = DatabaseHelper(context, "${viewModel.selectedVerseCommentary}.commentaries.sqlite3")
         crossRefDbHelper?.close()

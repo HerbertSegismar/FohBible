@@ -151,7 +151,7 @@ fun SearchScreen(
     val primaryColor = theme.primaryColor
     val colors = mapOf(
         "primary" to primaryColor,
-        "background" to if (isDark) Color(0xFF0f172a) else Color(0xFFF8FAFC),
+        "background" to Color.Transparent,
         "text" to if (isDark) Color.White else Color.Black,
         "muted" to if (isDark) Color(0xFF9CA3AF) else Color(0xFF6B7280),
         "card" to if (isDark) Color(0xFF1E293B) else Color.White,

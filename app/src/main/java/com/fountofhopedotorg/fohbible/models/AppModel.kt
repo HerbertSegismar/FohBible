@@ -35,6 +35,8 @@ class AppViewModel : ViewModel() {
             )
         )
     }
+    var renderOrbs by mutableStateOf(false)
+    var orbsCount by mutableIntStateOf(3)
     var wordsOfJesus by mutableStateOf(Color(0xFFDA4227))
     var editingHighlightColorIndex by mutableIntStateOf(-1)
     var showHighlightColorEditor by mutableStateOf(false)
@@ -73,7 +75,7 @@ class AppViewModel : ViewModel() {
     var bgImageIndex by mutableIntStateOf(0)
     var customTextureUri by mutableStateOf<String?>(null)
     var overlayOpacity by mutableFloatStateOf(0.8f)
-    var lightOverlayColor by mutableStateOf(Color(0xFFF5F5DC))
+    var lightOverlayColor by mutableStateOf(Color(0xFFFFFFFF))
     var darkOverlayColor by mutableStateOf(Color(0xFF100F21))
     var selectedDictionary by mutableStateOf("atsbd")
     var selectedVerseCommentary by mutableStateOf("cbsc")
