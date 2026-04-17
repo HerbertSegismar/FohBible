@@ -293,28 +293,36 @@ fun SettingsScreen() {
                         subtitle = "Horizontal or vertical arrangement"
                     ) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Card(
+                                shape = RoundedCornerShape(20.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor =
+                                        if (viewModel.multiViewLayout == "horizontal") MaterialTheme.colorScheme.primary.copy(
+                                            alpha = 0.1f
+                                        ) else Color.Transparent
+                                )
+                            ){
                             Text(
                                 text = "Horizontal",
                                 modifier = Modifier
                                     .clickable { viewModel.multiViewLayout = "horizontal" }
-                                    .background(
-                                        if (viewModel.multiViewLayout == "horizontal") MaterialTheme.colorScheme.primary.copy(
-                                            alpha = 0.1f
-                                        ) else Color.Transparent
-                                    )
-                                    .padding(8.dp)
-                            )
+                                    .padding(vertical = 8.dp, horizontal = 12.dp )
+                            ) }
+                            Card(
+                                shape = RoundedCornerShape(20.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor =
+                                            if (viewModel.multiViewLayout == "vertical") MaterialTheme.colorScheme.primary.copy(
+                                                alpha = 0.1f
+                                            ) else Color.Transparent
+                                )
+                            ) {
                             Text(
                                 text = "Vertical",
                                 modifier = Modifier
                                     .clickable { viewModel.multiViewLayout = "vertical" }
-                                    .background(
-                                        if (viewModel.multiViewLayout == "vertical") MaterialTheme.colorScheme.primary.copy(
-                                            alpha = 0.1f
-                                        ) else Color.Transparent
-                                    )
-                                    .padding(8.dp)
-                            )
+                                    .padding(vertical = 8.dp, horizontal = 12.dp )
+                            ) }
                         }
                     }
                     SettingsItem(
@@ -350,23 +358,37 @@ fun SettingsScreen() {
                     subtitle = "Adjust text size for better readability",
                     onClick = { showFontModal = true }
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(
-                            onClick = { viewModel.fontSize = maxOf(MIN_FONT_SIZE, viewModel.fontSize - 1) },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Text("A-", fontWeight = FontWeight.Bold)
-                        }
-                        Text(
-                            "${viewModel.fontSize}",
-                            modifier = Modifier.padding(horizontal = 8.dp),
-                            color = MaterialTheme.colorScheme.primary
+                    Card(
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
                         )
-                        IconButton(
-                            onClick = { viewModel.fontSize = minOf(MAX_FONT_SIZE, viewModel.fontSize + 1) },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Text("A+", fontWeight = FontWeight.Bold)
+                    ) {
+                        Row(modifier = Modifier.padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(
+                                onClick = {
+                                    viewModel.fontSize =
+                                        maxOf(MIN_FONT_SIZE, viewModel.fontSize - 1)
+                                },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Text("A-", fontWeight = FontWeight.Bold)
+                            }
+                            Text(
+                                "${viewModel.fontSize}",
+                                modifier = Modifier.padding(horizontal = 8.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                                fontSize = 20.sp
+                            )
+                            IconButton(
+                                onClick = {
+                                    viewModel.fontSize =
+                                        minOf(MAX_FONT_SIZE, viewModel.fontSize + 1)
+                                },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Text("A+", fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
@@ -591,24 +613,31 @@ fun SettingsScreen() {
                         subtitle = "Adjust the number of orbs rendered",
                         onClick = { showOrbsCountModal = true }
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(
-                                onClick = { viewModel.orbsCount = maxOf(MIN_ORB_COUNT, viewModel.orbsCount - 1) },
-                                modifier = Modifier.size(40.dp)
-                            ) {
-                                Text("-", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                            }
-                            Text(
-                                "${viewModel.orbsCount}",
-                                modifier = Modifier.padding(horizontal = 8.dp),
-                                color = MaterialTheme.colorScheme.primary,
-                                fontSize = 18.sp
+                        Card(
+                            shape = RoundedCornerShape(20.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
                             )
-                            IconButton(
-                                onClick = { viewModel.orbsCount = minOf(MAX_ORB_COUNT, viewModel.orbsCount + 1) },
-                                modifier = Modifier.size(40.dp)
-                            ) {
-                                Text("+", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(
+                                    onClick = { viewModel.orbsCount = maxOf(MIN_ORB_COUNT, viewModel.orbsCount - 1) },
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Text("-", fontWeight = FontWeight.Bold)
+                                }
+                                Text(
+                                    "${viewModel.orbsCount}",
+                                    modifier = Modifier.padding(horizontal = 8.dp),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontSize = 20.sp
+                                )
+                                IconButton(
+                                    onClick = { viewModel.orbsCount = minOf(MAX_ORB_COUNT, viewModel.orbsCount + 1) },
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Text("+", fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }

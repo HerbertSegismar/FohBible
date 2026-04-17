@@ -170,28 +170,44 @@ fun FontSizeControls(viewModel: AppViewModel) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("Font Size", style = MaterialTheme.typography.bodyMedium, fontSize = 14.sp)
-            Text("1-100", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
+            Text(
+                "1-100",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Medium
+            )
         }
         Spacer(modifier = Modifier.height(8.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = { viewModel.fontSize = maxOf(minFontSize, viewModel.fontSize - 1) }, modifier = Modifier.size(32.dp)) {
-                Text("A-", fontWeight = FontWeight.Bold)
-            }
-            Text(
-                text = "${viewModel.fontSize}",
-                modifier = Modifier
-                    .padding(horizontal = 16.dp)
-                    .clickable { showFontSizeDialog = true },
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
+        Card(
+            shape = RoundedCornerShape(4.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
             )
-            IconButton(onClick = { viewModel.fontSize = minOf(maxFontSize, viewModel.fontSize + 1) }, modifier = Modifier.size(32.dp)) {
-                Text("A+", fontWeight = FontWeight.Bold)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = {
+                    viewModel.fontSize = maxOf(minFontSize, viewModel.fontSize - 1)
+                }, modifier = Modifier.size(32.dp)) {
+                    Text("A-", fontWeight = FontWeight.Bold)
+                }
+                Text(
+                    text = "${viewModel.fontSize}",
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .clickable { showFontSizeDialog = true },
+                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+                IconButton(onClick = {
+                    viewModel.fontSize = minOf(maxFontSize, viewModel.fontSize + 1)
+                }, modifier = Modifier.size(32.dp)) {
+                    Text("A+", fontWeight = FontWeight.Bold)
+                }
             }
         }
     }

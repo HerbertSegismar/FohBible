@@ -435,8 +435,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 if (viewModel.scrollSync) viewModel.secondaryPassage = newPassage
                             }
                             key(
-                                viewModel.darkTheme,
-                                if (viewModel.darkTheme) viewModel.darkThemeReaderFontColor else viewModel.lightThemeReaderFontColor
+                                viewModel.darkThemeReaderFontColor, viewModel.lightThemeReaderFontColor
                             ) {
                                 ReaderScreen(
                                     passage = passage,
