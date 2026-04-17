@@ -119,7 +119,7 @@ class AppViewModel : ViewModel() {
                     try {
                         val files = context.assets.list(dir)
                         files?.forEach { file ->
-                            if (file.endsWith(".sqlite3") || file.endsWith(".sqlite")) {
+                            if (file.endsWith(".sqlite3")) {
                                 databaseFiles.add(file)
                             }
                         }

@@ -1,5 +1,4 @@
 package com.fountofhopedotorg.fohbible.screens
-
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -73,7 +72,6 @@ fun ReaderScreen(
             highlightIcon = colorScheme.primary
         )
     }
-
     var primaryCurrent by remember { mutableStateOf(passage.copy(verse = 1)) }
     var secondaryCurrent by remember { mutableStateOf(viewModel.secondaryPassage.copy(verse = 1)) }
     var targetVerse by remember { mutableStateOf(passage.verse) }
@@ -83,7 +81,6 @@ fun ReaderScreen(
     var selectedVersesForNote by remember { mutableStateOf(emptyList<Verse>()) }
     var crossRefHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     val contextFont = LocalContext.current
-
     LaunchedEffect(viewModel.selectedCrossReferenceDatabase) {
         crossRefHelper?.close()
         crossRefHelper = DatabaseHelper(contextFont, "${viewModel.selectedCrossReferenceDatabase}.crossreferences.sqlite3")
@@ -91,11 +88,9 @@ fun ReaderScreen(
     DisposableEffect(Unit) {
         onDispose { crossRefHelper?.close() }
     }
-
     var crossRefBook by remember { mutableIntStateOf(0) }
     var crossRefChapter by remember { mutableIntStateOf(0) }
     var crossRefVerse by remember { mutableIntStateOf(0) }
-
     LaunchedEffect(passage.bookNumber, passage.chapter, passage.verse) {
         if (passage.bookNumber != primaryCurrent.bookNumber || passage.chapter != primaryCurrent.chapter) {
             primaryCurrent = passage.copy(verse = 1)
@@ -118,13 +113,11 @@ fun ReaderScreen(
             secondaryCurrent = primaryCurrent
         }
     }
-
     val primaryLoadedVerses = remember { mutableStateMapOf<Pair<Int, Int>, List<VerseContent>>() }
     val secondaryLoadedVerses = remember { mutableStateMapOf<Pair<Int, Int>, List<VerseContent>>() }
     LaunchedEffect(databaseHelper) {
         primaryLoadedVerses.clear()
     }
-
     var secondaryDatabaseHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     LaunchedEffect(viewModel.multiVersion, viewModel.secondaryDbName) {
         secondaryDatabaseHelper?.close()
@@ -135,11 +128,9 @@ fun ReaderScreen(
     LaunchedEffect(secondaryDatabaseHelper) {
         secondaryLoadedVerses.clear()
     }
-
     val multi = viewModel.multiVersion
     val synced = viewModel.scrollSync && multi && secondaryDatabaseHelper != null
     val currentFontFamily = getFontFamily(viewModel.selectedFontFamily)
-
     var isButtonVisible by remember { mutableStateOf(true) }
     val buttonAlpha by animateFloatAsState(if (isButtonVisible) 1f else 0.2f, label = "buttonAlpha")
     val scope = rememberCoroutineScope()
@@ -150,6 +141,7 @@ fun ReaderScreen(
             isButtonVisible = false
         }
     }
+
     LaunchedEffect(primaryCurrent) {
         isButtonVisible = true
         scheduleFade()
@@ -166,7 +158,6 @@ fun ReaderScreen(
             isWordHighlightMode = false
         }
     }
-
     var dictionaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var strongDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var commentaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
@@ -187,106 +178,6 @@ fun ReaderScreen(
     var verseCommentaryBook by remember { mutableIntStateOf(0) }
     var verseCommentaryChapter by remember { mutableIntStateOf(0) }
     var verseCommentaryVerse by remember { mutableIntStateOf(0) }
-    var showMenu by remember { mutableStateOf(false) }
-    var showBgModal by remember { mutableStateOf(false) }
-    var showVerseOptions by remember { mutableStateOf(false) }
-    var selectedVerse by remember { mutableStateOf<Verse?>(null) }
-    var selectedPassage by remember { mutableStateOf<PassageSelection?>(null) }
-    var selectedIsPrimary by remember { mutableStateOf(false) }
-
-    var refreshKey by remember { mutableIntStateOf(0) }
-    val subheadingsDbHelper = remember { DatabaseHelper(contextFont, "kjvsubheadings.sqlite3") }
-    var showCrossRefModal by remember { mutableStateOf(false) }
-    var crossRefSource by remember { mutableStateOf("") }
-    var crossRefContent by remember { mutableStateOf("") }
-    var crossRefBibleDb by remember { mutableStateOf<DatabaseHelper?>(null) }
-
-    val onWordPress = remember {
-        { word: String, isPrimary: Boolean ->
-            currentModalIsOldTestament = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
-            val trimmed = word.trim()
-            val definition = dictionaryDbHelper?.getWordDefinition(trimmed) ?: "Definition not found."
-            currentWord = trimmed
-            wordDefinition = definition
-            wordDb = if (isPrimary) databaseHelper else secondaryDatabaseHelper
-            showWordModal = true
-        }
-    }
-
-    val onStrongsPress = remember {
-        { strongNumber: String, _: Int, isPrimary: Boolean ->
-            val isOldTestamentForVersion = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
-            currentModalIsOldTestament = isOldTestamentForVersion
-            val trimmed = strongNumber.trim()
-            val prefixed = if (trimmed.firstOrNull()?.isLetter() ?: false) trimmed else (if (isOldTestamentForVersion) "H" else "G") + trimmed
-            val definition = strongDbHelper?.getStrongDefinition(prefixed) ?: "Strong's definition not found."
-            currentStrongNumber = prefixed
-            strongDefinition = definition
-            strongDb = if (isPrimary) databaseHelper else secondaryDatabaseHelper
-            showStrongsModal = true
-        }
-    }
-
-    val onTagPress = remember {
-        { marker: String, bookNumber: Int, chapter: Int, verseNumber: Int, isPrimary: Boolean ->
-            currentModalIsOldTestament = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
-            val dbHelper = if (isPrimary) commentaryDbHelper else secondaryCommentaryDbHelper
-            val text = dbHelper?.getCommentary(bookNumber, chapter, verseNumber, marker) ?: "No commentary found."
-            commentaryTitle = "Notes on ${BibleData.getBookByCustomNumber(bookNumber)?.name ?: ""} $chapter:$verseNumber$marker"
-            commentaryContent = text
-            commentaryBibleDb = if (isPrimary) databaseHelper else secondaryDatabaseHelper
-            showCommentaryModal = true
-        }
-    }
-
-    val onVerseLongPress = remember {
-        { verse: Verse, currentPassage: PassageSelection, isPrimary: Boolean ->
-            selectedVerse = verse
-            selectedPassage = currentPassage
-            selectedIsPrimary = isPrimary
-            showVerseOptions = true
-        }
-    }
-
-    val onCrossRefClick = remember {
-        { book: Int, chapter: Int, verse: Int, isPrimary: Boolean ->
-            val dbForVerses = if (isPrimary) databaseHelper else secondaryDatabaseHelper
-            val refs = crossRefHelper?.getCrossReferences(book, chapter, verse) ?: emptyList()
-            val bookName = BibleData.getBookByCustomNumber(book)?.name ?: book.toString()
-            crossRefSource = "References for $bookName $chapter:$verse"
-            val htmlItems = refs.joinToString("<br>") { ref ->
-                val toBook = BibleData.getBookByCustomNumber(ref.bookTo)?.name ?: ref.bookTo.toString()
-                val verseRange = if (ref.verseToStart == ref.verseToEnd) {
-                    ref.verseToStart.toString()
-                } else {
-                    "${ref.verseToStart}-${ref.verseToEnd}"
-                }
-                val href = "B:${ref.bookTo} ${ref.chapterTo}:$verseRange"
-                "<a href=\"$href\">$toBook ${ref.chapterTo}:$verseRange</a>"
-            }
-            crossRefContent = htmlItems
-            crossRefBibleDb = dbForVerses
-            crossRefBook = book
-            crossRefChapter = chapter
-            crossRefVerse = verse
-            currentModalIsOldTestament = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
-            showCrossRefModal = true
-        }
-    }
-
-    val onVerseCommentaryClick = remember {
-        { book: Int, chap: Int, verseNum: Int ->
-            verseCommentaryBook = book
-            verseCommentaryChapter = chap
-            verseCommentaryVerse = verseNum
-            currentModalIsOldTestament = viewModel.isOldTestament
-            showVerseCommentaryModal = true
-        }
-    }
-
-    val onWordHighlightAction = remember {
-        { activateWordHighlightMode() }
-    }
 
     LaunchedEffect(viewModel.selectedDictionary, databaseHelper?.databaseName) {
         dictionaryDbHelper?.close()
@@ -296,11 +187,47 @@ fun ReaderScreen(
         commentaryDbHelper?.close()
         commentaryDbHelper = createCommentaryHelperIfExists(contextFont, databaseHelper?.databaseName)
     }
+
     LaunchedEffect(viewModel.multiVersion, viewModel.secondaryDbName, secondaryDatabaseHelper?.databaseName) {
         secondaryCommentaryDbHelper?.close()
         secondaryCommentaryDbHelper = createCommentaryHelperIfExists(contextFont, secondaryDatabaseHelper?.databaseName)
     }
-
+    val onWordPress: (String, Boolean) -> Unit = { word, isPrimary ->
+        currentModalIsOldTestament = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
+        val trimmed = word.trim()
+        val definition = dictionaryDbHelper?.getWordDefinition(trimmed) ?: "Definition not found."
+        currentWord = trimmed
+        wordDefinition = definition
+        wordDb = if (isPrimary) databaseHelper else secondaryDatabaseHelper
+        showWordModal = true
+    }
+    val onStrongsPress: (String, Int, Boolean) -> Unit = { strongNumber, _, isPrimary ->
+        val isOldTestamentForVersion = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
+        currentModalIsOldTestament = isOldTestamentForVersion
+        val trimmed = strongNumber.trim()
+        val prefixed = if (trimmed.firstOrNull()?.isLetter() ?: false) trimmed else (if (isOldTestamentForVersion) "H" else "G") + trimmed
+        val definition = strongDbHelper?.getStrongDefinition(prefixed) ?: "Strong's definition not found."
+        currentStrongNumber = prefixed
+        strongDefinition = definition
+        strongDb = if (isPrimary) databaseHelper else secondaryDatabaseHelper
+        showStrongsModal = true
+    }
+    val onTagPress: (String, Int, Int, Int, Boolean) -> Unit = { marker, bookNumber, chapter, verseNumber, isPrimary ->
+        currentModalIsOldTestament = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
+        val dbHelper = if (isPrimary) commentaryDbHelper else secondaryCommentaryDbHelper
+        val text = dbHelper?.getCommentary(bookNumber, chapter, verseNumber, marker) ?: "No commentary found."
+        commentaryTitle = "Notes on ${BibleData.getBookByCustomNumber(bookNumber)?.name ?: ""} $chapter:$verseNumber$marker"
+        commentaryContent = text
+        commentaryBibleDb = if (isPrimary) databaseHelper else secondaryDatabaseHelper
+        showCommentaryModal = true
+    }
+    val onVerseCommentaryClick: (Int, Int, Int) -> Unit = { book, chap, verseNum ->
+        verseCommentaryBook = book
+        verseCommentaryChapter = chap
+        verseCommentaryVerse = verseNum
+        currentModalIsOldTestament = viewModel.isOldTestament
+        showVerseCommentaryModal = true
+    }
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -309,7 +236,47 @@ fun ReaderScreen(
             viewModel.bgImageIndex = 34
         }
     }
-
+    var showMenu by remember { mutableStateOf(false) }
+    var showBgModal by remember { mutableStateOf(false) }
+    var showVerseOptions by remember { mutableStateOf(false) }
+    var selectedVerse by remember { mutableStateOf<Verse?>(null) }
+    var selectedPassage by remember { mutableStateOf<PassageSelection?>(null) }
+    var selectedIsPrimary by remember { mutableStateOf(false) }
+    val onVerseLongPress: (Verse, PassageSelection, Boolean) -> Unit = { verse, currentPassage, isPrimary ->
+        selectedVerse = verse
+        selectedPassage = currentPassage
+        selectedIsPrimary = isPrimary
+        showVerseOptions = true
+    }
+    var refreshKey by remember { mutableIntStateOf(0) }
+    val subheadingsDbHelper = remember { DatabaseHelper(contextFont, "kjvsubheadings.sqlite3") }
+    var showCrossRefModal by remember { mutableStateOf(false) }
+    var crossRefSource by remember { mutableStateOf("") }
+    var crossRefContent by remember { mutableStateOf("") }
+    var crossRefBibleDb by remember { mutableStateOf<DatabaseHelper?>(null) }
+    val onCrossRefClick: (Int, Int, Int, Boolean) -> Unit = { book, chapter, verse, isPrimary ->
+        val dbForVerses = if (isPrimary) databaseHelper else secondaryDatabaseHelper
+        val refs = crossRefHelper?.getCrossReferences(book, chapter, verse) ?: emptyList()
+        val bookName = BibleData.getBookByCustomNumber(book)?.name ?: book.toString()
+        crossRefSource = "References for $bookName $chapter:$verse"
+        val htmlItems = refs.joinToString("<br>") { ref ->
+            val toBook = BibleData.getBookByCustomNumber(ref.bookTo)?.name ?: ref.bookTo.toString()
+            val verseRange = if (ref.verseToStart == ref.verseToEnd) {
+                ref.verseToStart.toString()
+            } else {
+                "${ref.verseToStart}-${ref.verseToEnd}"
+            }
+            val href = "B:${ref.bookTo} ${ref.chapterTo}:$verseRange"
+            "<a href=\"$href\">$toBook ${ref.chapterTo}:$verseRange</a>"
+        }
+        crossRefContent = htmlItems
+        crossRefBibleDb = dbForVerses
+        crossRefBook = book
+        crossRefChapter = chapter
+        crossRefVerse = verse
+        currentModalIsOldTestament = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
+        showCrossRefModal = true
+    }
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
@@ -339,7 +306,7 @@ fun ReaderScreen(
                 refreshKey = refreshKey,
                 onVerseCommentaryClick = onVerseCommentaryClick,
                 markerColor = viewModel.wordMarkerColor,
-                onWordHighlightAction = onWordHighlightAction
+                onWordHighlightAction = { activateWordHighlightMode() }
             )
         } else if (synced) {
             SyncedMultiVersionReader(
@@ -370,7 +337,7 @@ fun ReaderScreen(
                 refreshKey = refreshKey,
                 onVerseCommentaryClick = onVerseCommentaryClick,
                 markerColor = viewModel.wordMarkerColor,
-                onWordHighlightAction = onWordHighlightAction
+                onWordHighlightAction = { activateWordHighlightMode() }
             )
         } else {
             IndependentMultiVersionReader(
@@ -406,7 +373,7 @@ fun ReaderScreen(
                 refreshKey = refreshKey,
                 onVerseCommentaryClick = onVerseCommentaryClick,
                 markerColor = viewModel.wordMarkerColor,
-                onWordHighlightAction = onWordHighlightAction
+                onWordHighlightAction = { activateWordHighlightMode() }
             )
         }
         val fabModifier = Modifier
