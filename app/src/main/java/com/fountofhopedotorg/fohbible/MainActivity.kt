@@ -226,7 +226,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
             selectedVerseCommentary = prefs[SELECTED_VERSE_COMMENTARY_KEY] ?: "cbsc"
             selectedCrossReferenceDatabase = prefs[SELECTED_CROSS_REFERENCE_DB_KEY] ?: "obx"
             renderOrbs = prefs[RENDER_ORBS_KEY] ?: false
-            orbsCount = prefs[ORBS_COUNT_KEY] ?: 6
+            orbsCount = prefs[ORBS_COUNT_KEY] ?: 3
             primaryPassage = PassageSelection(
                 bookNumber = prefs[PRIMARY_BOOK_NUMBER_KEY] ?: 10,
                 bookName = prefs[PRIMARY_BOOK_NAME_KEY] ?: "Genesis",
@@ -249,6 +249,8 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
             if (predefinedHighlightColors.isEmpty()) resetHighlightColorsToDefault()
         }
     }
+    SavePreference({ viewModel.renderOrbs }, RENDER_ORBS_KEY, dataStore)
+    SavePreference({ viewModel.orbsCount }, ORBS_COUNT_KEY, dataStore)
     SavePreference({ viewModel.lightThemeReaderFontColor.toArgb() }, LIGHT_THEME_READER_FONT_COLOR_KEY, dataStore)
     SavePreference({ viewModel.darkThemeReaderFontColor.toArgb() }, DARK_THEME_READER_FONT_COLOR_KEY, dataStore)
     SavePreference({ viewModel.fontSize }, FONT_SIZE_KEY, dataStore)
