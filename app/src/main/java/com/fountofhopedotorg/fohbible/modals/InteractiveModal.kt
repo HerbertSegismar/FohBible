@@ -1,5 +1,4 @@
 package com.fountofhopedotorg.fohbible.modals
-
 import android.content.res.Configuration
 import android.text.SpannableString
 import android.text.method.LinkMovementMethod
@@ -31,7 +30,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -77,6 +75,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.text.HtmlCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.ColorWheelDialog
+import com.fountofhopedotorg.fohbible.composables.InteractiveLoadingIndicator
 import com.fountofhopedotorg.fohbible.data.BibleData
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.ModalPage
@@ -94,6 +93,12 @@ import com.fountofhopedotorg.fohbible.functions.prepareStrongContent
 import com.fountofhopedotorg.fohbible.functions.sanitizeHtmlContent
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.utils.Fonts
+import com.fountofhopedotorg.fohbible.utils.InteractiveModalUtils.crossReferenceDatabaseDisplayNames
+import com.fountofhopedotorg.fohbible.utils.InteractiveModalUtils.crossReferenceDatabases
+import com.fountofhopedotorg.fohbible.utils.InteractiveModalUtils.dictionaries
+import com.fountofhopedotorg.fohbible.utils.InteractiveModalUtils.dictionaryDisplayNames
+import com.fountofhopedotorg.fohbible.utils.InteractiveModalUtils.verseCommentaries
+import com.fountofhopedotorg.fohbible.utils.InteractiveModalUtils.verseCommentaryDisplayNames
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import com.fountofhopedotorg.fohbible.utils.getFontFamily
 import kotlinx.coroutines.Dispatchers
@@ -128,46 +133,17 @@ fun InteractiveModal(
         primary = MaterialTheme.colorScheme.primary,
         tagColor = MaterialTheme.colorScheme.secondary,
         tagBg = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f),
-        wordsOfJesus = Color(0xFFDA4227),
+        wordsOfJesus = viewModel.wordsOfJesus,
         searchHighlightBg = if (viewModel.darkTheme) Color(0xFF81D4FA).copy(alpha = 0.3f) else Color.Yellow.copy(alpha = 0.3f),
         highlightIcon = MaterialTheme.colorScheme.primary
     )
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val currentFontFamily = getFontFamily(viewModel.selectedFontFamily)
-
     var dictionaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var strongDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var commentaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var verseCommentaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var crossRefDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
-
-    val dictionaries = listOf("atsbd", "cbtel", "isbe", "noah", "oxford", "topical", "tcr")
-    val dictionaryDisplayNames = mapOf(
-        "atsbd" to "ATSBD",
-        "cbtel" to "CBTEL",
-        "isbe" to "Int'l Standard Bible Encyclopedia",
-        "noah" to "Noah Webster's Dictionary",
-        "oxford" to "Oxford Dictionary",
-        "topical" to "Topical Bible Dictionary",
-        "tcr" to "Thompson Chain Reference"
-    )
-    val verseCommentaries = listOf("cbsc", "spurgeon", "ebc", "fairbairn", "hawker", "mhwbc", "scofield", "tsk")
-    val verseCommentaryDisplayNames = mapOf(
-        "cbsc" to "Cambridge Bible Commentary",
-        "spurgeon" to "Charles Spurgeon's Commentary",
-        "ebc" to "Expositor's Bible Commentary",
-        "fairbairn" to "Fairbairn's Typology of Scripture",
-        "hawker" to "Hawker's Poor Man's Commentary",
-        "mhwbc" to "Matthew Henry's Commentary",
-        "scofield" to "Scofield Reference Bible",
-        "tsk" to "Treasury of Scripture Knowledge"
-    )
-    val crossReferenceDatabases = listOf("esv", "niv11", "obx")
-    val crossReferenceDatabaseDisplayNames = mapOf(
-        "esv" to "References from ESV",
-        "niv11" to "References from NIV",
-        "obx" to "References from OpenBible Project"
-    )
 
     DisposableEffect(Unit) {
         onDispose {
@@ -178,7 +154,6 @@ fun InteractiveModal(
             verseCommentaryDbHelper?.close()
         }
     }
-
     LaunchedEffect(show, viewModel.selectedDictionary, viewModel.selectedVerseCommentary, viewModel.selectedCrossReferenceDatabase, databaseHelper?.databaseName) {
         dictionaryDbHelper?.close()
         dictionaryDbHelper = DatabaseHelper(context, "${viewModel.selectedDictionary}.dictionary.sqlite3")
@@ -193,10 +168,8 @@ fun InteractiveModal(
         crossRefDbHelper?.close()
         crossRefDbHelper = DatabaseHelper(context, "${viewModel.selectedCrossReferenceDatabase}.crossreferences.sqlite3")
     }
-
     val stack = remember { mutableStateListOf<ModalPage>() }
     val scrollStates = remember { mutableStateMapOf<ModalPage, ScrollState>() }
-
     LaunchedEffect(show) {
         if (show) {
             stack.clear()
@@ -213,27 +186,22 @@ fun InteractiveModal(
                 "definition" -> {
                     val dbDisplayName = dictionaryDisplayNames[viewModel.selectedDictionary] ?: viewModel.selectedDictionary
                     val capitalizedWord = word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
-
                     if (definition.isNotBlank() && !definition.contains("not found", ignoreCase = true)) {
                         val pairs = listOf(Pair(word, definition))
                         val isOxford = viewModel.selectedDictionary == "oxford"
                         val isTopical = viewModel.selectedDictionary == "topical"
-
                         val newContent = buildDefinitionContent(
                             originalWord = word,
                             pairs = pairs,
                             isOxford = isOxford,
                             isTopical = isTopical
                         )
-
                         val title = "Definition of $capitalizedWord"
                         stack.add(ModalPage(title, "definition", newContent, word = word, description = dbDisplayName, isOldTestament = isOldTestament))
                     } else {
                         val loadingPage = ModalPage("Searching for $capitalizedWord...", "definition", "Loading...", word = word, description = dbDisplayName, isOldTestament = isOldTestament)
                         stack.add(loadingPage)
-
                         val pairs = getDefinitionOrClosest(dictionaryDbHelper, word) ?: emptyList()
-
                         if (pairs.isNotEmpty()) {
                             val isExact = pairs.size == 1 && pairs[0].first.equals(word, ignoreCase = true)
                             val isTopical = viewModel.selectedDictionary == "topical"
@@ -246,14 +214,12 @@ fun InteractiveModal(
                             } else {
                                 "Matches for \"$capitalizedWord\""
                             }
-
                             val newContent = buildDefinitionContent(
                                 originalWord = word,
                                 pairs = pairs,
                                 isOxford = viewModel.selectedDictionary == "oxford",
                                 isTopical = isTopical
                             )
-
                             stack[0] = loadingPage.copy(title = newTitle, content = newContent)
                         } else {
                             stack[0] = loadingPage.copy(title = "Definition not found", content = "No results for \"$word\".")
@@ -313,18 +279,12 @@ fun InteractiveModal(
             }
         }
     }
-
     val scope = rememberCoroutineScope()
-
     val onWordPress: (String) -> Unit = Unit@{ w ->
         val trimmed = w.trim()
-        if (trimmed.isEmpty() || trimmed.matches(Regex(".*\\d.*"))) {
-            return@Unit
-        }
-
+        if (trimmed.isEmpty() || trimmed.matches(Regex(".*\\d.*"))) { return@Unit }
         val dbDisplayName = dictionaryDisplayNames[viewModel.selectedDictionary] ?: viewModel.selectedDictionary
         val capitalizedWord = trimmed.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
-
         val currentIsOld = stack.last().isOldTestament
         val loadingTitle = "Loading Definition of $capitalizedWord"
         val loadingPage = ModalPage(
@@ -336,28 +296,18 @@ fun InteractiveModal(
             isOldTestament = currentIsOld
         )
         stack.add(loadingPage)
-
         scope.launch {
             val pairs: List<Pair<String, String>> = getDefinitionOrClosest(dictionaryDbHelper, trimmed) ?: emptyList()
-
             val isOxford = viewModel.selectedDictionary == "oxford"
             val isTopical = viewModel.selectedDictionary == "topical"
-
             val newTitle = if (pairs.isNotEmpty()) {
                 val isExact = pairs.size == 1 && pairs[0].first.equals(trimmed, ignoreCase = true)
-                if (isTopical) {
-                    "References for $capitalizedWord"
-                } else if (isExact) {
+                if (isTopical) { "References for $capitalizedWord" } else if (isExact) {
                     "Definition of ${pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }}"
                 } else if (pairs.size == 1) {
                     "Closest match for ${pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }}"
-                } else {
-                    "Matches for \"$capitalizedWord\""
-                }
-            } else {
-                "Definition of $capitalizedWord not found"
-            }
-
+                } else { "Matches for \"$capitalizedWord\"" }
+            } else { "Definition of $capitalizedWord not found" }
             val newContent = if (pairs.isNotEmpty()) {
                 buildDefinitionContent(
                     originalWord = trimmed,
@@ -365,14 +315,9 @@ fun InteractiveModal(
                     isOxford = isOxford,
                     isTopical = isTopical
                 )
-            } else {
-                "No definition found."
-            }
-
+            } else { "No definition found." }
             val index = stack.indexOf(loadingPage)
-            if (index != -1) {
-                stack[index] = loadingPage.copy(title = newTitle, content = newContent)
-            }
+            if (index != -1) { stack[index] = loadingPage.copy(title = newTitle, content = newContent) }
         }
     }
 
@@ -380,14 +325,9 @@ fun InteractiveModal(
         val trimmed = strongNumber.trim()
         if (trimmed.isEmpty()) return@Unit
         val currentIsOld = stack.last().isOldTestament
-        val prefixed = if (trimmed.firstOrNull()?.isLetter() ?: false) {
-            trimmed.uppercase()
-        } else {
-            (if (currentIsOld) "H" else "G") + trimmed
-        }
-        if (!prefixed.matches(Regex("^[HG]\\d+"))) {
-            return@Unit
-        }
+        val prefixed = if (trimmed.firstOrNull()?.isLetter() ?: false) { trimmed.uppercase() } else {
+            (if (currentIsOld) "H" else "G") + trimmed }
+        if (!prefixed.matches(Regex("^[HG]\\d+"))) { return@Unit }
         val title = "Strong's Definition for $prefixed"
         val loadingPage = ModalPage(title, "strong", "Loading...", strongNumber = prefixed, isOldTestament = currentIsOld)
         stack.add(loadingPage)
@@ -397,12 +337,9 @@ fun InteractiveModal(
             }
             val prepared = prepareStrongContent(definition)
             val index = stack.indexOf(loadingPage)
-            if (index != -1) {
-                stack[index] = loadingPage.copy(content = prepared)
-            }
+            if (index != -1) { stack[index] = loadingPage.copy(content = prepared) }
         }
     }
-
     val onTagPress: (String, PassageSelection) -> Unit = Unit@{ marker, passage ->
         val bookNumber = passage.bookNumber
         val chapter = passage.chapter
@@ -421,8 +358,7 @@ fun InteractiveModal(
                 if (text?.isNotBlank() == true) "Verse $verseNum: \n$text" else null
             }
             val combined = if (commentaries.isNotEmpty()) {
-                commentaries.joinToString("\n\n────────────────────────\n\n")
-            } else {
+                commentaries.joinToString("\n\n────────────────────────\n\n") } else {
                 "No commentary found for marker \"$marker\" in this passage."
             }
             val sanitizedCombined = sanitizeHtmlContent(combined)
@@ -434,7 +370,6 @@ fun InteractiveModal(
             }
         }
     }
-
     val onCrossRefClick: (Int, Int, Int, Boolean) -> Unit = { book, chap, verseNum, isOld ->
         scope.launch {
             val refs = withContext(Dispatchers.IO) {
@@ -461,7 +396,6 @@ fun InteractiveModal(
             stack.add(newPage)
         }
     }
-
     val onVerseCommentaryClick: (bookNumber: Int, chapter: Int, verseNumber: Int, isOldTestament: Boolean) -> Unit = { book, chap, verseNum, isOld ->
         val displayName = verseCommentaryDisplayNames[viewModel.selectedVerseCommentary] ?: viewModel.selectedVerseCommentary
         val bookName = BibleData.getBookByCustomNumber(book)?.name ?: "Book"
@@ -492,34 +426,121 @@ fun InteractiveModal(
             }
         }
     }
-
-    val lightModalColor = if (viewModel.lightModalBackgroundColor != Color.Unspecified) {
-        viewModel.lightModalBackgroundColor
-    } else {
-        MaterialTheme.colorScheme.surface
-    }
-    val darkModalColor = if (viewModel.darkModalBackgroundColor != Color.Unspecified) {
-        viewModel.darkModalBackgroundColor
-    } else {
-        MaterialTheme.colorScheme.surface
-    }
-    val modalBackgroundColor = if (isDark) { darkModalColor } else { lightModalColor }
-
-    val configuration = LocalConfiguration.current
-    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    var crossRefDropdownExpanded by remember { mutableStateOf(false) }
-
     if (show) {
         if (stack.isEmpty()) return
         val currentPage = stack.last()
         val scrollState = scrollStates.getOrPut(currentPage) { ScrollState(0) }
         val textColor = MaterialTheme.colorScheme.onBackground
         val linkColor = MaterialTheme.colorScheme.primary
+
         var showModalColorWheel by remember { mutableStateOf(false) }
         var dictionaryDropdownExpanded by remember { mutableStateOf(false) }
         var commentaryDropdownExpanded by remember { mutableStateOf(false) }
+        var crossRefDropdownExpanded by remember { mutableStateOf(false) }
         var showEditWordDialog by remember { mutableStateOf(false) }
+        fun switchToDictionary(newDict: String) {
+            if (viewModel.selectedDictionary == newDict) return
+            val currentWord = currentPage.word ?: return
+            val dbDisplayName = dictionaryDisplayNames[newDict] ?: newDict
+            val loadingTitle = "Switching to ${newDict.uppercase()}"
+            val loadingPage = currentPage.copy(
+                title = loadingTitle,
+                content = "Loading...",
+                description = dbDisplayName
+            )
+            val index = stack.lastIndex
+            stack[index] = loadingPage
+            viewModel.selectedDictionary = newDict
+            scope.launch {
+                val tempDbHelper = withContext(Dispatchers.IO) {
+                    DatabaseHelper(context, "${newDict}.dictionary.sqlite3")
+                }
+                val pairs: List<Pair<String, String>> = getDefinitionOrClosest(tempDbHelper, currentWord) ?: emptyList()
+                val capitalizedWord = currentWord.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
+                val isExact = pairs.size == 1 && pairs[0].first.equals(currentWord, ignoreCase = true)
+                val isTopical = newDict == "topical"
+                val newTitle = if (isTopical) { "References for $capitalizedWord" } else if (isExact) {
+                    "Definition of ${pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }}"
+                } else if (pairs.size == 1) {
+                    "Closest match for ${pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }}"
+                } else { "Matches for \"$capitalizedWord\"" }
+                val newContent = buildDefinitionContent(
+                    originalWord = word,
+                    pairs = pairs,
+                    isOxford = viewModel.selectedDictionary == "oxford",
+                    isTopical = viewModel.selectedDictionary == "topical"
+                )
+                val updateIndex = stack.indexOf(loadingPage)
+                if (updateIndex != -1) { stack[updateIndex] = loadingPage.copy(title = newTitle, content = newContent) }
+                withContext(Dispatchers.IO) { tempDbHelper.close() }
+            }
+        }
+        fun switchToVerseCommentary(newComKey: String) {
+            if (viewModel.selectedVerseCommentary == newComKey) return
+            val bookNum = currentPage.bookNumber ?: return
+            val chap = currentPage.chapter ?: return
+            val vers = currentPage.verse ?: return
+            val newDisplayName = verseCommentaryDisplayNames[newComKey] ?: newComKey
+            val loadingPage = currentPage.copy( description = newDisplayName, content = "Loading..." )
+            val index = stack.lastIndex
+            stack[index] = loadingPage
+            viewModel.selectedVerseCommentary = newComKey
+            scope.launch {
+                val tempDbHelper = withContext(Dispatchers.IO) {
+                    DatabaseHelper(context, "${newComKey}.commentaries.sqlite3")
+                }
+                val commentaries = getVerseCommentaries(tempDbHelper, bookNum, chap, vers)
+                val newContent = if (commentaries.isNullOrEmpty()) { "No commentaries found." } else {
+                    commentaries.joinToString("<br><br>──────────<br><br>") { commentary -> commentary.text }
+                }
+                val updateIndex = stack.indexOf(loadingPage)
+                if (updateIndex != -1) { stack[updateIndex] = loadingPage.copy(content = newContent) }
+                withContext(Dispatchers.IO) { tempDbHelper.close() }
+            }
+        }
 
+        fun switchToCrossReference(newDbKey: String) {
+            if (viewModel.selectedCrossReferenceDatabase == newDbKey) return
+            val loadingPage = currentPage.copy( description = crossReferenceDatabaseDisplayNames[newDbKey] ?: newDbKey, content = "Loading..." )
+            stack[stack.lastIndex] = loadingPage
+            viewModel.selectedCrossReferenceDatabase = newDbKey
+            scope.launch {
+                val temp = DatabaseHelper(context, "${newDbKey}.crossreferences.sqlite3")
+                val b = currentPage.bookNumber ?: return@launch
+                val c = currentPage.chapter ?: return@launch
+                val v = currentPage.verse ?: return@launch
+                val refs = withContext(Dispatchers.IO) {
+                    temp.getCrossReferences(b, c, v)
+                }
+                val html = if (refs.isEmpty()) { "No references available." } else {
+                    sanitizeHtmlContent(
+                        refs.joinToString("<br>") { ref ->
+                            val toBook = BibleData.getBookByCustomNumber(ref.bookTo)?.name ?: ref.bookTo.toString()
+                            val verseRange = if (ref.verseToStart == ref.verseToEnd) ref.verseToStart.toString() else "${ref.verseToStart}-${ref.verseToEnd}"
+                            val href = "B:${ref.bookTo} ${ref.chapterTo}:$verseRange"
+                            "<a href=\"$href\">$toBook ${ref.chapterTo}:$verseRange</a>"
+                        }
+                    )
+                }
+                val idx = stack.indexOf(loadingPage)
+                if (idx != -1) { stack[idx] = loadingPage.copy(content = html) }
+                temp.close()
+            }
+        }
+        val lightModalColor = if (viewModel.lightModalBackgroundColor != Color.Unspecified) {
+            viewModel.lightModalBackgroundColor } else {
+            MaterialTheme.colorScheme.surface
+        }
+        val darkModalColor = if (viewModel.darkModalBackgroundColor != Color.Unspecified) {
+            viewModel.darkModalBackgroundColor } else {
+            MaterialTheme.colorScheme.surface
+        }
+        val modalBackgroundColor = if (isDark) {
+            darkModalColor } else {
+            lightModalColor
+        }
+        val configuration = LocalConfiguration.current
+        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         AlertDialog(
             modifier = if (isLandscape) Modifier.fillMaxWidth(0.9f) else Modifier,
             properties = if (isLandscape) DialogProperties(usePlatformDefaultWidth = false) else DialogProperties(),
@@ -555,10 +576,7 @@ fun InteractiveModal(
                             Text(text = currentPage.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                         }
                         if (currentPage.type == "verses" && currentPage.passage != null) {
-                            IconButton(onClick = {
-                                onNavigateToReader(currentPage.passage.copy(verseEnd = null, chapterEnd = null))
-                                onDismiss()
-                            }, modifier = Modifier.size(24.dp)) {
+                            IconButton(onClick = { onNavigateToReader(currentPage.passage.copy(verseEnd = null, chapterEnd = null)); onDismiss() }, modifier = Modifier.size(24.dp)) {
                                 Icon(Icons.Filled.ChevronRight, contentDescription = "Read in Reader", tint = MaterialTheme.colorScheme.primary)
                             }
                         }
@@ -613,48 +631,7 @@ fun InteractiveModal(
                                                         text = { Text(dictionaryDisplayNames[dictKey] ?: dictKey) },
                                                         onClick = {
                                                             dictionaryDropdownExpanded = false
-                                                            val previous = viewModel.selectedDictionary
-                                                            if (previous != dictKey) {
-                                                                viewModel.selectedDictionary = dictKey
-                                                                val currentWord = currentPage.word ?: return@DropdownMenuItem
-                                                                val loadingTitle = "Switching to ${dictKey.uppercase()}"
-                                                                val loadingPage = currentPage.copy(
-                                                                    title = loadingTitle,
-                                                                    content = "Loading...",
-                                                                    description = dictionaryDisplayNames[dictKey] ?: dictKey
-                                                                )
-                                                                val index = stack.lastIndex
-                                                                stack[index] = loadingPage
-                                                                scope.launch {
-                                                                    val tempDbHelper = withContext(Dispatchers.IO) {
-                                                                        DatabaseHelper(context, "${dictKey}.dictionary.sqlite3")
-                                                                    }
-                                                                    val pairs: List<Pair<String, String>> = getDefinitionOrClosest(tempDbHelper, currentWord) ?: emptyList()
-                                                                    val capitalizedWord = currentWord.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
-                                                                    val isExact = pairs.size == 1 && pairs[0].first.equals(currentWord, ignoreCase = true)
-                                                                    val isTopical = dictKey == "topical"
-                                                                    val newTitle = if (isTopical) {
-                                                                        "References for $capitalizedWord"
-                                                                    } else if (isExact) {
-                                                                        "Definition of ${pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }}"
-                                                                    } else if (pairs.size == 1) {
-                                                                        "Closest match for ${pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }}"
-                                                                    } else {
-                                                                        "Matches for \"$capitalizedWord\""
-                                                                    }
-                                                                    val newContent = buildDefinitionContent(
-                                                                        originalWord = word,
-                                                                        pairs = pairs,
-                                                                        isOxford = viewModel.selectedDictionary == "oxford",
-                                                                        isTopical = viewModel.selectedDictionary == "topical"
-                                                                    )
-                                                                    val updateIndex = stack.indexOf(loadingPage)
-                                                                    if (updateIndex != -1) {
-                                                                        stack[updateIndex] = loadingPage.copy(title = newTitle, content = newContent)
-                                                                    }
-                                                                    withContext(Dispatchers.IO) { tempDbHelper.close() }
-                                                                }
-                                                            }
+                                                            switchToDictionary(dictKey)
                                                         }
                                                     )
                                                 }
@@ -695,38 +672,7 @@ fun InteractiveModal(
                                                         text = { Text(verseCommentaryDisplayNames[comKey] ?: comKey) },
                                                         onClick = {
                                                             commentaryDropdownExpanded = false
-                                                            val previous = viewModel.selectedVerseCommentary
-                                                            if (previous != comKey) {
-                                                                viewModel.selectedVerseCommentary = comKey
-                                                                val bookNum = currentPage.bookNumber ?: return@DropdownMenuItem
-                                                                val chap = currentPage.chapter ?: return@DropdownMenuItem
-                                                                val vers = currentPage.verse ?: return@DropdownMenuItem
-                                                                val newDisplayName = verseCommentaryDisplayNames[comKey] ?: comKey
-                                                                val loadingPage = currentPage.copy(
-                                                                    description = newDisplayName,
-                                                                    content = "Loading..."
-                                                                )
-                                                                val index = stack.lastIndex
-                                                                stack[index] = loadingPage
-                                                                scope.launch {
-                                                                    val tempDbHelper = withContext(Dispatchers.IO) {
-                                                                        DatabaseHelper(context, "${comKey}.commentaries.sqlite3")
-                                                                    }
-                                                                    val commentaries = getVerseCommentaries(tempDbHelper, bookNum, chap, vers)
-                                                                    val newContent = if (commentaries.isNullOrEmpty()) {
-                                                                        "No commentaries found."
-                                                                    } else {
-                                                                        commentaries.joinToString("<br><br>──────────<br><br>") { commentary ->
-                                                                            commentary.text
-                                                                        }
-                                                                    }
-                                                                    val updateIndex = stack.indexOf(loadingPage)
-                                                                    if (updateIndex != -1) {
-                                                                        stack[updateIndex] = loadingPage.copy(content = newContent)
-                                                                    }
-                                                                    withContext(Dispatchers.IO) { tempDbHelper.close() }
-                                                                }
-                                                            }
+                                                            switchToVerseCommentary(comKey)
                                                         }
                                                     )
                                                 }
@@ -763,40 +709,7 @@ fun InteractiveModal(
                                                         text = { Text(crossReferenceDatabaseDisplayNames[dbKey] ?: dbKey) },
                                                         onClick = {
                                                             crossRefDropdownExpanded = false
-                                                            if (viewModel.selectedCrossReferenceDatabase != dbKey) {
-                                                                viewModel.selectedCrossReferenceDatabase = dbKey
-                                                                val loadingPage = currentPage.copy(
-                                                                    description = crossReferenceDatabaseDisplayNames[dbKey] ?: dbKey,
-                                                                    content = "Loading..."
-                                                                )
-                                                                stack[stack.lastIndex] = loadingPage
-                                                                scope.launch {
-                                                                    val temp = DatabaseHelper(context, "${dbKey}.crossreferences.sqlite3")
-                                                                    val b = currentPage.bookNumber ?: return@launch
-                                                                    val c = currentPage.chapter ?: return@launch
-                                                                    val v = currentPage.verse ?: return@launch
-                                                                    val refs = withContext(Dispatchers.IO) {
-                                                                        temp.getCrossReferences(b, c, v)
-                                                                    }
-                                                                    val html = if (refs.isEmpty()) {
-                                                                        "No references available."
-                                                                    } else {
-                                                                        sanitizeHtmlContent(
-                                                                            refs.joinToString("<br>") { ref ->
-                                                                                val toBook = BibleData.getBookByCustomNumber(ref.bookTo)?.name ?: ref.bookTo.toString()
-                                                                                val verseRange = if (ref.verseToStart == ref.verseToEnd) ref.verseToStart.toString() else "${ref.verseToStart}-${ref.verseToEnd}"
-                                                                                val href = "B:${ref.bookTo} ${ref.chapterTo}:$verseRange"
-                                                                                "<a href=\"$href\">$toBook ${ref.chapterTo}:$verseRange</a>"
-                                                                            }
-                                                                        )
-                                                                    }
-                                                                    val idx = stack.indexOf(loadingPage)
-                                                                    if (idx != -1) {
-                                                                        stack[idx] = loadingPage.copy(content = html)
-                                                                    }
-                                                                    temp.close()
-                                                                }
-                                                            }
+                                                            switchToCrossReference(dbKey)
                                                         }
                                                     )
                                                 }
@@ -852,7 +765,6 @@ fun InteractiveModal(
                     }
                     var currentBatch by remember(verses) { mutableIntStateOf(50) }
                     val showChapterHeaders = remember(verses) { verses.mapNotNull { it.chapter }.distinct().size > 1 }
-
                     Column(
                         modifier = Modifier
                             .verticalScroll(scrollState)
@@ -1013,14 +925,7 @@ fun InteractiveModal(
                 } else {
                     val content = currentPage.content
                     if (content == "Loading...") {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            CircularProgressIndicator()
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("Loading...")
-                        }
+                        InteractiveLoadingIndicator()
                     } else {
                         key(currentPage.content ?: "") {
                             AndroidView(
@@ -1186,7 +1091,9 @@ fun InteractiveModal(
                                                             val capitalizedWordToFetch = wordToFetch.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
                                                             val loadingTitle = "Loading Definition of $capitalizedWordToFetch"
                                                             val loadingPage = ModalPage(
-                                                                loadingTitle, "definition", "Loading...",
+                                                                loadingTitle,
+                                                                "definition",
+                                                                "Loading...",
                                                                 word = wordToFetch,
                                                                 description = dbDisplayName,
                                                                 isOldTestament = stack.last().isOldTestament
@@ -1271,48 +1178,7 @@ fun InteractiveModal(
                         val currentIndex = dictionaries.indexOf(viewModel.selectedDictionary)
                         val nextIndex = (currentIndex + 1) % dictionaries.size
                         val nextDictionary = dictionaries[nextIndex]
-                        val nextDisplayName = dictionaryDisplayNames[nextDictionary] ?: nextDictionary
-                        TextButton(onClick = {
-                            val currentWord = currentPage.word ?: return@TextButton
-                            val loadingTitle = "Switching to ${nextDictionary.uppercase()}"
-                            val loadingPage = currentPage.copy(
-                                title = loadingTitle,
-                                content = "Loading...",
-                                description = nextDisplayName
-                            )
-                            val index = stack.lastIndex
-                            stack[index] = loadingPage
-                            scope.launch {
-                                val tempDbHelper = withContext(Dispatchers.IO) {
-                                    DatabaseHelper(context, "${nextDictionary}.dictionary.sqlite3")
-                                }
-                                val pairs: List<Pair<String, String>> = getDefinitionOrClosest(tempDbHelper, currentWord) ?: emptyList()
-                                val capitalizedWord = currentWord.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
-                                val isExact = pairs.size == 1 && pairs[0].first.equals(currentWord, ignoreCase = true)
-                                val isTopical = nextDictionary == "topical"
-                                val newTitle = if (isTopical) {
-                                    "References for $capitalizedWord"
-                                } else if (isExact) {
-                                    "Definition of ${pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }}"
-                                } else if (pairs.size == 1) {
-                                    "Closest match for ${pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }}"
-                                } else {
-                                    "Matches for \"$capitalizedWord\""
-                                }
-                                val newContent = buildDefinitionContent(
-                                    originalWord = word,
-                                    pairs = pairs,
-                                    isOxford = viewModel.selectedDictionary == "oxford",
-                                    isTopical = viewModel.selectedDictionary == "topical"
-                                )
-                                val updateIndex = stack.indexOf(loadingPage)
-                                if (updateIndex != -1) {
-                                    stack[updateIndex] = loadingPage.copy(title = newTitle, content = newContent)
-                                }
-                                withContext(Dispatchers.IO) { tempDbHelper.close() }
-                            }
-                            viewModel.selectedDictionary = nextDictionary
-                        }) {
+                        TextButton(onClick = { switchToDictionary(nextDictionary) }) {
                             Text("Switch to ${nextDictionary.uppercase()}")
                         }
                     }
@@ -1322,37 +1188,7 @@ fun InteractiveModal(
                         val currentIndex = verseCommentaries.indexOf(viewModel.selectedVerseCommentary)
                         val nextIndex = (currentIndex + 1) % verseCommentaries.size
                         val nextKey = verseCommentaries[nextIndex]
-                        val nextDisplayName = verseCommentaryDisplayNames[nextKey] ?: nextKey
-                        TextButton(onClick = {
-                            val bookNum = currentPage.bookNumber ?: return@TextButton
-                            val chap = currentPage.chapter ?: return@TextButton
-                            val vers = currentPage.verse ?: return@TextButton
-                            val loadingPage = currentPage.copy(
-                                description = nextDisplayName,
-                                content = "Loading..."
-                            )
-                            val index = stack.lastIndex
-                            stack[index] = loadingPage
-                            scope.launch {
-                                val tempDbHelper = withContext(Dispatchers.IO) {
-                                    DatabaseHelper(context, "${nextKey}.commentaries.sqlite3")
-                                }
-                                val commentaries = getVerseCommentaries(tempDbHelper, bookNum, chap, vers)
-                                val newContent = if (commentaries.isNullOrEmpty()) {
-                                    "No commentaries found."
-                                } else {
-                                    commentaries.joinToString("<br><br>──────────<br><br>") { commentary ->
-                                        commentary.text
-                                    }
-                                }
-                                val updateIndex = stack.indexOf(loadingPage)
-                                if (updateIndex != -1) {
-                                    stack[updateIndex] = loadingPage.copy(content = newContent)
-                                }
-                                withContext(Dispatchers.IO) { tempDbHelper.close() }
-                            }
-                            viewModel.selectedVerseCommentary = nextKey
-                        }) {
+                        TextButton(onClick = { switchToVerseCommentary(nextKey) }) {
                             Text("Switch to ${nextKey.uppercase()}")
                         }
                     }
@@ -1361,44 +1197,7 @@ fun InteractiveModal(
                     {
                         val idx = crossReferenceDatabases.indexOf(viewModel.selectedCrossReferenceDatabase)
                         val nextKey = crossReferenceDatabases[(idx + 1) % crossReferenceDatabases.size]
-                        TextButton(onClick = {
-                            viewModel.selectedCrossReferenceDatabase = nextKey
-                            val loadingPage = currentPage.copy(
-                                description = crossReferenceDatabaseDisplayNames[nextKey] ?: nextKey,
-                                content = "Loading..."
-                            )
-                            stack[stack.lastIndex] = loadingPage
-                            scope.launch {
-                                val temp = DatabaseHelper(context, "${nextKey}.crossreferences.sqlite3")
-                                val b = currentPage.bookNumber ?: return@launch
-                                val c = currentPage.chapter ?: return@launch
-                                val v = currentPage.verse ?: return@launch
-                                val refs = withContext(Dispatchers.IO) {
-                                    temp.getCrossReferences(b, c, v)
-                                }
-                                val html = if (refs.isEmpty()) {
-                                    "No references available."
-                                } else {
-                                    sanitizeHtmlContent(
-                                        refs.joinToString("<br>") { ref ->
-                                            val toBook = BibleData.getBookByCustomNumber(ref.bookTo)?.name ?: ref.bookTo.toString()
-                                            val verseRange = if (ref.verseToStart == ref.verseToEnd) {
-                                                ref.verseToStart.toString()
-                                            } else {
-                                                "${ref.verseToStart}-${ref.verseToEnd}"
-                                            }
-                                            val href = "B:${ref.bookTo} ${ref.chapterTo}:$verseRange"
-                                            "<a href=\"$href\">$toBook ${ref.chapterTo}:$verseRange</a>"
-                                        }
-                                    )
-                                }
-                                val idx2 = stack.indexOf(loadingPage)
-                                if (idx2 != -1) {
-                                    stack[idx2] = loadingPage.copy(content = html)
-                                }
-                                temp.close()
-                            }
-                        }) {
+                        TextButton(onClick = { switchToCrossReference(nextKey) }) {
                             Text("Switch to ${nextKey.uppercase()}")
                         }
                     }
@@ -1407,7 +1206,6 @@ fun InteractiveModal(
             },
             containerColor = modalBackgroundColor
         )
-
         if (showModalColorWheel) {
             ColorWheelDialog(
                 onDismissRequest = { showModalColorWheel = false },
@@ -1422,7 +1220,6 @@ fun InteractiveModal(
                 initialColor = modalBackgroundColor
             )
         }
-
         if (showEditWordDialog) {
             var newWord by remember { mutableStateOf(currentPage.word ?: "") }
             AlertDialog(
