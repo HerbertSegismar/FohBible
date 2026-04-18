@@ -338,6 +338,7 @@ fun ScrollSyncButton(viewModel: AppViewModel, modifier: Modifier) {
             rotation = 180f,
         )
     }
+
 }
 
 @Composable

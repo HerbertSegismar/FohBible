@@ -95,7 +95,8 @@ fun ReaderScreen(
         if (passage.bookNumber != primaryCurrent.bookNumber || passage.chapter != primaryCurrent.chapter) {
             primaryCurrent = passage.copy(verse = 1)
             targetVerse = passage.verse
-        } else {
+        }
+        else {
             targetVerse = passage.verse
         }
     }
@@ -107,11 +108,20 @@ fun ReaderScreen(
             secondaryTargetVerse = viewModel.secondaryPassage.verse
         }
     }
+    var previousScrollSync by remember { mutableStateOf(viewModel.scrollSync) }
+
     LaunchedEffect(viewModel.scrollSync, viewModel.multiVersion) {
         if (viewModel.multiVersion && viewModel.scrollSync) {
             viewModel.secondaryPassage = viewModel.primaryPassage
             secondaryCurrent = primaryCurrent
         }
+
+        if (previousScrollSync != viewModel.scrollSync) {
+            targetVerse = 0
+            secondaryTargetVerse = 0
+        }
+
+        previousScrollSync = viewModel.scrollSync
     }
     val primaryLoadedVerses = remember { mutableStateMapOf<Pair<Int, Int>, List<VerseContent>>() }
     val secondaryLoadedVerses = remember { mutableStateMapOf<Pair<Int, Int>, List<VerseContent>>() }
