@@ -180,6 +180,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     LaunchedEffect(isLandscape) {
         toggleFullscreen()
     }
+
     DisposableEffect(view) {
         val listener = ViewTreeObserver.OnWindowFocusChangeListener { hasFocus ->
             if (hasFocus) {
@@ -437,7 +438,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 if (viewModel.scrollSync) viewModel.secondaryPassage = newPassage
                             }
                             key(
-                                viewModel.darkThemeReaderFontColor, viewModel.lightThemeReaderFontColor
+                                viewModel.darkThemeReaderFontColor, viewModel.lightThemeReaderFontColor, viewModel.wordsOfJesus
                             ) {
                                 ReaderScreen(
                                     passage = passage,
@@ -597,6 +598,13 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             onDismissRequest = { viewModel.showWordMarkerColorWheelDialog = false },
                             onColorSelected = { color -> viewModel.wordMarkerColor = color; viewModel.showWordMarkerColorWheelDialog = false },
                             initialColor = viewModel.wordMarkerColor
+                        )
+                    }
+                    if (viewModel.showJesusWordsColorWheelDialog) {
+                        ColorWheelDialog(
+                            onDismissRequest = { viewModel.showJesusWordsColorWheelDialog = false },
+                            onColorSelected = { color -> viewModel.wordsOfJesus = color; viewModel.showJesusWordsColorWheelDialog = false },
+                            initialColor = viewModel.wordsOfJesus
                         )
                     }
                     if (viewModel.showLightReaderFontColorWheelDialog) {

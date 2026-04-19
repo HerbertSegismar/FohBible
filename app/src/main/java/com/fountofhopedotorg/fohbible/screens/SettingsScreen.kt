@@ -338,6 +338,23 @@ fun SettingsScreen() {
                             )
                         )
                     }
+                    SettingsItem(
+                        title = "Square Aspect Ratio Views",
+                        subtitle = if (viewModel.squareAspectViews) {
+                            "Turn this off to disable auto square aspect ratio views when multi-version is on and device switches orientation mode"
+                        } else {
+                            "Turn this on to display square aspect ratio views in multi-window mode automatically when device changes orientation mode"
+                        }
+                    ) {
+                        Switch(
+                            checked = viewModel.squareAspectViews,
+                            onCheckedChange = { viewModel.squareAspectViews = it },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                            )
+                        )
+                    }
                 }
                 Spacer(Modifier.height(8.dp))
                 Column {
@@ -378,7 +395,7 @@ fun SettingsScreen() {
                                 "${viewModel.fontSize}",
                                 modifier = Modifier.padding(horizontal = 8.dp),
                                 color = MaterialTheme.colorScheme.primary,
-                                fontSize = 20.sp
+                                fontSize = 18.sp
                             )
                             IconButton(
                                 onClick = {
@@ -632,7 +649,7 @@ fun SettingsScreen() {
                                     "${viewModel.orbsCount}",
                                     modifier = Modifier.padding(horizontal = 8.dp),
                                     color = MaterialTheme.colorScheme.primary,
-                                    fontSize = 20.sp
+                                    fontSize = 18.sp
                                 )
                                 IconButton(
                                     onClick = { viewModel.orbsCount = minOf(MAX_ORB_COUNT, viewModel.orbsCount + 1) },
@@ -744,8 +761,8 @@ fun SettingsScreen() {
                         onClick = { showResetConfirmDialog = true },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.error
                         )
                     ) {
                         Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -762,9 +779,9 @@ fun SettingsScreen() {
                         },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.White)
                         Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
-                        Text("Feedback")
+                        Text("Feedback", color = Color.White)
                     }
                 }
             }
@@ -876,7 +893,7 @@ fun SettingsScreen() {
                     Text("• Font size, theme, colors", style = MaterialTheme.typography.bodyMedium)
                     Text("• Bible versions, layout, sync", style = MaterialTheme.typography.bodyMedium)
                     Text("• Background, overlay, palette colors,", style = MaterialTheme.typography.bodyMedium)
-                    Text("• Study mode, lazy reader, etc.", style = MaterialTheme.typography.bodyMedium)
+                    Text("• Study mode, etc.", style = MaterialTheme.typography.bodyMedium)
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         "This action cannot be undone.\n\nAre you sure you want to continue?",

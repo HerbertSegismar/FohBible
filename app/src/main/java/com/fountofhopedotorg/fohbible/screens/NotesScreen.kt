@@ -826,9 +826,9 @@ fun EmptyNotesScreen(isSearching: Boolean) {
                 Icons.AutoMirrored.Filled.Note,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                modifier = Modifier.size(120.dp).rotate(90f)
+                modifier = Modifier.size(90.dp).rotate(90f)
             )
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = if (isSearching) "No matching notes" else "No notes yet",
                 style = MaterialTheme.typography.titleLarge,

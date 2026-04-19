@@ -60,7 +60,6 @@ import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -319,26 +318,23 @@ fun OverlayOpacitySlider(viewModel: AppViewModel) {
 fun ScrollSyncButton(viewModel: AppViewModel, modifier: Modifier) {
     val scope = rememberCoroutineScope()
     val pendingJob = remember { mutableStateOf<Job?>(null) }
+    val icon = if (viewModel.scrollSync) Icons.Filled.Link else Icons.Filled.LinkOff
 
-    key("ScrollSyncButton") {
-        val icon = if (viewModel.scrollSync) Icons.Filled.Link else Icons.Filled.LinkOff
-
-        AnimatedIconButton(
-            onClick = {
-                if (pendingJob.value?.isActive == true) return@AnimatedIconButton
-                pendingJob.value = scope.launch {
-                    delay(250L)
-                    viewModel.scrollSync = !viewModel.scrollSync
-                    pendingJob.value = null
-                }
-            },
-            icon = icon,
-            contentDescription = "Toggle Scroll Sync",
-            modifier = modifier,
-            rotation = 180f,
-        )
-    }
-
+    AnimatedIconButton(
+        onClick = {
+            if (pendingJob.value?.isActive == true) return@AnimatedIconButton
+            pendingJob.value = scope.launch {
+                delay(250L)
+                viewModel.scrollSync = !viewModel.scrollSync
+                pendingJob.value = null
+                viewModel.scrollSyncAction = true
+            }
+        },
+        icon = icon,
+        contentDescription = "Toggle Scroll Sync",
+        modifier = modifier,
+        rotation = 180f,
+    )
 }
 
 @Composable
@@ -389,6 +385,7 @@ fun HomeAppBar(
 ) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val topAppBarHeight = if (isLandscape) 40.dp else 80.dp
     val iconSize = if (isLandscape) 45.dp else 40.dp
     var showNavigationDropdown by remember { mutableStateOf(false) }
     val viewModel: AppViewModel = viewModel()
@@ -403,10 +400,11 @@ fun HomeAppBar(
     }
     TopAppBar(
         title = { Text(text = screenTitle, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier
-            .fillMaxWidth()
             .padding(start = 0.dp), textAlign = TextAlign.Start) },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
-        modifier = modifier.background(Brush.verticalGradient(0.0f to LocalAppTheme.current.primaryColor, 0.7f to LocalAppTheme.current.primaryColor, 1.0f to Color.Transparent)),
+        modifier = modifier
+            .height(topAppBarHeight)
+            .background(Brush.verticalGradient(0.6f to LocalAppTheme.current.primaryColor, 0.85f to LocalAppTheme.current.primaryColor, 1.0f to Color.Transparent)),
         navigationIcon = {
             if (onBack != null) {
                 AnimatedIconButton(
@@ -417,7 +415,7 @@ fun HomeAppBar(
             }
         },
         actions = {
-            Row(modifier = Modifier.padding(end = if (isLandscape) 30.dp else 8.dp)) {
+            Row(modifier = Modifier.padding( horizontal = 15.dp)) {
                 AnimatedIconButton(
                     onClick = onBibleIconClick,
                     icon = Icons.Filled.Book,
@@ -501,6 +499,7 @@ fun ReaderAppBar(
     val viewModel: AppViewModel = viewModel()
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val topAppBarHeight = if (isLandscape) 40.dp else 80.dp
     val iconSize = if (isLandscape) 45.dp else 40.dp
 
     TopAppBar(
@@ -562,13 +561,15 @@ fun ReaderAppBar(
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
-        modifier = modifier.background(
-            Brush.verticalGradient(
-                0.0f to LocalAppTheme.current.primaryColor,
-                0.7f to LocalAppTheme.current.primaryColor,
-                1.0f to Color.Transparent
-            )
-        ),
+        modifier = modifier
+            .height(topAppBarHeight)
+            .background(
+                Brush.verticalGradient(
+                    0.6f to LocalAppTheme.current.primaryColor,
+                    0.85f to LocalAppTheme.current.primaryColor,
+                    1.0f to Color.Transparent
+                )
+            ),
         navigationIcon = {
             if (onBack != null) {
                 AnimatedIconButton(
@@ -579,38 +580,43 @@ fun ReaderAppBar(
             }
         },
         actions = {
-            if (!viewModel.multiVersion) {
-                Spacer(modifier = Modifier.width(if (isLandscape) 300.dp else 12.dp))
-            }
-            Row(modifier = Modifier.padding(end = 8.dp)) {
-                AnimatedIconButton(
-                    onClick = onThemeToggle,
-                    icon = if (viewModel.darkTheme) Icons.Filled.Brightness6 else Icons.Filled.Brightness2,
-                    contentDescription = "Toggle Theme",
-                    modifier = Modifier.size(iconSize),
-                    rotation = 180f,
-                )
-                AnimatedIconButton(
-                    onClick = onColorLensClick,
-                    icon = Icons.Filled.ColorLens,
-                    contentDescription = "Color Scheme",
-                    modifier = Modifier.size(iconSize),
-                    rotation = 180f,
-                )
-                if (viewModel.multiVersion) {
-                    ScrollSyncButton(viewModel = viewModel, modifier = Modifier.size(iconSize))
+            if (!viewModel.multiVersion || !isLandscape && viewModel.multiViewLayout == "horizontal") {
+                Row(modifier = Modifier.padding(end = 8.dp)) {
+                    if (isLandscape) {
+                        Spacer(modifier = Modifier.width(300.dp))
+                    } else {
+                        Spacer(modifier = Modifier.width(12.dp))
+                    }
+
+                    AnimatedIconButton(
+                        onClick = onThemeToggle,
+                        icon = if (viewModel.darkTheme) Icons.Filled.Brightness6 else Icons.Filled.Brightness2,
+                        contentDescription = "Toggle Theme",
+                        modifier = Modifier.size(iconSize),
+                        rotation = 180f,
+                    )
+                    AnimatedIconButton(
+                        onClick = onColorLensClick,
+                        icon = Icons.Filled.ColorLens,
+                        contentDescription = "Color Scheme",
+                        modifier = Modifier.size(iconSize),
+                        rotation = 180f,
+                    )
+                    if (viewModel.multiVersion) {
+                        ScrollSyncButton(viewModel = viewModel, modifier = Modifier.size(iconSize))
+                    }
+                    WindowsLayoutDropdown(
+                        viewModel = viewModel,
+                        modifier = Modifier.size(iconSize)
+                    )
+                    ReaderAppBarMenu(
+                        isLandscape = isLandscape,
+                        viewModel = viewModel,
+                        onScreenChange = onScreenChange,
+                        coroutineScope = rememberCoroutineScope(),
+                        modifier = Modifier.size(iconSize)
+                    )
                 }
-                WindowsLayoutDropdown(
-                    viewModel = viewModel,
-                    modifier = Modifier.size(iconSize)
-                )
-                ReaderAppBarMenu(
-                    isLandscape = isLandscape,
-                    viewModel = viewModel,
-                    onScreenChange = onScreenChange,
-                    coroutineScope = rememberCoroutineScope(),
-                    modifier = Modifier.size(iconSize)
-                )
             }
         }
     )
@@ -649,18 +655,16 @@ fun ReaderDropdownContent(
         }
         if (!isLandscape) {
             HorizontalDivider()
-        }
-        DropdownMenuItem(
-            text = { Text("Background Texture", modifier = Modifier.fillMaxWidth()) },
-            leadingIcon = { Icon(Icons.Outlined.Texture, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-            onClick = { viewModel.showBgModal = true }
-        )
-        if (!isLandscape) {
+            DropdownMenuItem(
+                text = { Text("Background Texture", modifier = Modifier.fillMaxWidth()) },
+                leadingIcon = { Icon(Icons.Outlined.Texture, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                onClick = { viewModel.showBgModal = true }
+            )
             HorizontalDivider()
-        }
-        if (!isLandscape) {
-            OverlayOpacitySlider(viewModel)
-            HorizontalDivider()
+            if (viewModel.bgImageIndex != 0) {
+                OverlayOpacitySlider(viewModel)
+                HorizontalDivider()
+            }
             DropdownMenuItem(
                 text = { Text(text = if (viewModel.isDictionaryMode) "Dictionary Mode On" else "Word Marker On", modifier = Modifier.fillMaxWidth()) },
                 leadingIcon = { Icon(if (viewModel.isDictionaryMode) Icons.AutoMirrored.Filled.Label else Icons.Filled.LocalFireDepartment, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
@@ -669,10 +673,17 @@ fun ReaderDropdownContent(
                     coroutineScope.launch { delay(400) }
                 }
             )
+            if (!viewModel.isDictionaryMode) {
+                HorizontalDivider()
+                ColorPickerRow(label = "Word Marker Color", color = viewModel.wordMarkerColor, onClick = { viewModel.showWordMarkerColorWheelDialog = true })
+            }
+            else {
+                HorizontalDivider()
+                ColorPickerRow(label = "Verse Marker Color", color = viewModel.verseMarkerColor, onClick = { viewModel.showVerseMarkerColorWheelDialog = true })
+            }
             HorizontalDivider()
-            ColorPickerRow(label = "Verse Marker Color", color = viewModel.verseMarkerColor, onClick = { viewModel.showVerseMarkerColorWheelDialog = true })
+            ColorPickerRow(label = "Jesus' Words Color", color = viewModel.wordsOfJesus, onClick = { viewModel.showJesusWordsColorWheelDialog = true })
             HorizontalDivider()
-            ColorPickerRow(label = "Word Marker Color", color = viewModel.wordMarkerColor, onClick = { viewModel.showWordMarkerColorWheelDialog = true })
             if (viewModel.darkTheme) {
                 ColorPickerRow(
                     label = "Font Color",
@@ -688,7 +699,6 @@ fun ReaderDropdownContent(
                 )
             }
             HorizontalDivider()
-            HorizontalDivider()
             FontSizeControls(viewModel)
         }
     }
@@ -700,6 +710,13 @@ fun ReaderDropdownContent(
                 .weight(1f)
                 .padding(end = 8.dp)) {
                 commonItems()
+                if (viewModel.bgImageIndex != 0) {
+                    DropdownMenuItem(
+                        text = { Text("Background Texture", modifier = Modifier.fillMaxWidth()) },
+                        leadingIcon = { Icon(Icons.Outlined.Texture, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                        onClick = { viewModel.showBgModal = true }
+                    )
+                }
                 Spacer(modifier = Modifier.weight(1f))
             }
             VerticalDivider()
@@ -715,8 +732,18 @@ fun ReaderDropdownContent(
 }
 @Composable
 fun ExtraReaderControls(viewModel: AppViewModel, coroutineScope: kotlinx.coroutines.CoroutineScope) {
-    OverlayOpacitySlider(viewModel)
-    HorizontalDivider()
+    if (viewModel.bgImageIndex != 0) {
+        OverlayOpacitySlider(viewModel)
+        HorizontalDivider()
+    } else {
+        DropdownMenuItem(
+            text = { Text("Background Texture", modifier = Modifier.fillMaxWidth()) },
+            leadingIcon = { Icon(Icons.Outlined.Texture, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+            onClick = { viewModel.showBgModal = true }
+        )
+        HorizontalDivider()
+    }
+
     DropdownMenuItem(
         text = { Text(text = if (viewModel.isDictionaryMode) "Dictionary Mode On" else "Word Marker On", modifier = Modifier.fillMaxWidth()) },
         leadingIcon = { Icon(if (viewModel.isDictionaryMode) Icons.AutoMirrored.Filled.Label else Icons.Filled.LocalFireDepartment, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
@@ -725,10 +752,16 @@ fun ExtraReaderControls(viewModel: AppViewModel, coroutineScope: kotlinx.corouti
             coroutineScope.launch { delay(400) }
         }
     )
+    if (!viewModel.isDictionaryMode) {
+        HorizontalDivider()
+        ColorPickerRow(label = "Word Marker Color", color = viewModel.wordMarkerColor, onClick = { viewModel.showWordMarkerColorWheelDialog = true })
+    }
+    else {
+        HorizontalDivider()
+        ColorPickerRow(label = "Verse Marker Color", color = viewModel.verseMarkerColor, onClick = { viewModel.showVerseMarkerColorWheelDialog = true })
+    }
     HorizontalDivider()
-    ColorPickerRow(label = "Verse Marker Color", color = viewModel.verseMarkerColor, onClick = { viewModel.showVerseMarkerColorWheelDialog = true })
-    HorizontalDivider()
-    ColorPickerRow(label = "Word Marker Color", color = viewModel.wordMarkerColor, onClick = { viewModel.showWordMarkerColorWheelDialog = true })
+    ColorPickerRow(label = "Jesus' Words Color", color = viewModel.wordsOfJesus, onClick = { viewModel.showJesusWordsColorWheelDialog = true })
     HorizontalDivider()
     if (viewModel.darkTheme) {
         ColorPickerRow(

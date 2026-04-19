@@ -336,7 +336,7 @@ fun NavigationModal(
     ) {
         Surface(
             modifier = Modifier.fillMaxSize(if (isLandscape) 0.98f else 1f),
-            shape = RoundedCornerShape(30.dp),
+            shape = RoundedCornerShape(25.dp),
             color = MaterialTheme.colorScheme.surface
         ) {
             Scaffold(

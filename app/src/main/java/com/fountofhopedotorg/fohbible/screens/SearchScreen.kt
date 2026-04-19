@@ -36,6 +36,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -398,6 +399,8 @@ fun SearchScreen(
                             modifier = Modifier.padding(end = 8.dp)
                         )
                         Checkbox(
+                            colors = CheckboxDefaults.colors(
+                                checkmarkColor = Color.White),
                             checked = inverseSearch,
                             onCheckedChange = { newValue ->
                                 inverseSearch = newValue
@@ -420,6 +423,8 @@ fun SearchScreen(
                             modifier = Modifier.padding(end = 8.dp)
                         )
                         Checkbox(
+                            colors = CheckboxDefaults.colors(
+                                checkmarkColor = Color.White),
                             checked = exactPhrase,
                             onCheckedChange = { newValue ->
                                 exactPhrase = newValue
@@ -439,7 +444,17 @@ fun SearchScreen(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = colors["primary"] as Color)
                 ) {
-                    Text(getResultStats(), color = Color.White, fontWeight = FontWeight.SemiBold)
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            getResultStats(),
+                            color = Color.White,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
             if (results.isEmpty()) {
@@ -614,7 +629,6 @@ fun EmptyStates(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         if (hasSearched && query.isEmpty() || query.isEmpty() && !hasSearched) {
-            Text("Search the Bible", fontSize = 18.sp, color = colors["text"] as Color, modifier = Modifier.padding(bottom = 8.dp))
             Text("Enter a word or phrase to find relevant verses", fontSize = 14.sp, color = colors["muted"] as Color, modifier = Modifier.padding(bottom = 24.dp))
             Card(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),

@@ -108,21 +108,19 @@ fun ReaderScreen(
             secondaryTargetVerse = viewModel.secondaryPassage.verse
         }
     }
-    var previousScrollSync by remember { mutableStateOf(viewModel.scrollSync) }
-
     LaunchedEffect(viewModel.scrollSync, viewModel.multiVersion) {
         if (viewModel.multiVersion && viewModel.scrollSync) {
             viewModel.secondaryPassage = viewModel.primaryPassage
             secondaryCurrent = primaryCurrent
         }
-
-        if (previousScrollSync != viewModel.scrollSync) {
-            targetVerse = 0
-            secondaryTargetVerse = 0
-        }
-
-        previousScrollSync = viewModel.scrollSync
     }
+    LaunchedEffect(viewModel.scrollSyncAction) {
+        if (viewModel.scrollSyncAction) {
+            delay(300)
+            viewModel.scrollSyncAction = false
+        }
+    }
+
     val primaryLoadedVerses = remember { mutableStateMapOf<Pair<Int, Int>, List<VerseContent>>() }
     val secondaryLoadedVerses = remember { mutableStateMapOf<Pair<Int, Int>, List<VerseContent>>() }
     LaunchedEffect(databaseHelper) {

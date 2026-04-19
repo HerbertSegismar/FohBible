@@ -152,6 +152,12 @@ fun ChapterView(
     val isPortraitVerticalMulti = !isLandscape && viewModel.multiVersion && viewModel.multiViewLayout == "vertical"
     val shouldShowFullHeader = (isPortraitVerticalMulti || (isLandscape && !isSingleView))
 
+    LaunchedEffect(isLandscape, viewModel.multiVersion, viewModel.squareAspectViews) {
+        if (viewModel.multiVersion && viewModel.squareAspectViews) {
+            viewModel.multiViewLayout = if (isLandscape) "horizontal" else "vertical"
+        }
+    }
+
     @Composable
     fun VerseItem(verseContent: VerseContent.VerseVal) {
         val verse = verseContent.verse
@@ -242,6 +248,7 @@ fun ChapterView(
                             if (onVerseCommentaryClick != null) put("commentary_${verse.verseNumber}", InlineTextContent(
                                 Placeholder((viewModel.fontSize * 1.4f).sp, viewModel.fontSize.sp, PlaceholderVerticalAlign.TextCenter)
                             ) {
+                                //verse commentary button
                                 Box(
                                     modifier = Modifier.fillMaxSize().clickable {
                                         onVerseCommentaryClick(passage.bookNumber, passage.chapter, verse.verseNumber)
@@ -445,10 +452,12 @@ fun ChapterView(
                 delay(100)
                 val targetIndex = content.indexOfFirst { it is VerseContent.VerseVal && it.verse.verseNumber == targetVerse }
                 if (targetIndex >= 0) {
-                    lazyState.animateScrollToItem(targetIndex)
-                    highlightedVerse = targetVerse
-                    delay(2000)
-                    highlightedVerse = null
+                    lazyState.scrollToItem(targetIndex)
+                    if (!viewModel.scrollSyncAction) {
+                        highlightedVerse = targetVerse
+                        delay(2000)
+                        highlightedVerse = null
+                    }
                 }
             }
             onInitialScrollComplete()

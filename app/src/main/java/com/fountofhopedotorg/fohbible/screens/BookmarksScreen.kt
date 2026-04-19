@@ -706,9 +706,9 @@ fun EmptyBookmarksScreen(isSearching: Boolean) {
                 Icons.Default.Bookmark,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                modifier = Modifier.size(120.dp)
+                modifier = Modifier.size(90.dp)
             )
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = if (isSearching) "No matching bookmarks" else "No bookmarks yet",
                 style = MaterialTheme.typography.titleLarge,

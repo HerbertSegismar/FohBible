@@ -1,12 +1,10 @@
 package com.fountofhopedotorg.fohbible.dropdowns
 
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.AutoAwesomeMosaic
@@ -15,13 +13,18 @@ import androidx.compose.material.icons.filled.LooksOne
 import androidx.compose.material.icons.filled.ViewStream
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.fountofhopedotorg.fohbible.composables.DropdownMenuItemWithIcon
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 
@@ -37,6 +40,7 @@ fun WindowsLayoutDropdown(
         animationSpec = tween(300),
         label = "windowsLayoutIconRotation"
     )
+
     Box(modifier = modifier) {
         IconButton(
             onClick = { expanded = !expanded }
@@ -59,19 +63,21 @@ fun WindowsLayoutDropdown(
             expanded = expanded,
             onDismissRequest = { expanded = false },
             modifier = Modifier.background(
-                if (viewModel.darkTheme) viewModel.darkModalBackgroundColor
-                else viewModel.lightModalBackgroundColor
+                if (viewModel.darkTheme) viewModel.darkModalBackgroundColor else viewModel.lightModalBackgroundColor
             ),
             offset = DpOffset(x = 100.dp, y = 0.dp),
         ) {
             Text(
                 "Windows Layout",
-                modifier = Modifier.fillMaxWidth().height(25.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(25.dp),
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
+
             HorizontalDivider()
 
             listOf("Single", "Horizontal", "Vertical").forEach { layout ->
@@ -81,13 +87,14 @@ fun WindowsLayoutDropdown(
                     "vertical" -> viewModel.multiVersion && viewModel.multiViewLayout == "vertical"
                     else -> false
                 }
+
                 val icon = when (layout.lowercase()) {
                     "single" -> Icons.Default.LooksOne
                     "horizontal", "vertical" -> Icons.Default.ViewStream
                     else -> Icons.AutoMirrored.Filled.Label
                 }
-                val iconModifier =
-                    if (layout.lowercase() == "horizontal") Modifier.rotate(90f) else Modifier
+
+                val iconModifier = if (layout.lowercase() == "horizontal") Modifier.rotate(90f) else Modifier
 
                 DropdownMenuItemWithIcon(
                     title = layout,
@@ -95,13 +102,16 @@ fun WindowsLayoutDropdown(
                     isActive = isActive,
                     onClick = {
                         when (layout.lowercase()) {
-                            "single" -> viewModel.multiVersion = false
+                            "single" -> {
+                                viewModel.multiVersion = false
+                            }
                             "horizontal" -> {
+                                viewModel.squareAspectViews = false
                                 viewModel.multiVersion = true
                                 viewModel.multiViewLayout = "horizontal"
                             }
-
                             "vertical" -> {
+                                viewModel.squareAspectViews = false
                                 viewModel.multiVersion = true
                                 viewModel.multiViewLayout = "vertical"
                             }
@@ -110,6 +120,121 @@ fun WindowsLayoutDropdown(
                     },
                     iconModifier = iconModifier
                 )
+            }
+
+            if (viewModel.multiVersion) {
+                HorizontalDivider()
+                DropdownMenuItem(
+                    onClick = {
+                        viewModel.squareAspectViews = !viewModel.squareAspectViews
+                    },
+                    text = {
+                        Text(
+                            "Square Aspect Ratio",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    },
+                    trailingIcon = {
+                        Checkbox(
+                            checked = viewModel.squareAspectViews,
+                            onCheckedChange = null,
+                            colors = CheckboxDefaults.colors(checkmarkColor = Color.White)
+                        )
+                    }
+                )
+                HorizontalDivider()
+                val primary = MaterialTheme.colorScheme.primary
+                val viewColor = primary.copy(0.6f)
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(15.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    val infiniteTransition = rememberInfiniteTransition(label = "Orientation preview")
+                    val progress by infiniteTransition.animateFloat(
+                        initialValue = 0f,
+                        targetValue = 1f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(durationMillis = 2500, easing = FastOutSlowInEasing),
+                            repeatMode = RepeatMode.Reverse
+                        ),
+                        label = "progress"
+                    )
+
+                    val animationMultiplier by animateFloatAsState(
+                        targetValue = if (viewModel.squareAspectViews) 1f else 0f,
+                        animationSpec = tween(500),
+                        label = "animationControl"
+                    )
+                    val effectiveProgress = progress * animationMultiplier
+
+                    Text(
+                        "Portrait↔Landscape",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 13.sp
+                    )
+
+                    Box(
+                        modifier = Modifier.size(80.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        val parentRotation = effectiveProgress * -90f
+                        val childRotation = effectiveProgress * 90f
+
+                        val animatedWidth = 40.dp
+                        val animatedHeight = 80.dp
+                        Box(
+                            modifier = Modifier
+                                .padding(top = 6.dp)
+                                .size(width = animatedWidth, height = animatedHeight)
+                                .graphicsLayer {
+                                    rotationZ = parentRotation
+                                    transformOrigin = TransformOrigin.Center
+                                    shape = RoundedCornerShape(4.dp)
+                                    clip = true
+                                }
+                                .background(primary.copy(0.1f))
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(6.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                repeat(2) {
+                                    Column(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .aspectRatio(1f)
+                                            .graphicsLayer {
+                                                rotationZ = childRotation
+                                            }
+                                            .clip(RoundedCornerShape(2.dp))
+                                            .background(viewColor)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(5.dp)
+                                                .background(primary)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Text(
+                        "Orientation Changes",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
             }
         }
     }
