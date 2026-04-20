@@ -65,6 +65,7 @@ import com.fountofhopedotorg.fohbible.composables.AboutDialog
 import com.fountofhopedotorg.fohbible.composables.ColorButton
 import com.fountofhopedotorg.fohbible.composables.FontButton
 import com.fountofhopedotorg.fohbible.composables.HighlightColorSquare
+import com.fountofhopedotorg.fohbible.composables.RotatingPhoneGraphics
 import com.fountofhopedotorg.fohbible.composables.SettingsItem
 import com.fountofhopedotorg.fohbible.composables.SettingsSection
 import com.fountofhopedotorg.fohbible.modals.BgModal
@@ -86,6 +87,8 @@ const val MIN_ORB_COUNT = 1
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen() {
+    val primary = MaterialTheme.colorScheme.primary
+    val viewColor = primary.copy(0.2f)
     val viewModel: AppViewModel = viewModel()
     val context = LocalContext.current
     var showBgModal by remember { mutableStateOf(false) }
@@ -147,8 +150,8 @@ fun SettingsScreen() {
                         checked = viewModel.darkTheme,
                         onCheckedChange = { viewModel.darkTheme = it },
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.primary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                            checkedThumbColor = primary,
+                            checkedTrackColor = primary.copy(alpha = 0.5f)
                         )
                     )
                 }
@@ -233,8 +236,8 @@ fun SettingsScreen() {
                         checked = viewModel.multiVersion,
                         onCheckedChange = { viewModel.multiVersion = it },
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.primary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                            checkedThumbColor = primary,
+                            checkedTrackColor = primary.copy(alpha = 0.5f)
                         )
                     )
                 }
@@ -297,7 +300,7 @@ fun SettingsScreen() {
                                 shape = RoundedCornerShape(20.dp),
                                 colors = CardDefaults.cardColors(
                                     containerColor =
-                                        if (viewModel.multiViewLayout == "horizontal") MaterialTheme.colorScheme.primary.copy(
+                                        if (viewModel.multiViewLayout == "horizontal") primary.copy(
                                             alpha = 0.1f
                                         ) else Color.Transparent
                                 )
@@ -312,7 +315,7 @@ fun SettingsScreen() {
                                 shape = RoundedCornerShape(20.dp),
                                 colors = CardDefaults.cardColors(
                                     containerColor =
-                                            if (viewModel.multiViewLayout == "vertical") MaterialTheme.colorScheme.primary.copy(
+                                            if (viewModel.multiViewLayout == "vertical") primary.copy(
                                                 alpha = 0.1f
                                             ) else Color.Transparent
                                 )
@@ -333,8 +336,8 @@ fun SettingsScreen() {
                             checked = viewModel.scrollSync,
                             onCheckedChange = { viewModel.scrollSync = it },
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.primary,
-                                checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                                checkedThumbColor = primary,
+                                checkedTrackColor = primary.copy(alpha = 0.5f)
                             )
                         )
                     }
@@ -350,10 +353,20 @@ fun SettingsScreen() {
                             checked = viewModel.squareAspectViews,
                             onCheckedChange = { viewModel.squareAspectViews = it },
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.primary,
-                                checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                                checkedThumbColor = primary,
+                                checkedTrackColor = primary.copy(alpha = 0.5f)
                             )
                         )
+                    }
+                    if (viewModel.squareAspectViews) {
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            RotatingPhoneGraphics(
+                                isSquareAspect = viewModel.squareAspectViews,
+                                primaryColor = primary,
+                                viewColor = viewColor,
+                                modifier = Modifier
+                            )
+                        }
                     }
                 }
                 Spacer(Modifier.height(8.dp))
@@ -378,7 +391,7 @@ fun SettingsScreen() {
                     Card(
                         shape = RoundedCornerShape(20.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                            containerColor = primary.copy(alpha = 0.1f)
                         )
                     ) {
                         Row(modifier = Modifier.padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -394,7 +407,7 @@ fun SettingsScreen() {
                             Text(
                                 "${viewModel.fontSize}",
                                 modifier = Modifier.padding(horizontal = 8.dp),
-                                color = MaterialTheme.colorScheme.primary,
+                                color = primary,
                                 fontSize = 18.sp
                             )
                             IconButton(
@@ -441,7 +454,7 @@ fun SettingsScreen() {
                                 modifier = Modifier
                                     .size(24.dp)
                                     .background(
-                                        color = MaterialTheme.colorScheme.primary,
+                                        color = primary,
                                         shape = CircleShape
                                     )
                             )
@@ -457,7 +470,7 @@ fun SettingsScreen() {
                             .size(30.dp)
                             .clip(CircleShape)
                             .background(viewModel.wordsOfJesus)
-                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(0.3f), CircleShape)
+                            .border(1.dp, primary.copy(0.3f), CircleShape)
                             .clickable { showWordsOfJesusColorWheel = true }
                     )
                 }
@@ -471,7 +484,7 @@ fun SettingsScreen() {
                                 .size(30.dp)
                                 .clip(CircleShape)
                                 .background(viewModel.darkOverlayColor)
-                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(0.3f), CircleShape)
+                                .border(1.dp, primary.copy(0.3f), CircleShape)
                                 .clickable { showDarkOverlayColorWheel = true }
                         )
                     }
@@ -484,7 +497,7 @@ fun SettingsScreen() {
                                 .size(30.dp)
                                 .clip(CircleShape)
                                 .background(viewModel.darkModalBackgroundColor)
-                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(0.3f), CircleShape)
+                                .border(1.dp, primary.copy(0.3f), CircleShape)
                                 .clickable { showDarkModalColorWheel = true }
                         )
                     }
@@ -499,7 +512,7 @@ fun SettingsScreen() {
                                 .background(viewModel.darkThemeReaderFontColor)
                                 .border(
                                     1.dp,
-                                    MaterialTheme.colorScheme.primary.copy(0.3f),
+                                    primary.copy(0.3f),
                                     CircleShape
                                 )
                                 .clickable { showDarkThemeReaderFontColorWheel = true }
@@ -516,7 +529,7 @@ fun SettingsScreen() {
                                 .size(30.dp)
                                 .clip(CircleShape)
                                 .background(viewModel.lightOverlayColor)
-                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(0.3f), CircleShape)
+                                .border(1.dp, primary.copy(0.3f), CircleShape)
                                 .clickable { showLightOverlayColorWheel = true }
                         )
                     }
@@ -529,7 +542,7 @@ fun SettingsScreen() {
                                 .size(30.dp)
                                 .clip(CircleShape)
                                 .background(viewModel.lightModalBackgroundColor)
-                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(0.3f), CircleShape)
+                                .border(1.dp, primary.copy(0.3f), CircleShape)
                                 .clickable { showLightModalColorWheel = true }
                         )
                     }
@@ -544,7 +557,7 @@ fun SettingsScreen() {
                                 .background(viewModel.lightThemeReaderFontColor)
                                 .border(
                                     1.dp,
-                                    MaterialTheme.colorScheme.primary.copy(0.3f),
+                                    primary.copy(0.3f),
                                     CircleShape
                                 )
                                 .clickable { showLightThemeReaderFontColorWheel = true }
@@ -560,21 +573,8 @@ fun SettingsScreen() {
                             .size(30.dp)
                             .clip(CircleShape)
                             .background(viewModel.verseMarkerColor)
-                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(0.3f), CircleShape)
+                            .border(1.dp, primary.copy(0.3f), CircleShape)
                             .clickable { showVerseMarkerColorWheel = true }
-                    )
-                }
-                SettingsItem(
-                    title = "Dictionary Mode",
-                    subtitle = "Toggle between dictionary or highlight mode on word tap"
-                ) {
-                    Switch(
-                        checked = viewModel.isDictionaryMode,
-                        onCheckedChange = { viewModel.isDictionaryMode = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.primary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                        )
                     )
                 }
                 if (!viewModel.isDictionaryMode) {
@@ -587,10 +587,23 @@ fun SettingsScreen() {
                                 .size(30.dp)
                                 .clip(CircleShape)
                                 .background(viewModel.wordMarkerColor)
-                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(0.3f), CircleShape)
+                                .border(1.dp, primary.copy(0.3f), CircleShape)
                                 .clickable { showWordMarkerColorWheel = true }
                         )
                     }
+                }
+                SettingsItem(
+                    title = "Dictionary Mode",
+                    subtitle = "Toggle between dictionary or highlight mode on word tap"
+                ) {
+                    Switch(
+                        checked = viewModel.isDictionaryMode,
+                        onCheckedChange = { viewModel.isDictionaryMode = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = primary,
+                            checkedTrackColor = primary.copy(alpha = 0.5f)
+                        )
+                    )
                 }
                 SettingsItem(
                     title = "Study Mode",
@@ -604,8 +617,8 @@ fun SettingsScreen() {
                         checked = viewModel.isStudyMode,
                         onCheckedChange = { viewModel.isStudyMode = it },
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.primary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                            checkedThumbColor = primary,
+                            checkedTrackColor = primary.copy(alpha = 0.5f)
                         )
                     )
                 }
@@ -621,8 +634,8 @@ fun SettingsScreen() {
                         checked = viewModel.renderOrbs,
                         onCheckedChange = { viewModel.renderOrbs = it },
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.primary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                            checkedThumbColor = primary,
+                            checkedTrackColor = primary.copy(alpha = 0.5f)
                         )
                     )
                 }
@@ -635,7 +648,7 @@ fun SettingsScreen() {
                         Card(
                             shape = RoundedCornerShape(20.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                                containerColor = primary.copy(alpha = 0.1f)
                             )
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -648,7 +661,7 @@ fun SettingsScreen() {
                                 Text(
                                     "${viewModel.orbsCount}",
                                     modifier = Modifier.padding(horizontal = 8.dp),
-                                    color = MaterialTheme.colorScheme.primary,
+                                    color = primary,
                                     fontSize = 18.sp
                                 )
                                 IconButton(
@@ -797,7 +810,7 @@ fun SettingsScreen() {
             },
             onDismiss = { showPrimaryVersionModal = false },
             colors = mapOf(
-                "primary" to MaterialTheme.colorScheme.primary,
+                "primary" to primary,
                 "card" to if (viewModel.darkTheme) viewModel.darkModalBackgroundColor else viewModel.lightModalBackgroundColor,
                 "text" to MaterialTheme.colorScheme.onSurface,
                 "muted" to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
@@ -815,7 +828,7 @@ fun SettingsScreen() {
             },
             onDismiss = { showSecondaryVersionModal = false },
             colors = mapOf(
-                "primary" to MaterialTheme.colorScheme.primary,
+                "primary" to primary,
                 "card" to if (viewModel.darkTheme) viewModel.darkModalBackgroundColor else viewModel.lightModalBackgroundColor,
                 "text" to MaterialTheme.colorScheme.onSurface,
                 "muted" to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
@@ -1108,7 +1121,7 @@ fun SettingsScreen() {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         "This may take a few moments. Continue?",
-                        color = MaterialTheme.colorScheme.primary,
+                        color = primary,
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -1167,7 +1180,7 @@ fun SettingsScreen() {
                             Icon(
                                 Icons.Default.Refresh,
                                 contentDescription = "Success",
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = primary,
                                 modifier = Modifier.size(40.dp)
                             )
                             Spacer(modifier = Modifier.height(12.dp))

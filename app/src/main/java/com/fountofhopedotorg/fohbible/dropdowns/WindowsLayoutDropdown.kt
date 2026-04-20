@@ -4,7 +4,6 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.AutoAwesomeMosaic
@@ -13,19 +12,15 @@ import androidx.compose.material.icons.filled.LooksOne
 import androidx.compose.material.icons.filled.ViewStream
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.fountofhopedotorg.fohbible.composables.DropdownMenuItemWithIcon
+import com.fountofhopedotorg.fohbible.composables.RotatingPhoneGraphics
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -144,95 +139,14 @@ fun WindowsLayoutDropdown(
                 )
                 HorizontalDivider()
                 val primary = MaterialTheme.colorScheme.primary
-                val viewColor = primary.copy(0.6f)
+                val viewColor = primary.copy(0.2f)
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(15.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    val infiniteTransition = rememberInfiniteTransition(label = "Orientation preview")
-                    val progress by infiniteTransition.animateFloat(
-                        initialValue = 0f,
-                        targetValue = 1f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(durationMillis = 2500, easing = FastOutSlowInEasing),
-                            repeatMode = RepeatMode.Reverse
-                        ),
-                        label = "progress"
-                    )
-
-                    val animationMultiplier by animateFloatAsState(
-                        targetValue = if (viewModel.squareAspectViews) 1f else 0f,
-                        animationSpec = tween(500),
-                        label = "animationControl"
-                    )
-                    val effectiveProgress = progress * animationMultiplier
-
-                    Text(
-                        "Portrait↔Landscape",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontSize = 13.sp
-                    )
-
-                    Box(
-                        modifier = Modifier.size(80.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        val parentRotation = effectiveProgress * -90f
-                        val childRotation = effectiveProgress * 90f
-
-                        val animatedWidth = 40.dp
-                        val animatedHeight = 80.dp
-                        Box(
-                            modifier = Modifier
-                                .padding(top = 6.dp)
-                                .size(width = animatedWidth, height = animatedHeight)
-                                .graphicsLayer {
-                                    rotationZ = parentRotation
-                                    transformOrigin = TransformOrigin.Center
-                                    shape = RoundedCornerShape(4.dp)
-                                    clip = true
-                                }
-                                .background(primary.copy(0.1f))
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(6.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                repeat(2) {
-                                    Column(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .aspectRatio(1f)
-                                            .graphicsLayer {
-                                                rotationZ = childRotation
-                                            }
-                                            .clip(RoundedCornerShape(2.dp))
-                                            .background(viewColor)
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .height(5.dp)
-                                                .background(primary)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Text(
-                        "Orientation Changes",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontSize = 13.sp,
-                        modifier = Modifier.padding(top = 8.dp)
+                Column(modifier = Modifier.fillMaxSize()) {
+                    RotatingPhoneGraphics(
+                        isSquareAspect = viewModel.squareAspectViews,
+                        primaryColor = primary,
+                        viewColor = viewColor,
+                        modifier = Modifier
                     )
                 }
             }
