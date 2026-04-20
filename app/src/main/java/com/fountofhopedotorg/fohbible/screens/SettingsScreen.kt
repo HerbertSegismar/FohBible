@@ -384,6 +384,58 @@ fun SettingsScreen() {
                     }
                 }
                 SettingsItem(
+                    title = "Show Floating Orbs",
+                    subtitle = if (viewModel.renderOrbs) {
+                        "Turn this off to disable floating orbs"
+                    } else {
+                        "Turn this on to add floating orbs across the entire app"
+                    }
+                ) {
+                    Switch(
+                        checked = viewModel.renderOrbs,
+                        onCheckedChange = { viewModel.renderOrbs = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = primary,
+                            checkedTrackColor = primary.copy(alpha = 0.5f)
+                        )
+                    )
+                }
+                if (viewModel.renderOrbs) {
+                    SettingsItem(
+                        title = "Orbs Count ($MIN_ORB_COUNT - $MAX_ORB_COUNT)",
+                        subtitle = "Adjust the number of orbs rendered",
+                        onClick = { showOrbsCountModal = true }
+                    ) {
+                        Card(
+                            shape = RoundedCornerShape(20.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = primary.copy(alpha = 0.1f)
+                            )
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(
+                                    onClick = { viewModel.orbsCount = maxOf(MIN_ORB_COUNT, viewModel.orbsCount - 1) },
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Text("-", fontWeight = FontWeight.Bold)
+                                }
+                                Text(
+                                    "${viewModel.orbsCount}",
+                                    modifier = Modifier.padding(horizontal = 8.dp),
+                                    color = primary,
+                                    fontSize = 18.sp
+                                )
+                                IconButton(
+                                    onClick = { viewModel.orbsCount = minOf(MAX_ORB_COUNT, viewModel.orbsCount + 1) },
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Text("+", fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
+                SettingsItem(
                     title = "Font Size",
                     subtitle = "Adjust text size for better readability",
                     onClick = { showFontModal = true }
@@ -459,6 +511,64 @@ fun SettingsScreen() {
                                     )
                             )
                         },
+                    )
+                }
+                SettingsItem(
+                    title = "Study Mode",
+                    subtitle = if (viewModel.isStudyMode) {
+                        "Turn this off to remove the extra buttons for cross-references and commentaries at the end of each verse"
+                    } else {
+                        "Turn this on to add the extra buttons for cross-references and commentaries at the end of each verse"
+                    }
+                ) {
+                    Switch(
+                        checked = viewModel.isStudyMode,
+                        onCheckedChange = { viewModel.isStudyMode = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = primary,
+                            checkedTrackColor = primary.copy(alpha = 0.5f)
+                        )
+                    )
+                }
+                SettingsItem(
+                    title = "Dictionary Mode",
+                    subtitle = "Toggle between dictionary or highlight mode on word tap"
+                ) {
+                    Switch(
+                        checked = viewModel.isDictionaryMode,
+                        onCheckedChange = { viewModel.isDictionaryMode = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = primary,
+                            checkedTrackColor = primary.copy(alpha = 0.5f)
+                        )
+                    )
+                }
+                if (!viewModel.isDictionaryMode) {
+                    SettingsItem(
+                        title = "Word Marker Color",
+                        subtitle = "Color for highlighting individual words"
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clip(CircleShape)
+                                .background(viewModel.wordMarkerColor)
+                                .border(1.dp, primary.copy(0.3f), CircleShape)
+                                .clickable { showWordMarkerColorWheel = true }
+                        )
+                    }
+                }
+                SettingsItem(
+                    title = "Verse Marker Color",
+                    subtitle = "Color for highlighting entire verses"
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(30.dp)
+                            .clip(CircleShape)
+                            .background(viewModel.verseMarkerColor)
+                            .border(1.dp, primary.copy(0.3f), CircleShape)
+                            .clickable { showVerseMarkerColorWheel = true }
                     )
                 }
                 SettingsItem(
@@ -562,116 +672,6 @@ fun SettingsScreen() {
                                 )
                                 .clickable { showLightThemeReaderFontColorWheel = true }
                         )
-                    }
-                }
-                SettingsItem(
-                    title = "Verse Marker Color",
-                    subtitle = "Color for highlighting entire verses"
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(30.dp)
-                            .clip(CircleShape)
-                            .background(viewModel.verseMarkerColor)
-                            .border(1.dp, primary.copy(0.3f), CircleShape)
-                            .clickable { showVerseMarkerColorWheel = true }
-                    )
-                }
-                if (!viewModel.isDictionaryMode) {
-                    SettingsItem(
-                        title = "Word Marker Color",
-                        subtitle = "Color for highlighting individual words"
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(30.dp)
-                                .clip(CircleShape)
-                                .background(viewModel.wordMarkerColor)
-                                .border(1.dp, primary.copy(0.3f), CircleShape)
-                                .clickable { showWordMarkerColorWheel = true }
-                        )
-                    }
-                }
-                SettingsItem(
-                    title = "Dictionary Mode",
-                    subtitle = "Toggle between dictionary or highlight mode on word tap"
-                ) {
-                    Switch(
-                        checked = viewModel.isDictionaryMode,
-                        onCheckedChange = { viewModel.isDictionaryMode = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = primary,
-                            checkedTrackColor = primary.copy(alpha = 0.5f)
-                        )
-                    )
-                }
-                SettingsItem(
-                    title = "Study Mode",
-                    subtitle = if (viewModel.isStudyMode) {
-                        "Turn this off to remove the extra buttons for cross-references and commentaries at the end of each verse"
-                    } else {
-                        "Turn this on to add the extra buttons for cross-references and commentaries at the end of each verse"
-                    }
-                ) {
-                    Switch(
-                        checked = viewModel.isStudyMode,
-                        onCheckedChange = { viewModel.isStudyMode = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = primary,
-                            checkedTrackColor = primary.copy(alpha = 0.5f)
-                        )
-                    )
-                }
-                SettingsItem(
-                    title = "Show Floating Orbs",
-                    subtitle = if (viewModel.renderOrbs) {
-                        "Turn this off to disable floating orbs"
-                    } else {
-                        "Turn this on to add floating orbs across the entire app"
-                    }
-                ) {
-                    Switch(
-                        checked = viewModel.renderOrbs,
-                        onCheckedChange = { viewModel.renderOrbs = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = primary,
-                            checkedTrackColor = primary.copy(alpha = 0.5f)
-                        )
-                    )
-                }
-                if (viewModel.renderOrbs) {
-                    SettingsItem(
-                        title = "Orbs Count ($MIN_ORB_COUNT - $MAX_ORB_COUNT)",
-                        subtitle = "Adjust the number of orbs rendered",
-                        onClick = { showOrbsCountModal = true }
-                    ) {
-                        Card(
-                            shape = RoundedCornerShape(20.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = primary.copy(alpha = 0.1f)
-                            )
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(
-                                    onClick = { viewModel.orbsCount = maxOf(MIN_ORB_COUNT, viewModel.orbsCount - 1) },
-                                    modifier = Modifier.size(40.dp)
-                                ) {
-                                    Text("-", fontWeight = FontWeight.Bold)
-                                }
-                                Text(
-                                    "${viewModel.orbsCount}",
-                                    modifier = Modifier.padding(horizontal = 8.dp),
-                                    color = primary,
-                                    fontSize = 18.sp
-                                )
-                                IconButton(
-                                    onClick = { viewModel.orbsCount = minOf(MAX_ORB_COUNT, viewModel.orbsCount + 1) },
-                                    modifier = Modifier.size(40.dp)
-                                ) {
-                                    Text("+", fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
                     }
                 }
             }
