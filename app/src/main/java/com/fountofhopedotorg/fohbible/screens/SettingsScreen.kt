@@ -155,6 +155,58 @@ fun SettingsScreen() {
                         )
                     )
                 }
+                SettingsItem(
+                    title = "Show Floating Orbs",
+                    subtitle = if (viewModel.renderOrbs) {
+                        "Turn this off to disable floating orbs"
+                    } else {
+                        "Turn this on to add floating orbs across the entire app"
+                    }
+                ) {
+                    Switch(
+                        checked = viewModel.renderOrbs,
+                        onCheckedChange = { viewModel.renderOrbs = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = primary,
+                            checkedTrackColor = primary.copy(alpha = 0.5f)
+                        )
+                    )
+                }
+                if (viewModel.renderOrbs) {
+                    SettingsItem(
+                        title = "Orbs Count ($MIN_ORB_COUNT - $MAX_ORB_COUNT)",
+                        subtitle = "Adjust the number of orbs rendered",
+                        onClick = { showOrbsCountModal = true }
+                    ) {
+                        Card(
+                            shape = RoundedCornerShape(20.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = primary.copy(alpha = 0.1f)
+                            )
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(
+                                    onClick = { viewModel.orbsCount = maxOf(MIN_ORB_COUNT, viewModel.orbsCount - 1) },
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Text("-", fontWeight = FontWeight.Bold)
+                                }
+                                Text(
+                                    "${viewModel.orbsCount}",
+                                    modifier = Modifier.padding(horizontal = 8.dp),
+                                    color = primary,
+                                    fontSize = 18.sp
+                                )
+                                IconButton(
+                                    onClick = { viewModel.orbsCount = minOf(MAX_ORB_COUNT, viewModel.orbsCount + 1) },
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Text("+", fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
                 Column {
                     Text("Color Scheme", style = MaterialTheme.typography.labelLarge)
                     Spacer(Modifier.height(8.dp))
@@ -384,58 +436,6 @@ fun SettingsScreen() {
                     }
                 }
                 SettingsItem(
-                    title = "Show Floating Orbs",
-                    subtitle = if (viewModel.renderOrbs) {
-                        "Turn this off to disable floating orbs"
-                    } else {
-                        "Turn this on to add floating orbs across the entire app"
-                    }
-                ) {
-                    Switch(
-                        checked = viewModel.renderOrbs,
-                        onCheckedChange = { viewModel.renderOrbs = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = primary,
-                            checkedTrackColor = primary.copy(alpha = 0.5f)
-                        )
-                    )
-                }
-                if (viewModel.renderOrbs) {
-                    SettingsItem(
-                        title = "Orbs Count ($MIN_ORB_COUNT - $MAX_ORB_COUNT)",
-                        subtitle = "Adjust the number of orbs rendered",
-                        onClick = { showOrbsCountModal = true }
-                    ) {
-                        Card(
-                            shape = RoundedCornerShape(20.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = primary.copy(alpha = 0.1f)
-                            )
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(
-                                    onClick = { viewModel.orbsCount = maxOf(MIN_ORB_COUNT, viewModel.orbsCount - 1) },
-                                    modifier = Modifier.size(40.dp)
-                                ) {
-                                    Text("-", fontWeight = FontWeight.Bold)
-                                }
-                                Text(
-                                    "${viewModel.orbsCount}",
-                                    modifier = Modifier.padding(horizontal = 8.dp),
-                                    color = primary,
-                                    fontSize = 18.sp
-                                )
-                                IconButton(
-                                    onClick = { viewModel.orbsCount = minOf(MAX_ORB_COUNT, viewModel.orbsCount + 1) },
-                                    modifier = Modifier.size(40.dp)
-                                ) {
-                                    Text("+", fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                    }
-                }
-                SettingsItem(
                     title = "Font Size",
                     subtitle = "Adjust text size for better readability",
                     onClick = { showFontModal = true }
@@ -475,7 +475,7 @@ fun SettingsScreen() {
                     }
                 }
                 SettingsItem(
-                    title = "Custom Background",
+                    title = "Custom Reader Background",
                     subtitle = "Add your own photo as background"
                 ) {
                     IconButton(
@@ -486,21 +486,22 @@ fun SettingsScreen() {
                     }
                 }
                 SettingsItem(
-                    title = "Background Texture",
-                    subtitle = "Choose from built-in textures",
+                    title = "Reader BG Texture",
+                    subtitle = "Choose from built-in textures or upload a custom one",
                     onClick = { showBgModal = true }
                 ) {
                     Icon(Icons.Default.ChevronRight, contentDescription = null)
                 }
                 SettingsItem(
-                    title = "Overlay Opacity",
-                    subtitle = "Adjust the overlay transparency"
+                    title = "Reader BG Overlay",
+                    subtitle = "Adjust the reader background overlay opacity"
                 ) {
+                    Text("${(viewModel.overlayOpacity * 100).toInt()}%", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
                     Slider(
                         value = viewModel.overlayOpacity,
                         onValueChange = { viewModel.overlayOpacity = it },
                         valueRange = 0f..1f,
-                        modifier = Modifier.fillMaxWidth(0.8f),
+                        modifier = Modifier.fillMaxWidth(0.5f),
                         thumb = {
                             Box(
                                 modifier = Modifier
