@@ -63,7 +63,7 @@ fun WindowsLayoutDropdown(
             offset = DpOffset(x = 100.dp, y = 0.dp),
         ) {
             Text(
-                "Windows Layout",
+                if (viewModel.multiVersion) "Dual Version View" else "Single View",
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(25.dp),

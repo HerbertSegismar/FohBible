@@ -84,6 +84,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.fountofhopedotorg.fohbible.ColorWheelDialog
 import com.fountofhopedotorg.fohbible.Screen
 import com.fountofhopedotorg.fohbible.allScreens
 import com.fountofhopedotorg.fohbible.data.ColorTheme
@@ -223,6 +224,26 @@ fun FontSizeControls(viewModel: AppViewModel) {
             appViewModel = viewModel
         )
     }
+    if (viewModel.showLightOverlayColorWheel) {
+        ColorWheelDialog(
+            onDismissRequest = { viewModel.showLightOverlayColorWheel = false },
+            onColorSelected = { color ->
+                viewModel.lightOverlayColor = color
+                viewModel.showLightOverlayColorWheel = false
+            },
+            initialColor = viewModel.lightOverlayColor
+        )
+    }
+    if (viewModel.showDarkOverlayColorWheel) {
+        ColorWheelDialog(
+            onDismissRequest = { viewModel.showDarkOverlayColorWheel = false },
+            onColorSelected = { color ->
+                viewModel.darkOverlayColor = color
+                viewModel.showDarkOverlayColorWheel = false
+            },
+            initialColor = viewModel.darkOverlayColor
+        )
+    }
 }
 
 @Composable
@@ -284,33 +305,55 @@ fun OverlayOpacitySlider(viewModel: AppViewModel) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("BG Overlay Opacity", style = MaterialTheme.typography.bodyMedium, fontSize = 14.sp)
+            Text("Background Overlay", style = MaterialTheme.typography.bodyMedium, fontSize = 14.sp)
             Text("${(viewModel.overlayOpacity * 100).toInt()}%", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
         }
-        Slider(
+        Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 5.dp),
-            value = viewModel.overlayOpacity,
-            onValueChange = { viewModel.overlayOpacity = it },
-            valueRange = 0f..1f,
-            colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.primary,
-                activeTrackColor = MaterialTheme.colorScheme.primary,
-                inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
-                activeTickColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                inactiveTickColor = MaterialTheme.colorScheme.surfaceVariant,
-            ),
-            thumb = {
-                Box(
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy((-20).dp)
+        ) {
+            Box(modifier = Modifier.fillMaxWidth(0.3f)) {
+                if (viewModel.darkTheme) {
+                    ColorPickerRow(
+                        label = "",
+                        color = viewModel.darkOverlayColor,
+                        onClick = { viewModel.showDarkOverlayColorWheel = true })
+                } else {
+                    ColorPickerRow(
+                        label = "",
+                        color = viewModel.lightOverlayColor,
+                        onClick = { viewModel.showLightOverlayColorWheel = true })
+                }
+            }
+            Box(modifier = Modifier.fillMaxWidth(1f)) {
+                Slider(
                     modifier = Modifier
-                        .size(18.dp)
-                        .shadow(2.dp, shape = CircleShape)
-                        .background(MaterialTheme.colorScheme.primary, CircleShape)
-                        .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape)
+                        .fillMaxWidth()
+                        .padding(horizontal = 5.dp),
+                    value = viewModel.overlayOpacity,
+                    onValueChange = { viewModel.overlayOpacity = it },
+                    valueRange = 0f..1f,
+                    colors = SliderDefaults.colors(
+                        thumbColor = MaterialTheme.colorScheme.primary,
+                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                        inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        activeTickColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                        inactiveTickColor = MaterialTheme.colorScheme.surfaceVariant,
+                    ),
+                    thumb = {
+                        Box(
+                            modifier = Modifier
+                                .size(18.dp)
+                                .shadow(2.dp, shape = CircleShape)
+                                .background(MaterialTheme.colorScheme.primary, CircleShape)
+                                .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape)
+                        )
+                    }
                 )
             }
-        )
+        }
     }
 }
 

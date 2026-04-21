@@ -50,6 +50,8 @@ class AppViewModel : ViewModel() {
     var showJesusWordsColorWheelDialog by mutableStateOf(false)
     var showLightReaderFontColorWheelDialog by mutableStateOf(false)
     var showDarkReaderFontColorWheelDialog by mutableStateOf(false)
+    var showDarkOverlayColorWheel by  mutableStateOf(false)
+    var showLightOverlayColorWheel by mutableStateOf(false)
     var isDictionaryMode by mutableStateOf(true)
     var verseMarkerColor by mutableStateOf(Color(0xFF95F198))
     var showVerseMarkerColorWheelDialog by mutableStateOf(false)

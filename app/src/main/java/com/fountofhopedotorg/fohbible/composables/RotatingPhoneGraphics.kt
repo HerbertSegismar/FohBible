@@ -69,7 +69,6 @@ fun RotatingPhoneGraphics(
 
         val effectiveProgress = progress * animationMultiplier
 
-        // 2. UI Content
         Text(
             text = "Portrait↔Landscape",
             style = MaterialTheme.typography.labelSmall,
