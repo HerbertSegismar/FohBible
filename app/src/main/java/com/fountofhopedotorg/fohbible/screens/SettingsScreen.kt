@@ -39,7 +39,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -67,6 +66,7 @@ import com.fountofhopedotorg.fohbible.composables.FontButton
 import com.fountofhopedotorg.fohbible.composables.HighlightColorSquare
 import com.fountofhopedotorg.fohbible.composables.RotatingPhoneGraphics
 import com.fountofhopedotorg.fohbible.composables.SettingsItem
+import com.fountofhopedotorg.fohbible.composables.SettingsOpacitySlider
 import com.fountofhopedotorg.fohbible.composables.SettingsSection
 import com.fountofhopedotorg.fohbible.modals.BgModal
 import com.fountofhopedotorg.fohbible.modals.FontModal
@@ -99,8 +99,6 @@ fun SettingsScreen() {
     var showColorWheel by remember { mutableStateOf(false) }
     var customColor by remember { mutableStateOf(viewModel.customColor) }
     var isUsingCustomColor by remember { mutableStateOf(viewModel.isCustomColor) }
-    var showLightOverlayColorWheel by remember { mutableStateOf(false) }
-    var showDarkOverlayColorWheel by remember { mutableStateOf(false) }
     var showLightModalColorWheel by remember { mutableStateOf(false) }
     var showDarkModalColorWheel by remember { mutableStateOf(false) }
     var showWordsOfJesusColorWheel by remember { mutableStateOf(false) }
@@ -475,46 +473,6 @@ fun SettingsScreen() {
                     }
                 }
                 SettingsItem(
-                    title = "Custom Reader Background",
-                    subtitle = "Add your own photo as background"
-                ) {
-                    IconButton(
-                        onClick = { imagePickerLauncher.launch("image/*") },
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(Icons.Default.AddCircleOutline, contentDescription = "Add custom background")
-                    }
-                }
-                SettingsItem(
-                    title = "Reader BG Texture",
-                    subtitle = "Choose from built-in textures or upload a custom one",
-                    onClick = { showBgModal = true }
-                ) {
-                    Icon(Icons.Default.ChevronRight, contentDescription = null)
-                }
-                SettingsItem(
-                    title = "Reader BG Overlay",
-                    subtitle = "Adjust the reader background overlay opacity"
-                ) {
-                    Text("${(viewModel.overlayOpacity * 100).toInt()}%", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
-                    Slider(
-                        value = viewModel.overlayOpacity,
-                        onValueChange = { viewModel.overlayOpacity = it },
-                        valueRange = 0f..1f,
-                        modifier = Modifier.fillMaxWidth(0.5f),
-                        thumb = {
-                            Box(
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .background(
-                                        color = primary,
-                                        shape = CircleShape
-                                    )
-                            )
-                        },
-                    )
-                }
-                SettingsItem(
                     title = "Study Mode",
                     subtitle = if (viewModel.isStudyMode) {
                         "Turn this off to remove the extra buttons for cross-references and commentaries at the end of each verse"
@@ -560,19 +518,6 @@ fun SettingsScreen() {
                     }
                 }
                 SettingsItem(
-                    title = "Verse Marker Color",
-                    subtitle = "Color for highlighting entire verses"
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(30.dp)
-                            .clip(CircleShape)
-                            .background(viewModel.verseMarkerColor)
-                            .border(1.dp, primary.copy(0.3f), CircleShape)
-                            .clickable { showVerseMarkerColorWheel = true }
-                    )
-                }
-                SettingsItem(
                     title = "Words of Jesus Color",
                     subtitle = "Color for the words of the Lord Jesus"
                 ) {
@@ -585,20 +530,20 @@ fun SettingsScreen() {
                             .clickable { showWordsOfJesusColorWheel = true }
                     )
                 }
+                SettingsItem(
+                    title = "Verse Marker Color",
+                    subtitle = "Color for highlighting entire verses"
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(30.dp)
+                            .clip(CircleShape)
+                            .background(viewModel.verseMarkerColor)
+                            .border(1.dp, primary.copy(0.3f), CircleShape)
+                            .clickable { showVerseMarkerColorWheel = true }
+                    )
+                }
                 if (viewModel.darkTheme) {
-                    SettingsItem(
-                        title = "Dark Theme Overlay Color",
-                        subtitle = "Overlay color for dark theme"
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(30.dp)
-                                .clip(CircleShape)
-                                .background(viewModel.darkOverlayColor)
-                                .border(1.dp, primary.copy(0.3f), CircleShape)
-                                .clickable { showDarkOverlayColorWheel = true }
-                        )
-                    }
                     SettingsItem(
                         title = "Dark Theme Modal Background Color",
                         subtitle = "Modal background color for dark theme"
@@ -632,19 +577,6 @@ fun SettingsScreen() {
                 }
                 else {
                     SettingsItem(
-                        title = "Light Theme Overlay Color",
-                        subtitle = "Overlay color for light theme"
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(30.dp)
-                                .clip(CircleShape)
-                                .background(viewModel.lightOverlayColor)
-                                .border(1.dp, primary.copy(0.3f), CircleShape)
-                                .clickable { showLightOverlayColorWheel = true }
-                        )
-                    }
-                    SettingsItem(
                         title = "Light Theme Modal Background Color",
                         subtitle = "Modal background color for light theme"
                     ) {
@@ -673,6 +605,34 @@ fun SettingsScreen() {
                                 )
                                 .clickable { showLightThemeReaderFontColorWheel = true }
                         )
+                    }
+                }
+                SettingsItem(
+                    title = "Custom Reader Background",
+                    subtitle = "Add your own photo as background"
+                ) {
+                    IconButton(
+                        onClick = { imagePickerLauncher.launch("image/*") },
+                        modifier = Modifier.size(30.dp)
+                    ) {
+                        Icon(Icons.Default.AddCircleOutline, contentDescription = "Add custom background",
+                            modifier = Modifier.size(30.dp))
+                    }
+                }
+                SettingsItem(
+                    title = "Reader BG Texture",
+                    subtitle = "Choose from built-in textures or upload a custom one",
+                    onClick = { showBgModal = true }
+                ) {
+                    Icon(Icons.Default.ChevronRight, contentDescription = null)
+                }
+                if (viewModel.bgImageIndex > 0) {
+                    SettingsItem( title = "" ) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                SettingsOpacitySlider(viewModel = viewModel)
+                            }
+                        }
                     }
                 }
             }
@@ -1015,26 +975,6 @@ fun SettingsScreen() {
                 showColorWheel = false
             },
             initialColor = customColor ?: viewModel.selectedColor ?: DefaultPrimaryColor
-        )
-    }
-    if (showLightOverlayColorWheel) {
-        ColorWheelDialog(
-            onDismissRequest = { showLightOverlayColorWheel = false },
-            onColorSelected = { color ->
-                viewModel.lightOverlayColor = color
-                showLightOverlayColorWheel = false
-            },
-            initialColor = viewModel.lightOverlayColor
-        )
-    }
-    if (showDarkOverlayColorWheel) {
-        ColorWheelDialog(
-            onDismissRequest = { showDarkOverlayColorWheel = false },
-            onColorSelected = { color ->
-                viewModel.darkOverlayColor = color
-                showDarkOverlayColorWheel = false
-            },
-            initialColor = viewModel.darkOverlayColor
         )
     }
     if (showWordMarkerColorWheel) {

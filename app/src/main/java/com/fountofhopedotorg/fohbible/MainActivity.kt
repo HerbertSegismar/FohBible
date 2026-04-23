@@ -544,6 +544,26 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             )
                         )
                     }
+                    if (viewModel.showLightOverlayColorWheel) {
+                        ColorWheelDialog(
+                            onDismissRequest = { viewModel.showLightOverlayColorWheel = false },
+                            onColorSelected = { color ->
+                                viewModel.lightOverlayColor = color
+                                viewModel.showLightOverlayColorWheel = false
+                            },
+                            initialColor = viewModel.lightOverlayColor
+                        )
+                    }
+                    if (viewModel.showDarkOverlayColorWheel) {
+                        ColorWheelDialog(
+                            onDismissRequest = { viewModel.showDarkOverlayColorWheel = false },
+                            onColorSelected = { color ->
+                                viewModel.darkOverlayColor = color
+                                viewModel.showDarkOverlayColorWheel = false
+                            },
+                            initialColor = viewModel.darkOverlayColor
+                        )
+                    }
                     if (viewModel.showColorThemeDialog) {
                         Dialog(onDismissRequest = { viewModel.showColorThemeDialog = false }) {
                             ColorThemeDialog(

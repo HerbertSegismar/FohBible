@@ -274,6 +274,7 @@ fun AnimatedIconButton(
 @Composable
 fun ColorPickerRow(
     label: String,
+    iconSize: Int,
     color: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -283,7 +284,7 @@ fun ColorPickerRow(
         leadingIcon = {
             Box(
                 modifier = Modifier
-                    .size(22.dp)
+                    .size(iconSize.dp)
                     .clip(CircleShape)
                     .background(color)
                     .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f), CircleShape)
@@ -292,6 +293,83 @@ fun ColorPickerRow(
         onClick = onClick,
         modifier = modifier.fillMaxWidth()
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsOpacitySlider(viewModel: AppViewModel) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Reader BG Overlay",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = "${(viewModel.overlayOpacity * 100).toInt()}%",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Medium
+            )
+        }
+        Text(
+            text = "Adjust overlay opacity with slider and set color with button",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,)
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Slider(
+                value = viewModel.overlayOpacity,
+                onValueChange = { viewModel.overlayOpacity = it },
+                valueRange = 0f..1f,
+                modifier = Modifier.weight(1f),
+                colors = SliderDefaults.colors(
+                    thumbColor = MaterialTheme.colorScheme.primary,
+                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                    inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                ),
+                thumb = {
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .shadow(2.dp, shape = CircleShape)
+                            .background(MaterialTheme.colorScheme.primary, CircleShape)
+                            .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape)
+                    )
+                }
+            )
+
+            if (viewModel.darkTheme) {
+                Box(
+                    modifier = Modifier
+                        .size(30.dp)
+                        .clip(CircleShape)
+                        .background(viewModel.darkOverlayColor)
+                        .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f), CircleShape)
+                        .clickable { viewModel.showDarkOverlayColorWheel = true }
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(30.dp)
+                        .clip(CircleShape)
+                        .background(viewModel.lightOverlayColor)
+                        .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f), CircleShape)
+                        .clickable { viewModel.showLightOverlayColorWheel = true }
+                )
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -318,11 +396,13 @@ fun OverlayOpacitySlider(viewModel: AppViewModel) {
                 if (viewModel.darkTheme) {
                     ColorPickerRow(
                         label = "",
+                        iconSize = 22,
                         color = viewModel.darkOverlayColor,
                         onClick = { viewModel.showDarkOverlayColorWheel = true })
                 } else {
                     ColorPickerRow(
                         label = "",
+                        iconSize = 22,
                         color = viewModel.lightOverlayColor,
                         onClick = { viewModel.showLightOverlayColorWheel = true })
                 }
@@ -718,18 +798,19 @@ fun ReaderDropdownContent(
             )
             if (!viewModel.isDictionaryMode) {
                 HorizontalDivider()
-                ColorPickerRow(label = "Word Marker Color", color = viewModel.wordMarkerColor, onClick = { viewModel.showWordMarkerColorWheelDialog = true })
+                ColorPickerRow(label = "Word Marker Color", iconSize = 22, color = viewModel.wordMarkerColor, onClick = { viewModel.showWordMarkerColorWheelDialog = true })
             }
             else {
                 HorizontalDivider()
-                ColorPickerRow(label = "Verse Marker Color", color = viewModel.verseMarkerColor, onClick = { viewModel.showVerseMarkerColorWheelDialog = true })
+                ColorPickerRow(label = "Verse Marker Color", iconSize = 22, color = viewModel.verseMarkerColor, onClick = { viewModel.showVerseMarkerColorWheelDialog = true })
             }
             HorizontalDivider()
-            ColorPickerRow(label = "Jesus' Words Color", color = viewModel.wordsOfJesus, onClick = { viewModel.showJesusWordsColorWheelDialog = true })
+            ColorPickerRow(label = "Jesus' Words Color", iconSize = 22, color = viewModel.wordsOfJesus, onClick = { viewModel.showJesusWordsColorWheelDialog = true })
             HorizontalDivider()
             if (viewModel.darkTheme) {
                 ColorPickerRow(
                     label = "Font Color",
+                    iconSize = 22,
                     color = viewModel.darkThemeReaderFontColor,
                     onClick = { viewModel.showDarkReaderFontColorWheelDialog= true }
                 )
@@ -737,6 +818,7 @@ fun ReaderDropdownContent(
             else {
                 ColorPickerRow(
                     label = "Font Color",
+                    iconSize = 22,
                     color = viewModel.lightThemeReaderFontColor,
                     onClick = { viewModel.showLightReaderFontColorWheelDialog= true }
                 )
@@ -797,18 +879,19 @@ fun ExtraReaderControls(viewModel: AppViewModel, coroutineScope: kotlinx.corouti
     )
     if (!viewModel.isDictionaryMode) {
         HorizontalDivider()
-        ColorPickerRow(label = "Word Marker Color", color = viewModel.wordMarkerColor, onClick = { viewModel.showWordMarkerColorWheelDialog = true })
+        ColorPickerRow(label = "Word Marker Color", iconSize = 22, color = viewModel.wordMarkerColor, onClick = { viewModel.showWordMarkerColorWheelDialog = true })
     }
     else {
         HorizontalDivider()
-        ColorPickerRow(label = "Verse Marker Color", color = viewModel.verseMarkerColor, onClick = { viewModel.showVerseMarkerColorWheelDialog = true })
+        ColorPickerRow(label = "Verse Marker Color", iconSize = 22, color = viewModel.verseMarkerColor, onClick = { viewModel.showVerseMarkerColorWheelDialog = true })
     }
     HorizontalDivider()
-    ColorPickerRow(label = "Jesus' Words Color", color = viewModel.wordsOfJesus, onClick = { viewModel.showJesusWordsColorWheelDialog = true })
+    ColorPickerRow(label = "Jesus' Words Color", iconSize = 22, color = viewModel.wordsOfJesus, onClick = { viewModel.showJesusWordsColorWheelDialog = true })
     HorizontalDivider()
     if (viewModel.darkTheme) {
         ColorPickerRow(
             label = "Font Color",
+            iconSize = 22,
             color = viewModel.darkThemeReaderFontColor,
             onClick = { viewModel.showDarkReaderFontColorWheelDialog= true }
         )
@@ -816,6 +899,7 @@ fun ExtraReaderControls(viewModel: AppViewModel, coroutineScope: kotlinx.corouti
     else {
         ColorPickerRow(
             label = "Font Color",
+            iconSize = 22,
             color = viewModel.lightThemeReaderFontColor,
             onClick = { viewModel.showLightReaderFontColorWheelDialog= true }
         )
