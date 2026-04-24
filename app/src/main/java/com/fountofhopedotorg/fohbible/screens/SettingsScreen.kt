@@ -23,7 +23,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Refresh
@@ -545,7 +544,7 @@ fun SettingsScreen() {
                 }
                 if (viewModel.darkTheme) {
                     SettingsItem(
-                        title = "Dark Theme Modal Background Color",
+                        title = "Modal Background Color",
                         subtitle = "Modal background color for dark theme"
                     ) {
                         Box(
@@ -558,7 +557,7 @@ fun SettingsScreen() {
                         )
                     }
                     SettingsItem(
-                        title = "Dark Theme Reader Font Color",
+                        title = "Reader Font Color",
                         subtitle = "Reader text color for dark theme"
                     ) {
                         Box(
@@ -577,7 +576,7 @@ fun SettingsScreen() {
                 }
                 else {
                     SettingsItem(
-                        title = "Light Theme Modal Background Color",
+                        title = "Modal Background Color",
                         subtitle = "Modal background color for light theme"
                     ) {
                         Box(
@@ -590,7 +589,7 @@ fun SettingsScreen() {
                         )
                     }
                     SettingsItem(
-                        title = "Light Theme Reader Font Color",
+                        title = "Reader Font Color",
                         subtitle = "Reader text color for light theme"
                     ) {
                         Box(
@@ -605,18 +604,6 @@ fun SettingsScreen() {
                                 )
                                 .clickable { showLightThemeReaderFontColorWheel = true }
                         )
-                    }
-                }
-                SettingsItem(
-                    title = "Custom Reader Background",
-                    subtitle = "Add your own photo as background"
-                ) {
-                    IconButton(
-                        onClick = { imagePickerLauncher.launch("image/*") },
-                        modifier = Modifier.size(30.dp)
-                    ) {
-                        Icon(Icons.Default.AddCircleOutline, contentDescription = "Add custom background",
-                            modifier = Modifier.size(30.dp))
                     }
                 }
                 SettingsItem(

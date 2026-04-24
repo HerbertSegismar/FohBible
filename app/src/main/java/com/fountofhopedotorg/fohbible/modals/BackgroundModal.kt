@@ -28,11 +28,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
+import androidx.compose.ui.graphics.Color
 
 @Composable
 fun BgModal(
@@ -114,9 +114,12 @@ fun BgModal(
                     onClick = onPickCustom,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null)
+                    Icon(Icons.Default.Add, contentDescription = null, tint = Color.White)
                     Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
-                    Text("Choose Custom Image")
+                    Text(
+                        text = "Choose Custom Image",
+                        color = Color.White
+                    )
                 }
 
                 if (customUri != null) {
