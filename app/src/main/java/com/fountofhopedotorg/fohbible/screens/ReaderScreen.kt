@@ -51,6 +51,7 @@ import com.fountofhopedotorg.fohbible.utils.getFontFamily
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.io.File
 
 @Composable
 fun ReaderScreen(
@@ -460,13 +461,13 @@ fun ReaderScreen(
             BgModal(
                 currentIndex = viewModel.bgImageIndex,
                 customUri = viewModel.customTextureUri,
-                onSelect = { index ->
-                    viewModel.bgImageIndex = index
-                    showBgModal = false
-                },
-                onDismiss = { showBgModal = false },
+                onSelect = { index -> viewModel.bgImageIndex = index; viewModel.showBgModal = false },
+                onDismiss = { viewModel.showBgModal = false },
                 onPickCustom = { imagePickerLauncher.launch("image/*") },
                 onRemoveCustom = {
+                    viewModel.customTextureUri?.let { path ->
+                        try { File(path).delete() } catch (_: Exception) { }
+                    }
                     viewModel.customTextureUri = null
                     viewModel.bgImageIndex = 0
                 }

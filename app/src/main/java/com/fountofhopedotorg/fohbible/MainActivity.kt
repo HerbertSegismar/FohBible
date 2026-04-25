@@ -1,6 +1,7 @@
 package com.fountofhopedotorg.fohbible
 
 import android.app.Activity
+import android.content.Context
 import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
@@ -87,6 +88,8 @@ import com.fountofhopedotorg.fohbible.ui.theme.ThemeManager
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
+import java.io.File
+import java.io.FileOutputStream
 
 private val LIGHT_THEME_READER_FONT_COLOR_KEY = intPreferencesKey("light_theme_reader_font_color")
 private val DARK_THEME_READER_FONT_COLOR_KEY = intPreferencesKey("dark_theme_reader_font_color")
@@ -343,8 +346,14 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            viewModel.customTextureUri = it.toString()
-            viewModel.bgImageIndex = 34
+            viewModel.customTextureUri?.let { oldPath ->
+                try { File(oldPath).delete() } catch (_: Exception) { }
+            }
+            val persistentPath = copyUriToInternalStorage(context, it)
+            if (persistentPath != null) {
+                viewModel.customTextureUri = persistentPath
+                viewModel.bgImageIndex = 34
+            }
         }
     }
 
@@ -604,6 +613,9 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             onDismiss = { viewModel.showBgModal = false },
                             onPickCustom = { imagePickerLauncher.launch("image/*") },
                             onRemoveCustom = {
+                                viewModel.customTextureUri?.let { path ->
+                                    try { File(path).delete() } catch (_: Exception) { }
+                                }
                                 viewModel.customTextureUri = null
                                 viewModel.bgImageIndex = 0
                             }
@@ -676,4 +688,20 @@ sealed class Screen {
     object Notes : Screen()
     object Settings : Screen()
     object Search : Screen()
+}
+
+private fun copyUriToInternalStorage(context: Context, sourceUri: Uri): String? {
+    return try {
+        val inputStream = context.contentResolver.openInputStream(sourceUri) ?: return null
+        val fileName = "custom_bg_${System.currentTimeMillis()}.jpg"
+        val destFile = File(context.filesDir, fileName)
+        FileOutputStream(destFile).use { outputStream ->
+            inputStream.copyTo(outputStream)
+        }
+        inputStream.close()
+        destFile.absolutePath
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    }
 }

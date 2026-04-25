@@ -76,6 +76,7 @@ import com.fountofhopedotorg.fohbible.ui.theme.DefaultPrimaryColor
 import com.fountofhopedotorg.fohbible.ui.theme.PredefinedColorThemes
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
 import com.fountofhopedotorg.fohbible.utils.availableFontFamilies
+import java.io.File
 
 const val MAX_FONT_SIZE = 100
 const val MIN_FONT_SIZE = 1
@@ -929,13 +930,13 @@ fun SettingsScreen() {
         BgModal(
             currentIndex = viewModel.bgImageIndex,
             customUri = viewModel.customTextureUri,
-            onSelect = { index ->
-                viewModel.bgImageIndex = index
-                showBgModal = false
-            },
-            onDismiss = { showBgModal = false },
+            onSelect = { index -> viewModel.bgImageIndex = index; viewModel.showBgModal = false },
+            onDismiss = { viewModel.showBgModal = false },
             onPickCustom = { imagePickerLauncher.launch("image/*") },
             onRemoveCustom = {
+                viewModel.customTextureUri?.let { path ->
+                    try { File(path).delete() } catch (_: Exception) { }
+                }
                 viewModel.customTextureUri = null
                 viewModel.bgImageIndex = 0
             }

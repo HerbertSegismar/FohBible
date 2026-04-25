@@ -95,7 +95,7 @@ fun BgModal(
                                 onClick = { onSelect(34) }
                             ) {
                                 AsyncImage(
-                                    model = customUri,
+                                    model = if (customUri.startsWith("/")) "file://$customUri" else customUri,
                                     contentDescription = "Custom texture",
                                     modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.Crop,
