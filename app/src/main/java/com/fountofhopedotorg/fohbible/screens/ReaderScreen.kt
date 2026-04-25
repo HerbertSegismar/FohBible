@@ -1,8 +1,5 @@
 package com.fountofhopedotorg.fohbible.screens
 import android.content.Intent
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -41,7 +38,6 @@ import com.fountofhopedotorg.fohbible.composables.SingleVersionReader
 import com.fountofhopedotorg.fohbible.composables.SyncedMultiVersionReader
 import com.fountofhopedotorg.fohbible.core.createCommentaryHelperIfExists
 import com.fountofhopedotorg.fohbible.data.*
-import com.fountofhopedotorg.fohbible.modals.BgModal
 import com.fountofhopedotorg.fohbible.modals.InteractiveModal
 import com.fountofhopedotorg.fohbible.modals.NotesModal
 import com.fountofhopedotorg.fohbible.modals.VerseOptionsModal
@@ -51,7 +47,6 @@ import com.fountofhopedotorg.fohbible.utils.getFontFamily
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.io.File
 
 @Composable
 fun ReaderScreen(
@@ -236,14 +231,6 @@ fun ReaderScreen(
         verseCommentaryVerse = verseNum
         currentModalIsOldTestament = viewModel.isOldTestament
         showVerseCommentaryModal = true
-    }
-    val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let {
-            viewModel.customTextureUri = it.toString()
-            viewModel.bgImageIndex = 34
-        }
     }
     var showMenu by remember { mutableStateOf(false) }
     var showBgModal by remember { mutableStateOf(false) }
@@ -456,22 +443,6 @@ fun ReaderScreen(
                     valueRange = 0f..1f
                 )
             }
-        }
-        if (showBgModal) {
-            BgModal(
-                currentIndex = viewModel.bgImageIndex,
-                customUri = viewModel.customTextureUri,
-                onSelect = { index -> viewModel.bgImageIndex = index; viewModel.showBgModal = false },
-                onDismiss = { viewModel.showBgModal = false },
-                onPickCustom = { imagePickerLauncher.launch("image/*") },
-                onRemoveCustom = {
-                    viewModel.customTextureUri?.let { path ->
-                        try { File(path).delete() } catch (_: Exception) { }
-                    }
-                    viewModel.customTextureUri = null
-                    viewModel.bgImageIndex = 0
-                }
-            )
         }
         InteractiveModal(
             show = showWordModal,

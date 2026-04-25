@@ -91,7 +91,6 @@ fun SettingsScreen() {
     val viewColor = primary.copy(0.2f)
     val viewModel: AppViewModel = viewModel()
     val context = LocalContext.current
-    var showBgModal by remember { mutableStateOf(false) }
     var showOrbsCountModal by remember { mutableStateOf(false) }
     var showFontModal by remember { mutableStateOf(false) }
     var tempFontSize by remember { mutableStateOf(viewModel.fontSize.toString()) }
@@ -623,7 +622,7 @@ fun SettingsScreen() {
                 SettingsItem(
                     title = "Reader BG Texture",
                     subtitle = "Choose from built-in textures or upload a custom one",
-                    onClick = { showBgModal = true }
+                    onClick = { viewModel.showBgModal = true }
                 ) {
                     Icon(Icons.Default.ChevronRight, contentDescription = null)
                 }
@@ -926,7 +925,7 @@ fun SettingsScreen() {
             }
         )
     }
-    if (showBgModal) {
+    if (viewModel.showBgModal) {
         BgModal(
             currentIndex = viewModel.bgImageIndex,
             customUri = viewModel.customTextureUri,
