@@ -159,7 +159,7 @@ fun BgModal(
                     horizontalArrangement = Arrangement.End
                 ) {
                     Button(onClick = onDismiss) {
-                        Text(text = "Cancel", color = Color.White)
+                        Text(text = "Close", color = Color.White)
                     }
                 }
             }
