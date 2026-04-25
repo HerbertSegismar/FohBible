@@ -202,7 +202,8 @@ data class ProcessingOptions(
     val enableTagClick: Boolean = true,
     val showFootnotesInline: Boolean = true,
     val preserveWhitespace: Boolean = false,
-    val showHeaders: Boolean = true
+    val showHeaders: Boolean = true,
+    val showStrongs: Boolean = true
 )
 
 data class SearchOptions(val bookRange: Pair<Int, Int>? = null)

@@ -46,6 +46,14 @@ class VerseTextProcessor {
                 body = AnnotatedString("")
             )
         }
+        var processedText = verseText
+        if (!options.showStrongs) {
+            processedText = processedText.replace(
+                Regex("""<S[^>]*>.*?</S>""", RegexOption.DOT_MATCHES_ALL),
+                ""
+            )
+            processedText = processedText.replace(Regex("\\s+"), " ")
+        }
 
         val cacheKey = buildCacheKey(
             verseText = verseText,
@@ -65,7 +73,7 @@ class VerseTextProcessor {
             return cached
         }
 
-        val nodes = parseXmlTags(verseText)
+        val nodes = parseXmlTags(processedText)
         val tree = buildTree(nodes)
         val initialContext = TraversalContext(
             textColor = textColor ?: themeColors.textColor,
@@ -345,24 +353,29 @@ class VerseTextProcessor {
         val rawText = if (options.preserveWhitespace) node.content else node.content.trim()
         if (rawText.isEmpty()) return
         when (context.currentTag) {
-            "S" -> if (options.enableStrongsClick && onStrongsPress != null) {
-                val trimmed = rawText.trim()
-                if (trimmed.isNotEmpty() && isValidStrongsNumber(trimmed)) {
-                    val prefixed = formatStrongsNumber(trimmed, context.isOldTestament)
-                    builder.pushStringAnnotation("strong", prefixed)
-                    builder.withStyle(
-                        SpanStyle(
-                            color = textContext.textColor,
-                            fontSize = textContext.baseFontSize * textContext.fontSizeMultiplier,
-                            baselineShift = textContext.baselineShift ?: BaselineShift.None
-                        )
-                    ) {
-                        builder.append(rawText)
-                    }
-                    builder.pop() } else {
-                    processNormalText(rawText, builder, textContext, highlight, themeColors, onWordPress, options, wordHighlights)
+            "S" -> {
+                if (!options.showStrongs) {
+                    return
                 }
-            } else { processNormalText(rawText, builder, textContext, highlight, themeColors, onWordPress, options, wordHighlights) }
+                if (options.enableStrongsClick && onStrongsPress != null) {
+                    val trimmed = rawText.trim()
+                    if (trimmed.isNotEmpty() && isValidStrongsNumber(trimmed)) {
+                        val prefixed = formatStrongsNumber(trimmed, context.isOldTestament)
+                        builder.pushStringAnnotation("strong", prefixed)
+                        builder.withStyle(
+                            SpanStyle(
+                                color = textContext.textColor,
+                                fontSize = textContext.baseFontSize * textContext.fontSizeMultiplier,
+                                baselineShift = textContext.baselineShift ?: BaselineShift.None
+                            )
+                        ) {
+                            builder.append(rawText)
+                        }
+                        builder.pop() } else {
+                        processNormalText(rawText, builder, textContext, highlight, themeColors, onWordPress, options, wordHighlights)
+                    }
+                } else { processNormalText(rawText, builder, textContext, highlight, themeColors, onWordPress, options, wordHighlights) }
+            }
 
             "f" -> {
                 val trimmed = rawText.trim()

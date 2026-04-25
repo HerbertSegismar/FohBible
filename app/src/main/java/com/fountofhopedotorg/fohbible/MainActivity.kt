@@ -118,6 +118,7 @@ private val OVERLAY_OPACITY_KEY = floatPreferencesKey("overlay_opacity")
 private val LIGHT_OVERLAY_COLOR_KEY = intPreferencesKey("light_overlay_color")
 private val DARK_OVERLAY_COLOR_KEY = intPreferencesKey("dark_overlay_color")
 private val IS_STUDY_MODE_KEY = booleanPreferencesKey("is_study_mode")
+private val SHOW_STRONGS_KEY = booleanPreferencesKey("show_strongs")
 private val IS_DICTIONARY_MODE_KEY = booleanPreferencesKey("is_dictionary_mode")
 private val VERSE_MARKER_COLOR_KEY = intPreferencesKey("verse_marker_color")
 private val LIGHT_MODAL_BG_COLOR_KEY = intPreferencesKey("light_modal_bg_color")
@@ -217,7 +218,8 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
             lightOverlayColor = Color(prefs[LIGHT_OVERLAY_COLOR_KEY] ?: Color(0xFFFFFFFF).toArgb())
             darkOverlayColor = Color(prefs[DARK_OVERLAY_COLOR_KEY] ?: Color(0xFF100F21).toArgb())
             wordMarkerColor = Color(prefs[MARKER_COLOR_KEY] ?: Color(0xDDAC95E1).toArgb())
-            isStudyMode = prefs[IS_STUDY_MODE_KEY] ?: true
+            isStudyMode = prefs[IS_STUDY_MODE_KEY] ?: false
+            showStrongs = prefs[SHOW_STRONGS_KEY] ?: false
             isDictionaryMode = prefs[IS_DICTIONARY_MODE_KEY] ?: true
             verseMarkerColor = Color(prefs[VERSE_MARKER_COLOR_KEY] ?: Color(0xFF95F198).toArgb())
             lightModalBackgroundColor = Color(prefs[LIGHT_MODAL_BG_COLOR_KEY] ?: Color(0xFFEAE7E3).toArgb())
@@ -273,6 +275,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     SavePreference({ viewModel.darkOverlayColor.toArgb() }, DARK_OVERLAY_COLOR_KEY, dataStore)
     SavePreference({ viewModel.wordMarkerColor.toArgb() }, MARKER_COLOR_KEY, dataStore)
     SavePreference({ viewModel.isStudyMode }, IS_STUDY_MODE_KEY, dataStore)
+    SavePreference({ viewModel.showStrongs }, SHOW_STRONGS_KEY, dataStore)
     SavePreference({ viewModel.isDictionaryMode }, IS_DICTIONARY_MODE_KEY, dataStore)
     SavePreference({ viewModel.verseMarkerColor.toArgb() }, VERSE_MARKER_COLOR_KEY, dataStore)
     SavePreference({ viewModel.lightModalBackgroundColor.toArgb() }, LIGHT_MODAL_BG_COLOR_KEY, dataStore)
@@ -600,7 +603,10 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             onSelect = { index -> viewModel.bgImageIndex = index; viewModel.showBgModal = false },
                             onDismiss = { viewModel.showBgModal = false },
                             onPickCustom = { imagePickerLauncher.launch("image/*") },
-                            onRemoveCustom = { viewModel.customTextureUri = null }
+                            onRemoveCustom = {
+                                viewModel.customTextureUri = null
+                                viewModel.bgImageIndex = 0
+                            }
                         )
                     }
                     if (viewModel.showReaderOverlayColorWheel) {

@@ -153,6 +153,19 @@ fun SettingsScreen() {
                     )
                 }
                 SettingsItem(
+                    title = "Strong's Concordance",
+                    subtitle = "Toggle strong's concordance numbers after every word on or off. This only applies to Bible translations which has a plus indicator e.g. KJV+"
+                ) {
+                    Switch(
+                        checked = viewModel.showStrongs,
+                        onCheckedChange = { viewModel.showStrongs = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = primary,
+                            checkedTrackColor = primary.copy(alpha = 0.5f)
+                        )
+                    )
+                }
+                SettingsItem(
                     title = "Show Floating Orbs",
                     subtitle = if (viewModel.renderOrbs) {
                         "Turn this off to disable floating orbs"
@@ -893,7 +906,8 @@ fun SettingsScreen() {
                         viewModel.wordMarkerColor = Color(0xDDAC95E1)
                         viewModel.verseMarkerColor = Color(0xFF95F198)
                         viewModel.isDictionaryMode = true
-                        viewModel.isStudyMode = true
+                        viewModel.isStudyMode = false
+                        viewModel.showStrongs = false
                         viewModel.wordsOfJesus = Color(0xFFDA4227)
                         viewModel.resetHighlightColorsToDefault()
 
@@ -921,7 +935,10 @@ fun SettingsScreen() {
             },
             onDismiss = { showBgModal = false },
             onPickCustom = { imagePickerLauncher.launch("image/*") },
-            onRemoveCustom = { viewModel.customTextureUri = null }
+            onRemoveCustom = {
+                viewModel.customTextureUri = null
+                viewModel.bgImageIndex = 0
+            }
         )
     }
     if (showFontModal) {

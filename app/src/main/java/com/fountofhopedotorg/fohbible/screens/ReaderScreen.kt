@@ -466,7 +466,10 @@ fun ReaderScreen(
                 },
                 onDismiss = { showBgModal = false },
                 onPickCustom = { imagePickerLauncher.launch("image/*") },
-                onRemoveCustom = { viewModel.customTextureUri = null }
+                onRemoveCustom = {
+                    viewModel.customTextureUri = null
+                    viewModel.bgImageIndex = 0
+                }
             )
         }
         InteractiveModal(

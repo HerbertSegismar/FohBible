@@ -64,6 +64,7 @@ import com.fountofhopedotorg.fohbible.Screen
 import com.fountofhopedotorg.fohbible.data.BibleBook
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
+import com.fountofhopedotorg.fohbible.data.ProcessingOptions
 import com.fountofhopedotorg.fohbible.data.SelectedWord
 import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.data.Verse
@@ -164,8 +165,11 @@ fun ChapterView(
         val fullVerse = verse.copy(bookName = passage.bookName, chapter = passage.chapter)
         val isPersistentHighlighted = databaseHelper?.isHighlighted(fullVerse) ?: false
         val persistentHighlightColor = if (isPersistentHighlighted) databaseHelper.getHighlightColor(fullVerse) ?: themeColors.searchHighlightBg else null
+        val processingOptions = remember(viewModel.showStrongs) {
+            ProcessingOptions(showStrongs = viewModel.showStrongs)
+        }
 
-        val processedVerse = remember(verse.text, viewModel.fontSize, themeColors, isPersistentHighlighted, isOldTestamentForThisVersion, refreshKey) {
+        val processedVerse = remember(verse.text, viewModel.fontSize, themeColors, isPersistentHighlighted, isOldTestamentForThisVersion, refreshKey, viewModel.showStrongs) {
             val onStrongsLocal: ((String) -> Unit)? = onStrongsPress?.let { { strong -> it(strong, passage.bookNumber, isPrimary) } }
             val onTagLocal: ((String) -> Unit)? = onTagPress?.let { { marker -> it(marker, passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary) } }
             val onWordLocal: ((String) -> Unit)? = onWordPress?.let { { word -> it(word, isPrimary) } }
@@ -178,7 +182,8 @@ fun ChapterView(
                 onWordPress = onWordLocal,
                 onStrongsPress = onStrongsLocal,
                 isHighlighted = isPersistentHighlighted,
-                isOldTestament = isOldTestamentForThisVersion
+                isOldTestament = isOldTestamentForThisVersion,
+                options = processingOptions
             )
         }
 

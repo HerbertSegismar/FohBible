@@ -35,6 +35,7 @@ class AppViewModel : ViewModel() {
             )
         )
     }
+    var showStrongs by mutableStateOf(false)
     var squareAspectViews by mutableStateOf(true)
     var scrollSyncAction by mutableStateOf(false)
     var lightThemeReaderFontColor by mutableStateOf(Color(0xFF101015))
@@ -44,7 +45,7 @@ class AppViewModel : ViewModel() {
     var wordsOfJesus by mutableStateOf(Color(0xFFDA4227))
     var editingHighlightColorIndex by mutableIntStateOf(-1)
     var showHighlightColorEditor by mutableStateOf(false)
-    var isStudyMode by mutableStateOf(true)
+    var isStudyMode by mutableStateOf(false)
     var wordMarkerColor by mutableStateOf(Color(0xDDAC95E1))
     var showWordMarkerColorWheelDialog by mutableStateOf(false)
     var showJesusWordsColorWheelDialog by mutableStateOf(false)
