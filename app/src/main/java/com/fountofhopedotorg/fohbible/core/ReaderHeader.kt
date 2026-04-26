@@ -79,7 +79,7 @@ fun ChapterHeader(
                     fontSize = 16.sp,
                     overflow = TextOverflow.Ellipsis,
                     maxLines = 1,
-                    color = Color.White,
+                    color = viewModel.headerButtonsColor,
                     textAlign = TextAlign.Start,
                     modifier = Modifier.weight(0.5f)
                 )
@@ -87,7 +87,7 @@ fun ChapterHeader(
                     text = passage.chapter.toString(),
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
-                    color = Color.White
+                    color = viewModel.headerButtonsColor,
                 )
             }
         }
@@ -104,7 +104,7 @@ fun ChapterHeader(
                 text = versionAbbr,
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
-                color = Color.White,
+                color = viewModel.headerButtonsColor,
                 maxLines = 1
             )
         }
@@ -118,16 +118,18 @@ fun ChapterHeader(
                 icon = if (viewModel.darkTheme) Icons.Filled.Brightness6 else Icons.Filled.Brightness2,
                 contentDescription = "Theme",
                 rotation = 180f,
-                tint = Color.White,
-                modifier = Modifier.size(20.dp)
+                tint = viewModel.headerButtonsColor,
+                modifier = Modifier.size(20.dp),
+                viewModel = viewModel
             )
             AnimatedIconButton(
                 onClick = onColorLensClick,
                 icon = Icons.Filled.ColorLens,
                 contentDescription = "Color",
                 rotation = 180f,
-                tint = Color.White,
-                modifier = Modifier.size(20.dp)
+                tint = viewModel.headerButtonsColor,
+                modifier = Modifier.size(20.dp),
+                viewModel = viewModel
             )
             if (viewModel.multiVersion) {
                 ScrollSyncButton(viewModel = viewModel, modifier = Modifier.size(20.dp))

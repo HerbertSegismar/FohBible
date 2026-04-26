@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.fountofhopedotorg.fohbible.Screen
+import com.fountofhopedotorg.fohbible.composables.ColorSplashCanvas
 import com.fountofhopedotorg.fohbible.data.BibleBook
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
@@ -238,7 +239,6 @@ fun ChapterView(
                             if (refCount > 0 && onCrossRefClick != null) put("crossref_${verse.verseNumber}", InlineTextContent(
                                 Placeholder((viewModel.fontSize * 1.4).sp, viewModel.fontSize.sp, PlaceholderVerticalAlign.TextCenter)
                             ) {
-                                //cross-ref button
                                 Box(
                                     modifier = Modifier.clickable {
                                         onCrossRefClick(passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary)
@@ -253,7 +253,6 @@ fun ChapterView(
                             if (onVerseCommentaryClick != null) put("commentary_${verse.verseNumber}", InlineTextContent(
                                 Placeholder((viewModel.fontSize * 1.4f).sp, viewModel.fontSize.sp, PlaceholderVerticalAlign.TextCenter)
                             ) {
-                                //verse commentary button
                                 Box(
                                     modifier = Modifier.fillMaxSize().clickable {
                                         onVerseCommentaryClick(passage.bookNumber, passage.chapter, verse.verseNumber)
@@ -325,27 +324,43 @@ fun ChapterView(
     }
 
     Box(modifier = modifier) {
-        val texture = when (viewModel.bgImageIndex) {
-            0 -> null
-            34 -> viewModel.customTextureUri
-            else -> "file:///android_asset/textures/${viewModel.bgImageIndex}.jpg"
+        when (viewModel.bgImageIndex) {
+            0 -> {  }
+            34 -> ColorSplashCanvas()
+            35 -> {
+                val customUri = viewModel.customTextureUri
+                if (customUri != null) {
+                    AsyncImage(
+                        model = if (customUri.startsWith("/")) "file://$customUri" else customUri,
+                        contentDescription = "Custom background",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
+            else -> {
+                val texture = "file:///android_asset/textures/${viewModel.bgImageIndex}.jpg"
+                AsyncImage(
+                    model = texture,
+                    contentDescription = "Texture background",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
         }
-        if (texture != null) {
-            AsyncImage(
-                model = texture,
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
-            val overlayColor = (if (viewModel.darkTheme) viewModel.darkOverlayColor else viewModel.lightOverlayColor).copy(alpha = viewModel.overlayOpacity)
+        val overlayColor = (if (viewModel.darkTheme) viewModel.darkOverlayColor else viewModel.lightOverlayColor)
+            .copy(alpha = viewModel.overlayOpacity)
+        if (viewModel.bgImageIndex != 0) {
             Box(modifier = Modifier.fillMaxSize().background(overlayColor))
         }
+
         if (viewModel.renderOrbs) {
             FloatingOrbsBackground(
                 modifier = Modifier.fillMaxSize(),
                 orbCount = viewModel.orbsCount
             )
         }
+
         Column {
             if (isPortraitHorizontalMulti) {
                 Row(
@@ -369,7 +384,7 @@ fun ChapterView(
                                 fontSize = 16.sp,
                                 overflow = TextOverflow.Ellipsis,
                                 maxLines = 1,
-                                color = Color.White,
+                                color = viewModel.headerButtonsColor,
                                 textAlign = TextAlign.Start,
                                 modifier = Modifier.weight(0.5f)
                             )
@@ -377,7 +392,7 @@ fun ChapterView(
                                 text = passage.chapter.toString(),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp,
-                                color = Color.White
+                                color = viewModel.headerButtonsColor,
                             )
                         }
                     }
@@ -395,7 +410,7 @@ fun ChapterView(
                             text = versionAbbr,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
-                            color = Color.White,
+                            color = viewModel.headerButtonsColor,
                             maxLines = 1
                         )
                     }

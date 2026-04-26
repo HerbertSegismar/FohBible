@@ -3,13 +3,30 @@ package com.fountofhopedotorg.fohbible.modals
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
@@ -21,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
+import com.fountofhopedotorg.fohbible.composables.ColorSplashCanvas
 
 @Composable
 fun BgModal(
@@ -31,11 +49,18 @@ fun BgModal(
     onPickCustom: () -> Unit,
     onRemoveCustom: () -> Unit
 ) {
+    val noneIndex = 0
+    val firstIndex = 1
+    val lastIndex = 33
+    val randomIndex = 34
+    val customIndex = 35
+
     val lazyListState = rememberLazyListState()
     LaunchedEffect(currentIndex) {
         val targetPosition = when (currentIndex) {
-            in 1..33 -> currentIndex
-            34 -> 34
+            in firstIndex..lastIndex -> currentIndex
+            randomIndex -> randomIndex
+            customIndex -> customIndex
             else -> 0
         }
         lazyListState.scrollToItem(targetPosition)
@@ -54,26 +79,27 @@ fun BgModal(
                 )
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
                 LazyRow(
                     state = lazyListState,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     item {
                         SelectableBox(
-                            selected = currentIndex == 0,
-                            onClick = { onSelect(0) }
+                            selected = currentIndex == noneIndex,
+                            onClick = { onSelect(noneIndex) }
                         ) {
                             Text(
                                 text = "None",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = if (currentIndex == 0)
+                                color = if (currentIndex == noneIndex)
                                     MaterialTheme.colorScheme.primary
                                 else
                                     MaterialTheme.colorScheme.outline.copy(alpha = 0.6f),
                             )
                         }
                     }
-                    items(33) { i ->
+                    items(lastIndex) { i ->
                         val index = i + 1
                         SelectableBox(
                             selected = currentIndex == index,
@@ -89,10 +115,18 @@ fun BgModal(
                         }
                     }
                     item {
+                        SelectableBox(
+                            selected = currentIndex == randomIndex,
+                            onClick = { onSelect(randomIndex) }
+                        ) {
+                            ColorSplashCanvas()
+                        }
+                    }
+                    item {
                         if (customUri != null) {
                             SelectableBox(
-                                selected = currentIndex == 34,
-                                onClick = { onSelect(34) }
+                                selected = currentIndex == customIndex,
+                                onClick = { onSelect(customIndex) }
                             ) {
                                 AsyncImage(
                                     model = if (customUri.startsWith("/")) "file://$customUri" else customUri,
@@ -104,13 +138,13 @@ fun BgModal(
                             }
                         } else {
                             SelectableBox(
-                                selected = currentIndex == 34,
+                                selected = currentIndex == customIndex,
                                 onClick = onPickCustom
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Add,
                                     contentDescription = "Add custom",
-                                    tint = if (currentIndex == 34)
+                                    tint = if (currentIndex == customIndex)
                                         MaterialTheme.colorScheme.primary
                                     else
                                         MaterialTheme.colorScheme.outline.copy(alpha = 0.6f),

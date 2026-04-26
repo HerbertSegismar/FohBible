@@ -27,7 +27,8 @@ import com.fountofhopedotorg.fohbible.models.AppViewModel
 @Composable
 fun WindowsLayoutDropdown(
     viewModel: AppViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    tint: Color = viewModel.headerButtonsColor
 ) {
     var expanded by remember { mutableStateOf(false) }
     val rotation by animateFloatAsState(
@@ -48,7 +49,7 @@ fun WindowsLayoutDropdown(
                 Icon(
                     imageVector = if (isOpen) Icons.Filled.Close else Icons.Filled.AutoAwesomeMosaic,
                     contentDescription = if (isOpen) "Close MultiView" else "MultiView",
-                    tint = Color.White,
+                    tint = tint,
                     modifier = Modifier.rotate(rotation)
                 )
             }

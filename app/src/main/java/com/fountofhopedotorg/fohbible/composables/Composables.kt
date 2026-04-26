@@ -5,6 +5,7 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -69,8 +70,10 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -99,6 +102,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlin.random.Random
 
 @Composable
 fun LoadingIndicator() {
@@ -251,9 +255,10 @@ fun AnimatedIconButton(
     onClick: () -> Unit,
     icon: ImageVector,
     contentDescription: String?,
+    viewModel: AppViewModel,
     modifier: Modifier = Modifier,
     rotation: Float = 0f,
-    tint: Color = Color.White
+    tint: Color = viewModel.headerButtonsColor
 ) {
     var targetRotation by remember { mutableFloatStateOf(0f) }
     val animatedRotation by animateFloatAsState(
@@ -457,6 +462,7 @@ fun ScrollSyncButton(viewModel: AppViewModel, modifier: Modifier) {
         contentDescription = "Toggle Scroll Sync",
         modifier = modifier,
         rotation = 180f,
+        viewModel = viewModel
     )
 }
 
@@ -467,7 +473,7 @@ fun DropdownMenuItemWithIcon(
     isActive: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    iconModifier: Modifier = Modifier
+    iconModifier: Modifier = Modifier,
 ) {
     val backgroundColor by animateColorAsState(
         targetValue = if (isActive) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
@@ -522,7 +528,7 @@ fun HomeAppBar(
         is Screen.Search -> "Search"
     }
     TopAppBar(
-        title = { Text(text = screenTitle, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier
+        title = { Text(text = screenTitle, color = viewModel.headerButtonsColor, fontWeight = FontWeight.Bold, modifier = Modifier
             .padding(start = 0.dp), textAlign = TextAlign.Start) },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
         modifier = modifier
@@ -534,6 +540,7 @@ fun HomeAppBar(
                     onClick = onBack,
                     icon = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
+                    viewModel = viewModel
                 )
             }
         },
@@ -546,6 +553,7 @@ fun HomeAppBar(
                     modifier = Modifier
                         .size(iconSize),
                     rotation = 360f,
+                    viewModel = viewModel
                 )
                 AnimatedIconButton(
                     onClick = onThemeToggle,
@@ -554,6 +562,7 @@ fun HomeAppBar(
                     modifier = Modifier
                         .size(iconSize),
                     rotation = 180f,
+                    viewModel = viewModel
                 )
                 AnimatedIconButton(
                     onClick = onColorLensClick,
@@ -562,10 +571,11 @@ fun HomeAppBar(
                     modifier = Modifier
                         .size(iconSize),
                     rotation = 180f,
+                    viewModel = viewModel
                 )
                 IconButton(onClick = { showNavigationDropdown = !showNavigationDropdown }, modifier = Modifier.rotate(rotation).size(iconSize)) {
                     Crossfade(targetState = showNavigationDropdown, animationSpec = tween(300), label = "iconCrossfade") { isOpen ->
-                        Icon(imageVector = if (isOpen) Icons.Filled.Close else Icons.Filled.Menu, contentDescription = if (isOpen) "Close Navigation" else "Open Navigation", tint = Color.White)
+                        Icon(imageVector = if (isOpen) Icons.Filled.Close else Icons.Filled.Menu, contentDescription = if (isOpen) "Close Navigation" else "Open Navigation", tint = viewModel.headerButtonsColor)
                     }
                 }
             }
@@ -651,14 +661,14 @@ fun ReaderAppBar(
                                 fontSize = 16.sp,
                                 overflow = TextOverflow.Ellipsis,
                                 maxLines = 1,
-                                color = Color.White,
+                                color = viewModel.headerButtonsColor,
                                 modifier = Modifier.weight(0.5f)
                             )
                             Text(
                                 text = currentScreen.passage?.chapter?.let { " $it" } ?: "",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp,
-                                color = Color.White
+                                color = viewModel.headerButtonsColor,
                             )
                         }
                     }
@@ -676,7 +686,7 @@ fun ReaderAppBar(
                             text = currentVersionAbbr,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
-                            color = Color.White,
+                            color = viewModel.headerButtonsColor,
                             maxLines = 1
                         )
                     }
@@ -698,7 +708,8 @@ fun ReaderAppBar(
                 AnimatedIconButton(
                     onClick = onBack,
                     icon = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back"
+                    contentDescription = "Back",
+                    viewModel = viewModel
                 )
             }
         },
@@ -717,6 +728,7 @@ fun ReaderAppBar(
                         contentDescription = "Toggle Theme",
                         modifier = Modifier.size(iconSize),
                         rotation = 180f,
+                        viewModel = viewModel
                     )
                     AnimatedIconButton(
                         onClick = onColorLensClick,
@@ -724,6 +736,7 @@ fun ReaderAppBar(
                         contentDescription = "Color Scheme",
                         modifier = Modifier.size(iconSize),
                         rotation = 180f,
+                        viewModel = viewModel
                     )
                     if (viewModel.multiVersion) {
                         ScrollSyncButton(viewModel = viewModel, modifier = Modifier.size(iconSize))
@@ -1034,6 +1047,61 @@ fun ColorOptionItem(theme: ColorTheme, onClick: () -> Unit) {
                     Text(theme.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                     Text("Primary & Secondary", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun FeedbackPill(text: String) {
+    Box(
+        modifier = Modifier
+            .background(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
+                shape = RoundedCornerShape(20.dp)
+            )
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Text(
+            text = text,
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.titleMedium
+        )
+    }
+}
+
+@Composable
+fun ColorSplashCanvas() {
+    val splashes = remember {
+        List(6) {
+            val baseColor = Color(Random.nextInt(256), Random.nextInt(256), Random.nextInt(256))
+            Triple(
+                baseColor,
+                Offset(Random.nextFloat(), Random.nextFloat()),
+                Random.nextFloat() * 0.8f + 0.2f
+            )
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clipToBounds()
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            splashes.forEach { (color, pos, scale) ->
+                val center = Offset(pos.x * size.width, pos.y * size.height)
+                val radius = size.minDimension * scale
+
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(color.copy(alpha = 0.8f), Color.Transparent),
+                        center = center,
+                        radius = radius
+                    ),
+                    radius = radius,
+                    center = center
+                )
             }
         }
     }

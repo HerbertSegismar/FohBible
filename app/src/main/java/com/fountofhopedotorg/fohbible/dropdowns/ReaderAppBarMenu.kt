@@ -29,7 +29,8 @@ fun ReaderAppBarMenu(
     viewModel: AppViewModel,
     onScreenChange: (Screen) -> Unit,
     coroutineScope: kotlinx.coroutines.CoroutineScope,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    tint: Color = viewModel.headerButtonsColor
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val rotation by animateFloatAsState(
@@ -49,7 +50,7 @@ fun ReaderAppBarMenu(
                 Icon(
                     imageVector = if (isOpen) Icons.Filled.Close else Icons.Filled.Menu,
                     contentDescription = if (isOpen) "Close Navigation" else "Open Navigation",
-                    tint = Color.White,
+                    tint = tint,
                     modifier = Modifier.rotate(rotation)
                 )
             }

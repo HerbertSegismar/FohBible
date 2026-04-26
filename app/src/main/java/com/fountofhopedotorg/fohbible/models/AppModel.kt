@@ -35,6 +35,7 @@ class AppViewModel : ViewModel() {
             )
         )
     }
+    var headerButtonsColor by mutableStateOf(Color(0xFFFFFFFF))
     var showStrongs by mutableStateOf(false)
     var squareAspectViews by mutableStateOf(true)
     var scrollSyncAction by mutableStateOf(false)

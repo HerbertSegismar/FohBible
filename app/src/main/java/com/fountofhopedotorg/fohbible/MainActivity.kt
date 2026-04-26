@@ -127,6 +127,7 @@ private val VERSE_MARKER_COLOR_KEY = intPreferencesKey("verse_marker_color")
 private val LIGHT_MODAL_BG_COLOR_KEY = intPreferencesKey("light_modal_bg_color")
 private val DARK_MODAL_BG_COLOR_KEY = intPreferencesKey("dark_modal_bg_color")
 private val WORDS_OF_JESUS_KEY = intPreferencesKey("words_of_jesus")
+private val HEADER_BUTTONS_KEY = intPreferencesKey("header_buttons_color")
 private val SELECTED_DICTIONARY_KEY = stringPreferencesKey("selected_dictionary")
 private val SELECTED_VERSE_COMMENTARY_KEY = stringPreferencesKey("selected_verse_commentary")
 private val SELECTED_CROSS_REFERENCE_DB_KEY = stringPreferencesKey("selected_cross_ref_db")
@@ -228,6 +229,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
             lightModalBackgroundColor = Color(prefs[LIGHT_MODAL_BG_COLOR_KEY] ?: Color(0xFFEAE7E3).toArgb())
             darkModalBackgroundColor = Color(prefs[DARK_MODAL_BG_COLOR_KEY] ?: Color(0xFF121523).toArgb())
             wordsOfJesus = Color(prefs[WORDS_OF_JESUS_KEY] ?: Color(0xFFDA4227).toArgb())
+            headerButtonsColor = Color(prefs[HEADER_BUTTONS_KEY] ?: Color(0xFFFFFFFF).toArgb())
             selectedDictionary = prefs[SELECTED_DICTIONARY_KEY] ?: "atsbd"
             selectedVerseCommentary = prefs[SELECTED_VERSE_COMMENTARY_KEY] ?: "cbsc"
             selectedCrossReferenceDatabase = prefs[SELECTED_CROSS_REFERENCE_DB_KEY] ?: "obx"
@@ -284,6 +286,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     SavePreference({ viewModel.lightModalBackgroundColor.toArgb() }, LIGHT_MODAL_BG_COLOR_KEY, dataStore)
     SavePreference({ viewModel.darkModalBackgroundColor.toArgb() }, DARK_MODAL_BG_COLOR_KEY, dataStore)
     SavePreference({ viewModel.wordsOfJesus.toArgb() }, WORDS_OF_JESUS_KEY, dataStore)
+    SavePreference({ viewModel.headerButtonsColor.toArgb() }, HEADER_BUTTONS_KEY, dataStore)
     SavePreference({ viewModel.selectedDictionary }, SELECTED_DICTIONARY_KEY, dataStore)
     SavePreference({ viewModel.selectedVerseCommentary }, SELECTED_VERSE_COMMENTARY_KEY, dataStore)
     SavePreference({ viewModel.selectedCrossReferenceDatabase }, SELECTED_CROSS_REFERENCE_DB_KEY, dataStore)
@@ -352,7 +355,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
             val persistentPath = copyUriToInternalStorage(context, it)
             if (persistentPath != null) {
                 viewModel.customTextureUri = persistentPath
-                viewModel.bgImageIndex = 34
+                viewModel.bgImageIndex = 35
             }
         }
     }

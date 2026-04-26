@@ -80,7 +80,6 @@ import java.io.File
 
 const val MAX_FONT_SIZE = 100
 const val MIN_FONT_SIZE = 1
-
 const val MAX_ORB_COUNT = 20
 const val MIN_ORB_COUNT = 1
 
@@ -101,6 +100,7 @@ fun SettingsScreen() {
     var showLightModalColorWheel by remember { mutableStateOf(false) }
     var showDarkModalColorWheel by remember { mutableStateOf(false) }
     var showWordsOfJesusColorWheel by remember { mutableStateOf(false) }
+    var showHeaderButtonsColorWheel by remember { mutableStateOf(false) }
     var showRefreshConfirmDialog by remember { mutableStateOf(false) }
     var showRefreshResultDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
@@ -127,7 +127,7 @@ fun SettingsScreen() {
     ) { uri: Uri? ->
         uri?.let {
             viewModel.customTextureUri = it.toString()
-            viewModel.bgImageIndex = 34
+            viewModel.bgImageIndex = 35
         }
     }
 
@@ -543,6 +543,19 @@ fun SettingsScreen() {
                     )
                 }
                 SettingsItem(
+                    title = "Header Contents Color",
+                    subtitle = "App Bar texts and buttons color "
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(30.dp)
+                            .clip(CircleShape)
+                            .background(viewModel.headerButtonsColor)
+                            .border(1.dp, primary.copy(0.3f), CircleShape)
+                            .clickable { showHeaderButtonsColorWheel = true }
+                    )
+                }
+                SettingsItem(
                     title = "Verse Marker Color",
                     subtitle = "Color for highlighting entire verses"
                 ) {
@@ -879,6 +892,7 @@ fun SettingsScreen() {
             confirmButton = {
                 TextButton(
                     onClick = {
+                        viewModel.headerButtonsColor = Color(0xFFFFFFFF)
                         viewModel.renderOrbs = false
                         viewModel.orbsCount = 3
                         viewModel.fontSize = 18
@@ -1049,6 +1063,16 @@ fun SettingsScreen() {
                 showWordsOfJesusColorWheel = false
             },
             initialColor = viewModel.wordsOfJesus
+        )
+    }
+    if (showHeaderButtonsColorWheel) {
+        ColorWheelDialog(
+            onDismissRequest = { showWordsOfJesusColorWheel = false },
+            onColorSelected = { color ->
+                viewModel.headerButtonsColor = color
+                showHeaderButtonsColorWheel = false
+            },
+            initialColor = viewModel.headerButtonsColor
         )
     }
     if (showRefreshConfirmDialog) {
