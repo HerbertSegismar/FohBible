@@ -61,7 +61,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.fountofhopedotorg.fohbible.Screen
-import com.fountofhopedotorg.fohbible.composables.ColorSplashCanvas
 import com.fountofhopedotorg.fohbible.data.BibleBook
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
@@ -71,6 +70,7 @@ import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.data.Verse
 import com.fountofhopedotorg.fohbible.data.VerseContent
 import com.fountofhopedotorg.fohbible.data.getVersesWithSubheadings
+import com.fountofhopedotorg.fohbible.functions.ColorSplashCanvas
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.orbs.FloatingOrbsBackground
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor

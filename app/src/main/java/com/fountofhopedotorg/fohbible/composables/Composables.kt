@@ -5,7 +5,6 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -70,10 +69,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -90,7 +87,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.ColorWheelDialog
 import com.fountofhopedotorg.fohbible.Screen
 import com.fountofhopedotorg.fohbible.allScreens
-import com.fountofhopedotorg.fohbible.data.ColorTheme
 import com.fountofhopedotorg.fohbible.dropdowns.ReaderAppBarMenu
 import com.fountofhopedotorg.fohbible.dropdowns.WindowsLayoutDropdown
 import com.fountofhopedotorg.fohbible.modals.FontModal
@@ -102,7 +98,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlin.random.Random
+import com.fountofhopedotorg.fohbible.functions.ColorOptionItem
 
 @Composable
 fun LoadingIndicator() {
@@ -1015,49 +1011,13 @@ fun ColorThemeDialog(
         }
     }
 }
-@Composable
-fun ColorOptionItem(theme: ColorTheme, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(80.dp)
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = theme.primaryColor.copy(alpha = 0.1f))
-    ) {
-        Column(modifier = Modifier
-            .fillMaxSize()
-            .padding(12.dp), verticalArrangement = Arrangement.Center) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(
-                                    theme.primaryColor,
-                                    theme.secondaryColor
-                                )
-                            )
-                        )
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    Text(theme.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
-                    Text("Primary & Secondary", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
-                }
-            }
-        }
-    }
-}
 
 @Composable
 fun FeedbackPill(text: String) {
     Box(
         modifier = Modifier
             .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
+                color = MaterialTheme.colorScheme.surfaceVariant,
                 shape = RoundedCornerShape(20.dp)
             )
             .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -1067,42 +1027,5 @@ fun FeedbackPill(text: String) {
             color = MaterialTheme.colorScheme.error,
             style = MaterialTheme.typography.titleMedium
         )
-    }
-}
-
-@Composable
-fun ColorSplashCanvas() {
-    val splashes = remember {
-        List(6) {
-            val baseColor = Color(Random.nextInt(256), Random.nextInt(256), Random.nextInt(256))
-            Triple(
-                baseColor,
-                Offset(Random.nextFloat(), Random.nextFloat()),
-                Random.nextFloat() * 0.8f + 0.2f
-            )
-        }
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .clipToBounds()
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            splashes.forEach { (color, pos, scale) ->
-                val center = Offset(pos.x * size.width, pos.y * size.height)
-                val radius = size.minDimension * scale
-
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(color.copy(alpha = 0.8f), Color.Transparent),
-                        center = center,
-                        radius = radius
-                    ),
-                    radius = radius,
-                    center = center
-                )
-            }
-        }
     }
 }

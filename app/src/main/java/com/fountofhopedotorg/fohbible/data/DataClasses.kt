@@ -2,6 +2,7 @@ package com.fountofhopedotorg.fohbible.data
 
 import android.content.Context
 import androidx.compose.animation.core.Animatable
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.AnnotatedString
@@ -205,6 +206,29 @@ data class ProcessingOptions(
     val showHeaders: Boolean = true,
     val showStrongs: Boolean = true
 )
+
+data class RealisticSplash(
+    val color: Color,
+    val position: Offset,
+    val scale: Float,
+    val mainBlobs: List<Blob>,
+    val droplets: List<Droplet>
+)
+
+data class Blob(
+    val offset: Offset,
+    val radius: Float,
+    val alpha: Float
+)
+
+data class Droplet(
+    val offset: Offset,
+    val radius: Float,
+    val alpha: Float,
+    val hasTail: Boolean = false,
+    val tailLength: Float = 0f
+)
+
 
 data class SearchOptions(val bookRange: Pair<Int, Int>? = null)
 

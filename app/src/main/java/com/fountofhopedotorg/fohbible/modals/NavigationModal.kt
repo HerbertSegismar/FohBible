@@ -132,6 +132,20 @@ fun NavigationModal(
     val coroutineScope = rememberCoroutineScope()
     var pendingVerseDigit by remember { mutableStateOf<String?>(null) }
 
+    val handleBookSelection: (BookUi) -> Unit = { book ->
+        selectedBook = book
+        chapterInput = ""
+        verseInput = ""
+        maxVerse = 0
+        focusedInput = "chapter"
+        pendingVerseDigit = null
+
+        if (book.totalChapters == 1) {
+            chapterInput = "1"
+            focusedInput = "verse"
+        }
+    }
+
     val selectedBibleBook by remember(selectedBook) {
         derivedStateOf {
             selectedBook?.let { BibleData.getBookByCustomNumber(it.bookNumber) }
@@ -406,14 +420,7 @@ fun NavigationModal(
                                     TestamentSection(
                                         title = "Old Testament",
                                         books = oldTestamentBooks,
-                                        onBookSelected = { book ->
-                                            selectedBook = book
-                                            chapterInput = ""
-                                            verseInput = ""
-                                            maxVerse = 0
-                                            focusedInput = "chapter"
-                                            pendingVerseDigit = null
-                                        },
+                                        onBookSelected = handleBookSelection,
                                         textColor = MaterialTheme.colorScheme.primary,
                                         selectedBook = selectedBook
                                     )
@@ -423,14 +430,7 @@ fun NavigationModal(
                                     TestamentSection(
                                         title = "New Testament",
                                         books = newTestamentBooks,
-                                        onBookSelected = { book ->
-                                            selectedBook = book
-                                            chapterInput = ""
-                                            verseInput = ""
-                                            maxVerse = 0
-                                            focusedInput = "chapter"
-                                            pendingVerseDigit = null
-                                        },
+                                        onBookSelected = handleBookSelection,
                                         textColor = MaterialTheme.colorScheme.secondary,
                                         selectedBook = selectedBook
                                     )
@@ -486,14 +486,7 @@ fun NavigationModal(
                                 TestamentSection(
                                     title = "Old Testament",
                                     books = oldTestamentBooks,
-                                    onBookSelected = { book ->
-                                        selectedBook = book
-                                        chapterInput = ""
-                                        verseInput = ""
-                                        maxVerse = 0
-                                        focusedInput = "chapter"
-                                        pendingVerseDigit = null
-                                    },
+                                    onBookSelected = handleBookSelection,
                                     textColor = MaterialTheme.colorScheme.primary,
                                     selectedBook = selectedBook
                                 )
@@ -503,14 +496,7 @@ fun NavigationModal(
                                 TestamentSection(
                                     title = "New Testament",
                                     books = newTestamentBooks,
-                                    onBookSelected = { book ->
-                                        selectedBook = book
-                                        chapterInput = ""
-                                        verseInput = ""
-                                        maxVerse = 0
-                                        focusedInput = "chapter"
-                                        pendingVerseDigit = null
-                                    },
+                                    onBookSelected = handleBookSelection,
                                     textColor = MaterialTheme.colorScheme.secondary,
                                     selectedBook = selectedBook
                                 )
