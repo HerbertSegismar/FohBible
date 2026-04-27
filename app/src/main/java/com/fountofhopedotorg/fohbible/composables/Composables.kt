@@ -15,11 +15,15 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -29,15 +33,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Label
+import androidx.compose.material.icons.automirrored.filled.Note
 import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Brightness2
 import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ColorLens
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Texture
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -511,7 +520,7 @@ fun HomeAppBar(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val topAppBarHeight = if (isLandscape) 40.dp else 80.dp
-    val iconSize = if (isLandscape) 45.dp else 40.dp
+    val iconSize = if (isLandscape) 45.dp else 35.dp
     var showNavigationDropdown by remember { mutableStateOf(false) }
     val viewModel: AppViewModel = viewModel()
     val rotation by animateFloatAsState(targetValue = if (showNavigationDropdown) 180f else 0f, animationSpec = tween(300), label = "menuIconRotation")
@@ -525,7 +534,7 @@ fun HomeAppBar(
     }
     TopAppBar(
         title = { Text(text = screenTitle, color = viewModel.headerButtonsColor, fontWeight = FontWeight.Bold, modifier = Modifier
-            .padding(start = 0.dp), textAlign = TextAlign.Start) },
+            .padding(start = 8.dp), textAlign = TextAlign.Start) },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
         modifier = modifier
             .height(topAppBarHeight)
@@ -533,6 +542,7 @@ fun HomeAppBar(
         navigationIcon = {
             if (onBack != null) {
                 AnimatedIconButton(
+                    modifier = Modifier.padding(start = 6.dp),
                     onClick = onBack,
                     icon = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
@@ -610,7 +620,8 @@ fun HomeAppBar(
                     )
                 }
             }
-        }
+        },
+        windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top)
     )
 }
 @OptIn(ExperimentalMaterial3Api::class)
@@ -629,15 +640,14 @@ fun ReaderAppBar(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val topAppBarHeight = if (isLandscape) 40.dp else 80.dp
-    val iconSize = if (isLandscape) 45.dp else 40.dp
+    val iconSize = if (isLandscape) 45.dp else 35.dp
 
     TopAppBar(
         title = {
             if (!viewModel.multiVersion) {
                 Row(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(end = 4.dp),
+                        .fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Button(
@@ -646,8 +656,9 @@ fun ReaderAppBar(
                         shape = RoundedCornerShape(4.dp),
                         contentPadding = PaddingValues(horizontal = 8.dp),
                         modifier = Modifier
+                            .padding(start = 6.dp)
                             .height(25.dp)
-                            .weight(if (isLandscape) 2f else 1f)
+                            .weight(if (isLandscape) 2f else 1.2f)
                             .padding(end = 4.dp)
                     ) {
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -675,8 +686,7 @@ fun ReaderAppBar(
                         contentPadding = PaddingValues(horizontal = 8.dp),
                         modifier = Modifier
                             .height(25.dp)
-                            .weight(if (isLandscape) 1f else 0.8f)
-                            .padding(end = if (onBack == null) 8.dp else 2.dp)
+                            .weight(1f)
                     ) {
                         Text(
                             text = currentVersionAbbr,
@@ -701,23 +711,81 @@ fun ReaderAppBar(
             ),
         navigationIcon = {
             if (onBack != null) {
-                AnimatedIconButton(
-                    onClick = onBack,
-                    icon = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    viewModel = viewModel
-                )
+                Box(
+                    modifier = Modifier
+                        .padding(start = 6.dp)
+                        .size(30.dp)
+                        .clip(CircleShape)
+                        .clickable(
+                            onClick = {
+                                onBack()
+                            }
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = viewModel.headerButtonsColor
+                    )
+                }
             }
         },
         actions = {
-            if (!viewModel.multiVersion || !isLandscape && viewModel.multiViewLayout == "horizontal") {
-                Row(modifier = Modifier.padding(end = 8.dp)) {
-                    if (isLandscape) {
-                        Spacer(modifier = Modifier.width(300.dp))
-                    } else {
-                        Spacer(modifier = Modifier.width(12.dp))
+            Row(modifier = Modifier.padding(horizontal = 8.dp)) {
+                if (viewModel.multiVersion || !viewModel.multiVersion && isLandscape) {
+                    IconButton(
+                        onClick = { onScreenChange(Screen.Home) },
+                        modifier = Modifier.size(iconSize)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Home,
+                            contentDescription = "Home",
+                            tint = viewModel.headerButtonsColor
+                        )
                     }
-
+                    IconButton(
+                        onClick = { onScreenChange(Screen.Bookmarks) },
+                        modifier = Modifier.size(iconSize)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Bookmarks,
+                            contentDescription = "Bookmarks",
+                            tint = viewModel.headerButtonsColor
+                        )
+                    }
+                    IconButton(
+                        onClick = { onScreenChange(Screen.Notes) },
+                        modifier = Modifier.size(iconSize)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Note,
+                            contentDescription = "Notes",
+                            tint = viewModel.headerButtonsColor
+                        )
+                    }
+                    IconButton(
+                        onClick = { onScreenChange(Screen.Search) },
+                        modifier = Modifier.size(iconSize)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = viewModel.headerButtonsColor
+                        )
+                    }
+                    IconButton(
+                        onClick = { onScreenChange(Screen.Settings) },
+                        modifier = Modifier.size(iconSize)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Settings",
+                            tint = viewModel.headerButtonsColor
+                        )
+                    }
+                }
+                if (!viewModel.multiVersion || !isLandscape && viewModel.multiViewLayout == "horizontal") {
                     AnimatedIconButton(
                         onClick = onThemeToggle,
                         icon = if (viewModel.darkTheme) Icons.Filled.Brightness6 else Icons.Filled.Brightness2,
@@ -750,7 +818,8 @@ fun ReaderAppBar(
                     )
                 }
             }
-        }
+        },
+        windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top)
     )
 }
 

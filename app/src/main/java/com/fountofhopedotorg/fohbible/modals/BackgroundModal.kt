@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import com.fountofhopedotorg.fohbible.functions.ColorSplashCanvas
@@ -70,11 +71,11 @@ fun BgModal(
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = "Select Background",
-                    style = MaterialTheme.typography.titleMedium,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+                HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
 
                 LazyRow(
                     state = lazyListState,
