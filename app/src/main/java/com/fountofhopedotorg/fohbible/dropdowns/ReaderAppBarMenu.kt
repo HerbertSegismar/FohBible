@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
@@ -19,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import com.fountofhopedotorg.fohbible.Screen
 import com.fountofhopedotorg.fohbible.composables.ReaderDropdownContent
 import com.fountofhopedotorg.fohbible.models.AppViewModel
@@ -32,6 +34,7 @@ fun ReaderAppBarMenu(
     modifier: Modifier = Modifier,
     tint: Color = viewModel.headerButtonsColor
 ) {
+    val iconSize = 35.dp
     var showMenu by remember { mutableStateOf(false) }
     val rotation by animateFloatAsState(
         targetValue = if (showMenu) 180f else 0f,
@@ -40,6 +43,7 @@ fun ReaderAppBarMenu(
     )
     Box(modifier = modifier) {
         IconButton(
+            modifier = Modifier.size(iconSize),
             onClick = { showMenu = !showMenu }
         ) {
             Crossfade(
@@ -51,7 +55,7 @@ fun ReaderAppBarMenu(
                     imageVector = if (isOpen) Icons.Filled.Close else Icons.Filled.Menu,
                     contentDescription = if (isOpen) "Close Navigation" else "Open Navigation",
                     tint = tint,
-                    modifier = Modifier.rotate(rotation)
+                    modifier = Modifier.size(iconSize * 0.65f).rotate(rotation)
                 )
             }
         }

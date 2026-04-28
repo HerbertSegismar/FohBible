@@ -30,6 +30,7 @@ fun WindowsLayoutDropdown(
     modifier: Modifier = Modifier,
     tint: Color = viewModel.headerButtonsColor
 ) {
+    val iconSize = 35.dp
     var expanded by remember { mutableStateOf(false) }
     val rotation by animateFloatAsState(
         targetValue = if (expanded) 180f else 0f,
@@ -39,6 +40,7 @@ fun WindowsLayoutDropdown(
 
     Box(modifier = modifier) {
         IconButton(
+            modifier = Modifier.size(iconSize),
             onClick = { expanded = !expanded }
         ) {
             Crossfade(
@@ -50,7 +52,7 @@ fun WindowsLayoutDropdown(
                     imageVector = if (isOpen) Icons.Filled.Close else Icons.Filled.AutoAwesomeMosaic,
                     contentDescription = if (isOpen) "Close MultiView" else "MultiView",
                     tint = tint,
-                    modifier = Modifier.rotate(rotation)
+                    modifier = Modifier.size(iconSize * 0.55f).rotate(rotation)
                 )
             }
         }

@@ -87,6 +87,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.core.DataStore
@@ -262,6 +263,7 @@ fun AnimatedIconButton(
     contentDescription: String?,
     viewModel: AppViewModel,
     modifier: Modifier = Modifier,
+    iconSize: Dp = 48.dp,
     rotation: Float = 0f,
     tint: Color = viewModel.headerButtonsColor
 ) {
@@ -271,14 +273,22 @@ fun AnimatedIconButton(
         animationSpec = tween(300),
         label = "iconRotation"
     )
+
     IconButton(
         onClick = {
             targetRotation += rotation
             onClick()
         },
-        modifier = modifier
+        modifier = modifier.size(iconSize)
     ) {
-        Icon(icon, contentDescription, tint = tint, modifier = Modifier.rotate(animatedRotation))
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier
+                .rotate(animatedRotation)
+                .size(iconSize)
+        )
     }
 }
 @Composable
@@ -448,7 +458,12 @@ fun OverlayOpacitySlider(viewModel: AppViewModel) {
 }
 
 @Composable
-fun ScrollSyncButton(viewModel: AppViewModel, modifier: Modifier) {
+fun ScrollSyncButton(
+    viewModel: AppViewModel,
+    modifier: Modifier = Modifier,
+    containerSize: Dp = 35.dp,
+    iconScale: Float = 0.6f
+) {
     val scope = rememberCoroutineScope()
     val pendingJob = remember { mutableStateOf<Job?>(null) }
     val icon = if (viewModel.scrollSync) Icons.Filled.Link else Icons.Filled.LinkOff
@@ -465,7 +480,8 @@ fun ScrollSyncButton(viewModel: AppViewModel, modifier: Modifier) {
         },
         icon = icon,
         contentDescription = "Toggle Scroll Sync",
-        modifier = modifier,
+        modifier = modifier.then(Modifier.size(containerSize)),
+        iconSize = containerSize * iconScale,
         rotation = 180f,
         viewModel = viewModel
     )
@@ -520,7 +536,7 @@ fun HomeAppBar(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val topAppBarHeight = if (isLandscape) 40.dp else 80.dp
-    val iconSize = if (isLandscape) 45.dp else 35.dp
+    val iconSize = 35.dp
     var showNavigationDropdown by remember { mutableStateOf(false) }
     val viewModel: AppViewModel = viewModel()
     val rotation by animateFloatAsState(targetValue = if (showNavigationDropdown) 180f else 0f, animationSpec = tween(300), label = "menuIconRotation")
@@ -541,23 +557,100 @@ fun HomeAppBar(
             .background(Brush.verticalGradient(0.6f to LocalAppTheme.current.primaryColor, 0.85f to LocalAppTheme.current.primaryColor, 1.0f to Color.Transparent)),
         navigationIcon = {
             if (onBack != null) {
-                AnimatedIconButton(
-                    modifier = Modifier.padding(start = 6.dp),
-                    onClick = onBack,
-                    icon = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    viewModel = viewModel
-                )
+                Box(
+                    modifier = Modifier
+                        .padding(start = 6.dp)
+                        .size(30.dp)
+                        .clip(CircleShape)
+                        .clickable(
+                            onClick = {
+                                onBack()
+                            }
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = viewModel.headerButtonsColor
+                    )
+                }
             }
         },
         actions = {
             Row(modifier = Modifier.padding( horizontal = 15.dp)) {
+                if (isLandscape ) {
+                    IconButton(
+                        onClick = { onScreenChange(Screen.Home) },
+                        modifier = Modifier.size(iconSize)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Home,
+                            contentDescription = "Home",
+                            tint = viewModel.headerButtonsColor,
+                            modifier = Modifier.size(iconSize * 0.65f)
+                        )
+                    }
+                    AnimatedIconButton(
+                        onClick = onBibleIconClick,
+                        icon = Icons.Filled.Book,
+                        contentDescription = "Bible Navigation",
+                        modifier = Modifier.size(iconSize),
+                        iconSize = iconSize * 0.55f,
+                        rotation = 360f,
+                        viewModel = viewModel
+                    )
+                    IconButton(
+                        onClick = { onScreenChange(Screen.Bookmarks) },
+                        modifier = Modifier.size(iconSize)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Bookmarks,
+                            contentDescription = "Bookmarks",
+                            tint = viewModel.headerButtonsColor,
+                            modifier = Modifier.size(iconSize * 0.55f)
+                        )
+                    }
+                    IconButton(
+                        onClick = { onScreenChange(Screen.Notes) },
+                        modifier = Modifier.size(iconSize)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Note,
+                            contentDescription = "Notes",
+                            tint = viewModel.headerButtonsColor,
+                            modifier = Modifier.size(iconSize * 0.55f).rotate(90f)
+                        )
+                    }
+                    IconButton(
+                        onClick = { onScreenChange(Screen.Search) },
+                        modifier = Modifier.size(iconSize)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = viewModel.headerButtonsColor,
+                            modifier = Modifier.size(iconSize * 0.7f)
+                        )
+                    }
+                    IconButton(
+                        onClick = { onScreenChange(Screen.Settings) },
+                        modifier = Modifier.size(iconSize)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Settings",
+                            tint = viewModel.headerButtonsColor,
+                            modifier = Modifier.size(iconSize * 0.6f)
+                        )
+                    }
+                }
                 AnimatedIconButton(
                     onClick = onBibleIconClick,
                     icon = Icons.Filled.Book,
                     contentDescription = "Bible Navigation",
-                    modifier = Modifier
-                        .size(iconSize),
+                    modifier = Modifier.size(iconSize),
+                    iconSize = iconSize * 0.55f,
                     rotation = 360f,
                     viewModel = viewModel
                 )
@@ -565,8 +658,8 @@ fun HomeAppBar(
                     onClick = onThemeToggle,
                     icon = if (viewModel.darkTheme) Icons.Filled.Brightness6 else Icons.Filled.Brightness2,
                     contentDescription = "Toggle Theme",
-                    modifier = Modifier
-                        .size(iconSize),
+                    modifier = Modifier.size(iconSize),
+                    iconSize = iconSize * 0.6f,
                     rotation = 180f,
                     viewModel = viewModel
                 )
@@ -574,8 +667,8 @@ fun HomeAppBar(
                     onClick = onColorLensClick,
                     icon = Icons.Filled.ColorLens,
                     contentDescription = "Color Scheme",
-                    modifier = Modifier
-                        .size(iconSize),
+                    modifier = Modifier.size(iconSize),
+                    iconSize = iconSize * 0.6f,
                     rotation = 180f,
                     viewModel = viewModel
                 )
@@ -640,7 +733,7 @@ fun ReaderAppBar(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val topAppBarHeight = if (isLandscape) 40.dp else 80.dp
-    val iconSize = if (isLandscape) 45.dp else 35.dp
+    val iconSize = 35.dp
 
     TopAppBar(
         title = {
@@ -732,8 +825,9 @@ fun ReaderAppBar(
             }
         },
         actions = {
+            Spacer(modifier = Modifier.width(if (isLandscape) 200.dp else 0.dp))
             Row(modifier = Modifier.padding(horizontal = 8.dp)) {
-                if (viewModel.multiVersion || !viewModel.multiVersion && isLandscape) {
+                if (viewModel.multiVersion && !isLandscape|| !viewModel.multiVersion && isLandscape || isLandscape && viewModel.multiVersion && viewModel.multiViewLayout == "horizontal") {
                     IconButton(
                         onClick = { onScreenChange(Screen.Home) },
                         modifier = Modifier.size(iconSize)
@@ -741,7 +835,8 @@ fun ReaderAppBar(
                         Icon(
                             imageVector = Icons.Default.Home,
                             contentDescription = "Home",
-                            tint = viewModel.headerButtonsColor
+                            tint = viewModel.headerButtonsColor,
+                            modifier = Modifier.size(iconSize * 0.65f)
                         )
                     }
                     IconButton(
@@ -751,7 +846,8 @@ fun ReaderAppBar(
                         Icon(
                             imageVector = Icons.Default.Bookmarks,
                             contentDescription = "Bookmarks",
-                            tint = viewModel.headerButtonsColor
+                            tint = viewModel.headerButtonsColor,
+                            modifier = Modifier.size(iconSize * 0.55f)
                         )
                     }
                     IconButton(
@@ -761,7 +857,8 @@ fun ReaderAppBar(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Note,
                             contentDescription = "Notes",
-                            tint = viewModel.headerButtonsColor
+                            tint = viewModel.headerButtonsColor,
+                            modifier = Modifier.size(iconSize * 0.55f).rotate(90f)
                         )
                     }
                     IconButton(
@@ -771,7 +868,8 @@ fun ReaderAppBar(
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = "Search",
-                            tint = viewModel.headerButtonsColor
+                            tint = viewModel.headerButtonsColor,
+                            modifier = Modifier.size(iconSize * 0.7f)
                         )
                     }
                     IconButton(
@@ -781,7 +879,8 @@ fun ReaderAppBar(
                         Icon(
                             imageVector = Icons.Default.Settings,
                             contentDescription = "Settings",
-                            tint = viewModel.headerButtonsColor
+                            tint = viewModel.headerButtonsColor,
+                            modifier = Modifier.size(iconSize * 0.6f)
                         )
                     }
                 }
@@ -791,6 +890,7 @@ fun ReaderAppBar(
                         icon = if (viewModel.darkTheme) Icons.Filled.Brightness6 else Icons.Filled.Brightness2,
                         contentDescription = "Toggle Theme",
                         modifier = Modifier.size(iconSize),
+                        iconSize = iconSize * 0.6f,
                         rotation = 180f,
                         viewModel = viewModel
                     )
@@ -799,11 +899,16 @@ fun ReaderAppBar(
                         icon = Icons.Filled.ColorLens,
                         contentDescription = "Color Scheme",
                         modifier = Modifier.size(iconSize),
+                        iconSize = iconSize * 0.6f,
                         rotation = 180f,
                         viewModel = viewModel
                     )
                     if (viewModel.multiVersion) {
-                        ScrollSyncButton(viewModel = viewModel, modifier = Modifier.size(iconSize))
+                        ScrollSyncButton(
+                            viewModel = viewModel,
+                            containerSize = 35.dp,
+                            iconScale = 0.6f
+                        )
                     }
                     WindowsLayoutDropdown(
                         viewModel = viewModel,
