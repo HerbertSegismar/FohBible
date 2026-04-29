@@ -72,18 +72,20 @@ fun VersionSelectionModal(
     val textColor = colors["text"] ?: MaterialTheme.colorScheme.onSurface
     val mutedColor = colors["muted"] ?: MaterialTheme.colorScheme.onSurfaceVariant
     val borderColor = colors["border"] ?: MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-    val allVersions = BibleVersionUtils.versionMap.entries.toList()
-    val filteredVersions by remember(searchQuery) {
+    val groupedVersions = remember(searchQuery) {
         derivedStateOf {
+            val all = BibleVersionUtils.getVersionsGroupedByLanguage()
             if (searchQuery.isBlank()) {
-                allVersions
+                all
             } else {
-                allVersions.filter { (key, shortName) ->
-                    val description = BibleVersionUtils.descriptionMap[key] ?: ""
-                    shortName.contains(searchQuery, ignoreCase = true) ||
-                            description.contains(searchQuery, ignoreCase = true) ||
-                            key.contains(searchQuery, ignoreCase = true)
-                }
+                all.mapValues { (_, list) ->
+                    list.filter { (key, shortName) ->
+                        val description = BibleVersionUtils.descriptionMap[key] ?: ""
+                        shortName.contains(searchQuery, ignoreCase = true) ||
+                                description.contains(searchQuery, ignoreCase = true) ||
+                                key.contains(searchQuery, ignoreCase = true)
+                    }
+                }.filterValues { it.isNotEmpty() }
             }
         }
     }
@@ -203,74 +205,79 @@ fun VersionSelectionModal(
                     LazyColumn(
                         modifier = Modifier.weight(1f)
                     ) {
-                        items(filteredVersions) { (key, shortName) ->
-                            val isSelected = key == currentVersionKey
-                            val description = BibleVersionUtils.descriptionMap[key] ?: ""
-
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(
-                                        if (isSelected) primaryColor.copy(alpha = 0.12f)
-                                        else Color.Transparent
-                                    )
-                                    .clickable {
-                                        keyboardController?.hide()
-                                        onVersionSelected(key)
-                                    }
-                                    .padding(horizontal = 20.dp, vertical = 14.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(
-                                    modifier = Modifier.weight(1f)
+                        groupedVersions.value.forEach { (language, versions) ->
+                            stickyHeader {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(surfaceColor)
+                                        .padding(horizontal = 20.dp, vertical = 8.dp)
                                 ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
+                                    Text(
+                                        text = language,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = primaryColor,
+                                        letterSpacing = 0.3.sp
+                                    )
+                                }
+                            }
+                            items(versions) { (key, shortName) ->
+                                val isSelected = key == currentVersionKey
+                                val description = BibleVersionUtils.descriptionMap[key] ?: ""
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(
+                                            if (isSelected) primaryColor.copy(alpha = 0.12f)
+                                            else Color.Transparent
+                                        )
+                                        .clickable {
+                                            keyboardController?.hide()
+                                            onVersionSelected(key)
+                                        }
+                                        .padding(horizontal = 20.dp, vertical = 14.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = shortName,
                                             fontSize = 16.sp,
                                             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
                                             color = if (isSelected) primaryColor else textColor
                                         )
-                                    }
-                                    Text(
-                                        text = description,
-                                        fontSize = 13.sp,
-                                        color = mutedColor,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                                Box(
-                                    modifier = Modifier.size(36.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    if (isSelected) {
-                                        Icon(
-                                            Icons.Default.CheckCircle,
-                                            contentDescription = "Selected",
-                                            tint = primaryColor,
-                                            modifier = Modifier.size(22.dp)
+                                        Text(
+                                            text = description,
+                                            fontSize = 13.sp,
+                                            color = mutedColor,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                     }
+                                    Box(modifier = Modifier.size(36.dp), contentAlignment = Alignment.Center) {
+                                        if (isSelected) {
+                                            Icon(
+                                                Icons.Default.CheckCircle,
+                                                contentDescription = "Selected",
+                                                tint = primaryColor,
+                                                modifier = Modifier.size(22.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                                if (versions.lastOrNull() != (key to shortName)) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(start = 20.dp),
+                                        color = borderColor,
+                                        thickness = 0.5.dp
+                                    )
                                 }
                             }
-                            if (filteredVersions.lastOrNull() != (key to shortName)) {
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(start = 20.dp),
-                                    color = borderColor,
-                                    thickness = 0.5.dp
-                                )
-                            }
                         }
-                        if (filteredVersions.isEmpty()) {
+                        if (groupedVersions.value.isEmpty()) {
                             item {
                                 Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(48.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(48.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(

@@ -645,15 +645,17 @@ fun HomeAppBar(
                         )
                     }
                 }
-                AnimatedIconButton(
-                    onClick = onBibleIconClick,
-                    icon = Icons.Filled.Book,
-                    contentDescription = "Bible Navigation",
-                    modifier = Modifier.size(iconSize),
-                    iconSize = iconSize * 0.55f,
-                    rotation = 360f,
-                    viewModel = viewModel
-                )
+                if (!isLandscape) {
+                    AnimatedIconButton(
+                        onClick = onBibleIconClick,
+                        icon = Icons.Filled.Book,
+                        contentDescription = "Bible Navigation",
+                        modifier = Modifier.size(iconSize),
+                        iconSize = iconSize * 0.55f,
+                        rotation = 360f,
+                        viewModel = viewModel
+                    )
+                }
                 AnimatedIconButton(
                     onClick = onThemeToggle,
                     icon = if (viewModel.darkTheme) Icons.Filled.Brightness6 else Icons.Filled.Brightness2,
