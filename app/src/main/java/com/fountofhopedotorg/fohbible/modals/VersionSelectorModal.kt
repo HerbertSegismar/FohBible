@@ -1,4 +1,5 @@
 package com.fountofhopedotorg.fohbible.modals
+
 import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -72,23 +73,40 @@ fun VersionSelectionModal(
     val textColor = colors["text"] ?: MaterialTheme.colorScheme.onSurface
     val mutedColor = colors["muted"] ?: MaterialTheme.colorScheme.onSurfaceVariant
     val borderColor = colors["border"] ?: MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+
     val groupedVersions = remember(searchQuery) {
         derivedStateOf {
             val all = BibleVersionUtils.getVersionsGroupedByLanguage()
             if (searchQuery.isBlank()) {
                 all
             } else {
-                all.mapValues { (_, list) ->
-                    list.filter { (key, shortName) ->
-                        val description = BibleVersionUtils.descriptionMap[key] ?: ""
-                        shortName.contains(searchQuery, ignoreCase = true) ||
-                                description.contains(searchQuery, ignoreCase = true) ||
-                                key.contains(searchQuery, ignoreCase = true)
+                // Build a new map that includes language name matches
+                val filtered = mutableMapOf<String, List<Pair<String, String>>>()
+                for ((language, versions) in all) {
+                    // Check if the language name matches the search query
+                    val languageMatches = language.contains(searchQuery, ignoreCase = true)
+
+                    if (languageMatches) {
+                        // Language matches → include all versions of this language
+                        filtered[language] = versions
+                    } else {
+                        // Language does not match → filter versions by version properties
+                        val matchingVersions = versions.filter { (key, shortName) ->
+                            val description = BibleVersionUtils.descriptionMap[key] ?: ""
+                            shortName.contains(searchQuery, ignoreCase = true) ||
+                                    description.contains(searchQuery, ignoreCase = true) ||
+                                    key.contains(searchQuery, ignoreCase = true)
+                        }
+                        if (matchingVersions.isNotEmpty()) {
+                            filtered[language] = matchingVersions
+                        }
                     }
-                }.filterValues { it.isNotEmpty() }
+                }
+                filtered
             }
         }
     }
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -100,7 +118,6 @@ fun VersionSelectionModal(
             exit = fadeOut(animationSpec = tween(150)) +
                     scaleOut(targetScale = 0.9f, animationSpec = tween(150))
         ) {
-
             val configuration = LocalConfiguration.current
             val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
             Card(
@@ -159,7 +176,7 @@ fun VersionSelectionModal(
                             .padding(horizontal = 20.dp),
                         placeholder = {
                             Text(
-                                "Search version",
+                                "Search version or language",
                                 color = mutedColor,
                                 fontSize = 14.sp
                             )
