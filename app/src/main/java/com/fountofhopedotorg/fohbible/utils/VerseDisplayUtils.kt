@@ -609,7 +609,7 @@ class VerseTextProcessor {
         }
     }
     private fun isWord(text: String): Boolean {
-        return text.matches(Regex("""[a-zA-ZÀ-ÿ']+"""))
+        return text.matches(Regex("""^[\p{L}\p{M}'-]+$"""))
     }
     private fun escapeRegex(string: String): String {
         return string.replace(ESCAPE_REGEX_PATTERN, "\\$0")
