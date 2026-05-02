@@ -2,6 +2,11 @@ package com.fountofhopedotorg.fohbible.utils
 
 object InteractiveModalUtils {
     val dictionaries = listOf("atsbd", "cbtel", "isbe", "noah", "oxford", "topical", "tcr", "eunsa")
+    val dictionariesByLanguage: Map<String, List<String>> = mapOf(
+        "en" to listOf("atsbd", "cbtel", "isbe", "noah", "oxford", "topical", "tcr"),
+        "es" to listOf("eunsa")
+    )
+
     val dictionaryDisplayNames = mapOf(
         "atsbd" to "ATSBD",
         "cbtel" to "CBTEL",
@@ -10,8 +15,9 @@ object InteractiveModalUtils {
         "oxford" to "Oxford Dictionary",
         "topical" to "Topical Bible Dictionary",
         "tcr" to "Thompson Chain Reference",
-        "eunsa" to "Sagrada Biblia - Universidad de Navarra"
+        "eunsa" to "Sagrada Biblia Spanish Dictionary"
     )
+
     val verseCommentaries = listOf("cbsc", "spurgeon", "ebc", "fairbairn", "hawker", "mhwbc", "scofield", "tsk")
     val verseCommentaryDisplayNames = mapOf(
         "cbsc" to "Cambridge Bible Commentary",
@@ -23,6 +29,7 @@ object InteractiveModalUtils {
         "scofield" to "Scofield Reference Bible",
         "tsk" to "Treasury of Scripture Knowledge"
     )
+
     val crossReferenceDatabases = listOf("esv", "niv11", "obx")
     val crossReferenceDatabaseDisplayNames = mapOf(
         "esv" to "References from ESV",

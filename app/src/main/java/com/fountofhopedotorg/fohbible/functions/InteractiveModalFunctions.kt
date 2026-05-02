@@ -5,6 +5,7 @@ import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.data.Verse
 import com.fountofhopedotorg.fohbible.data.VerseCommentary
+import com.fountofhopedotorg.fohbible.utils.InteractiveModalUtils.dictionariesByLanguage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Locale
@@ -251,4 +252,8 @@ suspend fun getVerseCommentaries(
         e.printStackTrace()
         null
     }
+}
+
+fun getLanguageForDictionary(dictKey: String): String? {
+    return dictionariesByLanguage.entries.find { it.value.contains(dictKey) }?.key
 }

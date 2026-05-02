@@ -1,4 +1,5 @@
 package com.fountofhopedotorg.fohbible.modals
+
 import android.content.res.Configuration
 import android.text.SpannableString
 import android.text.method.LinkMovementMethod
@@ -13,6 +14,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -88,6 +90,7 @@ import com.fountofhopedotorg.fohbible.functions.buildDefinitionContent
 import com.fountofhopedotorg.fohbible.functions.cleanDefinition
 import com.fountofhopedotorg.fohbible.functions.fetchVerses
 import com.fountofhopedotorg.fohbible.functions.getDefinitionOrClosest
+import com.fountofhopedotorg.fohbible.functions.getLanguageForDictionary
 import com.fountofhopedotorg.fohbible.functions.getVerseCommentaries
 import com.fountofhopedotorg.fohbible.functions.parseVerseLink
 import com.fountofhopedotorg.fohbible.functions.prepareStrongContent
@@ -97,6 +100,7 @@ import com.fountofhopedotorg.fohbible.utils.Fonts
 import com.fountofhopedotorg.fohbible.utils.InteractiveModalUtils.crossReferenceDatabaseDisplayNames
 import com.fountofhopedotorg.fohbible.utils.InteractiveModalUtils.crossReferenceDatabases
 import com.fountofhopedotorg.fohbible.utils.InteractiveModalUtils.dictionaries
+import com.fountofhopedotorg.fohbible.utils.InteractiveModalUtils.dictionariesByLanguage
 import com.fountofhopedotorg.fohbible.utils.InteractiveModalUtils.dictionaryDisplayNames
 import com.fountofhopedotorg.fohbible.utils.InteractiveModalUtils.verseCommentaries
 import com.fountofhopedotorg.fohbible.utils.InteractiveModalUtils.verseCommentaryDisplayNames
@@ -438,8 +442,20 @@ fun InteractiveModal(
         var commentaryDropdownExpanded by remember { mutableStateOf(false) }
         var crossRefDropdownExpanded by remember { mutableStateOf(false) }
         var showEditWordDialog by remember { mutableStateOf(false) }
+
+        LaunchedEffect(true, viewModel.selectedDictionary) {
+            if (show) {
+                val dictLang = getLanguageForDictionary(viewModel.selectedDictionary)
+                if (dictLang != null && dictLang != viewModel.selectedDictLanguage) {
+                    viewModel.selectedDictLanguage = dictLang
+                }
+            }
+        }
+
         fun switchToDictionary(newDict: String) {
             if (viewModel.selectedDictionary == newDict) return
+            val newLang = getLanguageForDictionary(newDict) ?: viewModel.selectedDictLanguage
+            viewModel.selectedDictLanguage = newLang
             val currentWord = currentPage.word ?: return
             val dbDisplayName = dictionaryDisplayNames[newDict] ?: newDict
             val loadingTitle = "Switching to ${newDict.uppercase()}"
@@ -603,19 +619,37 @@ fun InteractiveModal(
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        Text(
-                                            text = description,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
+                                        ///
+                                        TextButton(
+                                            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                                start = 0.dp,
+                                                end = 0.dp,
+                                                top = 4.dp,
+                                                bottom = 4.dp
+                                            ),
+                                            onClick = { dictionaryDropdownExpanded = true }) {
+                                            Text(
+                                                text = description,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        val currentLangDicts = dictionariesByLanguage[viewModel.selectedDictLanguage] ?: dictionaries
+                                        val currentDictIndex = currentLangDicts.indexOf(viewModel.selectedDictionary)
+                                        val nextDict = if (currentDictIndex != -1) {
+                                            currentLangDicts[(currentDictIndex + 1) % currentLangDicts.size]
+                                        } else {
+                                            currentLangDicts.firstOrNull() ?: viewModel.selectedDictionary
+                                        }
+                                        Spacer(modifier = Modifier.size(2.dp))
                                         Box {
                                             IconButton(
-                                                onClick = { dictionaryDropdownExpanded = true },
-                                                modifier = Modifier.size(40.dp)
+                                                onClick = { switchToDictionary(nextDict) },
+                                                modifier = Modifier.size(30.dp)
                                             ) {
                                                 Icon(
-                                                    Icons.Default.ArrowDropDown,
-                                                    contentDescription = "Select Dictionary",
+                                                    Icons.Filled.ChevronRight,
+                                                    contentDescription = "Next Dictionary",
                                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
                                             }
@@ -623,17 +657,34 @@ fun InteractiveModal(
                                                 expanded = dictionaryDropdownExpanded,
                                                 onDismissRequest = { dictionaryDropdownExpanded = false }
                                             ) {
-                                                dictionaries.forEach { dictKey ->
+                                                dictionariesByLanguage.forEach { (languageCode, dictKeys) ->
                                                     DropdownMenuItem(
-                                                        modifier = if (dictKey == viewModel.selectedDictionary) {
-                                                            Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-                                                        } else Modifier,
-                                                        text = { Text(dictionaryDisplayNames[dictKey] ?: dictKey) },
-                                                        onClick = {
-                                                            dictionaryDropdownExpanded = false
-                                                            switchToDictionary(dictKey)
-                                                        }
+                                                        text = {
+                                                            Text(
+                                                                text = when (languageCode) {
+                                                                    "en" -> "English"
+                                                                    "es" -> "Español"
+                                                                    else -> languageCode.uppercase()
+                                                                },
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = MaterialTheme.colorScheme.primary
+                                                            )
+                                                        },
+                                                        onClick = {},
+                                                        enabled = false
                                                     )
+                                                    dictKeys.forEach { dictKey ->
+                                                        DropdownMenuItem(
+                                                            modifier = if (dictKey == viewModel.selectedDictionary) {
+                                                                Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                                                            } else Modifier,
+                                                            text = { Text(dictionaryDisplayNames[dictKey] ?: dictKey) },
+                                                            onClick = {
+                                                                dictionaryDropdownExpanded = false
+                                                                switchToDictionary(dictKey)
+                                                            }
+                                                        )
+                                                    }
                                                 }
                                             }
                                         }
@@ -644,19 +695,36 @@ fun InteractiveModal(
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        Text(
-                                            text = description,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
+                                        ///
+                                        TextButton(
+                                            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                                start = 0.dp,
+                                                end = 0.dp,
+                                                top = 4.dp,
+                                                bottom = 4.dp
+                                            ),
+                                            onClick = { commentaryDropdownExpanded = true }) {
+                                            Text(
+                                                text = description,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        val currentComIndex = verseCommentaries.indexOf(viewModel.selectedVerseCommentary)
+                                        val nextCom = if (currentComIndex != -1) {
+                                            verseCommentaries[(currentComIndex + 1) % verseCommentaries.size]
+                                        } else {
+                                            verseCommentaries.firstOrNull() ?: viewModel.selectedVerseCommentary
+                                        }
+                                        Spacer(modifier = Modifier.size(2.dp))
                                         Box {
                                             IconButton(
-                                                onClick = { commentaryDropdownExpanded = true },
+                                                onClick = { switchToVerseCommentary(nextCom) },
                                                 modifier = Modifier.size(40.dp)
                                             ) {
                                                 Icon(
-                                                    Icons.Default.ArrowDropDown,
-                                                    contentDescription = "Select Commentary",
+                                                    Icons.Filled.ChevronRight,
+                                                    contentDescription = "Next Commentary",
                                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
                                             }
@@ -685,17 +753,38 @@ fun InteractiveModal(
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        Text(
-                                            text = description,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
+                                        ///
+                                        TextButton(
+                                            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                                start = 0.dp,
+                                                end = 0.dp,
+                                                top = 4.dp,
+                                                bottom = 4.dp
+                                            ),
+                                            onClick = { crossRefDropdownExpanded = true }) {
+                                            Text(
+                                                text = description,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        val currentRefIndex = crossReferenceDatabases.indexOf(viewModel.selectedCrossReferenceDatabase)
+                                        val nextRef = if (currentRefIndex != -1) {
+                                            crossReferenceDatabases[(currentRefIndex + 1) % crossReferenceDatabases.size]
+                                        } else {
+                                            crossReferenceDatabases.firstOrNull() ?: viewModel.selectedCrossReferenceDatabase
+                                        }
+                                        Spacer(modifier = Modifier.size(2.dp))
                                         Box {
                                             IconButton(
-                                                onClick = { crossRefDropdownExpanded = true },
+                                                onClick = { switchToCrossReference(nextRef) },
                                                 modifier = Modifier.size(40.dp)
                                             ) {
-                                                Icon(Icons.Default.ArrowDropDown, "Select Cross-Reference DB")
+                                                Icon(
+                                                    Icons.Filled.ChevronRight,
+                                                    contentDescription = "Next Cross-Reference DB",
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
                                             }
                                             DropdownMenu(
                                                 expanded = crossRefDropdownExpanded,
@@ -1161,6 +1250,54 @@ fun InteractiveModal(
                     }
                 }
             },
+            dismissButton = when (currentPage.type) {
+                "definition" -> {
+                    {
+                        val languageFullNames = mapOf(
+                            "en" to "English",
+                            "es" to "Español"
+                        )
+
+                        val languages = dictionariesByLanguage.keys.toList()
+                        val currentLang = viewModel.selectedDictLanguage
+
+                        var languageDropdownExpanded by remember { mutableStateOf(false) }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Box {
+                                TextButton(onClick = { languageDropdownExpanded = true }) {
+                                    Text(
+                                        text = languageFullNames[currentLang] ?: currentLang.uppercase(),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Icon(Icons.Default.ArrowDropDown, contentDescription = "Select Language")
+                                }
+                                DropdownMenu(
+                                    expanded = languageDropdownExpanded,
+                                    onDismissRequest = { languageDropdownExpanded = false }
+                                ) {
+                                    languages.forEach { lang ->
+                                        DropdownMenuItem(
+                                            text = { Text(languageFullNames[lang] ?: lang.uppercase()) },
+                                            onClick = {
+                                                languageDropdownExpanded = false
+                                                if (lang != currentLang) {
+                                                    viewModel.selectedDictLanguage = lang
+                                                    val firstDict = dictionariesByLanguage[lang]?.firstOrNull()
+                                                    if (firstDict != null && firstDict != viewModel.selectedDictionary) {
+                                                        switchToDictionary(firstDict)
+                                                    }
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                else -> null
+            },
             confirmButton = {
                 Row {
                     if (stack.size > 1) {
@@ -1172,38 +1309,6 @@ fun InteractiveModal(
                         Text("Close")
                     }
                 }
-            },
-            dismissButton = when (currentPage.type) {
-                "definition" -> {
-                    {
-                        val currentIndex = dictionaries.indexOf(viewModel.selectedDictionary)
-                        val nextIndex = (currentIndex + 1) % dictionaries.size
-                        val nextDictionary = dictionaries[nextIndex]
-                        TextButton(onClick = { switchToDictionary(nextDictionary) }) {
-                            Text("Switch to ${nextDictionary.uppercase()}")
-                        }
-                    }
-                }
-                "versecommentary" -> {
-                    {
-                        val currentIndex = verseCommentaries.indexOf(viewModel.selectedVerseCommentary)
-                        val nextIndex = (currentIndex + 1) % verseCommentaries.size
-                        val nextKey = verseCommentaries[nextIndex]
-                        TextButton(onClick = { switchToVerseCommentary(nextKey) }) {
-                            Text("Switch to ${nextKey.uppercase()}")
-                        }
-                    }
-                }
-                "crossreference" -> {
-                    {
-                        val idx = crossReferenceDatabases.indexOf(viewModel.selectedCrossReferenceDatabase)
-                        val nextKey = crossReferenceDatabases[(idx + 1) % crossReferenceDatabases.size]
-                        TextButton(onClick = { switchToCrossReference(nextKey) }) {
-                            Text("Switch to ${nextKey.uppercase()}")
-                        }
-                    }
-                }
-                else -> null
             },
             containerColor = modalBackgroundColor
         )
