@@ -663,7 +663,11 @@ fun InteractiveModal(
                                                             Text(
                                                                 text = when (languageCode) {
                                                                     "en" -> "English"
+                                                                    "ar" -> "Arabic"
                                                                     "es" -> "Español"
+                                                                    "grk" -> "Greek"
+                                                                    "heb" -> "Hebrew"
+                                                                    "ru" -> "Russian"
                                                                     else -> languageCode.uppercase()
                                                                 },
                                                                 fontWeight = FontWeight.Bold,
@@ -1255,7 +1259,11 @@ fun InteractiveModal(
                     {
                         val languageFullNames = mapOf(
                             "en" to "English",
-                            "es" to "Español"
+                            "ar" to "Arabic",
+                            "es" to "Español",
+                            "grk" to "Greek",
+                            "heb" to "Hebrew",
+                            "ru" to "Russian",
                         )
 
                         val languages = dictionariesByLanguage.keys.toList()
