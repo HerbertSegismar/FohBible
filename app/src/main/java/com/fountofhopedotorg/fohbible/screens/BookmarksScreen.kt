@@ -354,6 +354,7 @@ fun BookmarksScreen(
         if (showVersionModal) {
             VersionSelectionModal(
                 currentVersionKey = selectedDbName,
+                isSecondary = false,
                 onVersionSelected = { file ->
                     selectedDbName = file
                     selectedVersionAbbr = BibleVersionUtils.versionMap[file] ?: "Bible"

@@ -183,9 +183,9 @@ fun ReaderScreen(
     var verseCommentaryChapter by remember { mutableIntStateOf(0) }
     var verseCommentaryVerse by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(viewModel.selectedDictionary, databaseHelper?.databaseName) {
+    LaunchedEffect(viewModel.selectedPrimaryDictionary, databaseHelper?.databaseName) {
         dictionaryDbHelper?.close()
-        dictionaryDbHelper = DatabaseHelper(contextFont, "${viewModel.selectedDictionary}.dictionary.sqlite3")
+        dictionaryDbHelper = DatabaseHelper(contextFont, "${viewModel.selectedPrimaryDictionary}.dictionary.sqlite3")
         strongDbHelper?.close()
         strongDbHelper = DatabaseHelper(contextFont, "secedictionary.sqlite3")
         commentaryDbHelper?.close()

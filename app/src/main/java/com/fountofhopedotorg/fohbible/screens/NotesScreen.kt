@@ -113,7 +113,7 @@ fun NotesScreen(
     var sortOrder by remember { mutableStateOf(NoteSortOrder.DATE_NEWEST) }
     var showNotesModal by remember { mutableStateOf(false) }
     var selectedNoteForEdit by remember { mutableStateOf<Note?>(null) }
-    var showVersionModal by remember { mutableStateOf(false) } // New state for version modal
+    var showVersionModal by remember { mutableStateOf(false) }
     val viewModel = viewModel<AppViewModel>()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -407,6 +407,7 @@ fun NotesScreen(
         if (showVersionModal) {
             VersionSelectionModal(
                 currentVersionKey = selectedDbName,
+                isSecondary = false,
                 onVersionSelected = { file ->
                     selectedDbName = file
                     selectedVersionAbbr = BibleVersionUtils.versionMap[file] ?: "Bible"

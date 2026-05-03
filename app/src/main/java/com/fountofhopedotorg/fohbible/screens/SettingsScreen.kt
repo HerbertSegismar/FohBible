@@ -777,6 +777,7 @@ fun SettingsScreen() {
     if (showPrimaryVersionModal) {
         VersionSelectionModal(
             currentVersionKey = viewModel.currentDbName,
+            isSecondary = false,
             onVersionSelected = { file ->
                 viewModel.currentDbName = file
                 viewModel.currentVersionAbbr = BibleVersionUtils.versionMap[file] ?: "Bible"
@@ -795,6 +796,7 @@ fun SettingsScreen() {
     if (showSecondaryVersionModal) {
         VersionSelectionModal(
             currentVersionKey = viewModel.secondaryDbName,
+            isSecondary = true,
             onVersionSelected = { file ->
                 viewModel.secondaryDbName = file
                 viewModel.secondaryVersionAbbr = BibleVersionUtils.versionMap[file] ?: "Bible"

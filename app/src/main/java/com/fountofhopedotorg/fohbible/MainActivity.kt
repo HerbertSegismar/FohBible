@@ -230,7 +230,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
             darkModalBackgroundColor = Color(prefs[DARK_MODAL_BG_COLOR_KEY] ?: Color(0xFF121523).toArgb())
             wordsOfJesus = Color(prefs[WORDS_OF_JESUS_KEY] ?: Color(0xFFDA4227).toArgb())
             headerButtonsColor = Color(prefs[HEADER_BUTTONS_KEY] ?: Color(0xFFFFFFFF).toArgb())
-            selectedDictionary = prefs[SELECTED_DICTIONARY_KEY] ?: "atsbd"
+            selectedPrimaryDictionary = prefs[SELECTED_DICTIONARY_KEY] ?: "atsbd"
             selectedVerseCommentary = prefs[SELECTED_VERSE_COMMENTARY_KEY] ?: "cbsc"
             selectedCrossReferenceDatabase = prefs[SELECTED_CROSS_REFERENCE_DB_KEY] ?: "obx"
             renderOrbs = prefs[RENDER_ORBS_KEY] ?: false
@@ -287,7 +287,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     SavePreference({ viewModel.darkModalBackgroundColor.toArgb() }, DARK_MODAL_BG_COLOR_KEY, dataStore)
     SavePreference({ viewModel.wordsOfJesus.toArgb() }, WORDS_OF_JESUS_KEY, dataStore)
     SavePreference({ viewModel.headerButtonsColor.toArgb() }, HEADER_BUTTONS_KEY, dataStore)
-    SavePreference({ viewModel.selectedDictionary }, SELECTED_DICTIONARY_KEY, dataStore)
+    SavePreference({ viewModel.selectedPrimaryDictionary }, SELECTED_DICTIONARY_KEY, dataStore)
     SavePreference({ viewModel.selectedVerseCommentary }, SELECTED_VERSE_COMMENTARY_KEY, dataStore)
     SavePreference({ viewModel.selectedCrossReferenceDatabase }, SELECTED_CROSS_REFERENCE_DB_KEY, dataStore)
     SavePreference(
@@ -526,6 +526,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                     if (viewModel.showPrimaryVersionDropdown) {
                         VersionSelectionModal(
                             currentVersionKey = viewModel.currentDbName,
+                            isSecondary = false,
                             onVersionSelected = { file ->
                                 viewModel.currentDbName = file
                                 viewModel.currentVersionAbbr = BibleVersionUtils.versionMap[file] ?: "Bible"
@@ -544,6 +545,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                     if (viewModel.showSecondaryVersionDropdown) {
                         VersionSelectionModal(
                             currentVersionKey = viewModel.secondaryDbName,
+                            isSecondary = true,
                             onVersionSelected = { file ->
                                 viewModel.secondaryDbName = file
                                 viewModel.secondaryVersionAbbr = BibleVersionUtils.versionMap[file] ?: "Bible"

@@ -56,6 +56,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -64,8 +66,10 @@ fun VersionSelectionModal(
     currentVersionKey: String,
     onVersionSelected: (String) -> Unit,
     onDismiss: () -> Unit,
+    isSecondary: Boolean = false,
     colors: Map<String, Color> = emptyMap()
 ) {
+    val viewModel = viewModel<AppViewModel>()
     var searchQuery by remember { mutableStateOf("") }
     val keyboardController = LocalSoftwareKeyboardController.current
     val primaryColor = colors["primary"] ?: MaterialTheme.colorScheme.primary
@@ -80,17 +84,13 @@ fun VersionSelectionModal(
             if (searchQuery.isBlank()) {
                 all
             } else {
-                // Build a new map that includes language name matches
                 val filtered = mutableMapOf<String, List<Pair<String, String>>>()
                 for ((language, versions) in all) {
-                    // Check if the language name matches the search query
                     val languageMatches = language.contains(searchQuery, ignoreCase = true)
 
                     if (languageMatches) {
-                        // Language matches → include all versions of this language
                         filtered[language] = versions
                     } else {
-                        // Language does not match → filter versions by version properties
                         val matchingVersions = versions.filter { (key, shortName) ->
                             val description = BibleVersionUtils.descriptionMap[key] ?: ""
                             shortName.contains(searchQuery, ignoreCase = true) ||
@@ -251,6 +251,11 @@ fun VersionSelectionModal(
                                         )
                                         .clickable {
                                             keyboardController?.hide()
+                                            if (isSecondary) {
+                                                viewModel.updateSecondaryDictionaryForBibleLanguage(key)
+                                            } else {
+                                                viewModel.updateDictionaryForBibleLanguage(key)
+                                            }
                                             onVersionSelected(key)
                                         }
                                         .padding(horizontal = 20.dp, vertical = 14.dp),

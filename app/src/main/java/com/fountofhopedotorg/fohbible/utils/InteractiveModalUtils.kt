@@ -1,13 +1,12 @@
 package com.fountofhopedotorg.fohbible.utils
 
 object InteractiveModalUtils {
-    val dictionaries = listOf("atsbd", "cbtel", "isbe", "noah", "oxford", "topical", "tcr", "eunsa", "rbo", "gesenius", "ardbt")
     val dictionariesByLanguage: Map<String, List<String>> = mapOf(
-        "en" to listOf("atsbd", "cbtel", "isbe", "noah", "oxford", "topical", "tcr"),
-        "ar" to listOf("ardbt"),
-        "es" to listOf("eunsa"),
-        "heb" to listOf("gesenius"),
-        "ru" to listOf("rbo"),
+        "English" to listOf("atsbd", "cbtel", "isbe", "noah", "oxford", "topical", "tcr"),
+        "Arabic" to listOf("ardbt"),
+        "Spanish" to listOf("eunsa"),
+        "Hebrew" to listOf("gesenius"),
+        "Russian" to listOf("rbo"),
     )
 
     val dictionaryDisplayNames = mapOf(

@@ -496,6 +496,7 @@ fun SearchScreen(
         if (showVersionDropdown) {
             VersionSelectionModal(
                 currentVersionKey = currentVersionKey,
+                isSecondary = false,
                 onVersionSelected = handleVersionChange,
                 onDismiss = { showVersionDropdown = false },
                 colors = colors

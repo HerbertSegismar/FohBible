@@ -14,9 +14,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,7 +29,6 @@ import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -99,7 +98,6 @@ import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.utils.Fonts
 import com.fountofhopedotorg.fohbible.utils.InteractiveModalUtils.crossReferenceDatabaseDisplayNames
 import com.fountofhopedotorg.fohbible.utils.InteractiveModalUtils.crossReferenceDatabases
-import com.fountofhopedotorg.fohbible.utils.InteractiveModalUtils.dictionaries
 import com.fountofhopedotorg.fohbible.utils.InteractiveModalUtils.dictionariesByLanguage
 import com.fountofhopedotorg.fohbible.utils.InteractiveModalUtils.dictionaryDisplayNames
 import com.fountofhopedotorg.fohbible.utils.InteractiveModalUtils.verseCommentaries
@@ -130,6 +128,7 @@ fun InteractiveModal(
     chapter: Int? = null,
     verse: Int? = null
 ) {
+    var secondaryDictionaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     val viewModel = viewModel<AppViewModel>()
     val context = LocalContext.current
     val themeColors = ThemeColors(
@@ -154,14 +153,18 @@ fun InteractiveModal(
         onDispose {
             crossRefDbHelper?.close()
             dictionaryDbHelper?.close()
+            secondaryDictionaryDbHelper?.close()
             strongDbHelper?.close()
             commentaryDbHelper?.close()
             verseCommentaryDbHelper?.close()
         }
     }
-    LaunchedEffect(show, viewModel.selectedDictionary, viewModel.selectedVerseCommentary, viewModel.selectedCrossReferenceDatabase, databaseHelper?.databaseName) {
+    LaunchedEffect(show, viewModel.selectedPrimaryDictionary, viewModel.selectedSecondaryDictionary,
+        viewModel.selectedVerseCommentary, viewModel.selectedCrossReferenceDatabase, databaseHelper?.databaseName) {
         dictionaryDbHelper?.close()
-        dictionaryDbHelper = DatabaseHelper(context, "${viewModel.selectedDictionary}.dictionary.sqlite3")
+        dictionaryDbHelper = DatabaseHelper(context, "${viewModel.selectedPrimaryDictionary}.dictionary.sqlite3")
+        secondaryDictionaryDbHelper?.close()
+        secondaryDictionaryDbHelper = DatabaseHelper(context, "${viewModel.selectedSecondaryDictionary}.dictionary.sqlite3")
         strongDbHelper?.close()
         strongDbHelper = DatabaseHelper(context, "secedictionary.sqlite3")
         commentaryDbHelper?.close()
@@ -188,45 +191,57 @@ fun InteractiveModal(
                     stack.add(ModalPage(title, "strong", preparedDefinition, strongNumber = strongNumber, description = initialDescription, isOldTestament = isOldTestament))
                 }
                 "definition" -> {
-                    val dbDisplayName = dictionaryDisplayNames[viewModel.selectedDictionary] ?: viewModel.selectedDictionary
-                    val capitalizedWord = word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
-                    if (definition.isNotBlank() && !definition.contains("not found", ignoreCase = true)) {
-                        val pairs = listOf(Pair(word, definition))
-                        val isOxford = viewModel.selectedDictionary == "oxford"
-                        val isTopical = viewModel.selectedDictionary == "topical"
-                        val newContent = buildDefinitionContent(
-                            originalWord = word,
-                            pairs = pairs,
-                            isOxford = isOxford,
-                            isTopical = isTopical
+                    if (viewModel.selectedPrimaryDictionary.isEmpty()) {
+                        stack.add(
+                            ModalPage(
+                                title = "No Dictionary Available",
+                                type = "definition",
+                                content = "There are no dictionaries available for the ${viewModel.selectedPrimaryDictLanguage} language.",
+                                description = "Unavailable",
+                                isOldTestament = isOldTestament
+                            )
                         )
-                        val title = "Definition of $capitalizedWord"
-                        stack.add(ModalPage(title, "definition", newContent, word = word, description = dbDisplayName, isOldTestament = isOldTestament))
                     } else {
-                        val loadingPage = ModalPage("Searching for $capitalizedWord...", "definition", "Loading...", word = word, description = dbDisplayName, isOldTestament = isOldTestament)
-                        stack.add(loadingPage)
-                        val pairs = getDefinitionOrClosest(dictionaryDbHelper, word) ?: emptyList()
-                        if (pairs.isNotEmpty()) {
-                            val isExact = pairs.size == 1 && pairs[0].first.equals(word, ignoreCase = true)
-                            val isTopical = viewModel.selectedDictionary == "topical"
-                            val newTitle = if (isTopical) {
-                                "References for $capitalizedWord"
-                            } else if (isExact) {
-                                "Definition of ${pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }}"
-                            } else if (pairs.size == 1) {
-                                "Closest match for ${pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }}"
-                            } else {
-                                "Matches for \"$capitalizedWord\""
-                            }
+                        val dbDisplayName = dictionaryDisplayNames[viewModel.selectedPrimaryDictionary] ?: viewModel.selectedPrimaryDictionary
+                        val capitalizedWord = word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
+                        if (definition.isNotBlank() && !definition.contains("not found", ignoreCase = true)) {
+                            val pairs = listOf(Pair(word, definition))
+                            val isOxford = viewModel.selectedPrimaryDictionary == "oxford"
+                            val isTopical = viewModel.selectedPrimaryDictionary == "topical"
                             val newContent = buildDefinitionContent(
                                 originalWord = word,
                                 pairs = pairs,
-                                isOxford = viewModel.selectedDictionary == "oxford",
+                                isOxford = isOxford,
                                 isTopical = isTopical
                             )
-                            stack[0] = loadingPage.copy(title = newTitle, content = newContent)
+                            val title = "Definition of $capitalizedWord"
+                            stack.add(ModalPage(title, "definition", newContent, word = word, description = dbDisplayName, isOldTestament = isOldTestament))
                         } else {
-                            stack[0] = loadingPage.copy(title = "Definition not found", content = "No results for \"$word\".")
+                            val loadingPage = ModalPage("Searching for $capitalizedWord...", "definition", "Loading...", word = word, description = dbDisplayName, isOldTestament = isOldTestament)
+                            stack.add(loadingPage)
+                            val pairs = getDefinitionOrClosest(dictionaryDbHelper, word) ?: emptyList()
+                            if (pairs.isNotEmpty()) {
+                                val isExact = pairs.size == 1 && pairs[0].first.equals(word, ignoreCase = true)
+                                val isTopical = viewModel.selectedPrimaryDictionary == "topical"
+                                val newTitle = if (isTopical) {
+                                    "References for $capitalizedWord"
+                                } else if (isExact) {
+                                    "Definition of ${pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }}"
+                                } else if (pairs.size == 1) {
+                                    "Closest match for ${pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }}"
+                                } else {
+                                    "Matches for \"$capitalizedWord\""
+                                }
+                                val newContent = buildDefinitionContent(
+                                    originalWord = word,
+                                    pairs = pairs,
+                                    isOxford = viewModel.selectedPrimaryDictionary == "oxford",
+                                    isTopical = isTopical
+                                )
+                                stack[0] = loadingPage.copy(title = newTitle, content = newContent)
+                            } else {
+                                stack[0] = loadingPage.copy(title = "Definition not found", content = "No results for \"$word\".")
+                            }
                         }
                     }
                 }
@@ -287,7 +302,7 @@ fun InteractiveModal(
     val onWordPress: (String) -> Unit = Unit@{ w ->
         val trimmed = w.trim()
         if (trimmed.isEmpty() || trimmed.matches(Regex(".*\\d.*"))) { return@Unit }
-        val dbDisplayName = dictionaryDisplayNames[viewModel.selectedDictionary] ?: viewModel.selectedDictionary
+        val dbDisplayName = dictionaryDisplayNames[viewModel.selectedPrimaryDictionary] ?: viewModel.selectedPrimaryDictionary
         val capitalizedWord = trimmed.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
         val currentIsOld = stack.last().isOldTestament
         val loadingTitle = "Loading Definition of $capitalizedWord"
@@ -302,8 +317,8 @@ fun InteractiveModal(
         stack.add(loadingPage)
         scope.launch {
             val pairs: List<Pair<String, String>> = getDefinitionOrClosest(dictionaryDbHelper, trimmed) ?: emptyList()
-            val isOxford = viewModel.selectedDictionary == "oxford"
-            val isTopical = viewModel.selectedDictionary == "topical"
+            val isOxford = viewModel.selectedPrimaryDictionary == "oxford"
+            val isTopical = viewModel.selectedPrimaryDictionary == "topical"
             val newTitle = if (pairs.isNotEmpty()) {
                 val isExact = pairs.size == 1 && pairs[0].first.equals(trimmed, ignoreCase = true)
                 if (isTopical) { "References for $capitalizedWord" } else if (isExact) {
@@ -443,51 +458,85 @@ fun InteractiveModal(
         var crossRefDropdownExpanded by remember { mutableStateOf(false) }
         var showEditWordDialog by remember { mutableStateOf(false) }
 
-        LaunchedEffect(true, viewModel.selectedDictionary) {
+        LaunchedEffect(true, viewModel.selectedPrimaryDictionary) {
             if (show) {
-                val dictLang = getLanguageForDictionary(viewModel.selectedDictionary)
-                if (dictLang != null && dictLang != viewModel.selectedDictLanguage) {
-                    viewModel.selectedDictLanguage = dictLang
+                val dictLang = getLanguageForDictionary(viewModel.selectedPrimaryDictionary)
+                if (dictLang != null && dictLang != viewModel.selectedPrimaryDictLanguage) {
+                    viewModel.selectedPrimaryDictLanguage = dictLang
                 }
             }
         }
 
-        fun switchToDictionary(newDict: String) {
-            if (viewModel.selectedDictionary == newDict) return
-            val newLang = getLanguageForDictionary(newDict) ?: viewModel.selectedDictLanguage
-            viewModel.selectedDictLanguage = newLang
+        LaunchedEffect(true, viewModel.selectedSecondaryDictionary) {
+            if (show) {
+                val dictLang = getLanguageForDictionary(viewModel.selectedSecondaryDictionary)
+                if (dictLang != null && dictLang != viewModel.selectedSecondaryDictLanguage) {
+                    viewModel.selectedSecondaryDictLanguage = dictLang
+                }
+            }
+        }
+
+        fun switchToDictionary(newDict: String, isSecondary: Boolean = false) {
+            val currentSelected = if (isSecondary) viewModel.selectedSecondaryDictionary else viewModel.selectedPrimaryDictionary
+            val currentLang = if (isSecondary) viewModel.selectedSecondaryDictLanguage else viewModel.selectedPrimaryDictLanguage
+
+            if (currentSelected == newDict) return
+
+            val newLang = getLanguageForDictionary(newDict) ?: currentLang
+            if (isSecondary) {
+                viewModel.selectedSecondaryDictLanguage = newLang
+                viewModel.selectedSecondaryDictionary = newDict
+            } else {
+                viewModel.selectedPrimaryDictLanguage = newLang
+                viewModel.selectedPrimaryDictionary = newDict
+            }
+
             val currentWord = currentPage.word ?: return
             val dbDisplayName = dictionaryDisplayNames[newDict] ?: newDict
             val loadingTitle = "Switching to ${newDict.uppercase()}"
+
             val loadingPage = currentPage.copy(
                 title = loadingTitle,
                 content = "Loading...",
                 description = dbDisplayName
             )
+
             val index = stack.lastIndex
-            stack[index] = loadingPage
-            viewModel.selectedDictionary = newDict
+            if (index != -1) stack[index] = loadingPage
+
             scope.launch {
                 val tempDbHelper = withContext(Dispatchers.IO) {
                     DatabaseHelper(context, "${newDict}.dictionary.sqlite3")
                 }
+
                 val pairs: List<Pair<String, String>> = getDefinitionOrClosest(tempDbHelper, currentWord) ?: emptyList()
-                val capitalizedWord = currentWord.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
+                val capitalizedWord = currentWord.replaceFirstChar {
+                    if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString()
+                }
+
                 val isExact = pairs.size == 1 && pairs[0].first.equals(currentWord, ignoreCase = true)
                 val isTopical = newDict == "topical"
-                val newTitle = if (isTopical) { "References for $capitalizedWord" } else if (isExact) {
-                    "Definition of ${pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }}"
-                } else if (pairs.size == 1) {
-                    "Closest match for ${pairs[0].first.replaceFirstChar { it.titlecase(Locale.ROOT) }}"
-                } else { "Matches for \"$capitalizedWord\"" }
+
+                val newTitle = when {
+                    isTopical -> "References for $capitalizedWord"
+                    isExact -> "Definition of ${pairs[0].first.replaceFirstChar { it.titlecase(
+                        Locale.ROOT) }}"
+                    pairs.size == 1 -> "Closest match for ${pairs[0].first.replaceFirstChar { it.titlecase(
+                        Locale.ROOT) }}"
+                    else -> "Matches for \"$capitalizedWord\""
+                }
                 val newContent = buildDefinitionContent(
-                    originalWord = word,
+                    originalWord = currentWord,
                     pairs = pairs,
-                    isOxford = viewModel.selectedDictionary == "oxford",
-                    isTopical = viewModel.selectedDictionary == "topical"
+                    isOxford = newDict == "oxford",
+                    isTopical = newDict == "topical"
                 )
+
                 val updateIndex = stack.indexOf(loadingPage)
-                if (updateIndex != -1) { stack[updateIndex] = loadingPage.copy(title = newTitle, content = newContent) }
+                if (updateIndex != -1) {
+                    stack[updateIndex] = loadingPage.copy(title = newTitle, content = newContent)
+                }
+
                 withContext(Dispatchers.IO) { tempDbHelper.close() }
             }
         }
@@ -566,7 +615,7 @@ fun InteractiveModal(
                     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         if (currentPage.type == "definition" && currentPage.word != null) {
                             val capitalizedWord = currentPage.word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
-                            val isTopical = viewModel.selectedDictionary == "topical"
+                            val isTopical = viewModel.selectedPrimaryDictionary == "topical"
                             val prefix = when {
                                 isTopical -> "References for "
                                 currentPage.title.startsWith("Definition of ") -> "Definition of "
@@ -615,74 +664,67 @@ fun InteractiveModal(
                             Spacer(modifier = Modifier.height(4.dp))
                             when (currentPage.type) {
                                 "definition" -> {
+                                    val currentLangDicts = dictionariesByLanguage[viewModel.selectedPrimaryDictLanguage] ?: emptyList()
+
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        ///
                                         TextButton(
-                                            contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                                                start = 0.dp,
-                                                end = 0.dp,
-                                                top = 4.dp,
-                                                bottom = 4.dp
-                                            ),
-                                            onClick = { dictionaryDropdownExpanded = true }) {
+                                            contentPadding = PaddingValues(vertical = 4.dp),
+                                            onClick = { dictionaryDropdownExpanded = true }
+                                        ) {
                                             Text(
                                                 text = description,
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
-                                        val currentLangDicts = dictionariesByLanguage[viewModel.selectedDictLanguage] ?: dictionaries
-                                        val currentDictIndex = currentLangDicts.indexOf(viewModel.selectedDictionary)
-                                        val nextDict = if (currentDictIndex != -1) {
-                                            currentLangDicts[(currentDictIndex + 1) % currentLangDicts.size]
-                                        } else {
-                                            currentLangDicts.firstOrNull() ?: viewModel.selectedDictionary
-                                        }
+
                                         Spacer(modifier = Modifier.size(2.dp))
+
                                         Box {
-                                            IconButton(
-                                                onClick = { switchToDictionary(nextDict) },
-                                                modifier = Modifier.size(30.dp)
-                                            ) {
-                                                Icon(
-                                                    Icons.Filled.ChevronRight,
-                                                    contentDescription = "Next Dictionary",
-                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
+                                            if (currentLangDicts.size > 1) {
+                                                val currentDictIndex = currentLangDicts.indexOf(viewModel.selectedPrimaryDictionary)
+                                                val nextDict = if (currentDictIndex != -1) {
+                                                    currentLangDicts[(currentDictIndex + 1) % currentLangDicts.size]
+                                                } else {
+                                                    currentLangDicts.first()
+                                                }
+
+                                                IconButton(
+                                                    onClick = { switchToDictionary(nextDict) },
+                                                    modifier = Modifier.size(30.dp)
+                                                ) {
+                                                    Icon(
+                                                        Icons.Filled.ChevronRight,
+                                                        contentDescription = "Next Dictionary",
+                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
                                             }
                                             DropdownMenu(
                                                 expanded = dictionaryDropdownExpanded,
                                                 onDismissRequest = { dictionaryDropdownExpanded = false }
                                             ) {
-                                                dictionariesByLanguage.forEach { (languageCode, dictKeys) ->
+                                                if (currentLangDicts.isEmpty()) {
                                                     DropdownMenuItem(
-                                                        text = {
-                                                            Text(
-                                                                text = when (languageCode) {
-                                                                    "en" -> "English"
-                                                                    "ar" -> "Arabic"
-                                                                    "es" -> "Español"
-                                                                    "grk" -> "Greek"
-                                                                    "heb" -> "Hebrew"
-                                                                    "ru" -> "Russian"
-                                                                    else -> languageCode.uppercase()
-                                                                },
-                                                                fontWeight = FontWeight.Bold,
-                                                                color = MaterialTheme.colorScheme.primary
-                                                            )
-                                                        },
-                                                        onClick = {},
-                                                        enabled = false
+                                                        text = { Text("No dictionaries for this language") },
+                                                        onClick = { dictionaryDropdownExpanded = false }
                                                     )
-                                                    dictKeys.forEach { dictKey ->
+                                                } else {
+                                                    currentLangDicts.forEach { dictKey ->
+                                                        val displayName = dictionaryDisplayNames[dictKey] ?: dictKey
                                                         DropdownMenuItem(
-                                                            modifier = if (dictKey == viewModel.selectedDictionary) {
-                                                                Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-                                                            } else Modifier,
-                                                            text = { Text(dictionaryDisplayNames[dictKey] ?: dictKey) },
+                                                            text = {
+                                                                Text(
+                                                                    text = displayName,
+                                                                    color = if (viewModel.selectedPrimaryDictionary == dictKey)
+                                                                        MaterialTheme.colorScheme.primary
+                                                                    else
+                                                                        MaterialTheme.colorScheme.onSurface
+                                                                )
+                                                            },
                                                             onClick = {
                                                                 dictionaryDropdownExpanded = false
                                                                 switchToDictionary(dictKey)
@@ -699,9 +741,8 @@ fun InteractiveModal(
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        ///
                                         TextButton(
-                                            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                            contentPadding = PaddingValues(
                                                 start = 0.dp,
                                                 end = 0.dp,
                                                 top = 4.dp,
@@ -759,7 +800,7 @@ fun InteractiveModal(
                                     ) {
                                         ///
                                         TextButton(
-                                            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                            contentPadding = PaddingValues(
                                                 start = 0.dp,
                                                 end = 0.dp,
                                                 top = 4.dp,
@@ -1181,7 +1222,7 @@ fun InteractiveModal(
                                                     val wordToFetch = cleanedLinkText.ifEmpty { seeContent }
                                                     clickableSpan = object : ClickableSpan() {
                                                         override fun onClick(widget: View) {
-                                                            val dbDisplayName = dictionaryDisplayNames[viewModel.selectedDictionary] ?: viewModel.selectedDictionary
+                                                            val dbDisplayName = dictionaryDisplayNames[viewModel.selectedPrimaryDictionary] ?: viewModel.selectedPrimaryDictionary
                                                             val capitalizedWordToFetch = wordToFetch.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
                                                             val loadingTitle = "Loading Definition of $capitalizedWordToFetch"
                                                             val loadingPage = ModalPage(
@@ -1199,7 +1240,7 @@ fun InteractiveModal(
                                                                 val newTitleInner: String
                                                                 if (pairs.isNotEmpty()) {
                                                                     val isExact = pairs.size == 1 && pairs[0].first.equals(wordToFetch, ignoreCase = true)
-                                                                    val isTopical = viewModel.selectedDictionary == "topical"
+                                                                    val isTopical = viewModel.selectedPrimaryDictionary == "topical"
                                                                     newTitleInner = if (isTopical) {
                                                                         "References for $capitalizedWordToFetch"
                                                                     } else if (isExact) {
@@ -1257,51 +1298,7 @@ fun InteractiveModal(
             dismissButton = when (currentPage.type) {
                 "definition" -> {
                     {
-                        val languageFullNames = mapOf(
-                            "en" to "English",
-                            "ar" to "Arabic",
-                            "es" to "Español",
-                            "grk" to "Greek",
-                            "heb" to "Hebrew",
-                            "ru" to "Russian",
-                        )
 
-                        val languages = dictionariesByLanguage.keys.toList()
-                        val currentLang = viewModel.selectedDictLanguage
-
-                        var languageDropdownExpanded by remember { mutableStateOf(false) }
-
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Box {
-                                TextButton(onClick = { languageDropdownExpanded = true }) {
-                                    Text(
-                                        text = languageFullNames[currentLang] ?: currentLang.uppercase(),
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Icon(Icons.Default.ArrowDropDown, contentDescription = "Select Language")
-                                }
-                                DropdownMenu(
-                                    expanded = languageDropdownExpanded,
-                                    onDismissRequest = { languageDropdownExpanded = false }
-                                ) {
-                                    languages.forEach { lang ->
-                                        DropdownMenuItem(
-                                            text = { Text(languageFullNames[lang] ?: lang.uppercase()) },
-                                            onClick = {
-                                                languageDropdownExpanded = false
-                                                if (lang != currentLang) {
-                                                    viewModel.selectedDictLanguage = lang
-                                                    val firstDict = dictionariesByLanguage[lang]?.firstOrNull()
-                                                    if (firstDict != null && firstDict != viewModel.selectedDictionary) {
-                                                        switchToDictionary(firstDict)
-                                                    }
-                                                }
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
                 else -> null
@@ -1365,7 +1362,7 @@ fun InteractiveModal(
                                 scope.launch {
                                     val pairs = getDefinitionOrClosest(dictionaryDbHelper, trimmedWord) ?: emptyList()
                                     val isExact = pairs.size == 1 && pairs[0].first.equals(trimmedWord, ignoreCase = true)
-                                    val isTopical = viewModel.selectedDictionary == "topical"
+                                    val isTopical = viewModel.selectedPrimaryDictionary == "topical"
                                     val newTitle = if (isTopical) {
                                         "References for $capitalizedWord"
                                     } else if (isExact) {
@@ -1378,8 +1375,8 @@ fun InteractiveModal(
                                     val newContent = buildDefinitionContent(
                                         originalWord = word,
                                         pairs = pairs,
-                                        isOxford = viewModel.selectedDictionary == "oxford",
-                                        isTopical = viewModel.selectedDictionary == "topical"
+                                        isOxford = viewModel.selectedPrimaryDictionary == "oxford",
+                                        isTopical = viewModel.selectedPrimaryDictionary == "topical"
                                     )
                                     val updateIndex = stack.indexOf(loadingPage)
                                     if (updateIndex != -1) {
