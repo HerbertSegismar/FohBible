@@ -1,21 +1,27 @@
 package com.fountofhopedotorg.fohbible.utils
 
 object InteractiveModalUtils {
-    val dictionaries = listOf("atsbd", "cbtel", "isbe", "noah", "oxford", "topical", "tcr", "eunsa")
+    val dictionaries = listOf("atsbd", "cbtel", "isbe", "noah", "oxford", "topical", "tcr", "eunsa", "rbo", "gesenius", "ardbt")
     val dictionariesByLanguage: Map<String, List<String>> = mapOf(
         "en" to listOf("atsbd", "cbtel", "isbe", "noah", "oxford", "topical", "tcr"),
-        "es" to listOf("eunsa")
+        "ar" to listOf("ardbt"),
+        "es" to listOf("eunsa"),
+        "heb" to listOf("gesenius"),
+        "ru" to listOf("rbo"),
     )
 
     val dictionaryDisplayNames = mapOf(
         "atsbd" to "ATSBD",
         "cbtel" to "CBTEL",
+        "eunsa" to "Sagrada Biblia Spanish Dictionary",
         "isbe" to "Int'l Standard Bible Encyclopedia",
         "noah" to "Noah Webster's Dictionary",
         "oxford" to "Oxford Dictionary",
+        "rbo" to "Modern Russian Translation Dictionary",
         "topical" to "Topical Bible Dictionary",
         "tcr" to "Thompson Chain Reference",
-        "eunsa" to "Sagrada Biblia Spanish Dictionary"
+        "gesenius" to "Hebrew and Chaldee Lexicon",
+        "ardbt" to "Arabic Dictionary of Biblical Theology",
     )
 
     val verseCommentaries = listOf("cbsc", "spurgeon", "ebc", "fairbairn", "hawker", "mhwbc", "scofield", "tsk")
