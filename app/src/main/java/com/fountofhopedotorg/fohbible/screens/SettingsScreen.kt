@@ -354,27 +354,27 @@ fun SettingsScreen() {
                                         ) else Color.Transparent
                                 )
                             ){
-                            Text(
-                                text = "Horizontal",
-                                modifier = Modifier
-                                    .clickable { viewModel.multiViewLayout = "horizontal" }
-                                    .padding(vertical = 8.dp, horizontal = 12.dp )
-                            ) }
+                                Text(
+                                    text = "Horizontal",
+                                    modifier = Modifier
+                                        .clickable { viewModel.multiViewLayout = "horizontal" }
+                                        .padding(vertical = 8.dp, horizontal = 12.dp )
+                                ) }
                             Card(
                                 shape = RoundedCornerShape(20.dp),
                                 colors = CardDefaults.cardColors(
                                     containerColor =
-                                            if (viewModel.multiViewLayout == "vertical") primary.copy(
-                                                alpha = 0.1f
-                                            ) else Color.Transparent
+                                        if (viewModel.multiViewLayout == "vertical") primary.copy(
+                                            alpha = 0.1f
+                                        ) else Color.Transparent
                                 )
                             ) {
-                            Text(
-                                text = "Vertical",
-                                modifier = Modifier
-                                    .clickable { viewModel.multiViewLayout = "vertical" }
-                                    .padding(vertical = 8.dp, horizontal = 12.dp )
-                            ) }
+                                Text(
+                                    text = "Vertical",
+                                    modifier = Modifier
+                                        .clickable { viewModel.multiViewLayout = "vertical" }
+                                        .padding(vertical = 8.dp, horizontal = 12.dp )
+                                ) }
                         }
                     }
                     SettingsItem(

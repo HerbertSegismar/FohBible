@@ -54,6 +54,7 @@ fun ReaderScreen(
     databaseHelper: DatabaseHelper?,
     onPassageChange: (PassageSelection) -> Unit = {}
 ) {
+    var secondaryDictionaryModal by remember { mutableStateOf(false) }
     val viewModel = viewModel<AppViewModel>()
     val colorScheme = MaterialTheme.colorScheme
     val themeColors = remember(colorScheme, viewModel.darkTheme) {
@@ -162,7 +163,8 @@ fun ReaderScreen(
             isWordHighlightMode = false
         }
     }
-    var dictionaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
+    var primaryDictionaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
+    var secondaryDictionaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var strongDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var commentaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var secondaryCommentaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
@@ -183,11 +185,20 @@ fun ReaderScreen(
     var verseCommentaryChapter by remember { mutableIntStateOf(0) }
     var verseCommentaryVerse by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(viewModel.selectedPrimaryDictionary, databaseHelper?.databaseName) {
-        dictionaryDbHelper?.close()
-        dictionaryDbHelper = DatabaseHelper(contextFont, "${viewModel.selectedPrimaryDictionary}.dictionary.sqlite3")
+    LaunchedEffect(viewModel.selectedPrimaryDictionary, databaseHelper?.databaseName, viewModel.selectedSecondaryDictionary) {
+        primaryDictionaryDbHelper?.close()
+        primaryDictionaryDbHelper = if (viewModel.selectedPrimaryDictionary.isNotBlank()) {
+            DatabaseHelper(contextFont, "${viewModel.selectedPrimaryDictionary}.dictionary.sqlite3")
+        } else null
+
+        secondaryDictionaryDbHelper?.close()
+        secondaryDictionaryDbHelper = if (viewModel.selectedSecondaryDictionary.isNotBlank()) {
+            DatabaseHelper(contextFont, "${viewModel.selectedSecondaryDictionary}.dictionary.sqlite3")
+        } else null
+
         strongDbHelper?.close()
         strongDbHelper = DatabaseHelper(contextFont, "secedictionary.sqlite3")
+
         commentaryDbHelper?.close()
         commentaryDbHelper = createCommentaryHelperIfExists(contextFont, databaseHelper?.databaseName)
     }
@@ -196,13 +207,30 @@ fun ReaderScreen(
         secondaryCommentaryDbHelper?.close()
         secondaryCommentaryDbHelper = createCommentaryHelperIfExists(contextFont, secondaryDatabaseHelper?.databaseName)
     }
-    val onWordPress: (String, Boolean) -> Unit = { word, isPrimary ->
-        currentModalIsOldTestament = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
+    val onPrimaryWordPress: (String) -> Unit = { word ->
+        secondaryDictionaryModal = false
+        currentModalIsOldTestament = viewModel.isOldTestament
         val trimmed = word.trim()
-        val definition = dictionaryDbHelper?.getWordDefinition(trimmed) ?: "Definition not found."
+        val definition = primaryDictionaryDbHelper?.getWordDefinition(trimmed)
+            ?: "Definition not found."
+
         currentWord = trimmed
         wordDefinition = definition
-        wordDb = if (isPrimary) databaseHelper else secondaryDatabaseHelper
+        wordDb = databaseHelper
+        showWordModal = true
+    }
+
+    val onSecondaryWordPress: (String) -> Unit = { word ->
+        secondaryDictionaryModal = true
+        currentModalIsOldTestament = viewModel.isSecondaryOldTestament
+        val trimmed = word.trim()
+        val definition = secondaryDictionaryDbHelper?.getWordDefinition(trimmed)
+            ?: primaryDictionaryDbHelper?.getWordDefinition(trimmed)
+            ?: "Definition not found."
+
+        currentWord = trimmed
+        wordDefinition = definition
+        wordDb = secondaryDatabaseHelper ?: databaseHelper
         showWordModal = true
     }
     val onStrongsPress: (String, Int, Boolean) -> Unit = { strongNumber, _, isPrimary ->
@@ -293,7 +321,7 @@ fun ReaderScreen(
                     onPassageChange(newPassage)
                 },
                 scheduleFade = ::scheduleFade,
-                onWordPress = onWordPress,
+                onWordPress = onPrimaryWordPress,
                 onStrongsPress = onStrongsPress,
                 onTagPress = onTagPress,
                 onVerseLongPress = onVerseLongPress,
@@ -324,7 +352,8 @@ fun ReaderScreen(
                     viewModel.secondaryPassage = newPassage
                 },
                 scheduleFade = ::scheduleFade,
-                onWordPress = onWordPress,
+                onPrimaryWordPress = onPrimaryWordPress,
+                onSecondaryWordPress = onSecondaryWordPress,
                 onStrongsPress = onStrongsPress,
                 onTagPress = onTagPress,
                 onVerseLongPress = onVerseLongPress,
@@ -360,7 +389,8 @@ fun ReaderScreen(
                     viewModel.secondaryPassage = newPassage
                 },
                 scheduleFade = ::scheduleFade,
-                onWordPress = onWordPress,
+                onPrimaryWordPress = onPrimaryWordPress,
+                onSecondaryWordPress = onSecondaryWordPress,
                 onStrongsPress = onStrongsPress,
                 onTagPress = onTagPress,
                 onVerseLongPress = onVerseLongPress,
@@ -455,7 +485,8 @@ fun ReaderScreen(
             initialType = "definition",
             word = currentWord,
             definition = wordDefinition,
-            isOldTestament = currentModalIsOldTestament
+            isOldTestament = currentModalIsOldTestament,
+            useSecondaryDictionary = secondaryDictionaryModal
         )
         InteractiveModal(
             show = showStrongsModal,

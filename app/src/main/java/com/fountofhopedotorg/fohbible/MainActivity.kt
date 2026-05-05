@@ -129,6 +129,9 @@ private val DARK_MODAL_BG_COLOR_KEY = intPreferencesKey("dark_modal_bg_color")
 private val WORDS_OF_JESUS_KEY = intPreferencesKey("words_of_jesus")
 private val HEADER_BUTTONS_KEY = intPreferencesKey("header_buttons_color")
 private val SELECTED_DICTIONARY_KEY = stringPreferencesKey("selected_dictionary")
+private val PRIMARY_DICT_LANGUAGE_KEY = stringPreferencesKey("primary_dict_language")
+private val SECONDARY_DICT_LANGUAGE_KEY = stringPreferencesKey("secondary_dict_language")
+private val SECONDARY_DICTIONARY_KEY = stringPreferencesKey("secondary_dictionary")
 private val SELECTED_VERSE_COMMENTARY_KEY = stringPreferencesKey("selected_verse_commentary")
 private val SELECTED_CROSS_REFERENCE_DB_KEY = stringPreferencesKey("selected_cross_ref_db")
 private val PREDEFINED_HIGHLIGHT_COLORS_KEY = stringPreferencesKey("predefined_highlight_colors")
@@ -231,6 +234,9 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
             wordsOfJesus = Color(prefs[WORDS_OF_JESUS_KEY] ?: Color(0xFFDA4227).toArgb())
             headerButtonsColor = Color(prefs[HEADER_BUTTONS_KEY] ?: Color(0xFFFFFFFF).toArgb())
             selectedPrimaryDictionary = prefs[SELECTED_DICTIONARY_KEY] ?: "atsbd"
+            selectedPrimaryDictLanguage = prefs[PRIMARY_DICT_LANGUAGE_KEY] ?: "English"
+            selectedSecondaryDictLanguage = prefs[SECONDARY_DICT_LANGUAGE_KEY] ?: "English"
+            selectedSecondaryDictionary = prefs[SECONDARY_DICTIONARY_KEY] ?: "cbtel"
             selectedVerseCommentary = prefs[SELECTED_VERSE_COMMENTARY_KEY] ?: "cbsc"
             selectedCrossReferenceDatabase = prefs[SELECTED_CROSS_REFERENCE_DB_KEY] ?: "obx"
             renderOrbs = prefs[RENDER_ORBS_KEY] ?: false
@@ -288,6 +294,9 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     SavePreference({ viewModel.wordsOfJesus.toArgb() }, WORDS_OF_JESUS_KEY, dataStore)
     SavePreference({ viewModel.headerButtonsColor.toArgb() }, HEADER_BUTTONS_KEY, dataStore)
     SavePreference({ viewModel.selectedPrimaryDictionary }, SELECTED_DICTIONARY_KEY, dataStore)
+    SavePreference({ viewModel.selectedPrimaryDictLanguage }, PRIMARY_DICT_LANGUAGE_KEY, dataStore)
+    SavePreference({ viewModel.selectedSecondaryDictLanguage }, SECONDARY_DICT_LANGUAGE_KEY, dataStore)
+    SavePreference({ viewModel.selectedSecondaryDictionary }, SECONDARY_DICTIONARY_KEY, dataStore)
     SavePreference({ viewModel.selectedVerseCommentary }, SELECTED_VERSE_COMMENTARY_KEY, dataStore)
     SavePreference({ viewModel.selectedCrossReferenceDatabase }, SELECTED_CROSS_REFERENCE_DB_KEY, dataStore)
     SavePreference(

@@ -92,7 +92,7 @@ fun ChapterView(
     modifier: Modifier = Modifier,
     lazyState: LazyListState,
     onInitialScrollComplete: () -> Unit = {},
-    onWordPress: ((String, Boolean) -> Unit)? = null,
+    onWordPress: ((String) -> Unit)? = null,
     onStrongsPress: ((String, Int, Boolean) -> Unit)? = null,
     onTagPress: ((String, Int, Int, Int, Boolean) -> Unit)? = null,
     onVerseLongPress: ((Verse, PassageSelection) -> Unit)? = null,
@@ -112,7 +112,7 @@ fun ChapterView(
         viewModel.darkThemeReaderFontColor
     else
         viewModel.lightThemeReaderFontColor
-    val verseProcessor = remember { VerseTextProcessor() }
+    val verseProcessor = remember(databaseHelper?.databaseName) { VerseTextProcessor() }
     val isOldTestamentForThisVersion = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
     var highlightedVerse by remember { mutableStateOf<Int?>(null) }
 
@@ -170,10 +170,10 @@ fun ChapterView(
             ProcessingOptions(showStrongs = viewModel.showStrongs)
         }
 
-        val processedVerse = remember(verse.text, viewModel.fontSize, themeColors, isPersistentHighlighted, isOldTestamentForThisVersion, refreshKey, viewModel.showStrongs) {
+        val processedVerse = remember(verse.text, viewModel.fontSize, themeColors, isPersistentHighlighted, isOldTestamentForThisVersion, refreshKey, viewModel.showStrongs, verseProcessor) {
             val onStrongsLocal: ((String) -> Unit)? = onStrongsPress?.let { { strong -> it(strong, passage.bookNumber, isPrimary) } }
             val onTagLocal: ((String) -> Unit)? = onTagPress?.let { { marker -> it(marker, passage.bookNumber, passage.chapter, verse.verseNumber, isPrimary) } }
-            val onWordLocal: ((String) -> Unit)? = onWordPress?.let { { word -> it(word, isPrimary) } }
+            val onWordLocal: ((String) -> Unit)? = onWordPress?.let { { word -> it(word) } }
             verseProcessor.processVerse(
                 verseText = verse.text,
                 baseFontSize = viewModel.fontSize.sp,
@@ -290,7 +290,7 @@ fun ChapterView(
                                     val annotations = finalAnnotatedString.getStringAnnotations(start = position, end = position)
                                     val wordAnnotation = annotations.find { it.tag == "word" }
                                     if (wordAnnotation != null) {
-                                        if (viewModel.isDictionaryMode) onWordPress?.invoke(wordAnnotation.item, isPrimary) else {
+                                        if (viewModel.isDictionaryMode) onWordPress?.invoke(wordAnnotation.item) else {
                                             val word = SelectedWord(verse.verseNumber, wordAnnotation.start, wordAnnotation.end, currentMarkerColor)
                                             val wasSelected = selectedWords.contains(word)
                                             selectedWords = if (wasSelected) selectedWords - word else selectedWords + word

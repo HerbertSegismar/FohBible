@@ -126,7 +126,8 @@ fun InteractiveModal(
     isOldTestament: Boolean,
     bookNumber: Int? = null,
     chapter: Int? = null,
-    verse: Int? = null
+    verse: Int? = null,
+    useSecondaryDictionary: Boolean = false
 ) {
     var secondaryDictionaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     val viewModel = viewModel<AppViewModel>()
@@ -191,23 +192,27 @@ fun InteractiveModal(
                     stack.add(ModalPage(title, "strong", preparedDefinition, strongNumber = strongNumber, description = initialDescription, isOldTestament = isOldTestament))
                 }
                 "definition" -> {
-                    if (viewModel.selectedPrimaryDictionary.isEmpty()) {
+                    val selectedDictionary = if (useSecondaryDictionary) viewModel.selectedSecondaryDictionary else viewModel.selectedPrimaryDictionary
+                    val selectedDictLanguage = if (useSecondaryDictionary) viewModel.selectedSecondaryDictLanguage else viewModel.selectedPrimaryDictLanguage
+                    val dbHelper = if (useSecondaryDictionary) secondaryDictionaryDbHelper else dictionaryDbHelper
+
+                    if (selectedDictionary.isEmpty()) {
                         stack.add(
                             ModalPage(
                                 title = "No Dictionary Available",
                                 type = "definition",
-                                content = "There are no dictionaries available for the ${viewModel.selectedPrimaryDictLanguage} language.",
-                                description = "Unavailable",
+                                content = "There are no dictionaries available for the $selectedDictLanguage language.",
+                                description = null,
                                 isOldTestament = isOldTestament
                             )
                         )
                     } else {
-                        val dbDisplayName = dictionaryDisplayNames[viewModel.selectedPrimaryDictionary] ?: viewModel.selectedPrimaryDictionary
+                        val dbDisplayName = dictionaryDisplayNames[selectedDictionary] ?: selectedDictionary
                         val capitalizedWord = word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
                         if (definition.isNotBlank() && !definition.contains("not found", ignoreCase = true)) {
                             val pairs = listOf(Pair(word, definition))
-                            val isOxford = viewModel.selectedPrimaryDictionary == "oxford"
-                            val isTopical = viewModel.selectedPrimaryDictionary == "topical"
+                            val isOxford = selectedDictionary == "oxford"
+                            val isTopical = selectedDictionary == "topical"
                             val newContent = buildDefinitionContent(
                                 originalWord = word,
                                 pairs = pairs,
@@ -219,10 +224,10 @@ fun InteractiveModal(
                         } else {
                             val loadingPage = ModalPage("Searching for $capitalizedWord...", "definition", "Loading...", word = word, description = dbDisplayName, isOldTestament = isOldTestament)
                             stack.add(loadingPage)
-                            val pairs = getDefinitionOrClosest(dictionaryDbHelper, word) ?: emptyList()
+                            val pairs = getDefinitionOrClosest(dbHelper, word) ?: emptyList()
                             if (pairs.isNotEmpty()) {
                                 val isExact = pairs.size == 1 && pairs[0].first.equals(word, ignoreCase = true)
-                                val isTopical = viewModel.selectedPrimaryDictionary == "topical"
+                                val isTopical = selectedDictionary == "topical"
                                 val newTitle = if (isTopical) {
                                     "References for $capitalizedWord"
                                 } else if (isExact) {
@@ -235,7 +240,7 @@ fun InteractiveModal(
                                 val newContent = buildDefinitionContent(
                                     originalWord = word,
                                     pairs = pairs,
-                                    isOxford = viewModel.selectedPrimaryDictionary == "oxford",
+                                    isOxford = selectedDictionary == "oxford",
                                     isTopical = isTopical
                                 )
                                 stack[0] = loadingPage.copy(title = newTitle, content = newContent)
@@ -302,7 +307,10 @@ fun InteractiveModal(
     val onWordPress: (String) -> Unit = Unit@{ w ->
         val trimmed = w.trim()
         if (trimmed.isEmpty() || trimmed.matches(Regex(".*\\d.*"))) { return@Unit }
-        val dbDisplayName = dictionaryDisplayNames[viewModel.selectedPrimaryDictionary] ?: viewModel.selectedPrimaryDictionary
+        val activeDictHelper = if (useSecondaryDictionary) secondaryDictionaryDbHelper else dictionaryDbHelper
+        val selectedDict = if (useSecondaryDictionary) viewModel.selectedSecondaryDictionary else viewModel.selectedPrimaryDictionary
+        val dbDisplayName = dictionaryDisplayNames[selectedDict] ?: selectedDict
+
         val capitalizedWord = trimmed.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
         val currentIsOld = stack.last().isOldTestament
         val loadingTitle = "Loading Definition of $capitalizedWord"
@@ -316,9 +324,9 @@ fun InteractiveModal(
         )
         stack.add(loadingPage)
         scope.launch {
-            val pairs: List<Pair<String, String>> = getDefinitionOrClosest(dictionaryDbHelper, trimmed) ?: emptyList()
-            val isOxford = viewModel.selectedPrimaryDictionary == "oxford"
-            val isTopical = viewModel.selectedPrimaryDictionary == "topical"
+            val pairs: List<Pair<String, String>> = getDefinitionOrClosest(activeDictHelper, trimmed) ?: emptyList()
+            val isOxford = selectedDict == "oxford"
+            val isTopical = selectedDict == "topical"
             val newTitle = if (pairs.isNotEmpty()) {
                 val isExact = pairs.size == 1 && pairs[0].first.equals(trimmed, ignoreCase = true)
                 if (isTopical) { "References for $capitalizedWord" } else if (isExact) {
@@ -1220,9 +1228,12 @@ fun InteractiveModal(
                                                 }
                                                 else -> {
                                                     val wordToFetch = cleanedLinkText.ifEmpty { seeContent }
+                                                    val activeDictHelper = if (useSecondaryDictionary) secondaryDictionaryDbHelper else dictionaryDbHelper
+                                                    val selectedDict = if (useSecondaryDictionary) viewModel.selectedSecondaryDictionary else viewModel.selectedPrimaryDictionary
+                                                    val dbDisplayName = dictionaryDisplayNames[selectedDict] ?: selectedDict
+
                                                     clickableSpan = object : ClickableSpan() {
                                                         override fun onClick(widget: View) {
-                                                            val dbDisplayName = dictionaryDisplayNames[viewModel.selectedPrimaryDictionary] ?: viewModel.selectedPrimaryDictionary
                                                             val capitalizedWordToFetch = wordToFetch.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
                                                             val loadingTitle = "Loading Definition of $capitalizedWordToFetch"
                                                             val loadingPage = ModalPage(
@@ -1235,12 +1246,13 @@ fun InteractiveModal(
                                                             )
                                                             stack.add(loadingPage)
                                                             scope.launch {
-                                                                val pairs: List<Pair<String, String>> = getDefinitionOrClosest(dictionaryDbHelper, wordToFetch) ?: emptyList()
+                                                                val pairs: List<Pair<String, String>> = getDefinitionOrClosest(activeDictHelper, wordToFetch) ?: emptyList()
+                                                                val isOxford = selectedDict == "oxford"
+                                                                val isTopical = selectedDict == "topical"
                                                                 val newContentInner: String
                                                                 val newTitleInner: String
                                                                 if (pairs.isNotEmpty()) {
                                                                     val isExact = pairs.size == 1 && pairs[0].first.equals(wordToFetch, ignoreCase = true)
-                                                                    val isTopical = viewModel.selectedPrimaryDictionary == "topical"
                                                                     newTitleInner = if (isTopical) {
                                                                         "References for $capitalizedWordToFetch"
                                                                     } else if (isExact) {

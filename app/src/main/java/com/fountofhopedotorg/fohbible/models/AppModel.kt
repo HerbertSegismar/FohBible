@@ -38,6 +38,8 @@ class AppViewModel : ViewModel() {
     }
     var selectedPrimaryDictLanguage by mutableStateOf("English")
     var selectedSecondaryDictLanguage by mutableStateOf("English")
+    var selectedPrimaryDictionary by mutableStateOf("atsbd")
+    var selectedSecondaryDictionary by mutableStateOf("cbtel")
     var headerButtonsColor by mutableStateOf(Color(0xFFFFFFFF))
     var showStrongs by mutableStateOf(false)
     var squareAspectViews by mutableStateOf(true)
@@ -91,8 +93,6 @@ class AppViewModel : ViewModel() {
     var overlayOpacity by mutableFloatStateOf(0.8f)
     var lightOverlayColor by mutableStateOf(Color(0xFFFFFFFF))
     var darkOverlayColor by mutableStateOf(Color(0xFF100F21))
-    var selectedPrimaryDictionary by mutableStateOf("atsbd")
-    var selectedSecondaryDictionary by mutableStateOf("cbtel")
     var selectedVerseCommentary by mutableStateOf("cbsc")
     var selectedCrossReferenceDatabase by mutableStateOf("obx")
     val isOldTestament: Boolean
@@ -107,26 +107,24 @@ class AppViewModel : ViewModel() {
     fun updateDictionaryForBibleLanguage(bibleFile: String) {
         val lang = BibleVersionUtils.getLanguageForVersion(bibleFile)
         val availableDicts = InteractiveModalUtils.dictionariesByLanguage[lang]
+        selectedPrimaryDictLanguage = lang
 
-        if (!availableDicts.isNullOrEmpty()) {
-            selectedPrimaryDictLanguage = lang
-            selectedPrimaryDictionary = availableDicts.first()
+        selectedPrimaryDictionary = if (!availableDicts.isNullOrEmpty()) {
+            availableDicts.first()
         } else {
-            selectedPrimaryDictLanguage = lang
-            selectedPrimaryDictionary = ""
+            ""
         }
     }
 
     fun updateSecondaryDictionaryForBibleLanguage(bibleFile: String) {
         val lang = BibleVersionUtils.getLanguageForVersion(bibleFile)
         val availableDicts = InteractiveModalUtils.dictionariesByLanguage[lang]
+        selectedSecondaryDictLanguage = lang
 
-        if (!availableDicts.isNullOrEmpty()) {
-            selectedSecondaryDictLanguage = lang
-            selectedSecondaryDictionary = availableDicts.first()
+        selectedSecondaryDictionary = if (!availableDicts.isNullOrEmpty()) {
+            availableDicts.first()
         } else {
-            selectedSecondaryDictLanguage = lang
-            selectedSecondaryDictionary = ""
+            ""
         }
     }
 
