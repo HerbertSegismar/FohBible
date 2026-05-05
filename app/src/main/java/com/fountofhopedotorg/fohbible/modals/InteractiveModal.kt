@@ -1247,7 +1247,6 @@ fun InteractiveModal(
                                                             stack.add(loadingPage)
                                                             scope.launch {
                                                                 val pairs: List<Pair<String, String>> = getDefinitionOrClosest(activeDictHelper, wordToFetch) ?: emptyList()
-                                                                val isOxford = selectedDict == "oxford"
                                                                 val isTopical = selectedDict == "topical"
                                                                 val newContentInner: String
                                                                 val newTitleInner: String
