@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,6 +31,7 @@ import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -672,7 +674,9 @@ fun InteractiveModal(
                             Spacer(modifier = Modifier.height(4.dp))
                             when (currentPage.type) {
                                 "definition" -> {
-                                    val currentLangDicts = dictionariesByLanguage[viewModel.selectedPrimaryDictLanguage] ?: emptyList()
+                                    val selectedDictLanguage = if (useSecondaryDictionary) viewModel.selectedSecondaryDictLanguage else viewModel.selectedPrimaryDictLanguage
+                                    val selectedDictionary = if (useSecondaryDictionary) viewModel.selectedSecondaryDictionary else viewModel.selectedPrimaryDictionary
+                                    val currentLangDicts = dictionariesByLanguage[selectedDictLanguage] ?: emptyList()
 
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
@@ -693,7 +697,7 @@ fun InteractiveModal(
 
                                         Box {
                                             if (currentLangDicts.size > 1) {
-                                                val currentDictIndex = currentLangDicts.indexOf(viewModel.selectedPrimaryDictionary)
+                                                val currentDictIndex = currentLangDicts.indexOf(selectedDictionary)
                                                 val nextDict = if (currentDictIndex != -1) {
                                                     currentLangDicts[(currentDictIndex + 1) % currentLangDicts.size]
                                                 } else {
@@ -702,10 +706,10 @@ fun InteractiveModal(
 
                                                 IconButton(
                                                     onClick = { switchToDictionary(nextDict) },
-                                                    modifier = Modifier.size(30.dp)
+                                                    modifier = Modifier.size(28.dp).padding(start = 10.dp)
                                                 ) {
                                                     Icon(
-                                                        Icons.Filled.ChevronRight,
+                                                        Icons.Filled.FastForward,
                                                         contentDescription = "Next Dictionary",
                                                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                                                     )
@@ -727,7 +731,7 @@ fun InteractiveModal(
                                                             text = {
                                                                 Text(
                                                                     text = displayName,
-                                                                    color = if (viewModel.selectedPrimaryDictionary == dictKey)
+                                                                    color = if (selectedDictionary == dictKey)
                                                                         MaterialTheme.colorScheme.primary
                                                                     else
                                                                         MaterialTheme.colorScheme.onSurface
@@ -806,7 +810,6 @@ fun InteractiveModal(
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        ///
                                         TextButton(
                                             contentPadding = PaddingValues(
                                                 start = 0.dp,
@@ -954,7 +957,6 @@ fun InteractiveModal(
                                                     placeholderVerticalAlign = PlaceholderVerticalAlign.TextCenter
                                                 )
                                             ) {
-                                                //cross-ref button
                                                 Box(
                                                     modifier = Modifier
                                                         .clickable {
@@ -1306,14 +1308,7 @@ fun InteractiveModal(
                     }
                 }
             },
-            dismissButton = when (currentPage.type) {
-                "definition" -> {
-                    {
-
-                    }
-                }
-                else -> null
-            },
+            dismissButton = {},
             confirmButton = {
                 Row {
                     if (stack.size > 1) {

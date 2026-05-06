@@ -67,6 +67,7 @@ import com.fountofhopedotorg.fohbible.composables.RotatingPhoneGraphics
 import com.fountofhopedotorg.fohbible.composables.SettingsItem
 import com.fountofhopedotorg.fohbible.composables.SettingsOpacitySlider
 import com.fountofhopedotorg.fohbible.composables.SettingsSection
+import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.modals.BgModal
 import com.fountofhopedotorg.fohbible.modals.FontModal
 import com.fountofhopedotorg.fohbible.modals.OrbsCountModal
@@ -926,6 +927,42 @@ fun SettingsScreen() {
                         viewModel.showStrongs = false
                         viewModel.wordsOfJesus = Color(0xFFDA4227)
                         viewModel.resetHighlightColorsToDefault()
+
+                        viewModel.squareAspectViews = true
+                        viewModel.scrollSyncAction = false
+                        viewModel.isReaderFullScreen = false
+                        viewModel.showNavigationModal = false
+                        viewModel.showPrimaryVersionDropdown = false
+                        viewModel.showSecondaryVersionDropdown = false
+                        viewModel.showColorThemeDialog = false
+                        viewModel.showColorWheelDialog = false
+                        viewModel.showBgModal = false
+                        viewModel.editingHighlightColorIndex = -1
+                        viewModel.showHighlightColorEditor = false
+                        viewModel.showWordMarkerColorWheelDialog = false
+                        viewModel.showJesusWordsColorWheelDialog = false
+                        viewModel.showLightReaderFontColorWheelDialog = false
+                        viewModel.showDarkReaderFontColorWheelDialog = false
+                        viewModel.showDarkOverlayColorWheel = false
+                        viewModel.showLightOverlayColorWheel = false
+                        viewModel.showVerseMarkerColorWheelDialog = false
+                        viewModel.showSecondaryNavigationModal = false
+                        viewModel.showReaderOverlayColorWheel = false
+
+                        viewModel.primaryPassage = PassageSelection(10, "Genesis", 1, 1)
+                        viewModel.secondaryPassage = PassageSelection(500, "John", 1, 1)
+
+                        viewModel.selectedPrimaryDictLanguage = "English"
+                        viewModel.selectedSecondaryDictLanguage = "English"
+                        viewModel.selectedPrimaryDictionary = "atsbd"
+                        viewModel.selectedSecondaryDictionary = "cbtel"
+
+                        viewModel.selectedVerseCommentary = "cbsc"
+                        viewModel.selectedCrossReferenceDatabase = "obx"
+
+                        viewModel.isRefreshingDatabases = false
+                        viewModel.lastRefreshMessage = ""
+                        viewModel.lastRefreshSuccess = false
 
                         showResetConfirmDialog = false
                     },
