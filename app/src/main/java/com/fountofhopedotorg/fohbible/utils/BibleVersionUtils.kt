@@ -53,7 +53,8 @@ object BibleVersionUtils {
         "wmb.sqlite3" to "WMB",
         "woy.sqlite3" to "WOY",
         "ylt.sqlite3" to "YLT",
-        "УБД96.sqlite3" to "УБД96"
+        "УБД96.sqlite3" to "УБД96",
+        "РБО2.sqlite3" to "РБО2"
     )
 
     val descriptionMap: Map<String, String> = mapOf(
@@ -108,7 +109,8 @@ object BibleVersionUtils {
         "wmb.sqlite3" to "World Messianic Bible",
         "woy.sqlite3" to "Word of Yahweh",
         "ylt.sqlite3" to "Young's Literal Translation",
-        "УБД96.sqlite3" to "The Holy Bible in Ukrainian"
+        "УБД96.sqlite3" to "The Holy Bible in Ukrainian",
+        "РБО2.sqlite3" to "Библия. Современный русский перевод"
     )
 
     private val versionLanguage: Map<String, String> = mapOf(
@@ -163,7 +165,8 @@ object BibleVersionUtils {
         "wmb.sqlite3" to "English Messianic",
         "woy.sqlite3" to "English Messianic",
         "ylt.sqlite3" to "English",
-        "УБД96.sqlite3" to "Ukrainian"
+        "УБД96.sqlite3" to "Ukrainian",
+        "РБО2.sqlite3" to "Russian"
     )
 
     fun getVersionsGroupedByLanguage(): Map<String, List<Pair<String, String>>> {

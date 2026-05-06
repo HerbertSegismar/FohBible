@@ -6,7 +6,7 @@ object InteractiveModalUtils {
         "Arabic" to listOf("ardbt"),
         "Spanish" to listOf("eunsa"),
         "Hebrew" to listOf("gesenius"),
-        "Russian" to listOf("rbo", "Брокгауз"),
+        "Russian" to listOf("rbo", "Брокгауз", "ББС"),
     )
 
     val dictionaryDisplayNames = mapOf(
@@ -21,7 +21,8 @@ object InteractiveModalUtils {
         "tcr" to "Thompson Chain Reference",
         "gesenius" to "Hebrew and Chaldee Lexicon",
         "ardbt" to "Arabic Dictionary of Biblical Theology",
-        "Брокгауз" to "Библейская Энциклопедия Брокгауза"
+        "Брокгауз" to "Библейская Энциклопедия Брокгауза",
+        "ББС" to "Большой Библейский Словарь"
     )
 
     val verseCommentaries = listOf("cbsc", "spurgeon", "ebc", "fairbairn", "hawker", "mhwbc", "scofield", "tsk")

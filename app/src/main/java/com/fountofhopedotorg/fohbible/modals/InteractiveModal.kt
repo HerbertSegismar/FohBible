@@ -30,8 +30,8 @@ import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -488,11 +488,10 @@ fun InteractiveModal(
 
         fun switchToDictionary(newDict: String, isSecondary: Boolean = false) {
             val currentSelected = if (isSecondary) viewModel.selectedSecondaryDictionary else viewModel.selectedPrimaryDictionary
-            val currentLang = if (isSecondary) viewModel.selectedSecondaryDictLanguage else viewModel.selectedPrimaryDictLanguage
-
             if (currentSelected == newDict) return
 
-            val newLang = getLanguageForDictionary(newDict) ?: currentLang
+            val newLang = getLanguageForDictionary(newDict) ?: if (isSecondary) viewModel.selectedSecondaryDictLanguage else viewModel.selectedPrimaryDictLanguage
+
             if (isSecondary) {
                 viewModel.selectedSecondaryDictLanguage = newLang
                 viewModel.selectedSecondaryDictionary = newDict
@@ -651,8 +650,8 @@ fun InteractiveModal(
                             Text(text = currentPage.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                         }
                         if (currentPage.type == "verses" && currentPage.passage != null) {
-                            IconButton(onClick = { onNavigateToReader(currentPage.passage.copy(verseEnd = null, chapterEnd = null)); onDismiss() }, modifier = Modifier.size(24.dp)) {
-                                Icon(Icons.Filled.ChevronRight, contentDescription = "Read in Reader", tint = MaterialTheme.colorScheme.primary)
+                            IconButton(onClick = { onNavigateToReader(currentPage.passage.copy(verseEnd = null, chapterEnd = null)); onDismiss() }, modifier = Modifier.size(24.dp).padding(start = 5.dp)) {
+                                Icon(Icons.Filled.PlayArrow, contentDescription = "Read in Reader", tint = MaterialTheme.colorScheme.primary)
                             }
                         }
                         Spacer(modifier = Modifier.weight(1f))
@@ -705,7 +704,7 @@ fun InteractiveModal(
                                                 }
 
                                                 IconButton(
-                                                    onClick = { switchToDictionary(nextDict) },
+                                                    onClick = { switchToDictionary(nextDict, isSecondary = useSecondaryDictionary) },
                                                     modifier = Modifier.size(28.dp).padding(start = 10.dp)
                                                 ) {
                                                     Icon(
@@ -739,7 +738,7 @@ fun InteractiveModal(
                                                             },
                                                             onClick = {
                                                                 dictionaryDropdownExpanded = false
-                                                                switchToDictionary(dictKey)
+                                                                switchToDictionary(dictKey, isSecondary = useSecondaryDictionary)
                                                             }
                                                         )
                                                     }
@@ -777,10 +776,10 @@ fun InteractiveModal(
                                         Box {
                                             IconButton(
                                                 onClick = { switchToVerseCommentary(nextCom) },
-                                                modifier = Modifier.size(40.dp)
+                                                modifier = Modifier.size(28.dp).padding(start = 10.dp)
                                             ) {
                                                 Icon(
-                                                    Icons.Filled.ChevronRight,
+                                                    Icons.Filled.FastForward,
                                                     contentDescription = "Next Commentary",
                                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
@@ -834,10 +833,10 @@ fun InteractiveModal(
                                         Box {
                                             IconButton(
                                                 onClick = { switchToCrossReference(nextRef) },
-                                                modifier = Modifier.size(40.dp)
+                                                modifier = Modifier.size(28.dp).padding(start = 10.dp)
                                             ) {
                                                 Icon(
-                                                    Icons.Filled.ChevronRight,
+                                                    Icons.Filled.FastForward,
                                                     contentDescription = "Next Cross-Reference DB",
                                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
