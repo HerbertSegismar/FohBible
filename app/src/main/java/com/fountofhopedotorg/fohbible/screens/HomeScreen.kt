@@ -69,6 +69,7 @@ import com.fountofhopedotorg.fohbible.MainActivity
 import com.fountofhopedotorg.fohbible.MatrixNative
 import com.fountofhopedotorg.fohbible.R
 import com.fountofhopedotorg.fohbible.Screen
+import com.fountofhopedotorg.fohbible.composables.ImageSection
 import com.fountofhopedotorg.fohbible.data.BibleData
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
@@ -185,6 +186,9 @@ fun HomeScreen(
                 )
             }
             Spacer(modifier = Modifier.height(30.dp))
+        }
+        item {
+            ImageSection()
         }
         item {
             DailyVerseCard(
