@@ -1,5 +1,6 @@
 @file:OptIn(ExperimentalMaterial3Api::class)
-package com.fountofhopedotorg.fohbible
+
+package com.fountofhopedotorg.fohbible.composables
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -80,6 +81,8 @@ import kotlin.math.min
 import kotlin.math.sin
 import kotlin.math.sqrt
 import android.content.res.Configuration
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.IntSize
 import android.graphics.Color as AndroidColor
 
@@ -605,7 +608,7 @@ fun ColorPreviewSection(
                     shape = RoundedCornerShape(12.dp),
                     textStyle = MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.Medium,
-                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                        fontFamily = FontFamily.Monospace
                     )
                 )
 
@@ -978,7 +981,7 @@ fun ImprovedColorWheel(
                 sweepAngle = 3f,
                 useCenter = true,
                 topLeft = Offset(center.x - radius, center.y - radius),
-                size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2)
+                size = Size(radius * 2, radius * 2)
             )
         }
         drawCircle(

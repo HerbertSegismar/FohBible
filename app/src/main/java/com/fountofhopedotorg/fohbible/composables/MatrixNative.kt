@@ -1,4 +1,4 @@
-package com.fountofhopedotorg.fohbible
+package com.fountofhopedotorg.fohbible.composables
 
 import android.graphics.Paint
 import androidx.compose.animation.core.Animatable

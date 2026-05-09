@@ -72,7 +72,7 @@ import com.fountofhopedotorg.fohbible.data.VerseContent
 import com.fountofhopedotorg.fohbible.data.getVersesWithSubheadings
 import com.fountofhopedotorg.fohbible.functions.ColorSplashCanvas
 import com.fountofhopedotorg.fohbible.models.AppViewModel
-import com.fountofhopedotorg.fohbible.orbs.FloatingOrbsBackground
+import com.fountofhopedotorg.fohbible.composables.FloatingOrbsBackground
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay

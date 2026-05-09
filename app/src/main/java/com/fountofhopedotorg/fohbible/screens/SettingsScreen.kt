@@ -58,7 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.fountofhopedotorg.fohbible.ColorWheelDialog
+import com.fountofhopedotorg.fohbible.composables.ColorWheelDialog
 import com.fountofhopedotorg.fohbible.composables.AboutDialog
 import com.fountofhopedotorg.fohbible.composables.ColorButton
 import com.fountofhopedotorg.fohbible.composables.FontButton

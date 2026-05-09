@@ -67,6 +67,7 @@ import com.fountofhopedotorg.fohbible.composables.ReaderAppBar
 import com.fountofhopedotorg.fohbible.composables.SaveNullableStringPreference
 import com.fountofhopedotorg.fohbible.composables.SavePreference
 import com.fountofhopedotorg.fohbible.composables.ColorThemeDialog
+import com.fountofhopedotorg.fohbible.composables.ColorWheelDialog
 import com.fountofhopedotorg.fohbible.data.AppThemeState
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
@@ -74,7 +75,7 @@ import com.fountofhopedotorg.fohbible.modals.BgModal
 import com.fountofhopedotorg.fohbible.modals.NavigationModal
 import com.fountofhopedotorg.fohbible.modals.VersionSelectionModal
 import com.fountofhopedotorg.fohbible.models.AppViewModel
-import com.fountofhopedotorg.fohbible.orbs.FloatingOrbsBackground
+import com.fountofhopedotorg.fohbible.composables.FloatingOrbsBackground
 import com.fountofhopedotorg.fohbible.screens.BookmarksScreen
 import com.fountofhopedotorg.fohbible.screens.HomeScreen
 import com.fountofhopedotorg.fohbible.screens.NotesScreen
@@ -616,7 +617,8 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 viewModel.customColor = color
                                 viewModel.showColorWheelDialog = false
                             },
-                            initialColor = if (viewModel.isCustomColor && viewModel.customColor != null) viewModel.customColor!! else viewModel.selectedColor ?: ThemeManager.primaryColor
+                            initialColor = if (viewModel.isCustomColor && viewModel.customColor != null) viewModel.customColor!! else viewModel.selectedColor
+                                ?: ThemeManager.primaryColor
                         )
                     }
                     if (viewModel.showBgModal) {
@@ -639,7 +641,8 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                         ColorWheelDialog(
                             onDismissRequest = { viewModel.showReaderOverlayColorWheel = false },
                             onColorSelected = { color ->
-                                if (viewModel.darkTheme) viewModel.darkOverlayColor = color else viewModel.lightOverlayColor = color
+                                if (viewModel.darkTheme) viewModel.darkOverlayColor =
+                                    color else viewModel.lightOverlayColor = color
                                 viewModel.showReaderOverlayColorWheel = false
                             },
                             initialColor = if (viewModel.darkTheme) viewModel.darkOverlayColor else viewModel.lightOverlayColor
@@ -648,35 +651,56 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                     if (viewModel.showWordMarkerColorWheelDialog) {
                         ColorWheelDialog(
                             onDismissRequest = { viewModel.showWordMarkerColorWheelDialog = false },
-                            onColorSelected = { color -> viewModel.wordMarkerColor = color; viewModel.showWordMarkerColorWheelDialog = false },
+                            onColorSelected = { color ->
+                                viewModel.wordMarkerColor =
+                                    color; viewModel.showWordMarkerColorWheelDialog = false
+                            },
                             initialColor = viewModel.wordMarkerColor
                         )
                     }
                     if (viewModel.showJesusWordsColorWheelDialog) {
                         ColorWheelDialog(
                             onDismissRequest = { viewModel.showJesusWordsColorWheelDialog = false },
-                            onColorSelected = { color -> viewModel.wordsOfJesus = color; viewModel.showJesusWordsColorWheelDialog = false },
+                            onColorSelected = { color ->
+                                viewModel.wordsOfJesus =
+                                    color; viewModel.showJesusWordsColorWheelDialog = false
+                            },
                             initialColor = viewModel.wordsOfJesus
                         )
                     }
                     if (viewModel.showLightReaderFontColorWheelDialog) {
                         ColorWheelDialog(
-                            onDismissRequest = { viewModel.showLightReaderFontColorWheelDialog = false },
-                            onColorSelected = { color ->  viewModel.lightThemeReaderFontColor = color; viewModel.showLightReaderFontColorWheelDialog = false },
+                            onDismissRequest = {
+                                viewModel.showLightReaderFontColorWheelDialog = false
+                            },
+                            onColorSelected = { color ->
+                                viewModel.lightThemeReaderFontColor =
+                                    color; viewModel.showLightReaderFontColorWheelDialog = false
+                            },
                             initialColor = viewModel.lightThemeReaderFontColor
                         )
                     }
                     if (viewModel.showDarkReaderFontColorWheelDialog) {
                         ColorWheelDialog(
-                            onDismissRequest = { viewModel.showDarkReaderFontColorWheelDialog = false },
-                            onColorSelected = { color ->  viewModel.darkThemeReaderFontColor = color; viewModel.showDarkReaderFontColorWheelDialog = false },
+                            onDismissRequest = {
+                                viewModel.showDarkReaderFontColorWheelDialog = false
+                            },
+                            onColorSelected = { color ->
+                                viewModel.darkThemeReaderFontColor =
+                                    color; viewModel.showDarkReaderFontColorWheelDialog = false
+                            },
                             initialColor = viewModel.darkThemeReaderFontColor
                         )
                     }
                     if (viewModel.showVerseMarkerColorWheelDialog) {
                         ColorWheelDialog(
-                            onDismissRequest = { viewModel.showVerseMarkerColorWheelDialog = false },
-                            onColorSelected = { color -> viewModel.verseMarkerColor = color; viewModel.showVerseMarkerColorWheelDialog = false },
+                            onDismissRequest = {
+                                viewModel.showVerseMarkerColorWheelDialog = false
+                            },
+                            onColorSelected = { color ->
+                                viewModel.verseMarkerColor =
+                                    color; viewModel.showVerseMarkerColorWheelDialog = false
+                            },
                             initialColor = viewModel.verseMarkerColor
                         )
                     }

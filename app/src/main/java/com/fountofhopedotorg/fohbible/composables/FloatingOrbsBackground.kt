@@ -1,4 +1,4 @@
-package com.fountofhopedotorg.fohbible.orbs
+package com.fountofhopedotorg.fohbible.composables
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize

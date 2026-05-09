@@ -94,7 +94,6 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.fountofhopedotorg.fohbible.ColorWheelDialog
 import com.fountofhopedotorg.fohbible.Screen
 import com.fountofhopedotorg.fohbible.allScreens
 import com.fountofhopedotorg.fohbible.dropdowns.ReaderAppBarMenu

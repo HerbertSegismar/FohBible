@@ -1,20 +1,52 @@
 package com.fountofhopedotorg.fohbible.composables
 
 import android.annotation.SuppressLint
+import android.content.ContentValues
+import android.content.Context
+import android.content.Intent
+import android.graphics.Bitmap
+import android.media.MediaScannerConnection
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
+import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
@@ -27,16 +59,28 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.fountofhopedotorg.fohbible.models.AppViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 
 @SuppressLint("ConfigurationScreenWidthHeight")
 @Composable
 fun ImageSection() {
     val viewModel = viewModel<AppViewModel>()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    // GraphicsLayer for capturing the composite image
+    val graphicsLayer = rememberGraphicsLayer()
+    var captureReady by remember { mutableStateOf(false) }
 
     var imageSrc by remember { mutableStateOf<String?>(null) }
     var currentImageFile by remember { mutableStateOf<String?>(null) }
@@ -44,7 +88,7 @@ fun ImageSection() {
     var imageError by remember { mutableStateOf(false) }
     var imageLoaded by remember { mutableStateOf(false) }
     var isMobile by remember { mutableStateOf(false) }
-    var isConverting by remember { mutableStateOf(false) }
+    var isProcessing by remember { mutableStateOf(false) }
     var imageSize by remember { mutableStateOf(IntSize.Zero) }
 
     val configuration = LocalConfiguration.current
@@ -61,9 +105,109 @@ fun ImageSection() {
         randomText = inspirationalTexts.random()
         imageError = false
         imageLoaded = false
+        captureReady = false
+    }
+    suspend fun captureCompositeImage(): Bitmap? {
+        return withContext(Dispatchers.Main) {
+            try {
+                delay(100)
+                if (graphicsLayer.size.width == 0 || graphicsLayer.size.height == 0) {
+                    return@withContext null
+                }
+                graphicsLayer.toImageBitmap().asAndroidBitmap()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
+        }
     }
 
-    // ----- Error fallback (unchanged) -----
+    suspend fun shareCompositeImage(quoteText: String) {
+        val bitmap = captureCompositeImage()
+        if (bitmap == null) {
+            withContext(Dispatchers.Main) {
+                showToast(context, "Failed to capture image")
+            }
+            return
+        }
+        withContext(Dispatchers.IO) {
+            try {
+                val cacheFile = File(context.cacheDir, "share_inspiration.png")
+                FileOutputStream(cacheFile).use { out ->
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
+                }
+                val uri = FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    cacheFile
+                )
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "image/png"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    putExtra(Intent.EXTRA_TEXT, quoteText)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                withContext(Dispatchers.Main) {
+                    context.startActivity(Intent.createChooser(shareIntent, "Share inspiration"))
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    showToast(context, "Share failed: ${e.message}")
+                }
+            } finally {
+                bitmap.recycle()
+            }
+        }
+    }
+
+    suspend fun downloadCompositeImage(): Boolean {
+        val bitmap = captureCompositeImage() ?: return false
+        return withContext(Dispatchers.IO) {
+            try {
+                val fileName = "inspiration_${System.currentTimeMillis()}.png"
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    val contentValues = ContentValues().apply {
+                        put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                        put(MediaStore.MediaColumns.MIME_TYPE, "image/png")
+                        put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                        put(MediaStore.MediaColumns.IS_PENDING, 1)
+                    }
+                    val resolver = context.contentResolver
+                    val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+                    uri?.let {
+                        resolver.openOutputStream(it)?.use { outputStream ->
+                            bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+                        }
+                        contentValues.clear()
+                        contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                        resolver.update(it, contentValues, null, null)
+                        true
+                    } ?: false
+                } else {
+                    val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                    if (!downloadsDir.exists() && !downloadsDir.mkdirs()) return@withContext false
+                    val imageFile = File(downloadsDir, fileName)
+                    FileOutputStream(imageFile).use { out ->
+                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                    }
+                    MediaScannerConnection.scanFile(
+                        context,
+                        arrayOf(imageFile.absolutePath),
+                        arrayOf("image/png"),
+                        null
+                    )
+                    true
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
+            } finally {
+                bitmap.recycle()
+            }
+        }
+    }
+
     if (imageError) {
         Column(
             modifier = Modifier
@@ -111,139 +255,178 @@ fun ImageSection() {
         return
     }
 
-    // ----- Main image section -----
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp),
         contentAlignment = Alignment.TopEnd
     ) {
-        // Share / Download buttons
         Row(
             modifier = Modifier
                 .padding(12.dp)
                 .zIndex(10f),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             IconButton(
-                onClick = { /* share placeholder */ },
-                enabled = !isConverting,
+                onClick = {
+                    scope.launch {
+                        if (isProcessing || !captureReady) return@launch
+                        isProcessing = true
+                        try {
+                            shareCompositeImage(randomText)
+                        } catch (e: Exception) {
+                            showToast(context, "Error: ${e.message}")
+                        } finally {
+                            isProcessing = false
+                        }
+                    }
+                },
+                enabled = !isProcessing && captureReady,
                 modifier = Modifier
                     .size(40.dp)
-                    .background(Color.Black.copy(alpha = 0.6f), CircleShape)
             ) {
                 Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.White)
             }
+
             IconButton(
-                onClick = { /* download placeholder */ },
-                enabled = !isConverting,
+                onClick = {
+                    scope.launch {
+                        if (isProcessing || !captureReady) return@launch
+                        isProcessing = true
+                        try {
+                            val success = downloadCompositeImage()
+                            withContext(Dispatchers.Main) {
+                                showToast(
+                                    context,
+                                    if (success) "Image saved to Downloads" else "Failed to save image"
+                                )
+                            }
+                        } catch (e: Exception) {
+                            showToast(context, "Download error: ${e.message}")
+                        } finally {
+                            isProcessing = false
+                        }
+                    }
+                },
+                enabled = !isProcessing && captureReady,
                 modifier = Modifier
                     .size(40.dp)
-                    .background(Color.Black.copy(alpha = 0.6f), CircleShape)
             ) {
                 Icon(Icons.Default.Download, contentDescription = "Download", tint = Color.White)
             }
         }
 
-        // Card holding the image and overlay
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.cardElevation(8.dp)
-        ) {
-            Box(modifier = Modifier.fillMaxWidth()) {
-                // Loading placeholder
-                if (!imageLoaded) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(256.dp)
-                            .background(
-                                if (viewModel.darkTheme) Color(0xFF2D2D2D)
-                                else Color(0xFFE0E0E0)
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Loading image...", color = Color.Gray)
+        Box(
+            modifier = Modifier
+                .drawWithContent {
+                    graphicsLayer.record {
+                        this@drawWithContent.drawContent()
+                    }
+                    drawLayer(graphicsLayer)
+                }
+                .onGloballyPositioned { coordinates ->
+                    if (coordinates.size.width > 0 && coordinates.size.height > 0 && graphicsLayer.size != IntSize.Zero) {
+                        captureReady = true
                     }
                 }
-
-                // Actual image
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(imageSrc)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .wrapContentHeight()
-                        .clip(RoundedCornerShape(16.dp))
-                        .onGloballyPositioned { coordinates ->
-                            imageSize = coordinates.size
-                        },
-                    contentScale = ContentScale.Crop,
-                    onSuccess = { imageLoaded = true },
-                    onError = { imageError = true }
-                )
-
-                // Effects overlay – exact same size as the image
-                if (imageLoaded && currentImageFile != null && imageSize.height > 0) {
-                    val effect = when {
-                        currentImageFile!!.contains("w") -> EffectType.SNOW
-                        currentImageFile!!.contains("o") -> EffectType.ORBS
-                        else -> EffectType.METEORS
-                    }
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(with(LocalDensity.current) { imageSize.height.toDp() })
-                    ) {
-                        when (effect) {
-                            EffectType.SNOW -> FallingSnow(number = 50)
-                            EffectType.ORBS -> FloatingOrbs(number = 3)
-                            EffectType.METEORS -> SimpleMeteors(number = 5)
+        ) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(8.dp)
+            ) {
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    if (!imageLoaded) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(256.dp)
+                                .background(
+                                    if (viewModel.darkTheme) Color(0xFF2D2D2D)
+                                    else Color(0xFFE0E0E0)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Loading image...", color = Color.Gray)
                         }
                     }
-                }
-
-                // Text overlay
-                if (randomText.isNotBlank()) {
-                    Box(
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(imageSrc)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = null,
                         modifier = Modifier
-                            .align(Alignment.BottomCenter)
                             .fillMaxWidth()
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        Color.Black.copy(alpha = 0.8f),
-                                        Color.Black.copy(alpha = 0.4f),
-                                        Color.Transparent
-                                    ),
-                                    startY = Float.POSITIVE_INFINITY,
-                                    endY = 0f
+                            .wrapContentHeight()
+                            .clip(RoundedCornerShape(16.dp))
+                            .onGloballyPositioned { coordinates ->
+                                imageSize = coordinates.size
+                            },
+                        contentScale = ContentScale.Crop,
+                        onSuccess = { imageLoaded = true },
+                        onError = { imageError = true }
+                    )
+                    if (imageLoaded && currentImageFile != null && imageSize.height > 0) {
+                        val effect = when {
+                            currentImageFile!!.contains("w") -> EffectType.SNOW
+                            currentImageFile!!.contains("o") -> EffectType.ORBS
+                            else -> EffectType.METEORS
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(with(LocalDensity.current) { imageSize.height.toDp() })
+                        ) {
+                            when (effect) {
+                                EffectType.SNOW -> FallingSnow(number = 30)
+                                EffectType.ORBS -> FloatingOrbsBackground(
+                                    modifier = Modifier.fillMaxSize(),
+                                    orbCount = 3
                                 )
-                            )
-                            .padding(24.dp)
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.fillMaxWidth()) {
-                            Text("Daily Inspiration", fontSize = 20.sp,
-                                color = Color.White, fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "“${randomText.substringBefore(" - ")}”",
-                                fontSize = 16.sp,
-                                color = Color.White,
-                                fontStyle = FontStyle.Italic,
-                                textAlign = TextAlign.Center
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "- ${randomText.substringAfter(" - ")}",
-                                fontSize = 14.sp,
-                                color = Color.White.copy(alpha = 0.8f)
-                            )
+                                EffectType.METEORS -> Meteors(number = 3)
+                            }
+                        }
+                    }
+                    if (randomText.isNotBlank()) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .background(
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color.Black.copy(alpha = 0.8f),
+                                            Color.Black.copy(alpha = 0.4f),
+                                            Color.Transparent
+                                        ),
+                                        startY = Float.POSITIVE_INFINITY,
+                                        endY = 0f
+                                    )
+                                )
+                                .padding(24.dp)
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Daily Inspiration", fontSize = 20.sp,
+                                    color = Color.White, fontWeight = FontWeight.Bold)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "“${randomText.substringBefore(" - ")}”",
+                                    fontSize = 16.sp,
+                                    color = Color.White,
+                                    fontStyle = FontStyle.Italic,
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "- ${randomText.substringAfter(" - ")}",
+                                    fontSize = 14.sp,
+                                    color = Color.White.copy(alpha = 0.8f)
+                                )
+                            }
                         }
                     }
                 }
@@ -251,13 +434,18 @@ fun ImageSection() {
         }
     }
 }
+
+fun showToast(context: Context, message: String) {
+    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+}
+
 private val imageFilesSm = listOf(
-    "w1.jpg", "w2.jpg", "w3.jpg", "w4.jpg", "w5.jpg", "w6.jpg", "w7.jpg", "w8.jpg",
+    "w1.jpg", "w2.jpg", "w3.jpg", "w4.jpg", "w5.jpg", "w6.jpg", "w7.jpg",
     "n1.jpg", "n2.jpg", "n3.jpg", "n4.jpg", "n5.jpg", "n6.jpg", "n7.jpg", "n8.jpg",
     "n9.jpg", "n10.jpg", "n11.jpg", "n12.jpg", "n13.jpg", "n14.jpg", "n15.jpg", "n16.jpg",
     "n17.jpg", "n18.jpg", "n19.jpg", "n20.jpg", "n21.jpg", "n22.jpg", "n23.jpg", "n24.jpg",
-    "n25.jpg", "n26.jpg", "n27.jpg", "n28.jpg", "n29.jpg", "n30.jpg", "n31.jpg", "n32.jpg",
-    "n33.jpg", "n34.jpg", "o1.jpg", "o2.jpg", "o3.jpg", "o4.jpg", "o5.jpg", "o6.jpg",
+    "n25.jpg", "n26.jpg", "n27.jpg", "n28.jpg", "n29.jpg", "n30.jpg", "n31.jpg",
+    "o1.jpg", "o2.jpg", "o3.jpg", "o4.jpg", "o5.jpg", "o6.jpg",
     "o7.jpg", "o8.jpg", "o9.jpg", "o10.jpg"
 )
 

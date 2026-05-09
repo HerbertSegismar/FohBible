@@ -77,7 +77,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.text.HtmlCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.fountofhopedotorg.fohbible.ColorWheelDialog
+import com.fountofhopedotorg.fohbible.composables.ColorWheelDialog
 import com.fountofhopedotorg.fohbible.composables.InteractiveLoadingIndicator
 import com.fountofhopedotorg.fohbible.core.createCommentaryHelperIfExists
 import com.fountofhopedotorg.fohbible.data.BibleData
@@ -110,6 +110,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
+import androidx.compose.ui.platform.LocalLocale
 
 @Composable
 fun InteractiveModal(
@@ -1343,7 +1344,7 @@ fun InteractiveModal(
                 title = { Text("Edit Word") },
                 text = {
                     TextField(
-                        value = newWord.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() },
+                        value = newWord.replaceFirstChar { if (it.isLowerCase()) it.titlecase(LocalLocale.current.platformLocale) else it.toString() },
                         onValueChange = { newWord = it },
                         singleLine = true,
                         label = { Text("Enter word") }

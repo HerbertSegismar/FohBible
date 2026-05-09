@@ -64,9 +64,9 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.fountofhopedotorg.fohbible.Footer
+import com.fountofhopedotorg.fohbible.composables.Footer
 import com.fountofhopedotorg.fohbible.MainActivity
-import com.fountofhopedotorg.fohbible.MatrixNative
+import com.fountofhopedotorg.fohbible.composables.MatrixNative
 import com.fountofhopedotorg.fohbible.R
 import com.fountofhopedotorg.fohbible.Screen
 import com.fountofhopedotorg.fohbible.composables.ImageSection

@@ -1,4 +1,4 @@
-package com.fountofhopedotorg.fohbible
+package com.fountofhopedotorg.fohbible.composables
 
 import android.content.Intent
 import androidx.compose.foundation.clickable
@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import coil.compose.AsyncImage
+import com.fountofhopedotorg.fohbible.R
 import java.util.Calendar
 
 @Composable
