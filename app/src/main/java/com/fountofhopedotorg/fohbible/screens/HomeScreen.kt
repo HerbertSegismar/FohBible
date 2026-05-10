@@ -1,6 +1,7 @@
 package com.fountofhopedotorg.fohbible.screens
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Handler
 import android.os.Looper
 import androidx.compose.foundation.Image
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -53,6 +55,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
@@ -64,6 +67,8 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.fountofhopedotorg.fohbible.composables.Footer
 import com.fountofhopedotorg.fohbible.MainActivity
 import com.fountofhopedotorg.fohbible.composables.MatrixNative
@@ -242,7 +247,7 @@ fun HomeScreen(
         }
         item { Spacer(modifier = Modifier.height(40.dp)) }
         item { Footer() }
-        item { Spacer(modifier = Modifier.height(80.dp)) }
+        item { Spacer(modifier = Modifier.height(20.dp)) }
     }
 }
 @Composable
@@ -306,167 +311,227 @@ fun DailyVerseCard(
     val isLoading = remember { mutableStateOf(false) }
     var isBookmarked by remember(verses) { mutableStateOf(false) }
     val currentFontFamily = getFontFamily(viewModel.selectedFontFamily)
+
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    var imageSrc by remember { mutableStateOf<String?>(null) }
+    var currentImageFile by remember { mutableStateOf<String?>(null) }
+    var imageLoaded by remember { mutableStateOf(false) }
+    var imageError by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isLandscape) {
+        val imageFiles = if (!isLandscape) viewModel.imageFilesSm else viewModel.imageFilesMd
+        val assetPath = if (!isLandscape) "images/" else "images-md/"
+        val randomImageFile = imageFiles.random()
+        imageSrc = "file:///android_asset/$assetPath$randomImageFile"
+        currentImageFile = randomImageFile
+        imageLoaded = false
+        imageError = false
+    }
+
     LaunchedEffect(verses) {
         if (!verses.isNullOrEmpty()) {
             val isSaved = checkIfBookmarked(verses.first(), databaseHelper)
             isBookmarked = isSaved
         }
     }
-    Card(
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+            .padding(horizontal = 16.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            elevation = CardDefaults.cardElevation(8.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 100.dp)
             ) {
-                Text(
-                    text = "Fresh Revelations",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontFamily = currentFontFamily
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(imageSrc)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = "Background image",
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clip(RoundedCornerShape(20.dp)),
+                    contentScale = ContentScale.Crop,
+                    onSuccess = { imageLoaded = true },
+                    onError = { imageError = false }
                 )
-                IconButton(
-                    onClick = {
-                        isLoading.value = true
-                        onRefresh()
-                        Handler(Looper.getMainLooper()).postDelayed({
-                            isLoading.value = false
-                        }, 500)
-                    },
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    if (isLoading.value) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Icon(
-                            Icons.Filled.Refresh,
-                            contentDescription = "Refresh",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            if (!verses.isNullOrEmpty()) {
+
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onClick(verses) }
+                        .matchParentSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Black.copy(alpha = 0.7f),
+                                    Color.Black.copy(alpha = 0.5f),
+                                    Color.Black.copy(alpha = 0.6f)
+                                )
+                            )
+                        )
+                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column {
-                        val reference = SimpleVerseProcessor.extractVerseReference(verses)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
-                            text = reference,
-                            fontSize = 18.sp,
+                            text = "Fresh Revelations",
+                            fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                            color = Color.White,
                             fontFamily = currentFontFamily
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        verses.forEach { verse ->
-                            val annotatedText = buildAnnotatedString {
-                                withStyle(
-                                    style = SpanStyle(
-                                        color = MaterialTheme.colorScheme.primary,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 15.sp
+                        IconButton(
+                            onClick = {
+                                isLoading.value = true
+                                onRefresh()
+                                Handler(Looper.getMainLooper()).postDelayed({
+                                    isLoading.value = false
+                                }, 500)
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            if (isLoading.value) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.dp,
+                                    color = Color.White
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Filled.Refresh,
+                                    contentDescription = "Refresh",
+                                    tint = Color.White
+                                )
+                            }
+                        }
+                    }
+                    HorizontalDivider(color = Color.White, modifier = Modifier.padding(top = 2.dp, bottom = 25.dp))
+
+                    Column {
+                        if (!verses.isNullOrEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onClick(verses) }
+                            ) {
+                                Column {
+                                    val reference = SimpleVerseProcessor.extractVerseReference(verses)
+                                    Text(
+                                        text = reference,
+                                        fontSize = 14.sp,
+                                        color = Color.White.copy(alpha = 0.9f),
+                                        fontFamily = currentFontFamily
                                     )
-                                ) {
-                                    append("${verse.verseNumber} ")
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    verses.forEach { verse ->
+                                        val annotatedText = buildAnnotatedString {
+                                            withStyle(
+                                                style = SpanStyle(
+                                                    color = Color.White,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 15.sp
+                                                )
+                                            ) {
+                                                append("${verse.verseNumber} ")
+                                            }
+                                            append(SimpleVerseProcessor.stripXmlTags(verse.text))
+                                        }
+                                        Text(
+                                            text = annotatedText,
+                                            fontSize = 18.sp,
+                                            lineHeight = 22.sp,
+                                            textAlign = TextAlign.Justify,
+                                            modifier = Modifier.padding(bottom = 8.dp),
+                                            fontFamily = currentFontFamily,
+                                            color = Color.White
+                                        )
+                                    }
                                 }
-                                append(SimpleVerseProcessor.stripXmlTags(verse.text))
+                            }
+                        } else {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                repeat(3) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(20.dp)
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(Color.White.copy(alpha = 0.3f))
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    verses?.let { verseList ->
+                                        if (isBookmarked) {
+                                            removeFromBookmarks(verseList, databaseHelper)
+                                        } else {
+                                            saveToBookmarks(verseList, databaseHelper)
+                                        }
+                                        isBookmarked = !isBookmarked
+                                    }
+                                },
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
+                                    contentDescription = "Bookmark",
+                                    tint = Color.White
+                                )
                             }
                             Text(
-                                text = annotatedText,
-                                fontSize = 18.sp,
-                                lineHeight = 22.sp,
-                                textAlign = TextAlign.Justify,
-                                modifier = Modifier.padding(bottom = 8.dp),
-                                fontFamily = currentFontFamily
+                                text = "Share",
+                                color = Color.White,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .border(1.dp, Color.White, RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                                    .clickable {
+                                        verses?.let {
+                                            val shareText = buildString {
+                                                it.forEach { verse ->
+                                                    val cleanedText = SimpleVerseProcessor.stripXmlTags(verse.text)
+                                                    append("${verse.bookName ?: ""} ${verse.chapter ?: 0}:${verse.verseNumber} $cleanedText\n")
+                                                }
+                                            }
+                                            val shareIntent = Intent().apply {
+                                                action = Intent.ACTION_SEND
+                                                putExtra(Intent.EXTRA_TEXT, shareText)
+                                                type = "text/plain"
+                                            }
+                                            context.startActivity(Intent.createChooser(shareIntent, "Share verses via"))
+                                        }
+                                    }
                             )
                         }
                     }
                 }
-            } else {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    repeat(3) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(20.dp)
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                        )
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = {
-                        verses?.let { verseList ->
-                            if (isBookmarked) {
-                                removeFromBookmarks(verseList, databaseHelper)
-                            } else {
-                                saveToBookmarks(verseList, databaseHelper)
-                            }
-                            isBookmarked = !isBookmarked
-                        }
-                    },
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Icon(
-                        imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
-                        contentDescription = "Bookmark",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-                Text(
-                    text = "Share",
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .clickable {
-                            verses?.let {
-                                val shareText = buildString {
-                                    it.forEach { verse ->
-                                        val cleanedText = SimpleVerseProcessor.stripXmlTags(verse.text)
-                                        append("${verse.bookName ?: ""} ${verse.chapter ?: 0}:${verse.verseNumber} $cleanedText\n")
-                                    }
-                                }
-                                val shareIntent = Intent().apply {
-                                    action = Intent.ACTION_SEND
-                                    putExtra(Intent.EXTRA_TEXT, shareText)
-                                    type = "text/plain"
-                                }
-                                context.startActivity(Intent.createChooser(shareIntent, "Share verses via"))
-                            }
-                        }
-                )
             }
         }
     }

@@ -1,9 +1,9 @@
 package com.fountofhopedotorg.fohbible.composables
 
-import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.media.MediaScannerConnection
 import android.os.Build
@@ -71,14 +71,12 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 
-@SuppressLint("ConfigurationScreenWidthHeight")
 @Composable
 fun ImageSection() {
     val viewModel = viewModel<AppViewModel>()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // GraphicsLayer for capturing the composite image
     val graphicsLayer = rememberGraphicsLayer()
     var captureReady by remember { mutableStateOf(false) }
 
@@ -87,18 +85,14 @@ fun ImageSection() {
     var randomText by remember { mutableStateOf("") }
     var imageError by remember { mutableStateOf(false) }
     var imageLoaded by remember { mutableStateOf(false) }
-    var isMobile by remember { mutableStateOf(false) }
     var isProcessing by remember { mutableStateOf(false) }
     var imageSize by remember { mutableStateOf(IntSize.Zero) }
-
     val configuration = LocalConfiguration.current
-    LaunchedEffect(configuration.screenWidthDp) {
-        isMobile = configuration.screenWidthDp < 768
-    }
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    LaunchedEffect(isMobile) {
-        val imageFiles = if (isMobile) imageFilesSm else imageFilesMd
-        val assetPath = if (isMobile) "images/" else "images-md/"
+    LaunchedEffect(isLandscape) {
+        val imageFiles = if (!isLandscape) viewModel.imageFilesSm else viewModel.imageFilesMd
+        val assetPath = if (!isLandscape) "images/" else "images-md/"
         val randomImageFile = imageFiles.random()
         imageSrc = "file:///android_asset/$assetPath$randomImageFile"
         currentImageFile = randomImageFile
@@ -232,12 +226,12 @@ fun ImageSection() {
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Daily Inspiration", fontSize = 24.sp, fontWeight = FontWeight.SemiBold,
+                    Text("Daily Inspiration", fontSize = 16.sp, fontWeight = FontWeight.SemiBold,
                         color = if (viewModel.darkTheme) Color.White else Color.Black)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "“${randomText.substringBefore(" - ")}”",
-                        fontSize = 18.sp,
+                        fontSize = 20.sp,
                         fontStyle = FontStyle.Italic,
                         textAlign = TextAlign.Center,
                         color = if (viewModel.darkTheme) Color.White.copy(alpha = 0.85f)
@@ -265,7 +259,7 @@ fun ImageSection() {
             modifier = Modifier
                 .padding(12.dp)
                 .zIndex(10f),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             IconButton(
                 onClick = {
@@ -283,9 +277,10 @@ fun ImageSection() {
                 },
                 enabled = !isProcessing && captureReady,
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(30.dp)
             ) {
-                Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.White)
+                Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.White, modifier = Modifier
+                    .size(20.dp))
             }
 
             IconButton(
@@ -310,9 +305,10 @@ fun ImageSection() {
                 },
                 enabled = !isProcessing && captureReady,
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(30.dp)
             ) {
-                Icon(Icons.Default.Download, contentDescription = "Download", tint = Color.White)
+                Icon(Icons.Default.Download, contentDescription = "Download", tint = Color.White, modifier = Modifier
+                    .size(22.dp))
             }
         }
 
@@ -410,12 +406,12 @@ fun ImageSection() {
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text("Daily Inspiration", fontSize = 20.sp,
+                                Text("Daily Inspiration", fontSize = 16.sp,
                                     color = Color.White, fontWeight = FontWeight.Bold)
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     text = "“${randomText.substringBefore(" - ")}”",
-                                    fontSize = 16.sp,
+                                    fontSize = 20.sp,
                                     color = Color.White,
                                     fontStyle = FontStyle.Italic,
                                     textAlign = TextAlign.Center
@@ -438,23 +434,6 @@ fun ImageSection() {
 fun showToast(context: Context, message: String) {
     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
 }
-
-private val imageFilesSm = listOf(
-    "w1.jpg", "w2.jpg", "w3.jpg", "w4.jpg", "w5.jpg", "w6.jpg", "w7.jpg",
-    "n1.jpg", "n2.jpg", "n3.jpg", "n4.jpg", "n5.jpg", "n6.jpg", "n7.jpg", "n8.jpg",
-    "n9.jpg", "n10.jpg", "n11.jpg", "n12.jpg", "n13.jpg", "n14.jpg", "n15.jpg", "n16.jpg",
-    "n17.jpg", "n18.jpg", "n19.jpg", "n20.jpg", "n21.jpg", "n22.jpg", "n23.jpg", "n24.jpg",
-    "n25.jpg", "n26.jpg", "n27.jpg", "n28.jpg", "n29.jpg", "n30.jpg", "n31.jpg",
-    "o1.jpg", "o2.jpg", "o3.jpg", "o4.jpg", "o5.jpg", "o6.jpg",
-    "o7.jpg", "o8.jpg", "o9.jpg", "o10.jpg"
-)
-
-private val imageFilesMd = listOf(
-    "wm1.jpg", "wm2.jpg", "wm3.jpg", "wm4.jpg", "wm5.jpg", "wm6.jpg", "wm7.jpg",
-    "nm1.jpg", "nm2.jpg", "nm3.jpg", "nm4.jpg", "nm5.jpg", "nm6.jpg", "nm7.jpg", "nm8.jpg",
-    "nm9.jpg", "nm10.jpg", "nm11.jpg", "nm12.jpg", "nm13.jpg", "nm14.jpg",
-    "om1.jpg", "om2.jpg", "om3.jpg", "om4.jpg", "om5.jpg"
-)
 
 private val inspirationalTexts = listOf(
     "Be still and know that I am God. - Psalm 46:10",

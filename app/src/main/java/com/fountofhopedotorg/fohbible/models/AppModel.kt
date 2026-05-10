@@ -36,6 +36,23 @@ class AppViewModel : ViewModel() {
             )
         )
     }
+
+   val imageFilesSm = listOf(
+        "w1.jpg", "w2.jpg", "w3.jpg", "w4.jpg", "w5.jpg", "w6.jpg", "w7.jpg",
+        "n1.jpg", "n2.jpg", "n3.jpg", "n4.jpg", "n5.jpg", "n6.jpg", "n7.jpg", "n8.jpg",
+        "n9.jpg", "n10.jpg", "n11.jpg", "n12.jpg", "n13.jpg", "n14.jpg", "n15.jpg", "n16.jpg",
+        "n17.jpg", "n18.jpg", "n19.jpg", "n20.jpg", "n21.jpg", "n22.jpg", "n23.jpg", "n24.jpg",
+        "n25.jpg", "n26.jpg", "n27.jpg", "n28.jpg", "n29.jpg", "n30.jpg", "n31.jpg",
+        "o1.jpg", "o2.jpg", "o3.jpg", "o4.jpg", "o5.jpg", "o6.jpg",
+        "o7.jpg", "o8.jpg", "o9.jpg", "o10.jpg"
+    )
+
+    val imageFilesMd = listOf(
+        "wm1.jpg", "wm2.jpg", "wm3.jpg", "wm4.jpg", "wm5.jpg", "wm6.jpg", "wm7.jpg",
+        "nm1.jpg", "nm2.jpg", "nm3.jpg", "nm4.jpg", "nm5.jpg", "nm6.jpg", "nm7.jpg", "nm8.jpg",
+        "nm9.jpg", "nm10.jpg", "nm11.jpg", "nm12.jpg", "nm13.jpg", "nm14.jpg",
+        "om1.jpg", "om2.jpg", "om3.jpg", "om4.jpg", "om5.jpg"
+    )
     var selectedPrimaryDictLanguage by mutableStateOf("English")
     var selectedSecondaryDictLanguage by mutableStateOf("English")
     var selectedPrimaryDictionary by mutableStateOf("atsbd")
