@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
@@ -67,6 +68,8 @@ import com.fountofhopedotorg.fohbible.composables.RotatingPhoneGraphics
 import com.fountofhopedotorg.fohbible.composables.SettingsItem
 import com.fountofhopedotorg.fohbible.composables.SettingsOpacitySlider
 import com.fountofhopedotorg.fohbible.composables.SettingsSection
+import com.fountofhopedotorg.fohbible.data.BibleVersionInfo
+import com.fountofhopedotorg.fohbible.data.BibleVersionInfoRepository
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.modals.BgModal
 import com.fountofhopedotorg.fohbible.modals.FontModal
@@ -76,7 +79,10 @@ import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.ui.theme.DefaultPrimaryColor
 import com.fountofhopedotorg.fohbible.ui.theme.PredefinedColorThemes
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
+import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
 import com.fountofhopedotorg.fohbible.utils.availableFontFamilies
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 
 const val MAX_FONT_SIZE = 100
@@ -87,6 +93,10 @@ const val MIN_ORB_COUNT = 1
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen() {
+    var showVersionInfoDialog by remember { mutableStateOf(false) }
+    var versionInfoForDialog by remember { mutableStateOf("") }
+    var bibleInfoData by remember { mutableStateOf<BibleVersionInfo?>(null) }
+    var isLoadingInfo by remember { mutableStateOf(false) }
     val primary = MaterialTheme.colorScheme.primary
     val viewColor = primary.copy(0.2f)
     val viewModel: AppViewModel = viewModel()
@@ -121,6 +131,20 @@ fun SettingsScreen() {
     LaunchedEffect(viewModel.isRefreshingDatabases) {
         if (viewModel.isRefreshingDatabases && !showRefreshResultDialog) {
             showRefreshResultDialog = true
+        }
+    }
+    LaunchedEffect(versionInfoForDialog) {
+        if (versionInfoForDialog.isNotEmpty()) {
+            isLoadingInfo = true
+            bibleInfoData = null
+
+            withContext(Dispatchers.IO) {
+                val info = BibleVersionInfoRepository.getVersionInfo(context, versionInfoForDialog)
+                withContext(Dispatchers.Main) {
+                    bibleInfoData = info
+                    isLoadingInfo = false
+                }
+            }
         }
     }
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -270,6 +294,21 @@ fun SettingsScreen() {
                                 maxLines = 1
                             )
                         }
+                        IconButton(
+                            onClick = {
+                                showVersionInfoDialog = true
+                                versionInfoForDialog = viewModel.currentDbName
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Info,
+                                contentDescription = "Version info",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.size(5.dp))
                         Icon(
                             Icons.Default.ArrowDropDown,
                             contentDescription = "Change version",
@@ -332,6 +371,21 @@ fun SettingsScreen() {
                                     maxLines = 1
                                 )
                             }
+                            IconButton(
+                                onClick = {
+                                    showVersionInfoDialog = true
+                                    versionInfoForDialog = viewModel.secondaryDbName
+                                },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Info,
+                                    contentDescription = "Version info",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.size(5.dp))
                             Icon(
                                 Icons.Default.ArrowDropDown,
                                 contentDescription = "Change version",
@@ -1221,5 +1275,86 @@ fun SettingsScreen() {
     }
     if (showAboutDialog) {
         AboutDialog(onDismiss = { showAboutDialog = false })
+    }
+
+    if (showVersionInfoDialog && versionInfoForDialog.isNotEmpty()) {
+        LaunchedEffect(versionInfoForDialog) {
+            isLoadingInfo = true
+            bibleInfoData = withContext(Dispatchers.IO) {
+                BibleVersionInfoRepository.getVersionInfo(
+                    context,
+                    versionInfoForDialog
+                )
+            }
+            isLoadingInfo = false
+        }
+
+        AlertDialog(
+            onDismissRequest = {
+                showVersionInfoDialog = false
+                bibleInfoData = null
+            },
+            title = {
+                Text(
+                    text = "Version Info",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = viewModel.fontSize.sp
+                )
+            },
+            text = {
+                if (isLoadingInfo) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(100.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }  else {
+                    val info = bibleInfoData
+                    if (info != null) {
+                        Column {
+                            val cleanDescription = info.description?.let {
+                                SimpleVerseProcessor.stripXmlTags(it)
+                            }
+                            val cleanDetailedInfo = info.detailedInfo?.let {
+                                SimpleVerseProcessor.stripXmlTags(it)
+                            }
+
+                            if (!cleanDescription.isNullOrEmpty()) {
+                                Text(
+                                    text = cleanDescription,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.padding(bottom = 12.dp)
+                                )
+                            }
+                            if (!cleanDetailedInfo.isNullOrEmpty()) {
+                                Text(
+                                    text = cleanDetailedInfo,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            if (cleanDescription.isNullOrEmpty() && cleanDetailedInfo.isNullOrEmpty()) {
+                                Text(
+                                    text = "No detailed information available.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                    } else {
+                        Text(
+                            text = "Could not load version information.",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showVersionInfoDialog = false }) {
+                    Text("Close")
+                }
+            }
+        )
     }
 }

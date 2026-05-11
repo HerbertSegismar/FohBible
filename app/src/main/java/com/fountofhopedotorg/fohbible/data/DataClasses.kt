@@ -35,6 +35,11 @@ data class ModalPage(
     val verse: Int? = null
 )
 
+data class BibleVersionInfo(
+    val description: String?,
+    val detailedInfo: String?
+)
+
 data class Verse(
     val verseNumber: Int,
     val text: String,

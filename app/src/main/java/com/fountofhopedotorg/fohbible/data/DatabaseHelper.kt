@@ -810,6 +810,42 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
     }
 }
 
+object BibleVersionInfoRepository {
+
+    fun getVersionInfo(context: Context, dbName: String): BibleVersionInfo? {
+        return try {
+            val dbFile = context.getDatabasePath(dbName)
+            if (!dbFile.exists()) return null
+
+            val db = SQLiteDatabase.openDatabase(
+                dbFile.absolutePath,
+                null,
+                SQLiteDatabase.OPEN_READONLY
+            )
+
+            val description = db.rawQuery(
+                "SELECT value FROM info WHERE name = ?",
+                arrayOf("description")
+            ).use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            }
+
+            val detailedInfo = db.rawQuery(
+                "SELECT value FROM info WHERE name = ?",
+                arrayOf("detailed_info")
+            ).use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            }
+
+            db.close()
+            BibleVersionInfo(description, detailedInfo)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+}
+
 fun getVersesWithSubheadings(
     versesHelper: DatabaseHelper,
     subheadingsHelper: DatabaseHelper,

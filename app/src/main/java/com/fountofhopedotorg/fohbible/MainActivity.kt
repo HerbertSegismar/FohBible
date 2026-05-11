@@ -153,6 +153,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
+    var secondaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     val currentScreen = viewModel.navigationStack.last()
     var isUsingCustomColor by remember { mutableStateOf(viewModel.isCustomColor) }
     var customColor by remember { mutableStateOf(viewModel.customColor) }
@@ -351,8 +352,16 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
         dbHelper = DatabaseHelper(activity, viewModel.currentDbName)
     }
 
+    LaunchedEffect(viewModel.secondaryDbName) {
+        secondaryDbHelper?.close()
+        secondaryDbHelper = DatabaseHelper(activity, viewModel.secondaryDbName)
+    }
+
     DisposableEffect(Unit) {
-        onDispose { dbHelper?.close() }
+        onDispose {
+            dbHelper?.close()
+            secondaryDbHelper?.close()
+        }
     }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
