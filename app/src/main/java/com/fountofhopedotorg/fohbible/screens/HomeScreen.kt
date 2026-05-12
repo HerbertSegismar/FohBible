@@ -1,9 +1,8 @@
 package com.fountofhopedotorg.fohbible.screens
+
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
-import android.os.Handler
-import android.os.Looper
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -11,6 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -41,13 +41,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -69,12 +63,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.fountofhopedotorg.fohbible.composables.Footer
-import com.fountofhopedotorg.fohbible.MainActivity
-import com.fountofhopedotorg.fohbible.composables.MatrixNative
 import com.fountofhopedotorg.fohbible.R
 import com.fountofhopedotorg.fohbible.Screen
+import com.fountofhopedotorg.fohbible.composables.Footer
 import com.fountofhopedotorg.fohbible.composables.ImageSection
+import com.fountofhopedotorg.fohbible.composables.MatrixNative
 import com.fountofhopedotorg.fohbible.data.BibleData
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
@@ -84,7 +77,60 @@ import com.fountofhopedotorg.fohbible.data.Verse
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
 import com.fountofhopedotorg.fohbible.utils.getFontFamily
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.random.Random
+
+private object BookmarkHelper {
+    suspend fun isBookmarked(verse: Verse, dbHelper: DatabaseHelper): Boolean =
+        withContext(Dispatchers.IO) { dbHelper.isBookmarked(verse) }
+
+    suspend fun addBookmarks(verses: List<Verse>, dbHelper: DatabaseHelper) =
+        withContext(Dispatchers.IO) { verses.forEach { dbHelper.addBookmark(it) } }
+
+    suspend fun removeBookmarks(verses: List<Verse>, dbHelper: DatabaseHelper) =
+        withContext(Dispatchers.IO) { verses.forEach { dbHelper.removeBookmark(it) } }
+}
+
+private object VerseShareHelper {
+    fun buildShareText(verses: List<Verse>): String = buildString {
+        verses.forEach { verse ->
+            val cleanedText = SimpleVerseProcessor.stripXmlTags(verse.text)
+            append("${verse.bookName ?: ""} ${verse.chapter ?: 0}:${verse.verseNumber} $cleanedText\n")
+        }
+    }
+
+    fun shareVerses(context: Context, verses: List<Verse>) {
+        val shareText = buildShareText(verses)
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            putExtra(Intent.EXTRA_TEXT, shareText)
+            type = "text/plain"
+        }
+        context.startActivity(Intent.createChooser(intent, "Share verses via"))
+    }
+}
+
+private suspend fun loadRandomVerses(context: Context, dbHelper: DatabaseHelper?): List<Verse> =
+    withContext(Dispatchers.IO) {
+        val helper = dbHelper ?: DatabaseHelper(
+            context as com.fountofhopedotorg.fohbible.MainActivity,
+            databaseName = "kj2.sqlite3"
+        )
+        val verses = helper.getRandomVerses()
+        if (dbHelper == null) helper.close()
+        verses
+    }
+
+private class RandomImageSelector(private val viewModel: AppViewModel) {
+    fun getRandomImage(isLandscape: Boolean): String {
+        val assetPath = if (!isLandscape) "images/" else "images-md/"
+        val fileList = if (!isLandscape) viewModel.imageFilesSm else viewModel.imageFilesMd
+        val randomFile = fileList.random()
+        return "file:///android_asset/$assetPath$randomFile"
+    }
+}
 
 @Composable
 fun HomeScreen(
@@ -94,131 +140,77 @@ fun HomeScreen(
     databaseHelper: DatabaseHelper? = null
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val viewModel = viewModel<AppViewModel>()
+
     var dailyVerses by remember { mutableStateOf<List<Verse>?>(null) }
-    LaunchedEffect(Unit) {
-        if (dailyVerses == null) {
-            loadRandomVerses(context, databaseHelper) { verses ->
-                dailyVerses = verses
-            }
-        }
-    }
     var popularDevotionals by remember { mutableStateOf<List<PopularDevotional>>(emptyList()) }
+
     LaunchedEffect(Unit) {
-        if (popularDevotionals.isEmpty()) {
-            popularDevotionals = getRandomDevotionals()
-        }
+        dailyVerses = loadRandomVerses(context, databaseHelper)
     }
+    LaunchedEffect(Unit) {
+        popularDevotionals = getRandomDevotionals()
+    }
+
     val quickActions = listOf(
-        QuickAction(
-            title = "Reader",
-            icon = Icons.Filled.Book,
-            color = MaterialTheme.colorScheme.primary,
-            onClick = { onNavigateToScreen(Screen.Reader()) }
-        ),
-        QuickAction(
-            title = "Bookmarks",
-            icon = Icons.Filled.Bookmark,
-            color = MaterialTheme.colorScheme.primary,
-            onClick = { onNavigateToScreen(Screen.Bookmarks) }
-        ),
-        QuickAction(
-            title = "Notes",
-            icon = Icons.AutoMirrored.Filled.Note,
-            color = MaterialTheme.colorScheme.primary,
-            onClick = { onNavigateToScreen(Screen.Notes) }
-        ),
-        QuickAction(
-            title = "Search",
-            icon = Icons.Filled.Search,
-            color = MaterialTheme.colorScheme.primary,
-            onClick = { onNavigateToScreen(Screen.Search) }
-        ),
-        QuickAction(
-            title = "Settings",
-            icon = Icons.Filled.Settings,
-            color = MaterialTheme.colorScheme.primary,
-            onClick = { onNavigateToScreen(Screen.Settings) }
-        )
+        QuickAction("Reader", Icons.Filled.Book, MaterialTheme.colorScheme.primary) {
+            onNavigateToScreen(Screen.Reader())
+        },
+        QuickAction("Bookmarks", Icons.Filled.Bookmark, MaterialTheme.colorScheme.primary) {
+            onNavigateToScreen(Screen.Bookmarks)
+        },
+        QuickAction("Notes", Icons.AutoMirrored.Filled.Note, MaterialTheme.colorScheme.primary) {
+            onNavigateToScreen(Screen.Notes)
+        },
+        QuickAction("Search", Icons.Filled.Search, MaterialTheme.colorScheme.primary) {
+            onNavigateToScreen(Screen.Search)
+        },
+        QuickAction("Settings", Icons.Filled.Settings, MaterialTheme.colorScheme.primary) {
+            onNavigateToScreen(Screen.Settings)
+        }
     )
+
     LazyColumn(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        item { Spacer(modifier = Modifier.height(8.dp)) }
+        item { Spacer(Modifier.height(8.dp)) }
 
-        item {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "Fount of Hope",
-                    fontSize = 25.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp),
-                    fontFamily = getFontFamily("rubikglitch")
-                )
-                Image(
-                    painter = painterResource(id = R.drawable.foh),
-                    contentDescription = "Fount of Hope Logo",
-                    modifier = Modifier
-                        .size(160.dp)
-                        .clip(RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Fit
-                )
-                Text(
-                    text = "Study Bible",
-                    fontSize = 30.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp),
-                    fontFamily = getFontFamily("rubikglitch")
-                )
-                Text(
-                    text = "Your Daily Source of Inspiration",
-                    fontSize = 20.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                    fontFamily = getFontFamily("oswald")
-                )
-            }
-            Spacer(modifier = Modifier.height(30.dp))
-        }
-        item {
-            ImageSection()
-        }
+        item { HomeHeader() }
+
+        item { ImageSection() }
+
         item {
             DailyVerseCard(
                 verses = dailyVerses,
                 onRefresh = {
-                    loadRandomVerses(context, databaseHelper) { verses ->
-                        dailyVerses = verses
+                    scope.launch {
+                        dailyVerses = loadRandomVerses(context, databaseHelper)
                     }
                 },
                 onClick = { verses ->
                     if (verses.isNotEmpty()) {
                         val first = verses.first()
                         val bookNumber = BibleData.getBookByName(first.bookName ?: "")?.customNumber ?: 1
-                        val passage = PassageSelection(
-                            bookNumber = bookNumber,
-                            bookName = first.bookName ?: "Genesis",
-                            chapter = first.chapter ?: 1,
-                            verse = first.verseNumber
+                        onNavigateToReader(
+                            PassageSelection(
+                                bookNumber = bookNumber,
+                                bookName = first.bookName ?: "Genesis",
+                                chapter = first.chapter ?: 1,
+                                verse = first.verseNumber
+                            )
                         )
-                        onNavigateToReader(passage)
                     }
                 },
-                databaseHelper = databaseHelper ?: DatabaseHelper(context as MainActivity, "kj2.sqlite3")
+                databaseHelper = databaseHelper ?: DatabaseHelper(
+                    context as com.fountofhopedotorg.fohbible.MainActivity,
+                    "kj2.sqlite3"
+                ),
+                viewModel = viewModel
             )
         }
+
         item {
             Text(
                 text = "Quick Access",
@@ -228,33 +220,76 @@ fun HomeScreen(
             )
             QuickAccessCarousel(actions = quickActions)
         }
+
         item {
             PopularDevotionalsSection(
                 devotionals = popularDevotionals,
                 onNavigateToReader = onNavigateToReader
             )
         }
-        item { Spacer(modifier = Modifier.height(40.dp)) }
+
+        item { Spacer(Modifier.height(40.dp)) }
+
         item {
             val isMatrixVisible by remember { mutableStateOf(true) }
             if (isMatrixVisible) {
-                key("matrix_component") {
-                    MatrixNative()
-                }
+                key("matrix_component") { MatrixNative() }
             } else {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(Modifier.height(16.dp))
             }
         }
-        item { Spacer(modifier = Modifier.height(40.dp)) }
+
+        item { Spacer(Modifier.height(40.dp)) }
         item { Footer() }
-        item { Spacer(modifier = Modifier.height(20.dp)) }
+        item { Spacer(Modifier.height(20.dp)) }
     }
 }
+
 @Composable
-fun QuickAccessCarousel(actions: List<QuickAction>) {
+private fun HomeHeader() {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "Fount of Hope",
+            fontSize = 25.sp,
+            color = MaterialTheme.colorScheme.primary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(8.dp),
+            fontFamily = getFontFamily("rubikglitch")
+        )
+        Image(
+            painter = painterResource(id = R.drawable.foh),
+            contentDescription = "Fount of Hope Logo",
+            modifier = Modifier.size(160.dp).clip(RoundedCornerShape(8.dp)),
+            contentScale = ContentScale.Fit
+        )
+        Text(
+            text = "Study Bible",
+            fontSize = 30.sp,
+            color = MaterialTheme.colorScheme.primary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(8.dp),
+            fontFamily = getFontFamily("rubikglitch")
+        )
+        Text(
+            text = "Your Daily Source of Inspiration",
+            fontSize = 20.sp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            fontFamily = getFontFamily("oswald")
+        )
+    }
+    Spacer(Modifier.height(30.dp))
+}
+
+@Composable
+private fun QuickAccessCarousel(actions: List<QuickAction>) {
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(actions) { action ->
@@ -262,22 +297,19 @@ fun QuickAccessCarousel(actions: List<QuickAction>) {
         }
     }
 }
+
 @Composable
-fun QuickActionCarouselItem(action: QuickAction) {
+private fun QuickActionCarouselItem(action: QuickAction) {
     Card(
         modifier = Modifier
             .width(140.dp)
             .height(120.dp)
             .clickable(onClick = action.onClick),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = action.color.copy(alpha = 0.1f)
-        )
+        colors = CardDefaults.cardColors(containerColor = action.color.copy(alpha = 0.1f))
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
+            modifier = Modifier.fillMaxSize().padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -285,9 +317,11 @@ fun QuickActionCarouselItem(action: QuickAction) {
                 imageVector = action.icon,
                 contentDescription = action.title,
                 tint = action.color,
-                modifier = Modifier.size(32.dp).then(if (action.title == "Notes") Modifier.rotate(90f) else Modifier)
+                modifier = Modifier.size(32.dp).then(
+                    if (action.title == "Notes") Modifier.rotate(90f) else Modifier
+                )
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(Modifier.height(8.dp))
             Text(
                 text = action.title,
                 style = MaterialTheme.typography.bodyMedium,
@@ -299,67 +333,55 @@ fun QuickActionCarouselItem(action: QuickAction) {
         }
     }
 }
+
 @Composable
-fun DailyVerseCard(
-    verses: List<Verse>? = null,
-    onRefresh: () -> Unit = {},
-    onClick: (List<Verse>) -> Unit = {},
-    databaseHelper: DatabaseHelper
+private fun DailyVerseCard(
+    verses: List<Verse>?,
+    onRefresh: () -> Unit,
+    onClick: (List<Verse>) -> Unit,
+    databaseHelper: DatabaseHelper,
+    viewModel: AppViewModel
 ) {
     val context = LocalContext.current
-    val viewModel = viewModel<AppViewModel>()
-    val isLoading = remember { mutableStateOf(false) }
-    var isBookmarked by remember(verses) { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     val currentFontFamily = getFontFamily(viewModel.selectedFontFamily)
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    var imageSrc by remember { mutableStateOf<String?>(null) }
-    var currentImageFile by remember { mutableStateOf<String?>(null) }
+    val imageSelector = remember(viewModel) { RandomImageSelector(viewModel) }
+
+    var imageSrc by remember { mutableStateOf(imageSelector.getRandomImage(isLandscape)) }
     var imageLoaded by remember { mutableStateOf(false) }
     var imageError by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
+    var isBookmarked by remember(verses) { mutableStateOf(false) }
 
     LaunchedEffect(isLandscape) {
-        val imageFiles = if (!isLandscape) viewModel.imageFilesSm else viewModel.imageFilesMd
-        val assetPath = if (!isLandscape) "images/" else "images-md/"
-        val randomImageFile = imageFiles.random()
-        imageSrc = "file:///android_asset/$assetPath$randomImageFile"
-        currentImageFile = randomImageFile
+        imageSrc = imageSelector.getRandomImage(isLandscape)
         imageLoaded = false
         imageError = false
     }
 
     LaunchedEffect(verses) {
         if (!verses.isNullOrEmpty()) {
-            val isSaved = checkIfBookmarked(verses.first(), databaseHelper)
-            isBookmarked = isSaved
+            isBookmarked = BookmarkHelper.isBookmarked(verses.first(), databaseHelper)
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-    ) {
+    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
             elevation = CardDefaults.cardElevation(8.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 100.dp)
-            ) {
+            Box(modifier = Modifier.fillMaxWidth().heightIn(min = 100.dp)) {
                 AsyncImage(
                     model = ImageRequest.Builder(context)
                         .data(imageSrc)
                         .crossfade(true)
                         .build(),
                     contentDescription = "Background image",
-                    modifier = Modifier
-                        .matchParentSize()
-                        .clip(RoundedCornerShape(20.dp)),
+                    modifier = Modifier.matchParentSize().clip(RoundedCornerShape(20.dp)),
                     contentScale = ContentScale.Crop,
                     onSuccess = { imageLoaded = true },
                     onError = { imageError = false }
@@ -380,9 +402,7 @@ fun DailyVerseCard(
                 )
 
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(20.dp),
+                    modifier = Modifier.fillMaxSize().padding(20.dp),
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
                     Row(
@@ -399,178 +419,141 @@ fun DailyVerseCard(
                         )
                         IconButton(
                             onClick = {
-                                isLoading.value = true
+                                isLoading = true
                                 onRefresh()
-                                Handler(Looper.getMainLooper()).postDelayed({
-                                    isLoading.value = false
-                                }, 500)
+                                scope.launch {
+                                    delay(500)
+                                    isLoading = false
+                                }
                             },
                             modifier = Modifier.size(32.dp)
                         ) {
-                            if (isLoading.value) {
+                            if (isLoading) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(24.dp),
                                     strokeWidth = 2.dp,
                                     color = Color.White
                                 )
                             } else {
-                                Icon(
-                                    Icons.Filled.Refresh,
-                                    contentDescription = "Refresh",
-                                    tint = Color.White
+                                Icon(Icons.Filled.Refresh, contentDescription = "Refresh", tint = Color.White)
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(color = Color.White, modifier = Modifier.padding(top = 2.dp, bottom = 25.dp))
+
+                    if (!verses.isNullOrEmpty()) {
+                        Box(modifier = Modifier.fillMaxWidth().clickable { onClick(verses) }) {
+                            Column {
+                                val reference = SimpleVerseProcessor.extractVerseReference(verses)
+                                Text(
+                                    text = reference,
+                                    fontSize = 14.sp,
+                                    color = Color.White.copy(alpha = 0.9f),
+                                    fontFamily = currentFontFamily
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                verses.forEach { verse ->
+                                    val annotatedText = buildAnnotatedString {
+                                        withStyle(SpanStyle(color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)) {
+                                            append("${verse.verseNumber} ")
+                                        }
+                                        append(SimpleVerseProcessor.stripXmlTags(verse.text))
+                                    }
+                                    Text(
+                                        text = annotatedText,
+                                        fontSize = 18.sp,
+                                        lineHeight = 22.sp,
+                                        textAlign = TextAlign.Justify,
+                                        modifier = Modifier.padding(bottom = 8.dp),
+                                        fontFamily = currentFontFamily,
+                                        color = Color.White
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            repeat(3) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(20.dp)
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(Color.White.copy(alpha = 0.3f))
                                 )
                             }
                         }
                     }
-                    HorizontalDivider(color = Color.White, modifier = Modifier.padding(top = 2.dp, bottom = 25.dp))
 
-                    Column {
-                        if (!verses.isNullOrEmpty()) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onClick(verses) }
-                            ) {
-                                Column {
-                                    val reference = SimpleVerseProcessor.extractVerseReference(verses)
-                                    Text(
-                                        text = reference,
-                                        fontSize = 14.sp,
-                                        color = Color.White.copy(alpha = 0.9f),
-                                        fontFamily = currentFontFamily
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    verses.forEach { verse ->
-                                        val annotatedText = buildAnnotatedString {
-                                            withStyle(
-                                                style = SpanStyle(
-                                                    color = Color.White,
-                                                    fontWeight = FontWeight.Bold,
-                                                    fontSize = 15.sp
-                                                )
-                                            ) {
-                                                append("${verse.verseNumber} ")
-                                            }
-                                            append(SimpleVerseProcessor.stripXmlTags(verse.text))
-                                        }
-                                        Text(
-                                            text = annotatedText,
-                                            fontSize = 18.sp,
-                                            lineHeight = 22.sp,
-                                            textAlign = TextAlign.Justify,
-                                            modifier = Modifier.padding(bottom = 8.dp),
-                                            fontFamily = currentFontFamily,
-                                            color = Color.White
-                                        )
-                                    }
-                                }
-                            }
-                        } else {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                repeat(3) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(20.dp)
-                                            .clip(RoundedCornerShape(4.dp))
-                                            .background(Color.White.copy(alpha = 0.3f))
-                                    )
-                                }
-                            }
-                        }
+                    Spacer(Modifier.height(16.dp))
 
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconButton(
-                                onClick = {
-                                    verses?.let { verseList ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = {
+                                verses?.let { verseList ->
+                                    scope.launch {
                                         if (isBookmarked) {
-                                            removeFromBookmarks(verseList, databaseHelper)
+                                            BookmarkHelper.removeBookmarks(verseList, databaseHelper)
                                         } else {
-                                            saveToBookmarks(verseList, databaseHelper)
+                                            BookmarkHelper.addBookmarks(verseList, databaseHelper)
                                         }
                                         isBookmarked = !isBookmarked
                                     }
-                                },
-                                modifier = Modifier.size(40.dp)
-                            ) {
-                                Icon(
-                                    imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
-                                    contentDescription = "Bookmark",
-                                    tint = Color.White
-                                )
-                            }
-                            Text(
-                                text = "Share",
-                                color = Color.White,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .border(1.dp, Color.White, RoundedCornerShape(8.dp))
-                                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                                    .clickable {
-                                        verses?.let {
-                                            val shareText = buildString {
-                                                it.forEach { verse ->
-                                                    val cleanedText = SimpleVerseProcessor.stripXmlTags(verse.text)
-                                                    append("${verse.bookName ?: ""} ${verse.chapter ?: 0}:${verse.verseNumber} $cleanedText\n")
-                                                }
-                                            }
-                                            val shareIntent = Intent().apply {
-                                                action = Intent.ACTION_SEND
-                                                putExtra(Intent.EXTRA_TEXT, shareText)
-                                                type = "text/plain"
-                                            }
-                                            context.startActivity(Intent.createChooser(shareIntent, "Share verses via"))
-                                        }
-                                    }
+                                }
+                            },
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
+                                contentDescription = "Bookmark",
+                                tint = Color.White
                             )
                         }
+
+                        Text(
+                            text = "Share",
+                            color = Color.White,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .border(1.dp, Color.White, RoundedCornerShape(8.dp))
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                .clickable {
+                                    verses?.let { VerseShareHelper.shareVerses(context, it) }
+                                }
+                        )
                     }
                 }
             }
         }
     }
 }
+
 @Composable
-fun PopularDevotionalsSection(
+private fun PopularDevotionalsSection(
     devotionals: List<PopularDevotional>,
     onNavigateToReader: (PassageSelection) -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Popular Devotionals",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        Spacer(modifier = Modifier.height(12.dp))
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        Text(
+            text = "Popular Devotionals",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(Modifier.height(12.dp))
         devotionals.forEachIndexed { index, devotional ->
-            DevotionalItem(
-                devotional = devotional,
-                onNavigateToReader = onNavigateToReader
-            )
-            if (index < devotionals.lastIndex) {
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-            }
+            DevotionalItem(devotional = devotional, onNavigateToReader = onNavigateToReader)
+            if (index < devotionals.lastIndex) HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
         }
     }
 }
+
 @Composable
-fun DevotionalItem(
+private fun DevotionalItem(
     devotional: PopularDevotional,
     onNavigateToReader: (PassageSelection) -> Unit
 ) {
@@ -579,13 +562,14 @@ fun DevotionalItem(
             .fillMaxWidth()
             .clickable {
                 val bookNumber = BibleData.getBookByName(devotional.bookName)?.customNumber ?: 1
-                val passage = PassageSelection(
-                    bookNumber = bookNumber,
-                    bookName = devotional.bookName,
-                    chapter = devotional.chapter,
-                    verse = devotional.verse
+                onNavigateToReader(
+                    PassageSelection(
+                        bookNumber = bookNumber,
+                        bookName = devotional.bookName,
+                        chapter = devotional.chapter,
+                        verse = devotional.verse
+                    )
                 )
-                onNavigateToReader(passage)
             }
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -597,30 +581,15 @@ fun DevotionalItem(
                 .clip(RoundedCornerShape(12.dp))
                 .background(
                     brush = Brush.verticalGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primary,
-                            MaterialTheme.colorScheme.secondary
-                        )
+                        colors = listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)
                     )
                 ),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                Icons.Filled.PlayArrow,
-                contentDescription = "Play",
-                tint = Color.White,
-                modifier = Modifier.size(24.dp)
-            )
+            Icon(Icons.Filled.PlayArrow, contentDescription = "Play", tint = Color.White, modifier = Modifier.size(24.dp))
         }
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = devotional.title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium
-            )
+        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(text = devotional.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
             Text(
                 text = devotional.preview,
                 style = MaterialTheme.typography.bodySmall,
@@ -630,41 +599,12 @@ fun DevotionalItem(
             )
         }
         IconButton(onClick = {}) {
-            Icon(
-                Icons.Filled.BookmarkBorder,
-                contentDescription = "Bookmark",
-                tint = MaterialTheme.colorScheme.primary
-            )
+            Icon(Icons.Filled.BookmarkBorder, contentDescription = "Bookmark", tint = MaterialTheme.colorScheme.primary)
         }
     }
 }
-fun loadRandomVerses(
-    context: Context,
-    databaseHelper: DatabaseHelper?,
-    onComplete: (List<Verse>) -> Unit
-) {
-    if (databaseHelper != null) {
-        Thread {
-            val verses = databaseHelper.getRandomVerses()
-            Handler(Looper.getMainLooper()).post {
-                onComplete(verses)
-            }
-        }.start()
-    } else {
-        Thread {
-            val dbHelper = DatabaseHelper(
-                context as MainActivity,
-                databaseName = "kj2.sqlite3"
-            )
-            val verses = dbHelper.getRandomVerses()
-            dbHelper.close()
-            Handler(Looper.getMainLooper()).post {
-                onComplete(verses)
-            }
-        }.start()
-    }
-}
-fun getRandomDevotionals(): List<PopularDevotional> {
+
+private fun getRandomDevotionals(): List<PopularDevotional> {
     val allDevotionals = listOf(
         PopularDevotional("Psalm 23", "The Lord is my shepherd...", "Psalms", 23, 1),
         PopularDevotional("The Lord's Prayer", "Our Father in heaven...", "Matthew", 6, 9),
@@ -725,21 +665,4 @@ fun getRandomDevotionals(): List<PopularDevotional> {
         PopularDevotional("The Bronze Serpent", "So Moses made a bronze serpent and put it up on a pole...", "Numbers", 21, 9)
     )
     return allDevotionals.shuffled(Random).take(5)
-}
-private fun saveToBookmarks(verses: List<Verse>, databaseHelper: DatabaseHelper) {
-    Thread {
-        verses.forEach { verse ->
-            databaseHelper.addBookmark(verse)
-        }
-    }.start()
-}
-private fun removeFromBookmarks(verses: List<Verse>, databaseHelper: DatabaseHelper) {
-    Thread {
-        verses.forEach { verse ->
-            databaseHelper.removeBookmark(verse)
-        }
-    }.start()
-}
-private fun checkIfBookmarked(verse: Verse, databaseHelper: DatabaseHelper): Boolean {
-    return databaseHelper.isBookmarked(verse)
 }

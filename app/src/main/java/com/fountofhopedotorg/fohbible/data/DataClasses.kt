@@ -48,6 +48,15 @@ data class Verse(
     val bookNumber: Int? = null
 )
 
+data class SearchColors(
+    val primary: Color,
+    val background: Color,
+    val text: Color,
+    val muted: Color,
+    val card: Color,
+    val border: Color
+)
+
 data class SearchVerse(
     val verse: Int,
     val text: String?,

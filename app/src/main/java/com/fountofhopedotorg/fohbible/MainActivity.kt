@@ -47,8 +47,10 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -62,6 +64,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.fountofhopedotorg.fohbible.composables.BibleVersionInfoDialog
 import com.fountofhopedotorg.fohbible.composables.HomeAppBar
 import com.fountofhopedotorg.fohbible.composables.ReaderAppBar
 import com.fountofhopedotorg.fohbible.composables.SaveNullableStringPreference
@@ -76,6 +79,8 @@ import com.fountofhopedotorg.fohbible.modals.NavigationModal
 import com.fountofhopedotorg.fohbible.modals.VersionSelectionModal
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.composables.FloatingOrbsBackground
+import com.fountofhopedotorg.fohbible.data.BibleVersionInfo
+import com.fountofhopedotorg.fohbible.data.BibleVersionInfoRepository
 import com.fountofhopedotorg.fohbible.screens.BookmarksScreen
 import com.fountofhopedotorg.fohbible.screens.HomeScreen
 import com.fountofhopedotorg.fohbible.screens.NotesScreen
@@ -87,8 +92,10 @@ import com.fountofhopedotorg.fohbible.ui.theme.FohBibleTheme
 import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
 import com.fountofhopedotorg.fohbible.ui.theme.ThemeManager
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 
@@ -153,6 +160,9 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
+    var isLoadingInfo by remember { mutableStateOf(false) }
+    var bibleInfoData by remember { mutableStateOf<BibleVersionInfo?>(null) }
+    var isLoadingVersionInfo by remember { mutableStateOf(false) }
     var secondaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     val currentScreen = viewModel.navigationStack.last()
     var isUsingCustomColor by remember { mutableStateOf(viewModel.isCustomColor) }
@@ -189,6 +199,20 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     }
     LaunchedEffect(isLandscape) {
         toggleFullscreen()
+    }
+    LaunchedEffect(viewModel.versionInfoForDialog) {
+        if (viewModel.versionInfoForDialog.isNotEmpty()) {
+            isLoadingVersionInfo = true
+            bibleInfoData = null
+
+            withContext(Dispatchers.IO) {
+                val info = BibleVersionInfoRepository.getVersionInfo(context, viewModel.versionInfoForDialog)
+                withContext(Dispatchers.Main) {
+                    bibleInfoData = info
+                    isLoadingVersionInfo = false
+                }
+            }
+        }
     }
 
     DisposableEffect(view) {
@@ -711,6 +735,34 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                     color; viewModel.showVerseMarkerColorWheelDialog = false
                             },
                             initialColor = viewModel.verseMarkerColor
+                        )
+                    }
+                    if (viewModel.showVersionInfoDialog && viewModel.versionInfoForDialog.isNotEmpty()) {
+                        LaunchedEffect(viewModel.versionInfoForDialog) {
+                            isLoadingInfo = true
+                            bibleInfoData = withContext(Dispatchers.IO) {
+                                BibleVersionInfoRepository.getVersionInfo(
+                                    context,
+                                    viewModel.versionInfoForDialog
+                                )
+                            }
+                            isLoadingInfo = false
+                        }
+
+                        BibleVersionInfoDialog(
+                            showDialog = viewModel.showVersionInfoDialog,
+                            onDismiss = {
+                                viewModel.showVersionInfoDialog = false
+                                bibleInfoData = null
+                            },
+                            isLoading = isLoadingVersionInfo,
+                            versionInfo = bibleInfoData?.let {
+                                BibleVersionInfo(description = it.description, detailedInfo = it.detailedInfo)
+                            },
+                            titleTextStyle = MaterialTheme.typography.headlineSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = viewModel.fontSize.sp
+                            )
                         )
                     }
                 }

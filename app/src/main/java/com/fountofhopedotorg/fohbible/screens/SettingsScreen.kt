@@ -1,9 +1,8 @@
 package com.fountofhopedotorg.fohbible.screens
+
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,7 +22,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
@@ -68,10 +66,7 @@ import com.fountofhopedotorg.fohbible.composables.RotatingPhoneGraphics
 import com.fountofhopedotorg.fohbible.composables.SettingsItem
 import com.fountofhopedotorg.fohbible.composables.SettingsOpacitySlider
 import com.fountofhopedotorg.fohbible.composables.SettingsSection
-import com.fountofhopedotorg.fohbible.data.BibleVersionInfo
-import com.fountofhopedotorg.fohbible.data.BibleVersionInfoRepository
 import com.fountofhopedotorg.fohbible.data.PassageSelection
-import com.fountofhopedotorg.fohbible.modals.BgModal
 import com.fountofhopedotorg.fohbible.modals.FontModal
 import com.fountofhopedotorg.fohbible.modals.OrbsCountModal
 import com.fountofhopedotorg.fohbible.modals.VersionSelectionModal
@@ -79,11 +74,7 @@ import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.ui.theme.DefaultPrimaryColor
 import com.fountofhopedotorg.fohbible.ui.theme.PredefinedColorThemes
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
-import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
 import com.fountofhopedotorg.fohbible.utils.availableFontFamilies
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import java.io.File
 
 const val MAX_FONT_SIZE = 100
 const val MIN_FONT_SIZE = 1
@@ -93,14 +84,11 @@ const val MIN_ORB_COUNT = 1
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen() {
-    var showVersionInfoDialog by remember { mutableStateOf(false) }
-    var versionInfoForDialog by remember { mutableStateOf("") }
-    var bibleInfoData by remember { mutableStateOf<BibleVersionInfo?>(null) }
-    var isLoadingInfo by remember { mutableStateOf(false) }
     val primary = MaterialTheme.colorScheme.primary
-    val viewColor = primary.copy(0.2f)
+    val viewColor = primary.copy(alpha = 0.2f)
     val viewModel: AppViewModel = viewModel()
     val context = LocalContext.current
+    var showHeaderButtonsColorWheel by remember { mutableStateOf(false) }
     var showOrbsCountModal by remember { mutableStateOf(false) }
     var showFontModal by remember { mutableStateOf(false) }
     var tempFontSize by remember { mutableStateOf(viewModel.fontSize.toString()) }
@@ -108,22 +96,15 @@ fun SettingsScreen() {
     var showColorWheel by remember { mutableStateOf(false) }
     var customColor by remember { mutableStateOf(viewModel.customColor) }
     var isUsingCustomColor by remember { mutableStateOf(viewModel.isCustomColor) }
-    var showLightModalColorWheel by remember { mutableStateOf(false) }
-    var showDarkModalColorWheel by remember { mutableStateOf(false) }
-    var showWordsOfJesusColorWheel by remember { mutableStateOf(false) }
-    var showHeaderButtonsColorWheel by remember { mutableStateOf(false) }
+    var showPrimaryVersionModal by remember { mutableStateOf(false) }
+    var showSecondaryVersionModal by remember { mutableStateOf(false) }
     var showRefreshConfirmDialog by remember { mutableStateOf(false) }
     var showRefreshResultDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
-    var showWordMarkerColorWheel by remember { mutableStateOf(false) }
-    var showVerseMarkerColorWheel by remember { mutableStateOf(false) }
-    var showLightThemeReaderFontColorWheel by remember { mutableStateOf(false) }
-    var showDarkThemeReaderFontColorWheel by remember { mutableStateOf(false) }
     var showResetConfirmDialog by remember { mutableStateOf(false) }
-    var showHighlightColorWheel by remember { mutableStateOf(false) }
     var showResetHighlightColorsDialog by remember { mutableStateOf(false) }
-    var showPrimaryVersionModal by remember { mutableStateOf(false) }
-    var showSecondaryVersionModal by remember { mutableStateOf(false) }
+
+    // Sync local UI state with ViewModel changes
     LaunchedEffect(viewModel.isCustomColor, viewModel.customColor) {
         isUsingCustomColor = viewModel.isCustomColor
         customColor = viewModel.customColor
@@ -133,28 +114,6 @@ fun SettingsScreen() {
             showRefreshResultDialog = true
         }
     }
-    LaunchedEffect(versionInfoForDialog) {
-        if (versionInfoForDialog.isNotEmpty()) {
-            isLoadingInfo = true
-            bibleInfoData = null
-
-            withContext(Dispatchers.IO) {
-                val info = BibleVersionInfoRepository.getVersionInfo(context, versionInfoForDialog)
-                withContext(Dispatchers.Main) {
-                    bibleInfoData = info
-                    isLoadingInfo = false
-                }
-            }
-        }
-    }
-    val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let {
-            viewModel.customTextureUri = it.toString()
-            viewModel.bgImageIndex = 35
-        }
-    }
 
     LazyColumn(
         modifier = Modifier
@@ -162,6 +121,7 @@ fun SettingsScreen() {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // ----- App Settings -----
         item {
             SettingsSection(title = "App Settings", subtitle = "Customize App appearance") {
                 SettingsItem(
@@ -257,8 +217,11 @@ fun SettingsScreen() {
                 }
             }
         }
+
+        // ----- Reader Settings -----
         item {
             SettingsSection(title = "Reader Settings", subtitle = "Customize your Bible reading experience") {
+                // Primary version
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -296,8 +259,8 @@ fun SettingsScreen() {
                         }
                         IconButton(
                             onClick = {
-                                showVersionInfoDialog = true
-                                versionInfoForDialog = viewModel.currentDbName
+                                viewModel.showVersionInfoDialog = true
+                                viewModel.versionInfoForDialog = viewModel.currentDbName
                             },
                             modifier = Modifier.size(32.dp)
                         ) {
@@ -308,13 +271,6 @@ fun SettingsScreen() {
                                 modifier = Modifier.size(20.dp)
                             )
                         }
-                        Spacer(modifier = Modifier.size(5.dp))
-                        Icon(
-                            Icons.Default.ArrowDropDown,
-                            contentDescription = "Change version",
-                            modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
                 }
                 SettingsItem(
@@ -373,8 +329,8 @@ fun SettingsScreen() {
                             }
                             IconButton(
                                 onClick = {
-                                    showVersionInfoDialog = true
-                                    versionInfoForDialog = viewModel.secondaryDbName
+                                    viewModel.showVersionInfoDialog = true
+                                    viewModel.versionInfoForDialog = viewModel.secondaryDbName
                                 },
                                 modifier = Modifier.size(32.dp)
                             ) {
@@ -385,13 +341,6 @@ fun SettingsScreen() {
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
-                            Spacer(modifier = Modifier.size(5.dp))
-                            Icon(
-                                Icons.Default.ArrowDropDown,
-                                contentDescription = "Change version",
-                                modifier = Modifier.size(24.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
@@ -403,33 +352,29 @@ fun SettingsScreen() {
                             Card(
                                 shape = RoundedCornerShape(20.dp),
                                 colors = CardDefaults.cardColors(
-                                    containerColor =
-                                        if (viewModel.multiViewLayout == "horizontal") primary.copy(
-                                            alpha = 0.1f
-                                        ) else Color.Transparent
+                                    containerColor = if (viewModel.multiViewLayout == "horizontal") primary.copy(alpha = 0.1f) else Color.Transparent
                                 )
-                            ){
+                            ) {
                                 Text(
                                     text = "Horizontal",
                                     modifier = Modifier
                                         .clickable { viewModel.multiViewLayout = "horizontal" }
-                                        .padding(vertical = 8.dp, horizontal = 12.dp )
-                                ) }
+                                        .padding(vertical = 8.dp, horizontal = 12.dp)
+                                )
+                            }
                             Card(
                                 shape = RoundedCornerShape(20.dp),
                                 colors = CardDefaults.cardColors(
-                                    containerColor =
-                                        if (viewModel.multiViewLayout == "vertical") primary.copy(
-                                            alpha = 0.1f
-                                        ) else Color.Transparent
+                                    containerColor = if (viewModel.multiViewLayout == "vertical") primary.copy(alpha = 0.1f) else Color.Transparent
                                 )
                             ) {
                                 Text(
                                     text = "Vertical",
                                     modifier = Modifier
                                         .clickable { viewModel.multiViewLayout = "vertical" }
-                                        .padding(vertical = 8.dp, horizontal = 12.dp )
-                                ) }
+                                        .padding(vertical = 8.dp, horizontal = 12.dp)
+                                )
+                            }
                         }
                     }
                     SettingsItem(
@@ -500,10 +445,7 @@ fun SettingsScreen() {
                     ) {
                         Row(modifier = Modifier.padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
                             IconButton(
-                                onClick = {
-                                    viewModel.fontSize =
-                                        maxOf(MIN_FONT_SIZE, viewModel.fontSize - 1)
-                                },
+                                onClick = { viewModel.fontSize = maxOf(MIN_FONT_SIZE, viewModel.fontSize - 1) },
                                 modifier = Modifier.size(32.dp)
                             ) {
                                 Text("A-", fontWeight = FontWeight.Bold)
@@ -515,10 +457,7 @@ fun SettingsScreen() {
                                 fontSize = 18.sp
                             )
                             IconButton(
-                                onClick = {
-                                    viewModel.fontSize =
-                                        minOf(MAX_FONT_SIZE, viewModel.fontSize + 1)
-                                },
+                                onClick = { viewModel.fontSize = minOf(MAX_FONT_SIZE, viewModel.fontSize + 1) },
                                 modifier = Modifier.size(32.dp)
                             ) {
                                 Text("A+", fontWeight = FontWeight.Bold)
@@ -580,7 +519,7 @@ fun SettingsScreen() {
                                 .clip(CircleShape)
                                 .background(viewModel.wordMarkerColor)
                                 .border(1.dp, primary.copy(0.3f), CircleShape)
-                                .clickable { showWordMarkerColorWheel = true }
+                                .clickable { viewModel.showWordMarkerColorWheelDialog = true }
                         )
                     }
                 }
@@ -594,12 +533,12 @@ fun SettingsScreen() {
                             .clip(CircleShape)
                             .background(viewModel.wordsOfJesus)
                             .border(1.dp, primary.copy(0.3f), CircleShape)
-                            .clickable { showWordsOfJesusColorWheel = true }
+                            .clickable { viewModel.showJesusWordsColorWheelDialog = true }
                     )
                 }
                 SettingsItem(
                     title = "Header Contents Color",
-                    subtitle = "App Bar texts and buttons color "
+                    subtitle = "App Bar texts and buttons color"
                 ) {
                     Box(
                         modifier = Modifier
@@ -620,7 +559,7 @@ fun SettingsScreen() {
                             .clip(CircleShape)
                             .background(viewModel.verseMarkerColor)
                             .border(1.dp, primary.copy(0.3f), CircleShape)
-                            .clickable { showVerseMarkerColorWheel = true }
+                            .clickable { viewModel.showVerseMarkerColorWheelDialog = true }
                     )
                 }
                 if (viewModel.darkTheme) {
@@ -634,7 +573,7 @@ fun SettingsScreen() {
                                 .clip(CircleShape)
                                 .background(viewModel.darkModalBackgroundColor)
                                 .border(1.dp, primary.copy(0.3f), CircleShape)
-                                .clickable { showDarkModalColorWheel = true }
+                                .clickable { viewModel.showDarkOverlayColorWheel = true }
                         )
                     }
                     SettingsItem(
@@ -646,16 +585,11 @@ fun SettingsScreen() {
                                 .size(30.dp)
                                 .clip(CircleShape)
                                 .background(viewModel.darkThemeReaderFontColor)
-                                .border(
-                                    1.dp,
-                                    primary.copy(0.3f),
-                                    CircleShape
-                                )
-                                .clickable { showDarkThemeReaderFontColorWheel = true }
+                                .border(1.dp, primary.copy(0.3f), CircleShape)
+                                .clickable { viewModel.showDarkReaderFontColorWheelDialog = true }
                         )
                     }
-                }
-                else {
+                } else {
                     SettingsItem(
                         title = "Modal Background Color",
                         subtitle = "Modal background color for light theme"
@@ -666,7 +600,7 @@ fun SettingsScreen() {
                                 .clip(CircleShape)
                                 .background(viewModel.lightModalBackgroundColor)
                                 .border(1.dp, primary.copy(0.3f), CircleShape)
-                                .clickable { showLightModalColorWheel = true }
+                                .clickable { viewModel.showLightOverlayColorWheel = true }
                         )
                     }
                     SettingsItem(
@@ -678,12 +612,8 @@ fun SettingsScreen() {
                                 .size(30.dp)
                                 .clip(CircleShape)
                                 .background(viewModel.lightThemeReaderFontColor)
-                                .border(
-                                    1.dp,
-                                    primary.copy(0.3f),
-                                    CircleShape
-                                )
-                                .clickable { showLightThemeReaderFontColorWheel = true }
+                                .border(1.dp, primary.copy(0.3f), CircleShape)
+                                .clickable { viewModel.showLightReaderFontColorWheelDialog = true }
                         )
                     }
                 }
@@ -695,7 +625,7 @@ fun SettingsScreen() {
                     Icon(Icons.Default.ChevronRight, contentDescription = null)
                 }
                 if (viewModel.bgImageIndex > 0) {
-                    SettingsItem( title = "" ) {
+                    SettingsItem(title = "") {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Box(modifier = Modifier.weight(1f)) {
                                 SettingsOpacitySlider(viewModel = viewModel)
@@ -705,6 +635,8 @@ fun SettingsScreen() {
                 }
             }
         }
+
+        // ----- Word Marker Palette Colors -----
         item {
             SettingsSection(
                 title = "Word Marker Palette Colors",
@@ -725,7 +657,6 @@ fun SettingsScreen() {
                                     onClick = {
                                         viewModel.editingHighlightColorIndex = i
                                         viewModel.showHighlightColorEditor = true
-                                        showHighlightColorWheel = true
                                     },
                                     modifier = Modifier.weight(1f)
                                 )
@@ -742,6 +673,8 @@ fun SettingsScreen() {
                 }
             }
         }
+
+        // ----- Database Management -----
         item {
             SettingsSection(
                 title = "Database Management",
@@ -769,6 +702,8 @@ fun SettingsScreen() {
                 )
             }
         }
+
+        // ----- More Options -----
         item {
             SettingsSection(title = "More Options", subtitle = "Additional preferences") {
                 SettingsItem(
@@ -793,6 +728,8 @@ fun SettingsScreen() {
                 }
             }
         }
+
+        // ----- Quick Actions -----
         item {
             SettingsSection(title = "Quick Actions", subtitle = "Common tasks") {
                 Row(
@@ -829,6 +766,8 @@ fun SettingsScreen() {
             }
         }
     }
+
+    // ----- Dialogs and Modals (no BgModal – it is shown at app level) -----
     if (showPrimaryVersionModal) {
         VersionSelectionModal(
             currentVersionKey = viewModel.currentDbName,
@@ -870,16 +809,8 @@ fun SettingsScreen() {
     if (showResetHighlightColorsDialog) {
         AlertDialog(
             onDismissRequest = { showResetHighlightColorsDialog = false },
-            title = {
-                Text(
-                    "Reset Highlight Colors",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
-                )
-            },
-            text = {
-                Text("This will reset all marker colors to their default values. Continue?")
-            },
+            title = { Text("Reset Highlight Colors", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+            text = { Text("This will reset all marker colors to their default values. Continue?") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -887,31 +818,25 @@ fun SettingsScreen() {
                         showResetHighlightColorsDialog = false
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Reset")
-                }
+                ) { Text("Reset") }
             },
             dismissButton = {
-                TextButton(onClick = { showResetHighlightColorsDialog = false }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { showResetHighlightColorsDialog = false }) { Text("Cancel") }
             }
         )
     }
-    if (showHighlightColorWheel) {
+    if (viewModel.showHighlightColorEditor) {
         ColorWheelDialog(
             onDismissRequest = {
-                showHighlightColorWheel = false
                 viewModel.showHighlightColorEditor = false
                 viewModel.editingHighlightColorIndex = -1
             },
             onColorSelected = { color ->
                 if (viewModel.editingHighlightColorIndex != -1) {
                     viewModel.updateHighlightColor(viewModel.editingHighlightColorIndex, color)
-                    viewModel.showHighlightColorEditor = false
-                    viewModel.editingHighlightColorIndex = -1
                 }
-                showHighlightColorWheel = false
+                viewModel.showHighlightColorEditor = false
+                viewModel.editingHighlightColorIndex = -1
             },
             initialColor = if (viewModel.editingHighlightColorIndex != -1) {
                 viewModel.predefinedHighlightColors.getOrNull(viewModel.editingHighlightColorIndex) ?: Color.White
@@ -923,32 +848,24 @@ fun SettingsScreen() {
     if (showResetConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showResetConfirmDialog = false },
-            title = {
-                Text(
-                    "Reset All Settings",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
-                )
-            },
+            title = { Text("Reset All Settings", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
             text = {
                 Column {
                     Text("This will restore EVERY setting to its default value:")
                     Spacer(modifier = Modifier.height(12.dp))
                     Text("• Font size, theme, colors", style = MaterialTheme.typography.bodyMedium)
                     Text("• Bible versions, layout, sync", style = MaterialTheme.typography.bodyMedium)
-                    Text("• Background, overlay, palette colors,", style = MaterialTheme.typography.bodyMedium)
+                    Text("• Background, overlay, palette colors", style = MaterialTheme.typography.bodyMedium)
                     Text("• Study mode, etc.", style = MaterialTheme.typography.bodyMedium)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        "This action cannot be undone.\n\nAre you sure you want to continue?",
-                        color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.Medium
-                    )
+                    Text("This action cannot be undone.\n\nAre you sure you want to continue?",
+                        color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Medium)
                 }
             },
             confirmButton = {
                 TextButton(
                     onClick = {
+                        // Reset all ViewModel properties to defaults
                         viewModel.headerButtonsColor = Color(0xFFFFFFFF)
                         viewModel.renderOrbs = false
                         viewModel.orbsCount = 3
@@ -971,7 +888,6 @@ fun SettingsScreen() {
                         viewModel.darkOverlayColor = Color(0xFF100F21)
                         viewModel.darkThemeReaderFontColor = Color(0xFFFFFFFF)
                         viewModel.lightThemeReaderFontColor = Color(0xFF101015)
-                        viewModel.darkOverlayColor = Color(0xFF100F21)
                         viewModel.lightModalBackgroundColor = Color(0xFFEAE7E3)
                         viewModel.darkModalBackgroundColor = Color(0xFF121523)
                         viewModel.wordMarkerColor = Color(0xDDAC95E1)
@@ -981,7 +897,6 @@ fun SettingsScreen() {
                         viewModel.showStrongs = false
                         viewModel.wordsOfJesus = Color(0xFFDA4227)
                         viewModel.resetHighlightColorsToDefault()
-
                         viewModel.squareAspectViews = true
                         viewModel.scrollSyncAction = false
                         viewModel.isReaderFullScreen = false
@@ -1002,49 +917,24 @@ fun SettingsScreen() {
                         viewModel.showVerseMarkerColorWheelDialog = false
                         viewModel.showSecondaryNavigationModal = false
                         viewModel.showReaderOverlayColorWheel = false
-
                         viewModel.primaryPassage = PassageSelection(10, "Genesis", 1, 1)
                         viewModel.secondaryPassage = PassageSelection(500, "John", 1, 1)
-
                         viewModel.selectedPrimaryDictLanguage = "English"
                         viewModel.selectedSecondaryDictLanguage = "English"
                         viewModel.selectedPrimaryDictionary = "atsbd"
                         viewModel.selectedSecondaryDictionary = "cbtel"
-
                         viewModel.selectedVerseCommentary = "cbsc"
                         viewModel.selectedCrossReferenceDatabase = "obx"
-
                         viewModel.isRefreshingDatabases = false
                         viewModel.lastRefreshMessage = ""
                         viewModel.lastRefreshSuccess = false
-
                         showResetConfirmDialog = false
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Reset All")
-                }
+                ) { Text("Reset All") }
             },
             dismissButton = {
-                TextButton(onClick = { showResetConfirmDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-    if (viewModel.showBgModal) {
-        BgModal(
-            currentIndex = viewModel.bgImageIndex,
-            customUri = viewModel.customTextureUri,
-            onSelect = { index -> viewModel.bgImageIndex = index; viewModel.showBgModal = false },
-            onDismiss = { viewModel.showBgModal = false },
-            onPickCustom = { imagePickerLauncher.launch("image/*") },
-            onRemoveCustom = {
-                viewModel.customTextureUri?.let { path ->
-                    try { File(path).delete() } catch (_: Exception) { }
-                }
-                viewModel.customTextureUri = null
-                viewModel.bgImageIndex = 0
+                TextButton(onClick = { showResetConfirmDialog = false }) { Text("Cancel") }
             }
         )
     }
@@ -1088,79 +978,9 @@ fun SettingsScreen() {
             initialColor = customColor ?: viewModel.selectedColor ?: DefaultPrimaryColor
         )
     }
-    if (showWordMarkerColorWheel) {
-        ColorWheelDialog(
-            onDismissRequest = { showWordMarkerColorWheel = false },
-            onColorSelected = { color ->
-                viewModel.wordMarkerColor = color
-                showWordMarkerColorWheel = false
-            },
-            initialColor = viewModel.wordMarkerColor
-        )
-    }
-    if (showVerseMarkerColorWheel) {
-        ColorWheelDialog(
-            onDismissRequest = { showVerseMarkerColorWheel = false },
-            onColorSelected = { color ->
-                viewModel.verseMarkerColor = color
-                showVerseMarkerColorWheel = false
-            },
-            initialColor = viewModel.verseMarkerColor
-        )
-    }
-    if (showLightThemeReaderFontColorWheel) {
-        ColorWheelDialog(
-            onDismissRequest = { showLightThemeReaderFontColorWheel = false },
-            onColorSelected = { color ->
-                viewModel.lightThemeReaderFontColor = color
-                showLightThemeReaderFontColorWheel = false
-            },
-            initialColor = viewModel.lightThemeReaderFontColor
-        )
-    }
-    if (showDarkThemeReaderFontColorWheel) {
-        ColorWheelDialog(
-            onDismissRequest = { showDarkThemeReaderFontColorWheel = false },
-            onColorSelected = { color ->
-                viewModel.darkThemeReaderFontColor = color
-                showDarkThemeReaderFontColorWheel = false
-            },
-            initialColor = viewModel.darkThemeReaderFontColor
-        )
-    }
-    if (showLightModalColorWheel) {
-        ColorWheelDialog(
-            onDismissRequest = { showLightModalColorWheel = false },
-            onColorSelected = { color ->
-                viewModel.lightModalBackgroundColor = color
-                showLightModalColorWheel = false
-            },
-            initialColor = viewModel.lightModalBackgroundColor
-        )
-    }
-    if (showDarkModalColorWheel) {
-        ColorWheelDialog(
-            onDismissRequest = { showDarkModalColorWheel = false },
-            onColorSelected = { color ->
-                viewModel.darkModalBackgroundColor = color
-                showDarkModalColorWheel = false
-            },
-            initialColor = viewModel.darkModalBackgroundColor
-        )
-    }
-    if (showWordsOfJesusColorWheel) {
-        ColorWheelDialog(
-            onDismissRequest = { showWordsOfJesusColorWheel = false },
-            onColorSelected = { color ->
-                viewModel.wordsOfJesus = color
-                showWordsOfJesusColorWheel = false
-            },
-            initialColor = viewModel.wordsOfJesus
-        )
-    }
     if (showHeaderButtonsColorWheel) {
         ColorWheelDialog(
-            onDismissRequest = { showWordsOfJesusColorWheel = false },
+            onDismissRequest = { showHeaderButtonsColorWheel = false },
             onColorSelected = { color ->
                 viewModel.headerButtonsColor = color
                 showHeaderButtonsColorWheel = false
@@ -1181,11 +1001,7 @@ fun SettingsScreen() {
                     Text("• Recopy commentary databases")
                     Text("• Note: Your bookmarks and settings will not be affected")
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        "This may take a few moments. Continue?",
-                        color = primary,
-                        fontWeight = FontWeight.Medium
-                    )
+                    Text("This may take a few moments. Continue?", color = primary, fontWeight = FontWeight.Medium)
                 }
             },
             confirmButton = {
@@ -1196,14 +1012,10 @@ fun SettingsScreen() {
                         showRefreshResultDialog = true
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Refresh")
-                }
+                ) { Text("Refresh") }
             },
             dismissButton = {
-                TextButton(onClick = { showRefreshConfirmDialog = false }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { showRefreshConfirmDialog = false }) { Text("Cancel") }
             }
         )
     }
@@ -1224,137 +1036,36 @@ fun SettingsScreen() {
             text = {
                 Column {
                     if (viewModel.isRefreshingDatabases) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                             Text("Please wait...")
                         }
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            viewModel.lastRefreshMessage,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Text(viewModel.lastRefreshMessage, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     } else {
                         if (viewModel.lastRefreshSuccess) {
-                            Icon(
-                                Icons.Default.Refresh,
-                                contentDescription = "Success",
-                                tint = primary,
-                                modifier = Modifier.size(40.dp)
-                            )
+                            Icon(Icons.Default.Refresh, contentDescription = "Success", tint = primary, modifier = Modifier.size(40.dp))
                             Spacer(modifier = Modifier.height(12.dp))
                         }
                         Text(viewModel.lastRefreshMessage, style = MaterialTheme.typography.bodyMedium)
                         if (!viewModel.lastRefreshSuccess) {
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                "Try restarting the app if issues persist.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Text("Try restarting the app if issues persist.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
             },
             confirmButton = {
                 if (!viewModel.isRefreshingDatabases) {
-                    TextButton(
-                        onClick = {
-                            showRefreshResultDialog = false
-                            viewModel.lastRefreshMessage = ""
-                        }
-                    ) {
-                        Text("OK")
-                    }
+                    TextButton(onClick = {
+                        showRefreshResultDialog = false
+                        viewModel.lastRefreshMessage = ""
+                    }) { Text("OK") }
                 }
             }
         )
     }
     if (showAboutDialog) {
         AboutDialog(onDismiss = { showAboutDialog = false })
-    }
-
-    if (showVersionInfoDialog && versionInfoForDialog.isNotEmpty()) {
-        LaunchedEffect(versionInfoForDialog) {
-            isLoadingInfo = true
-            bibleInfoData = withContext(Dispatchers.IO) {
-                BibleVersionInfoRepository.getVersionInfo(
-                    context,
-                    versionInfoForDialog
-                )
-            }
-            isLoadingInfo = false
-        }
-
-        AlertDialog(
-            onDismissRequest = {
-                showVersionInfoDialog = false
-                bibleInfoData = null
-            },
-            title = {
-                Text(
-                    text = "Version Info",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = viewModel.fontSize.sp
-                )
-            },
-            text = {
-                if (isLoadingInfo) {
-                    Box(
-                        modifier = Modifier.fillMaxWidth().height(100.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }  else {
-                    val info = bibleInfoData
-                    if (info != null) {
-                        Column {
-                            val cleanDescription = info.description?.let {
-                                SimpleVerseProcessor.stripXmlTags(it)
-                            }
-                            val cleanDetailedInfo = info.detailedInfo?.let {
-                                SimpleVerseProcessor.stripXmlTags(it)
-                            }
-
-                            if (!cleanDescription.isNullOrEmpty()) {
-                                Text(
-                                    text = cleanDescription,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    modifier = Modifier.padding(bottom = 12.dp)
-                                )
-                            }
-                            if (!cleanDetailedInfo.isNullOrEmpty()) {
-                                Text(
-                                    text = cleanDetailedInfo,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            if (cleanDescription.isNullOrEmpty() && cleanDetailedInfo.isNullOrEmpty()) {
-                                Text(
-                                    text = "No detailed information available.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            }
-                        }
-                    } else {
-                        Text(
-                            text = "Could not load version information.",
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showVersionInfoDialog = false }) {
-                    Text("Close")
-                }
-            }
-        )
     }
 }

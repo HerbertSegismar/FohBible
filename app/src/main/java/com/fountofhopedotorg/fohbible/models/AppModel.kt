@@ -53,6 +53,9 @@ class AppViewModel : ViewModel() {
         "nm9.jpg", "nm10.jpg", "nm11.jpg", "nm12.jpg", "nm13.jpg", "nm14.jpg",
         "om1.jpg", "om2.jpg", "om3.jpg", "om4.jpg", "om5.jpg"
     )
+
+    var versionInfoForDialog by mutableStateOf("")
+    var showVersionInfoDialog by mutableStateOf(false)
     var selectedPrimaryDictLanguage by mutableStateOf("English")
     var selectedSecondaryDictLanguage by mutableStateOf("English")
     var selectedPrimaryDictionary by mutableStateOf("atsbd")

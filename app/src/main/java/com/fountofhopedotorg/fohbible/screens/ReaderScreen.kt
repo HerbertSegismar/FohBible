@@ -1,4 +1,5 @@
 package com.fountofhopedotorg.fohbible.screens
+
 import android.content.Intent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -48,12 +49,54 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+private sealed class ReaderModalState {
+    object None : ReaderModalState()
+    data class Word(
+        val word: String,
+        val definition: String,
+        val dbHelper: DatabaseHelper?,
+        val isOldTestament: Boolean,
+        val useSecondaryDictionary: Boolean
+    ) : ReaderModalState()
+    data class Strong(
+        val strongNumber: String,
+        val definition: String,
+        val dbHelper: DatabaseHelper?,
+        val isOldTestament: Boolean
+    ) : ReaderModalState()
+    data class Commentary(
+        val title: String,
+        val content: String,
+        val dbHelper: DatabaseHelper?,
+        val isOldTestament: Boolean
+    ) : ReaderModalState()
+    data class CrossRef(
+        val source: String,
+        val content: String,
+        val dbHelper: DatabaseHelper?,
+        val book: Int,
+        val chapter: Int,
+        val verse: Int,
+        val isOldTestament: Boolean
+    ) : ReaderModalState()
+    data class VerseCommentary(
+        val book: Int,
+        val chapter: Int,
+        val verse: Int,
+        val dbHelper: DatabaseHelper?,
+        val isOldTestament: Boolean
+    ) : ReaderModalState()
+}
+
 @Composable
 fun ReaderScreen(
     passage: PassageSelection,
     databaseHelper: DatabaseHelper?,
     onPassageChange: (PassageSelection) -> Unit = {}
 ) {
+    var verseCommentaryBook by remember { mutableIntStateOf(0) }
+    var verseCommentaryChapter by remember { mutableIntStateOf(0) }
+    var verseCommentaryVerse by remember { mutableIntStateOf(0) }
     var secondaryDictionaryModal by remember { mutableStateOf(false) }
     val viewModel = viewModel<AppViewModel>()
     val colorScheme = MaterialTheme.colorScheme
@@ -168,23 +211,7 @@ fun ReaderScreen(
     var strongDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var commentaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     var secondaryCommentaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
-    var showWordModal by remember { mutableStateOf(false) }
-    var currentWord by remember { mutableStateOf("") }
-    var wordDefinition by remember { mutableStateOf("") }
-    var wordDb by remember { mutableStateOf<DatabaseHelper?>(null) }
-    var showStrongsModal by remember { mutableStateOf(false) }
-    var currentStrongNumber by remember { mutableStateOf("") }
-    var strongDefinition by remember { mutableStateOf("") }
-    var strongDb by remember { mutableStateOf<DatabaseHelper?>(null) }
-    var showCommentaryModal by remember { mutableStateOf(false) }
-    var commentaryTitle by remember { mutableStateOf("") }
-    var commentaryContent by remember { mutableStateOf("") }
-    var commentaryBibleDb by remember { mutableStateOf<DatabaseHelper?>(null) }
-    var showVerseCommentaryModal by remember { mutableStateOf(false) }
-    var verseCommentaryBook by remember { mutableIntStateOf(0) }
-    var verseCommentaryChapter by remember { mutableIntStateOf(0) }
-    var verseCommentaryVerse by remember { mutableIntStateOf(0) }
-
+    var modalState by remember { mutableStateOf<ReaderModalState>(ReaderModalState.None) }
     LaunchedEffect(viewModel.selectedPrimaryDictionary, databaseHelper?.databaseName, viewModel.selectedSecondaryDictionary) {
         primaryDictionaryDbHelper?.close()
         primaryDictionaryDbHelper = if (viewModel.selectedPrimaryDictionary.isNotBlank()) {
@@ -207,6 +234,7 @@ fun ReaderScreen(
         secondaryCommentaryDbHelper?.close()
         secondaryCommentaryDbHelper = createCommentaryHelperIfExists(contextFont, secondaryDatabaseHelper?.databaseName)
     }
+
     val onPrimaryWordPress: (String) -> Unit = { word ->
         secondaryDictionaryModal = false
         currentModalIsOldTestament = viewModel.isOldTestament
@@ -214,10 +242,13 @@ fun ReaderScreen(
         val definition = primaryDictionaryDbHelper?.getWordDefinition(trimmed)
             ?: "Definition not found."
 
-        currentWord = trimmed
-        wordDefinition = definition
-        wordDb = databaseHelper
-        showWordModal = true
+        modalState = ReaderModalState.Word(
+            word = trimmed,
+            definition = definition,
+            dbHelper = databaseHelper,
+            isOldTestament = currentModalIsOldTestament,
+            useSecondaryDictionary = secondaryDictionaryModal
+        )
     }
 
     val onSecondaryWordPress: (String) -> Unit = { word ->
@@ -228,61 +259,78 @@ fun ReaderScreen(
             ?: primaryDictionaryDbHelper?.getWordDefinition(trimmed)
             ?: "Definition not found."
 
-        currentWord = trimmed
-        wordDefinition = definition
-        wordDb = secondaryDatabaseHelper ?: databaseHelper
-        showWordModal = true
+        modalState = ReaderModalState.Word(
+            word = trimmed,
+            definition = definition,
+            dbHelper = secondaryDatabaseHelper ?: databaseHelper,
+            isOldTestament = currentModalIsOldTestament,
+            useSecondaryDictionary = secondaryDictionaryModal
+        )
     }
+
     val onStrongsPress: (String, Int, Boolean) -> Unit = { strongNumber, _, isPrimary ->
         val isOldTestamentForVersion = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
         currentModalIsOldTestament = isOldTestamentForVersion
         val trimmed = strongNumber.trim()
         val prefixed = if (trimmed.firstOrNull()?.isLetter() ?: false) trimmed else (if (isOldTestamentForVersion) "H" else "G") + trimmed
         val definition = strongDbHelper?.getStrongDefinition(prefixed) ?: "Strong's definition not found."
-        currentStrongNumber = prefixed
-        strongDefinition = definition
-        strongDb = if (isPrimary) databaseHelper else secondaryDatabaseHelper
-        showStrongsModal = true
+        modalState = ReaderModalState.Strong(
+            strongNumber = prefixed,
+            definition = definition,
+            dbHelper = if (isPrimary) databaseHelper else secondaryDatabaseHelper,
+            isOldTestament = currentModalIsOldTestament
+        )
     }
+
     val onTagPress: (String, Int, Int, Int, Boolean) -> Unit = { marker, bookNumber, chapter, verseNumber, isPrimary ->
         currentModalIsOldTestament = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
         val dbHelper = if (isPrimary) commentaryDbHelper else secondaryCommentaryDbHelper
         val text = dbHelper?.getCommentary(bookNumber, chapter, verseNumber, marker) ?: "No commentary found."
-        commentaryTitle = "Notes on ${BibleData.getBookByCustomNumber(bookNumber)?.name ?: ""} $chapter:$verseNumber$marker"
-        commentaryContent = text
-        commentaryBibleDb = if (isPrimary) databaseHelper else secondaryDatabaseHelper
-        showCommentaryModal = true
+        val title = "Notes on ${BibleData.getBookByCustomNumber(bookNumber)?.name ?: ""} $chapter:$verseNumber$marker"
+        modalState = ReaderModalState.Commentary(
+            title = title,
+            content = text,
+            dbHelper = if (isPrimary) databaseHelper else secondaryDatabaseHelper,
+            isOldTestament = currentModalIsOldTestament
+        )
     }
+
     val onVerseCommentaryClick: (Int, Int, Int) -> Unit = { book, chap, verseNum ->
         verseCommentaryBook = book
         verseCommentaryChapter = chap
         verseCommentaryVerse = verseNum
         currentModalIsOldTestament = viewModel.isOldTestament
-        showVerseCommentaryModal = true
+        modalState = ReaderModalState.VerseCommentary(
+            book = book,
+            chapter = chap,
+            verse = verseNum,
+            dbHelper = databaseHelper,
+            isOldTestament = currentModalIsOldTestament
+        )
     }
+
     var showMenu by remember { mutableStateOf(false) }
     var showBgModal by remember { mutableStateOf(false) }
     var showVerseOptions by remember { mutableStateOf(false) }
     var selectedVerse by remember { mutableStateOf<Verse?>(null) }
     var selectedPassage by remember { mutableStateOf<PassageSelection?>(null) }
     var selectedIsPrimary by remember { mutableStateOf(false) }
+
     val onVerseLongPress: (Verse, PassageSelection, Boolean) -> Unit = { verse, currentPassage, isPrimary ->
         selectedVerse = verse
         selectedPassage = currentPassage
         selectedIsPrimary = isPrimary
         showVerseOptions = true
     }
+
     var refreshKey by remember { mutableIntStateOf(0) }
     val subheadingsDbHelper = remember { DatabaseHelper(contextFont, "kjvsubheadings.sqlite3") }
-    var showCrossRefModal by remember { mutableStateOf(false) }
-    var crossRefSource by remember { mutableStateOf("") }
-    var crossRefContent by remember { mutableStateOf("") }
-    var crossRefBibleDb by remember { mutableStateOf<DatabaseHelper?>(null) }
+
     val onCrossRefClick: (Int, Int, Int, Boolean) -> Unit = { book, chapter, verse, isPrimary ->
         val dbForVerses = if (isPrimary) databaseHelper else secondaryDatabaseHelper
         val refs = crossRefHelper?.getCrossReferences(book, chapter, verse) ?: emptyList()
         val bookName = BibleData.getBookByCustomNumber(book)?.name ?: book.toString()
-        crossRefSource = "References for $bookName $chapter:$verse"
+        val source = "References for $bookName $chapter:$verse"
         val htmlItems = refs.joinToString("<br>") { ref ->
             val toBook = BibleData.getBookByCustomNumber(ref.bookTo)?.name ?: ref.bookTo.toString()
             val verseRange = if (ref.verseToStart == ref.verseToEnd) {
@@ -293,14 +341,21 @@ fun ReaderScreen(
             val href = "B:${ref.bookTo} ${ref.chapterTo}:$verseRange"
             "<a href=\"$href\">$toBook ${ref.chapterTo}:$verseRange</a>"
         }
-        crossRefContent = htmlItems
-        crossRefBibleDb = dbForVerses
         crossRefBook = book
         crossRefChapter = chapter
         crossRefVerse = verse
         currentModalIsOldTestament = if (isPrimary) viewModel.isOldTestament else viewModel.isSecondaryOldTestament
-        showCrossRefModal = true
+        modalState = ReaderModalState.CrossRef(
+            source = source,
+            content = htmlItems,
+            dbHelper = dbForVerses,
+            book = book,
+            chapter = chapter,
+            verse = verse,
+            isOldTestament = currentModalIsOldTestament
+        )
     }
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
@@ -474,76 +529,81 @@ fun ReaderScreen(
                 )
             }
         }
-        InteractiveModal(
-            show = showWordModal,
-            onDismiss = { showWordModal = false },
-            onNavigateToReader = { p ->
-                viewModel.primaryPassage = p
-                viewModel.navigateTo(Screen.Reader(p))
-            },
-            databaseHelper = wordDb,
-            initialType = "definition",
-            word = currentWord,
-            definition = wordDefinition,
-            isOldTestament = currentModalIsOldTestament,
-            useSecondaryDictionary = secondaryDictionaryModal
-        )
-        InteractiveModal(
-            show = showStrongsModal,
-            onDismiss = { showStrongsModal = false },
-            onNavigateToReader = { p ->
-                viewModel.primaryPassage = p
-                viewModel.navigateTo(Screen.Reader(p))
-            },
-            databaseHelper = strongDb,
-            initialType = "strong",
-            strongNumber = currentStrongNumber,
-            strongDefinition = strongDefinition,
-            isOldTestament = currentModalIsOldTestament
-        )
-        InteractiveModal(
-            show = showCommentaryModal,
-            onDismiss = { showCommentaryModal = false },
-            onNavigateToReader = { p ->
-                viewModel.primaryPassage = p
-                viewModel.navigateTo(Screen.Reader(p))
-            },
-            databaseHelper = commentaryBibleDb,
-            initialType = "commentary",
-            initialTitle = commentaryTitle,
-            initialContent = commentaryContent,
-            isOldTestament = currentModalIsOldTestament
-        )
-        InteractiveModal(
-            show = showCrossRefModal,
-            onDismiss = { showCrossRefModal = false },
-            onNavigateToReader = { p ->
-                viewModel.primaryPassage = p
-                viewModel.navigateTo(Screen.Reader(p))
-            },
-            databaseHelper = crossRefBibleDb,
-            initialType = "crossreference",
-            initialTitle = crossRefSource,
-            initialContent = crossRefContent,
-            bookNumber = crossRefBook,
-            chapter = crossRefChapter,
-            verse = crossRefVerse,
-            isOldTestament = currentModalIsOldTestament
-        )
-        InteractiveModal(
-            show = showVerseCommentaryModal,
-            onDismiss = { showVerseCommentaryModal = false },
-            onNavigateToReader = { p ->
-                viewModel.primaryPassage = p
-                viewModel.navigateTo(Screen.Reader(p))
-            },
-            databaseHelper = databaseHelper,
-            initialType = "versecommentary",
-            bookNumber = verseCommentaryBook,
-            chapter = verseCommentaryChapter,
-            verse = verseCommentaryVerse,
-            isOldTestament = currentModalIsOldTestament
-        )
+
+        when (val state = modalState) {
+            is ReaderModalState.Word -> InteractiveModal(
+                show = true,
+                onDismiss = { modalState = ReaderModalState.None },
+                onNavigateToReader = { p ->
+                    viewModel.primaryPassage = p
+                    viewModel.navigateTo(Screen.Reader(p))
+                },
+                databaseHelper = state.dbHelper,
+                initialType = "definition",
+                word = state.word,
+                definition = state.definition,
+                isOldTestament = state.isOldTestament,
+                useSecondaryDictionary = state.useSecondaryDictionary
+            )
+            is ReaderModalState.Strong -> InteractiveModal(
+                show = true,
+                onDismiss = { modalState = ReaderModalState.None },
+                onNavigateToReader = { p ->
+                    viewModel.primaryPassage = p
+                    viewModel.navigateTo(Screen.Reader(p))
+                },
+                databaseHelper = state.dbHelper,
+                initialType = "strong",
+                strongNumber = state.strongNumber,
+                strongDefinition = state.definition,
+                isOldTestament = state.isOldTestament
+            )
+            is ReaderModalState.Commentary -> InteractiveModal(
+                show = true,
+                onDismiss = { modalState = ReaderModalState.None },
+                onNavigateToReader = { p ->
+                    viewModel.primaryPassage = p
+                    viewModel.navigateTo(Screen.Reader(p))
+                },
+                databaseHelper = state.dbHelper,
+                initialType = "commentary",
+                initialTitle = state.title,
+                initialContent = state.content,
+                isOldTestament = state.isOldTestament
+            )
+            is ReaderModalState.CrossRef -> InteractiveModal(
+                show = true,
+                onDismiss = { modalState = ReaderModalState.None },
+                onNavigateToReader = { p ->
+                    viewModel.primaryPassage = p
+                    viewModel.navigateTo(Screen.Reader(p))
+                },
+                databaseHelper = state.dbHelper,
+                initialType = "crossreference",
+                initialTitle = state.source,
+                initialContent = state.content,
+                bookNumber = state.book,
+                chapter = state.chapter,
+                verse = state.verse,
+                isOldTestament = state.isOldTestament
+            )
+            is ReaderModalState.VerseCommentary -> InteractiveModal(
+                show = true,
+                onDismiss = { modalState = ReaderModalState.None },
+                onNavigateToReader = { p ->
+                    viewModel.primaryPassage = p
+                    viewModel.navigateTo(Screen.Reader(p))
+                },
+                databaseHelper = state.dbHelper,
+                initialType = "versecommentary",
+                bookNumber = state.book,
+                chapter = state.chapter,
+                verse = state.verse,
+                isOldTestament = state.isOldTestament
+            )
+            ReaderModalState.None -> {}
+        }
+
         val selVerse = selectedVerse
         val selPassage = selectedPassage
         val selIsPrimary = selectedIsPrimary

@@ -1,8 +1,7 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
 package com.fountofhopedotorg.fohbible.screens
+
 import android.content.Context
-import android.os.Handler
-import android.os.Looper
+import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -28,40 +27,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SearchBar
-import androidx.compose.material3.SearchBarDefaults
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -84,21 +58,27 @@ import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.data.Verse
 import com.fountofhopedotorg.fohbible.models.AppViewModel
+import com.fountofhopedotorg.fohbible.modals.VersionSelectionModal
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
 import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import com.fountofhopedotorg.fohbible.modals.VersionSelectionModal
+import kotlinx.coroutines.withContext
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookmarksScreen(
-    databaseHelper: DatabaseHelper? = null,
     onNavigateToReader: (PassageSelection) -> Unit
 ) {
+    val viewModel: AppViewModel = viewModel()
     val context = LocalContext.current
-    val appViewModel: AppViewModel = viewModel()
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val lazyListState = rememberLazyListState()
+
     var bookmarkedVerses by remember { mutableStateOf<List<Verse>>(emptyList()) }
-    var selectedDbName by remember { mutableStateOf(appViewModel.currentDbName) }
-    var selectedVersionAbbr by remember { mutableStateOf(appViewModel.currentVersionAbbr) }
+    var selectedDbName by remember { mutableStateOf(viewModel.currentDbName) }
+    var selectedVersionAbbr by remember { mutableStateOf(viewModel.currentVersionAbbr) }
     var multiSelectMode by remember { mutableStateOf(false) }
     val selectedVerses = remember { mutableStateListOf<Verse>() }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
@@ -107,15 +87,12 @@ fun BookmarksScreen(
     var showSortOptions by remember { mutableStateOf(false) }
     var sortOrder by remember { mutableStateOf(SortOrder.DATE_ADDED) }
     var showVersionModal by remember { mutableStateOf(false) }
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    val lazyListState = rememberLazyListState()
+
     val dbHelper = remember(selectedDbName) { DatabaseHelper(context as MainActivity, selectedDbName) }
+
     LaunchedEffect(selectedDbName, multiSelectMode) {
         if (!multiSelectMode) {
-            loadBookmarks(context, databaseHelper, selectedDbName) { verses ->
-                bookmarkedVerses = sortVerses(verses, sortOrder)
-            }
+            bookmarkedVerses = sortVerses(loadBookmarks(dbHelper), sortOrder)
         }
     }
     LaunchedEffect(sortOrder) {
@@ -123,18 +100,17 @@ fun BookmarksScreen(
             bookmarkedVerses = sortVerses(bookmarkedVerses, sortOrder)
         }
     }
+
     val filteredVerses = remember(bookmarkedVerses, searchQuery) {
-        if (searchQuery.isEmpty()) {
-            bookmarkedVerses
-        } else {
-            bookmarkedVerses.filter { verse ->
-                verse.text.contains(searchQuery, ignoreCase = true) ||
-                        verse.bookName?.contains(searchQuery, ignoreCase = true) == true ||
-                        verse.verseNumber.toString().contains(searchQuery) ||
-                        verse.chapter?.toString()?.contains(searchQuery) == true
-            }
+        if (searchQuery.isEmpty()) bookmarkedVerses
+        else bookmarkedVerses.filter { verse ->
+            verse.text.contains(searchQuery, ignoreCase = true) ||
+                    verse.bookName?.contains(searchQuery, ignoreCase = true) == true ||
+                    verse.verseNumber.toString().contains(searchQuery) ||
+                    verse.chapter?.toString()?.contains(searchQuery) == true
         }
     }
+
     Scaffold(
         containerColor = Color.Transparent,
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -162,8 +138,8 @@ fun BookmarksScreen(
         floatingActionButton = {
             AnimatedVisibility(
                 visible = selectedVerses.isNotEmpty() && multiSelectMode,
-                enter = expandVertically(animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)),
-                exit = shrinkVertically(animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+                enter = expandVertically(spring(dampingRatio = Spring.DampingRatioMediumBouncy)),
+                exit = shrinkVertically(spring(dampingRatio = Spring.DampingRatioMediumBouncy))
             ) {
                 FloatingActionButton(
                     onClick = { showDeleteConfirmation = true },
@@ -175,15 +151,11 @@ fun BookmarksScreen(
             }
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
+        Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
             AnimatedVisibility(
                 visible = searchActive,
-                enter = expandVertically(animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)),
-                exit = shrinkVertically(animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+                enter = expandVertically(spring(dampingRatio = Spring.DampingRatioMediumBouncy)),
+                exit = shrinkVertically(spring(dampingRatio = Spring.DampingRatioMediumBouncy))
             ) {
                 SearchBar(
                     inputField = {
@@ -194,11 +166,11 @@ fun BookmarksScreen(
                             expanded = searchActive,
                             onExpandedChange = { searchActive = it },
                             placeholder = { Text("Search in bookmarks...") },
-                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                            leadingIcon = { Icon(Icons.Default.Search, null) },
                             trailingIcon = {
                                 if (searchQuery.isNotEmpty()) {
                                     IconButton(onClick = { searchQuery = "" }) {
-                                        Icon(Icons.Default.Close, contentDescription = "Clear")
+                                        Icon(Icons.Default.Close, "Clear")
                                     }
                                 }
                             }
@@ -206,105 +178,100 @@ fun BookmarksScreen(
                     },
                     expanded = searchActive,
                     onExpandedChange = { searchActive = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                }
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {}
             }
+
             if (!searchActive) {
                 Column(modifier = Modifier.fillMaxWidth().padding(18.dp)) {
                     Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showVersionModal = true },
+                        modifier = Modifier.fillMaxWidth().clickable { showVersionModal = true },
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                         )
                     ) {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Column {
                                 Text(
-                                    text = "Bible Version",
+                                    "Bible Version",
                                     style = MaterialTheme.typography.labelLarge,
                                     fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.primary
                                 )
                                 Text(
-                                    text = "$selectedVersionAbbr - ${BibleVersionUtils.descriptionMap[selectedDbName] ?: "Bible translation"}",
+                                    "$selectedVersionAbbr - ${BibleVersionUtils.descriptionMap[selectedDbName] ?: "Bible translation"}",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            Icon(
-                                Icons.Default.ArrowDropDown,
-                                contentDescription = "Change version",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
+                            IconButton(
+                                onClick = {
+                                    viewModel.showVersionInfoDialog = true
+                                    viewModel.versionInfoForDialog = viewModel.currentDbName
+                                },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                            }
                         }
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
+
+            Spacer(Modifier.height(8.dp))
+
             if (filteredVerses.isEmpty()) {
                 EmptyBookmarksScreen(searchQuery.isNotEmpty())
             } else {
                 LazyColumn(
                     state = lazyListState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp),
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(filteredVerses, key = { verse -> "${verse.bookName}-${verse.chapter}-${verse.verseNumber}" }) { verse ->
-                        SwipeToDeleteBookmarkItem(
+                    items(filteredVerses, key = { "${it.bookName}-${it.chapter}-${it.verseNumber}" }) { verse ->
+                        BookmarkItem(
                             verse = verse,
                             isSelected = selectedVerses.contains(verse),
                             multiSelectMode = multiSelectMode,
                             onToggleSelect = {
                                 if (multiSelectMode) {
-                                    if (selectedVerses.contains(verse)) {
-                                        selectedVerses.remove(verse)
-                                    } else {
-                                        selectedVerses.add(verse)
-                                    }
+                                    if (selectedVerses.contains(verse)) selectedVerses.remove(verse)
+                                    else selectedVerses.add(verse)
                                 }
                             },
                             onRemove = {
                                 scope.launch {
-                                    removeBookmark(verse, dbHelper)
-                                    bookmarkedVerses = bookmarkedVerses.filter { it != verse }
-                                    snackbarHostState.showSnackbar(
-                                        "Bookmark removed",
-                                        actionLabel = "Undo",
-                                        duration = androidx.compose.material3.SnackbarDuration.Short
-                                    ).also { action ->
-                                        if (action == androidx.compose.material3.SnackbarResult.ActionPerformed) {
-                                            dbHelper.addBookmark(verse)
-                                            bookmarkedVerses = bookmarkedVerses + verse
+                                    deleteBookmarksWithUndo(
+                                        bookmarksToDelete = listOf(verse),
+                                        dbHelper = dbHelper,
+                                        snackbarHostState = snackbarHostState,
+                                        onDeleted = { deleted ->
+                                            bookmarkedVerses = bookmarkedVerses.filter { it !in deleted }
+                                        },
+                                        onRestore = { restored ->
+                                            bookmarkedVerses = sortVerses(bookmarkedVerses + restored, sortOrder)
                                         }
-                                    }
+                                    )
                                 }
                             },
                             onNavigate = {
                                 if (!multiSelectMode) {
-                                    appViewModel.currentDbName = selectedDbName
-                                    appViewModel.currentVersionAbbr = selectedVersionAbbr
+                                    viewModel.currentDbName = selectedDbName
+                                    viewModel.currentVersionAbbr = selectedVersionAbbr
                                     val bookNumber = BibleData.getBookByName(verse.bookName ?: "")?.customNumber ?: 1
-                                    val passage = PassageSelection(
-                                        bookNumber = bookNumber,
-                                        bookName = verse.bookName ?: "Genesis",
-                                        chapter = verse.chapter ?: 1,
-                                        verse = verse.verseNumber
+                                    onNavigateToReader(
+                                        PassageSelection(
+                                            bookNumber = bookNumber,
+                                            bookName = verse.bookName ?: "Genesis",
+                                            chapter = verse.chapter ?: 1,
+                                            verse = verse.verseNumber
+                                        )
                                     )
-                                    onNavigateToReader(passage)
                                 }
                             }
                         )
@@ -315,55 +282,52 @@ fun BookmarksScreen(
         if (showSortOptions) {
             SortOptionsDialog(
                 currentSortOrder = sortOrder,
-                onSortOrderSelected = {
-                    sortOrder = it
-                    showSortOptions = false
-                },
+                onSortOrderSelected = { sortOrder = it; showSortOptions = false },
                 onDismiss = { showSortOptions = false }
             )
         }
         if (showDeleteConfirmation) {
+            val bookmarksToDelete = selectedVerses.toList()
             DeleteConfirmationDialog(
-                count = selectedVerses.size,
+                count = bookmarksToDelete.size,
                 onConfirm = {
-                    selectedVerses.forEach { verse ->
-                        removeBookmark(verse, dbHelper)
-                    }
-                    bookmarkedVerses = bookmarkedVerses.filter { it !in selectedVerses }
-                    selectedVerses.clear()
-                    multiSelectMode = false
-                    showDeleteConfirmation = false
                     scope.launch {
-                        snackbarHostState.showSnackbar(
-                            "${selectedVerses.size} bookmarks removed",
-                            actionLabel = "Undo",
-                            duration = androidx.compose.material3.SnackbarDuration.Short
-                        ).also { action ->
-                            if (action == androidx.compose.material3.SnackbarResult.ActionPerformed) {
-                                selectedVerses.forEach { verse ->
-                                    dbHelper.addBookmark(verse)
-                                }
-                                bookmarkedVerses = bookmarkedVerses + selectedVerses
+                        deleteBookmarksWithUndo(
+                            bookmarksToDelete = bookmarksToDelete,
+                            dbHelper = dbHelper,
+                            snackbarHostState = snackbarHostState,
+                            onDeleted = { deleted ->
+                                bookmarkedVerses = bookmarkedVerses.filter { it !in deleted }
+                                selectedVerses.clear()
+                                multiSelectMode = false
+                            },
+                            onRestore = { restored ->
+                                bookmarkedVerses = sortVerses(bookmarkedVerses + restored, sortOrder)
+                                selectedVerses.clear()
+                                multiSelectMode = false
                             }
-                        }
+                        )
                     }
+                    showDeleteConfirmation = false
                 },
                 onDismiss = { showDeleteConfirmation = false }
             )
         }
         if (showVersionModal) {
             VersionSelectionModal(
-                currentVersionKey = selectedDbName,
+                currentVersionKey = viewModel.currentDbName,
                 isSecondary = false,
                 onVersionSelected = { file ->
                     selectedDbName = file
                     selectedVersionAbbr = BibleVersionUtils.versionMap[file] ?: "Bible"
+                    viewModel.currentDbName = file
+                    viewModel.currentVersionAbbr = selectedVersionAbbr
                     showVersionModal = false
                 },
                 onDismiss = { showVersionModal = false },
                 colors = mapOf(
                     "primary" to MaterialTheme.colorScheme.primary,
-                    "card" to if (appViewModel.darkTheme) appViewModel.darkModalBackgroundColor else appViewModel.lightModalBackgroundColor,
+                    "card" to if (viewModel.darkTheme) viewModel.darkModalBackgroundColor else viewModel.lightModalBackgroundColor,
                     "text" to MaterialTheme.colorScheme.onSurface,
                     "muted" to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     "border" to MaterialTheme.colorScheme.surfaceVariant
@@ -372,6 +336,64 @@ fun BookmarksScreen(
         }
     }
 }
+private suspend fun deleteBookmarksWithUndo(
+    bookmarksToDelete: List<Verse>,
+    dbHelper: DatabaseHelper,
+    snackbarHostState: SnackbarHostState,
+    onDeleted: (List<Verse>) -> Unit,
+    onRestore: (List<Verse>) -> Unit
+) {
+    withContext(Dispatchers.IO) {
+        bookmarksToDelete.forEach { dbHelper.removeBookmark(it) }
+    }
+    onDeleted(bookmarksToDelete)
+
+    val result = snackbarHostState.showSnackbar(
+        message = "${bookmarksToDelete.size} bookmark${if (bookmarksToDelete.size != 1) "s" else ""} removed",
+        actionLabel = "Undo",
+        duration = SnackbarDuration.Short
+    )
+    if (result == SnackbarResult.ActionPerformed) {
+        withContext(Dispatchers.IO) {
+            bookmarksToDelete.forEach { dbHelper.addBookmark(it) }
+        }
+        onRestore(bookmarksToDelete)
+    }
+}
+private suspend fun loadBookmarks(dbHelper: DatabaseHelper): List<Verse> =
+    withContext(Dispatchers.IO) { dbHelper.getBookmarks() }
+
+private fun shareVerses(context: Context, verses: List<Verse>) {
+    val text = verses.joinToString("\n\n") { verse ->
+        "${verse.bookName} ${verse.chapter}:${verse.verseNumber}\n${SimpleVerseProcessor.stripXmlTags(verse.text)}"
+    }
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        putExtra(Intent.EXTRA_TEXT, text)
+        type = "text/plain"
+    }
+    context.startActivity(Intent.createChooser(intent, null))
+}
+
+private fun sortVerses(verses: List<Verse>, sortOrder: SortOrder): List<Verse> = when (sortOrder) {
+    SortOrder.BOOK -> verses.sortedWith(
+        compareBy<Verse> { BibleData.getBookByName(it.bookName ?: "")?.customNumber ?: 0 }
+            .thenBy { it.chapter ?: 0 }
+            .thenBy { it.verseNumber }
+    )
+    SortOrder.CHAPTER -> verses.sortedWith(
+        compareBy<Verse> { it.chapter ?: 0 }
+            .thenBy { BibleData.getBookByName(it.bookName ?: "")?.customNumber ?: 0 }
+            .thenBy { it.verseNumber }
+    )
+    SortOrder.DATE_ADDED -> verses
+}
+
+enum class SortOrder(val displayName: String) {
+    BOOK("By Book"),
+    CHAPTER("By Chapter"),
+    DATE_ADDED("Recently Added")
+}
+
 @Composable
 fun NormalTopBar(
     bookmarksCount: Int,
@@ -381,67 +403,32 @@ fun NormalTopBar(
     onMore: () -> Unit
 ) {
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(4.dp)
-            .height(64.dp),
+        modifier = Modifier.fillMaxWidth().shadow(4.dp).height(64.dp),
         color = MaterialTheme.colorScheme.surface
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                text = "Bookmarks ($bookmarksCount)",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onSearch) {
-                    Icon(
-                        Icons.Default.Search,
-                        contentDescription = "Search",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
+            Text("Bookmarks ($bookmarksCount)", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onSearch) { Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.primary) }
                 Box {
                     IconButton(onClick = onSort) {
-                        BadgedBox(
-                            badge = {
-                                if (showSortBadge) {
-                                    Badge(
-                                        modifier = Modifier.size(8.dp),
-                                        containerColor = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                        ) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.Sort,
-                                contentDescription = "Sort",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
+                        BadgedBox(badge = { if (showSortBadge) Badge(modifier = Modifier.size(8.dp), containerColor = MaterialTheme.colorScheme.primary) }) {
+                            Icon(Icons.AutoMirrored.Filled.Sort, null, tint = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
-                IconButton(onClick = onMore) {
-                    Icon(
-                        Icons.Default.MoreVert,
-                        contentDescription = "More options",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
+                IconButton(onClick = onMore) { Icon(Icons.Default.MoreVert, null, tint = MaterialTheme.colorScheme.primary) }
             }
         }
     }
 }
+
 @Composable
-fun SwipeToDeleteBookmarkItem(
+fun BookmarkItem(
     verse: Verse,
     isSelected: Boolean,
     multiSelectMode: Boolean,
@@ -453,47 +440,24 @@ fun SwipeToDeleteBookmarkItem(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(
-                onClick = {
-                    if (multiSelectMode) {
-                        onToggleSelect()
-                    } else {
-                        onNavigate()
-                    }
-                },
-                onLongClick = {
-                    if (!multiSelectMode) {
-                        onToggleSelect()
-                    }
-                }
+                onClick = { if (multiSelectMode) onToggleSelect() else onNavigate() },
+                onLongClick = { if (!multiSelectMode) onToggleSelect() }
             ),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) {
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-            } else {
-                MaterialTheme.colorScheme.primaryContainer
-            }
+            containerColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+            else MaterialTheme.colorScheme.primaryContainer
         )
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     AnimatedVisibility(visible = multiSelectMode) {
-                        Checkbox(
-                            checked = isSelected,
-                            onCheckedChange = { onToggleSelect() },
-                            modifier = Modifier.padding(end = 8.dp)
-                        )
+                        Checkbox(checked = isSelected, onCheckedChange = { onToggleSelect() }, modifier = Modifier.padding(end = 8.dp))
                     }
                     Text(
                         text = "${verse.bookName} ${verse.chapter}:${verse.verseNumber}",
@@ -505,78 +469,31 @@ fun SwipeToDeleteBookmarkItem(
                     )
                 }
                 if (!multiSelectMode) {
-                    Row {
-                        IconButton(
-                            onClick = { onRemove() },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Delete,
-                                contentDescription = "Delete Bookmark",
-                                tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
+                    IconButton(onClick = onRemove, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(Modifier.height(8.dp))
             val annotatedText = buildAnnotatedString {
-                withStyle(
-                    style = SpanStyle(
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
-                    )
-                ) {
+                withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 14.sp)) {
                     append("${verse.verseNumber} ")
                 }
                 append(SimpleVerseProcessor.stripXmlTags(verse.text))
             }
-            Text(
-                text = annotatedText,
-                style = MaterialTheme.typography.bodyMedium,
-                lineHeight = 20.sp,
-                textAlign = TextAlign.Justify,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis
-            )
-            Row(
-                modifier = Modifier.padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = verse.bookName?.take(3) ?: "GEN",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(horizontal = 4.dp)
-                    )
+            Text(annotatedText, style = MaterialTheme.typography.bodyMedium, lineHeight = 20.sp, textAlign = TextAlign.Justify, maxLines = 3, overflow = TextOverflow.Ellipsis)
+            Row(modifier = Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), modifier = Modifier.clip(CircleShape).padding(horizontal = 8.dp, vertical = 4.dp)) {
+                    Text(verse.bookName?.take(3) ?: "GEN", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 4.dp))
                 }
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f),
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = "Ch ${verse.chapter}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.padding(horizontal = 4.dp)
-                    )
+                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f), modifier = Modifier.clip(CircleShape).padding(horizontal = 8.dp, vertical = 4.dp)) {
+                    Text("Ch ${verse.chapter}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(horizontal = 4.dp))
                 }
             }
         }
     }
 }
+
 @Composable
 fun SortOptionsDialog(
     currentSortOrder: SortOrder,
@@ -584,51 +501,23 @@ fun SortOptionsDialog(
     onDismiss: () -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
-                Text(
-                    text = "Sort Bookmarks",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
+        Card(modifier = Modifier.fillMaxWidth().padding(16.dp), shape = RoundedCornerShape(16.dp)) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Sort Bookmarks", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 16.dp))
                 SortOrder.entries.forEach { order ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onSortOrderSelected(order) }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = currentSortOrder == order,
-                            onClick = { onSortOrderSelected(order) }
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = order.displayName,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
+                    Row(modifier = Modifier.fillMaxWidth().clickable { onSortOrderSelected(order) }.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = currentSortOrder == order, onClick = { onSortOrderSelected(order) })
+                        Spacer(Modifier.width(12.dp))
+                        Text(order.displayName, style = MaterialTheme.typography.bodyLarge)
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
-                TextButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.align(Alignment.End)
-                ) {
-                    Text("Done")
-                }
+                Spacer(Modifier.height(16.dp))
+                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Done") }
             }
         }
     }
 }
+
 @Composable
 fun DeleteConfirmationDialog(
     count: Int,
@@ -636,56 +525,18 @@ fun DeleteConfirmationDialog(
     onDismiss: () -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Icon(
-                    Icons.Default.DeleteForever,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(48.dp)
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = if (count == 1) "Delete Bookmark?" else "Delete $count Bookmarks?",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = if (count == 1) "This bookmark will be permanently removed." else "These bookmarks will be permanently removed.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(24.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    TextButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Cancel")
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    TextButton(
-                        onClick = onConfirm,
-                        modifier = Modifier.weight(1f),
-                        colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError
-                        )
-                    ) {
+        Card(modifier = Modifier.fillMaxWidth().padding(16.dp), shape = RoundedCornerShape(16.dp)) {
+            Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Default.DeleteForever, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(48.dp))
+                Spacer(Modifier.height(16.dp))
+                Text(if (count == 1) "Delete Bookmark?" else "Delete $count Bookmarks?", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                Spacer(Modifier.height(8.dp))
+                Text(if (count == 1) "This bookmark will be permanently removed." else "These bookmarks will be permanently removed.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), textAlign = TextAlign.Center)
+                Spacer(Modifier.height(24.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    TextButton(onClick = onDismiss, modifier = Modifier.weight(1f)) { Text("Cancel") }
+                    Spacer(Modifier.width(16.dp))
+                    TextButton(onClick = onConfirm, modifier = Modifier.weight(1f), colors = ButtonDefaults.textButtonColors(containerColor = MaterialTheme.colorScheme.error, contentColor = MaterialTheme.colorScheme.onError)) {
                         Text("Delete")
                     }
                 }
@@ -693,100 +544,16 @@ fun DeleteConfirmationDialog(
         }
     }
 }
+
 @Composable
 fun EmptyBookmarksScreen(isSearching: Boolean) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                Icons.Default.Bookmark,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                modifier = Modifier.size(90.dp)
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = if (isSearching) "No matching bookmarks" else "No bookmarks yet",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = if (isSearching) "Try a different search term" else "Bookmark verses to see them here",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                textAlign = TextAlign.Center
-            )
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Icon(Icons.Default.Bookmark, null, tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f), modifier = Modifier.size(90.dp))
+            Spacer(Modifier.height(12.dp))
+            Text(if (isSearching) "No matching bookmarks" else "No bookmarks yet", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+            Spacer(Modifier.height(8.dp))
+            Text(if (isSearching) "Try a different search term" else "Bookmark verses to see them here", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f), textAlign = TextAlign.Center)
         }
     }
-}
-private fun shareVerses(context: Context, verses: List<Verse>) {
-    val text = verses.joinToString("\n\n") { verse ->
-        "${verse.bookName} ${verse.chapter}:${verse.verseNumber}\n${SimpleVerseProcessor.stripXmlTags(verse.text)}"
-    }
-    val sendIntent = android.content.Intent().apply {
-        action = android.content.Intent.ACTION_SEND
-        putExtra(android.content.Intent.EXTRA_TEXT, text)
-        type = "text/plain"
-    }
-    val shareIntent = android.content.Intent.createChooser(sendIntent, null)
-    context.startActivity(shareIntent)
-}
-private fun sortVerses(verses: List<Verse>, sortOrder: SortOrder): List<Verse> {
-    return when (sortOrder) {
-        SortOrder.BOOK -> verses.sortedWith(
-            compareBy<Verse> { BibleData.getBookByName(it.bookName ?: "")?.customNumber ?: 0 }
-                .thenBy { it.chapter ?: 0 }
-                .thenBy { it.verseNumber }
-        )
-        SortOrder.CHAPTER -> verses.sortedWith(
-            compareBy<Verse> { it.chapter ?: 0 }
-                .thenBy { BibleData.getBookByName(it.bookName ?: "")?.customNumber ?: 0 }
-                .thenBy { it.verseNumber }
-        )
-        SortOrder.DATE_ADDED -> verses
-    }
-}
-enum class SortOrder(val displayName: String) {
-    BOOK("By Book"),
-    CHAPTER("By Chapter"),
-    DATE_ADDED("Recently Added")
-}
-private fun loadBookmarks(
-    context: Context,
-    databaseHelper: DatabaseHelper?,
-    currentDbName: String,
-    onComplete: (List<Verse>) -> Unit
-) {
-    if (databaseHelper != null) {
-        Thread {
-            val verses = databaseHelper.getBookmarks()
-            Handler(Looper.getMainLooper()).post {
-                onComplete(verses)
-            }
-        }.start()
-    } else {
-        Thread {
-            val dbHelper = DatabaseHelper(
-                context as MainActivity,
-                databaseName = currentDbName
-            )
-            val verses = dbHelper.getBookmarks()
-            dbHelper.close()
-            Handler(Looper.getMainLooper()).post {
-                onComplete(verses)
-            }
-        }.start()
-    }
-}
-private fun removeBookmark(verse: Verse, databaseHelper: DatabaseHelper) {
-    Thread {
-        databaseHelper.removeBookmark(verse)
-    }.start()
 }
