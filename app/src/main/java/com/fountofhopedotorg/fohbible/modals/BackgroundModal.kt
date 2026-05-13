@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
+import com.fountofhopedotorg.fohbible.composables.FloatingOrbsBackground
 import com.fountofhopedotorg.fohbible.functions.ColorSplashCanvas
 import com.fountofhopedotorg.fohbible.functions.SelectableBox
 
@@ -41,6 +42,7 @@ import com.fountofhopedotorg.fohbible.functions.SelectableBox
 fun BgModal(
     currentIndex: Int,
     customUri: String?,
+    currentOrbsCount: Int,
     onSelect: (Int) -> Unit,
     onDismiss: () -> Unit,
     onPickCustom: () -> Unit,
@@ -50,6 +52,7 @@ fun BgModal(
     val firstIndex = 1
     val lastIndex = 33
     val randomIndex = 34
+    val floatingOrbsIndex = 36
     val customIndex = 35
 
     val lazyListState = rememberLazyListState()
@@ -57,6 +60,7 @@ fun BgModal(
         val targetPosition = when (currentIndex) {
             in firstIndex..lastIndex -> currentIndex
             randomIndex -> randomIndex
+            floatingOrbsIndex -> floatingOrbsIndex
             customIndex -> customIndex
             else -> 0
         }
@@ -119,6 +123,16 @@ fun BgModal(
                             ColorSplashCanvas()
                         }
                     }
+
+                    item {
+                        SelectableBox(
+                            selected = currentIndex == floatingOrbsIndex,
+                            onClick = { onSelect(floatingOrbsIndex) }
+                        ) {
+                            FloatingOrbsBackground(orbCount = currentOrbsCount)
+                        }
+                    }
+
                     item {
                         if (customUri != null) {
                             SelectableBox(
@@ -164,10 +178,7 @@ fun BgModal(
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                    Text(
-                        text = "Add Custom Image",
-                        color = Color.White
-                    )
+                    Text(text = "Add Custom Image", color = Color.White)
                 }
 
                 if (customUri != null) {

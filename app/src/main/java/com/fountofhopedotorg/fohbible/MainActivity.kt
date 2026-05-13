@@ -160,7 +160,6 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
-    var isLoadingInfo by remember { mutableStateOf(false) }
     var bibleInfoData by remember { mutableStateOf<BibleVersionInfo?>(null) }
     var isLoadingVersionInfo by remember { mutableStateOf(false) }
     var secondaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
@@ -199,20 +198,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     }
     LaunchedEffect(isLandscape) {
         toggleFullscreen()
-    }
-    LaunchedEffect(viewModel.versionInfoForDialog) {
-        if (viewModel.versionInfoForDialog.isNotEmpty()) {
-            isLoadingVersionInfo = true
-            bibleInfoData = null
-
-            withContext(Dispatchers.IO) {
-                val info = BibleVersionInfoRepository.getVersionInfo(context, viewModel.versionInfoForDialog)
-                withContext(Dispatchers.Main) {
-                    bibleInfoData = info
-                    isLoadingVersionInfo = false
-                }
-            }
-        }
     }
 
     DisposableEffect(view) {
@@ -658,7 +643,12 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                         BgModal(
                             currentIndex = viewModel.bgImageIndex,
                             customUri = viewModel.customTextureUri,
-                            onSelect = { index -> viewModel.bgImageIndex = index; viewModel.showBgModal = false },
+                            currentOrbsCount = viewModel.orbsCount,
+                            onSelect = { index ->
+                                viewModel.bgImageIndex = index
+                                viewModel.renderOrbs = (index == 36)
+                                viewModel.showBgModal = false
+                            },
                             onDismiss = { viewModel.showBgModal = false },
                             onPickCustom = { imagePickerLauncher.launch("image/*") },
                             onRemoveCustom = {
@@ -739,14 +729,15 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                     }
                     if (viewModel.showVersionInfoDialog && viewModel.versionInfoForDialog.isNotEmpty()) {
                         LaunchedEffect(viewModel.versionInfoForDialog) {
-                            isLoadingInfo = true
-                            bibleInfoData = withContext(Dispatchers.IO) {
-                                BibleVersionInfoRepository.getVersionInfo(
-                                    context,
-                                    viewModel.versionInfoForDialog
-                                )
+                            isLoadingVersionInfo = true
+                            bibleInfoData = null
+                            withContext(Dispatchers.IO) {
+                                val info = BibleVersionInfoRepository.getVersionInfo(context, viewModel.versionInfoForDialog)
+                                withContext(Dispatchers.Main) {
+                                    bibleInfoData = info
+                                    isLoadingVersionInfo = false
+                                }
                             }
-                            isLoadingInfo = false
                         }
 
                         BibleVersionInfoDialog(

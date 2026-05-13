@@ -69,7 +69,6 @@ import com.fountofhopedotorg.fohbible.composables.SettingsSection
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.modals.FontModal
 import com.fountofhopedotorg.fohbible.modals.OrbsCountModal
-import com.fountofhopedotorg.fohbible.modals.VersionSelectionModal
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.ui.theme.DefaultPrimaryColor
 import com.fountofhopedotorg.fohbible.ui.theme.PredefinedColorThemes
@@ -96,15 +95,12 @@ fun SettingsScreen() {
     var showColorWheel by remember { mutableStateOf(false) }
     var customColor by remember { mutableStateOf(viewModel.customColor) }
     var isUsingCustomColor by remember { mutableStateOf(viewModel.isCustomColor) }
-    var showPrimaryVersionModal by remember { mutableStateOf(false) }
-    var showSecondaryVersionModal by remember { mutableStateOf(false) }
     var showRefreshConfirmDialog by remember { mutableStateOf(false) }
     var showRefreshResultDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
     var showResetConfirmDialog by remember { mutableStateOf(false) }
     var showResetHighlightColorsDialog by remember { mutableStateOf(false) }
 
-    // Sync local UI state with ViewModel changes
     LaunchedEffect(viewModel.isCustomColor, viewModel.customColor) {
         isUsingCustomColor = viewModel.isCustomColor
         customColor = viewModel.customColor
@@ -121,7 +117,6 @@ fun SettingsScreen() {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // ----- App Settings -----
         item {
             SettingsSection(title = "App Settings", subtitle = "Customize App appearance") {
                 SettingsItem(
@@ -131,23 +126,6 @@ fun SettingsScreen() {
                     Switch(
                         checked = viewModel.darkTheme,
                         onCheckedChange = { viewModel.darkTheme = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = primary,
-                            checkedTrackColor = primary.copy(alpha = 0.5f)
-                        )
-                    )
-                }
-                SettingsItem(
-                    title = "Show Floating Orbs",
-                    subtitle = if (viewModel.renderOrbs) {
-                        "Turn this off to disable floating orbs"
-                    } else {
-                        "Turn this on to add floating orbs across the entire app"
-                    }
-                ) {
-                    Switch(
-                        checked = viewModel.renderOrbs,
-                        onCheckedChange = { viewModel.renderOrbs = it },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = primary,
                             checkedTrackColor = primary.copy(alpha = 0.5f)
@@ -225,7 +203,7 @@ fun SettingsScreen() {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { showPrimaryVersionModal = true },
+                        .clickable { viewModel.showPrimaryVersionDropdown = true },
                     shape = RoundedCornerShape(8.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
@@ -291,7 +269,7 @@ fun SettingsScreen() {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { showSecondaryVersionModal = true },
+                            .clickable { viewModel.showSecondaryVersionDropdown = true },
                         shape = RoundedCornerShape(8.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
@@ -765,46 +743,6 @@ fun SettingsScreen() {
                 }
             }
         }
-    }
-
-    // ----- Dialogs and Modals (no BgModal – it is shown at app level) -----
-    if (showPrimaryVersionModal) {
-        VersionSelectionModal(
-            currentVersionKey = viewModel.currentDbName,
-            isSecondary = false,
-            onVersionSelected = { file ->
-                viewModel.currentDbName = file
-                viewModel.currentVersionAbbr = BibleVersionUtils.versionMap[file] ?: "Bible"
-                showPrimaryVersionModal = false
-            },
-            onDismiss = { showPrimaryVersionModal = false },
-            colors = mapOf(
-                "primary" to primary,
-                "card" to if (viewModel.darkTheme) viewModel.darkModalBackgroundColor else viewModel.lightModalBackgroundColor,
-                "text" to MaterialTheme.colorScheme.onSurface,
-                "muted" to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                "border" to MaterialTheme.colorScheme.surfaceVariant
-            )
-        )
-    }
-    if (showSecondaryVersionModal) {
-        VersionSelectionModal(
-            currentVersionKey = viewModel.secondaryDbName,
-            isSecondary = true,
-            onVersionSelected = { file ->
-                viewModel.secondaryDbName = file
-                viewModel.secondaryVersionAbbr = BibleVersionUtils.versionMap[file] ?: "Bible"
-                showSecondaryVersionModal = false
-            },
-            onDismiss = { showSecondaryVersionModal = false },
-            colors = mapOf(
-                "primary" to primary,
-                "card" to if (viewModel.darkTheme) viewModel.darkModalBackgroundColor else viewModel.lightModalBackgroundColor,
-                "text" to MaterialTheme.colorScheme.onSurface,
-                "muted" to MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                "border" to MaterialTheme.colorScheme.surfaceVariant
-            )
-        )
     }
     if (showResetHighlightColorsDialog) {
         AlertDialog(

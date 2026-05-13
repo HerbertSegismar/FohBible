@@ -182,12 +182,17 @@ fun ReaderScreen(
     var isButtonVisible by remember { mutableStateOf(true) }
     val buttonAlpha by animateFloatAsState(if (isButtonVisible) 1f else 0.2f, label = "buttonAlpha")
     val scope = rememberCoroutineScope()
+    var fadeJob by remember { mutableStateOf<Job?>(null) }
 
     fun scheduleFade() {
-        scope.launch {
+        fadeJob?.cancel()
+        fadeJob = scope.launch {
             delay(5000)
             isButtonVisible = false
         }
+    }
+    DisposableEffect(Unit) {
+        onDispose { fadeJob?.cancel() }
     }
 
     LaunchedEffect(primaryCurrent) {
