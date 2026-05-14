@@ -93,18 +93,12 @@ fun SettingsScreen() {
     var tempFontSize by remember { mutableStateOf(viewModel.fontSize.toString()) }
     var tempOrbsCount by remember { mutableStateOf(viewModel.orbsCount.toString()) }
     var showColorWheel by remember { mutableStateOf(false) }
-    var customColor by remember { mutableStateOf(viewModel.customColor) }
-    var isUsingCustomColor by remember { mutableStateOf(viewModel.isCustomColor) }
     var showRefreshConfirmDialog by remember { mutableStateOf(false) }
     var showRefreshResultDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
     var showResetConfirmDialog by remember { mutableStateOf(false) }
     var showResetHighlightColorsDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(viewModel.isCustomColor, viewModel.customColor) {
-        isUsingCustomColor = viewModel.isCustomColor
-        customColor = viewModel.customColor
-    }
     LaunchedEffect(viewModel.isRefreshingDatabases) {
         if (viewModel.isRefreshingDatabases && !showRefreshResultDialog) {
             showRefreshResultDialog = true
@@ -175,19 +169,18 @@ fun SettingsScreen() {
                             ColorButton(
                                 color = theme.primaryColor,
                                 name = theme.name,
-                                isSelected = viewModel.selectedColor == theme.primaryColor && !isUsingCustomColor,
+                                isSelected = viewModel.selectedColor == theme.primaryColor && !viewModel.isCustomColor,
                                 onClick = {
                                     viewModel.selectedColor = theme.primaryColor
                                     viewModel.isCustomColor = false
-                                    isUsingCustomColor = false
                                 }
                             )
                         }
                         item {
                             ColorButton(
-                                color = customColor ?: DefaultPrimaryColor,
+                                color = viewModel.customColor ?: DefaultPrimaryColor,
                                 name = "Custom",
-                                isSelected = isUsingCustomColor,
+                                isSelected = viewModel.isCustomColor,
                                 onClick = { showColorWheel = true }
                             )
                         }
@@ -909,11 +902,9 @@ fun SettingsScreen() {
                 viewModel.customColor = color
                 viewModel.selectedColor = color
                 viewModel.isCustomColor = true
-                isUsingCustomColor = true
-                customColor = color
                 showColorWheel = false
             },
-            initialColor = customColor ?: viewModel.selectedColor ?: DefaultPrimaryColor
+            initialColor = viewModel.customColor ?: viewModel.selectedColor ?: DefaultPrimaryColor
         )
     }
     if (showHeaderButtonsColorWheel) {

@@ -1341,7 +1341,7 @@ fun InteractiveModal(
             var newWord by remember { mutableStateOf(currentPage.word ?: "") }
             AlertDialog(
                 onDismissRequest = { showEditWordDialog = false },
-                title = { Text("Edit Word") },
+                title = { Text("Edit Word", fontSize = 18.sp, color = themeColors.primary) },
                 text = {
                     TextField(
                         value = newWord.replaceFirstChar { if (it.isLowerCase()) it.titlecase(LocalLocale.current.platformLocale) else it.toString() },
