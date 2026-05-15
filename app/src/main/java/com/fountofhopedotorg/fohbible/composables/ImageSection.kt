@@ -11,6 +11,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -63,7 +64,11 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.fountofhopedotorg.fohbible.data.BibleData
+import com.fountofhopedotorg.fohbible.data.InspirationalVerseRef
+import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.models.AppViewModel
+import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -72,7 +77,9 @@ import java.io.File
 import java.io.FileOutputStream
 
 @Composable
-fun ImageSection() {
+fun ImageSection(
+    onNavigateToReader: (PassageSelection) -> Unit
+) {
     val viewModel = viewModel<AppViewModel>()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -89,6 +96,7 @@ fun ImageSection() {
     var imageSize by remember { mutableStateOf(IntSize.Zero) }
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    var selectedRef by remember { mutableStateOf<InspirationalVerseRef?>(null) }
 
     LaunchedEffect(isLandscape) {
         val imageFiles = if (!isLandscape) viewModel.imageFilesSm else viewModel.imageFilesMd
@@ -96,11 +104,41 @@ fun ImageSection() {
         val randomImageFile = imageFiles.random()
         imageSrc = "file:///android_asset/$assetPath$randomImageFile"
         currentImageFile = randomImageFile
-        randomText = inspirationalTexts.random()
         imageError = false
         imageLoaded = false
         captureReady = false
+
+        try {
+            val ref = inspirationalRefs.random()
+            val verses = viewModel.databaseHelper.getVerses(ref.bookNumber, ref.chapter)
+
+            val selectedVerses = if (ref.endVerse != null) {
+                verses.filter { it.verseNumber in ref.verse..ref.endVerse }
+            } else {
+                verses.filter { it.verseNumber == ref.verse }
+            }
+
+            if (selectedVerses.isEmpty()) {
+                randomText = inspirationalTexts.random()
+                selectedRef = null
+            } else {
+                val bookName = BibleData.getBookByCustomNumber(ref.bookNumber)?.name ?: "Unknown"
+                val reference = if (ref.endVerse != null) {
+                    "$bookName ${ref.chapter}:${ref.verse}-${ref.endVerse}"
+                } else {
+                    "$bookName ${ref.chapter}:${ref.verse}"
+                }
+                val rawText = selectedVerses.joinToString(" ") { it.text }
+                val cleanText = SimpleVerseProcessor.stripXmlTags(rawText)
+                randomText = "$cleanText - $reference"
+                selectedRef = ref
+            }
+        } catch (_: Exception) {
+            randomText = "I can do all things through Christ who strengthens me. - Philippians 4:13"
+            selectedRef = null
+        }
     }
+
     suspend fun captureCompositeImage(): Bitmap? {
         return withContext(Dispatchers.Main) {
             try {
@@ -276,11 +314,9 @@ fun ImageSection() {
                     }
                 },
                 enabled = !isProcessing && captureReady,
-                modifier = Modifier
-                    .size(30.dp)
+                modifier = Modifier.size(30.dp)
             ) {
-                Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.White, modifier = Modifier
-                    .size(20.dp))
+                Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.White, modifier = Modifier.size(20.dp))
             }
 
             IconButton(
@@ -304,11 +340,9 @@ fun ImageSection() {
                     }
                 },
                 enabled = !isProcessing && captureReady,
-                modifier = Modifier
-                    .size(30.dp)
+                modifier = Modifier.size(30.dp)
             ) {
-                Icon(Icons.Default.Download, contentDescription = "Download", tint = Color.White, modifier = Modifier
-                    .size(22.dp))
+                Icon(Icons.Default.Download, contentDescription = "Download", tint = Color.White, modifier = Modifier.size(22.dp))
             }
         }
 
@@ -327,7 +361,21 @@ fun ImageSection() {
                 }
         ) {
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        selectedRef?.let { ref ->
+                            val bookName = BibleData.getBookByCustomNumber(ref.bookNumber)?.name ?: return@let
+                            onNavigateToReader(
+                                PassageSelection(
+                                    bookNumber = ref.bookNumber,
+                                    bookName = bookName,
+                                    chapter = ref.chapter,
+                                    verse = ref.verse
+                                )
+                            )
+                        }
+                    },
                 shape = RoundedCornerShape(16.dp),
                 elevation = CardDefaults.cardElevation(8.dp)
             ) {
@@ -434,6 +482,49 @@ fun ImageSection() {
 fun showToast(context: Context, message: String) {
     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
 }
+
+val inspirationalRefs = listOf(
+    InspirationalVerseRef(230, 46, 10),
+    InspirationalVerseRef(570, 4, 13),
+    InspirationalVerseRef(230, 23, 1),
+    InspirationalVerseRef(300, 29, 11),
+    InspirationalVerseRef(240, 3, 5),
+    InspirationalVerseRef(160, 8, 10),
+    InspirationalVerseRef(670, 5, 7),
+    InspirationalVerseRef(60, 1, 9),
+    InspirationalVerseRef(520, 8, 28),
+    InspirationalVerseRef(570, 4, 7),
+    InspirationalVerseRef(470, 5, 16),
+    InspirationalVerseRef(470, 19, 26),
+    InspirationalVerseRef(230, 46, 1),
+    InspirationalVerseRef(230, 27, 1),
+    InspirationalVerseRef(570, 4, 6),
+    InspirationalVerseRef(290, 40, 31),
+    InspirationalVerseRef(230, 34, 18),
+    InspirationalVerseRef(500, 3, 16),
+    InspirationalVerseRef(540, 5, 17),
+    InspirationalVerseRef(520, 8, 28),
+    InspirationalVerseRef(550, 5, 22, 23),
+    InspirationalVerseRef(230, 119, 105),
+    InspirationalVerseRef(20, 14, 14),
+    InspirationalVerseRef(470, 11, 28),
+    InspirationalVerseRef(470, 6, 33),
+    InspirationalVerseRef(500, 16, 33),
+    InspirationalVerseRef(530, 13, 13),
+    InspirationalVerseRef(470, 18, 20),
+    InspirationalVerseRef(230, 28, 7),
+    InspirationalVerseRef(670, 2, 9),
+    InspirationalVerseRef(590, 5, 16, 18),
+    InspirationalVerseRef(290, 41, 10),
+    InspirationalVerseRef(470, 19, 26),
+    InspirationalVerseRef(240, 18, 10),
+    InspirationalVerseRef(290, 40, 29),
+    InspirationalVerseRef(600, 3, 3),
+    InspirationalVerseRef(230, 34, 8),
+    InspirationalVerseRef(520, 5, 1),
+    InspirationalVerseRef(570, 4, 19),
+    InspirationalVerseRef(620, 1, 7)
+)
 
 private val inspirationalTexts = listOf(
     "Be still and know that I am God. - Psalm 46:10",

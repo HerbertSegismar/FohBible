@@ -66,6 +66,13 @@ data class SearchVerse(
     val bookColor: String? = null
 )
 
+data class InspirationalVerseRef(
+    val bookNumber: Int,
+    val chapter: Int,
+    val verse: Int,
+    val endVerse: Int? = null
+)
+
 data class CrossReference(
     val bookTo: Int,
     val chapterTo: Int,

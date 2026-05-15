@@ -179,7 +179,7 @@ fun HomeScreen(
 
         item { HomeHeader() }
 
-        item { ImageSection() }
+        item {  ImageSection(onNavigateToReader = onNavigateToReader) }
 
         item {
             DailyVerseCard(

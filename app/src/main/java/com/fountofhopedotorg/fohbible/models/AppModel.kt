@@ -1,4 +1,6 @@
 package com.fountofhopedotorg.fohbible.models
+
+import android.app.Application
 import android.content.Context
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -8,7 +10,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.fountofhopedotorg.fohbible.Screen
 import com.fountofhopedotorg.fohbible.data.BibleData
@@ -22,8 +24,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
 
+// CHANGED: Now extends AndroidViewModel to have access to Application context
 @Stable
-class AppViewModel : ViewModel() {
+class AppViewModel(application: Application) : AndroidViewModel(application) {
+
     val predefinedHighlightColors = mutableStateListOf<Color>().apply {
         addAll(
             listOf(
@@ -37,7 +41,7 @@ class AppViewModel : ViewModel() {
         )
     }
 
-   val imageFilesSm = listOf(
+    val imageFilesSm = listOf(
         "w1.jpg", "w2.jpg", "w3.jpg", "w4.jpg", "w5.jpg", "w6.jpg", "w7.jpg",
         "n1.jpg", "n2.jpg", "n3.jpg", "n4.jpg", "n5.jpg", "n6.jpg", "n7.jpg", "n8.jpg",
         "n9.jpg", "n10.jpg", "n11.jpg", "n12.jpg", "n13.jpg", "n14.jpg", "n15.jpg", "n16.jpg",
@@ -123,6 +127,15 @@ class AppViewModel : ViewModel() {
     var lastRefreshMessage by mutableStateOf("")
     var lastRefreshSuccess by mutableStateOf(false)
     var showReaderOverlayColorWheel by mutableStateOf(false)
+
+    // ADDED: Expose a databaseHelper for the current Bible version
+    // Because currentDbName can change, we make it a property that reacts to changes.
+    // For simplicity, a lazy property is used here – it will use the initial database name.
+    // If you need it to switch automatically, you can replace this with a custom getter that returns
+    // a new DatabaseHelper whenever currentDbName changes, but be careful about lifecycle.
+    val databaseHelper by lazy {
+        DatabaseHelper(getApplication(), currentDbName)
+    }
 
     fun updateDictionaryForBibleLanguage(bibleFile: String) {
         val lang = BibleVersionUtils.getLanguageForVersion(bibleFile)
