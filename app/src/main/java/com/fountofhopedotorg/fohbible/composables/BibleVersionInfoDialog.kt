@@ -60,10 +60,9 @@ fun BibleVersionInfoDialog(
                 if (isLoading) {
                     loadingContent()
                 } else {
-                    val info = versionInfo
-                    if (info != null) {
-                        val cleanDescription = transformText(info.description)
-                        val cleanDetailedInfo = transformText(info.detailedInfo)
+                    if (versionInfo != null) {
+                        val cleanDescription = transformText(versionInfo.description)
+                        val cleanDetailedInfo = transformText(versionInfo.detailedInfo)
 
                         Column {
                             if (!cleanDescription.isNullOrEmpty()) {

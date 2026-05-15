@@ -117,7 +117,7 @@ private fun applyInteractions(orbs: List<Orb>, dt: Float) {
 @Composable
 fun FloatingOrbsBackground(
     modifier: Modifier = Modifier,
-    orbCount: Int = 6
+    orbCount: Int
 ) {
     val orbs = remember { List(orbCount) { Orb() } }
     val time by produceState(initialValue = 0L) {

@@ -78,7 +78,6 @@ import com.fountofhopedotorg.fohbible.modals.BgModal
 import com.fountofhopedotorg.fohbible.modals.NavigationModal
 import com.fountofhopedotorg.fohbible.modals.VersionSelectionModal
 import com.fountofhopedotorg.fohbible.models.AppViewModel
-import com.fountofhopedotorg.fohbible.composables.FloatingOrbsBackground
 import com.fountofhopedotorg.fohbible.data.BibleVersionInfo
 import com.fountofhopedotorg.fohbible.data.BibleVersionInfoRepository
 import com.fountofhopedotorg.fohbible.screens.BookmarksScreen
@@ -164,8 +163,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     var isLoadingVersionInfo by remember { mutableStateOf(false) }
     var secondaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
     val currentScreen = viewModel.navigationStack.last()
-    var isUsingCustomColor by remember { mutableStateOf(viewModel.isCustomColor) }
-    var customColor by remember { mutableStateOf(viewModel.customColor) }
     val dataStore = remember { activity.appDataStore }
 
     val configuration = LocalConfiguration.current
@@ -339,14 +336,12 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
         }
     }
 
-    LaunchedEffect(viewModel.selectedColor, viewModel.darkTheme, viewModel.isCustomColor, viewModel.customColor) {
+    LaunchedEffect(viewModel.selectedColor, viewModel.darkTheme, viewModel.isCustomColor) {
         viewModel.selectedColor?.let {
             ThemeManager.primaryColor = it
             ThemeManager.darkTheme = viewModel.darkTheme
             ThemeManager.isCustomColor = viewModel.isCustomColor
         }
-        isUsingCustomColor = viewModel.isCustomColor
-        customColor = viewModel.customColor
     }
 
     val themeState = AppThemeState(
@@ -383,7 +378,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
             val persistentPath = copyUriToInternalStorage(context, it)
             if (persistentPath != null) {
                 viewModel.customTextureUri = persistentPath
-                viewModel.bgImageIndex = 35
+                viewModel.bgImageIndex = 36
             }
         }
     }
@@ -449,12 +444,6 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                     }
                 }
             ) { innerPadding ->
-                if (currentScreen !is Screen.Reader && viewModel.renderOrbs) {
-                    FloatingOrbsBackground(
-                        modifier = Modifier.fillMaxSize(),
-                        orbCount = viewModel.orbsCount
-                    )
-                }
                 Box(modifier = Modifier.padding(innerPadding)) {
                     BackHandler(enabled = viewModel.navigationStack.size > 1) { viewModel.goBack() }
                     when (currentScreen) {
@@ -643,10 +632,9 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                         BgModal(
                             currentIndex = viewModel.bgImageIndex,
                             customUri = viewModel.customTextureUri,
-                            currentOrbsCount = viewModel.orbsCount,
                             onSelect = { index ->
                                 viewModel.bgImageIndex = index
-                                viewModel.renderOrbs = (index == 36)
+                                viewModel.renderOrbs = (index == 35)
                                 viewModel.showBgModal = false
                             },
                             onDismiss = { viewModel.showBgModal = false },

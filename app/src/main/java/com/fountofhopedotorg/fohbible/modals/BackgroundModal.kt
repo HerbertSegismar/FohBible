@@ -42,7 +42,6 @@ import com.fountofhopedotorg.fohbible.functions.SelectableBox
 fun BgModal(
     currentIndex: Int,
     customUri: String?,
-    currentOrbsCount: Int,
     onSelect: (Int) -> Unit,
     onDismiss: () -> Unit,
     onPickCustom: () -> Unit,
@@ -52,8 +51,8 @@ fun BgModal(
     val firstIndex = 1
     val lastIndex = 33
     val randomIndex = 34
-    val floatingOrbsIndex = 36
-    val customIndex = 35
+    val floatingOrbsIndex = 35
+    val customIndex = 36
 
     val lazyListState = rememberLazyListState()
     LaunchedEffect(currentIndex) {
@@ -129,7 +128,7 @@ fun BgModal(
                             selected = currentIndex == floatingOrbsIndex,
                             onClick = { onSelect(floatingOrbsIndex) }
                         ) {
-                            FloatingOrbsBackground(orbCount = currentOrbsCount)
+                            FloatingOrbsBackground(orbCount = 2)
                         }
                     }
 

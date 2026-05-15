@@ -327,7 +327,8 @@ fun ChapterView(
         when (viewModel.bgImageIndex) {
             0 -> {  }
             34 -> ColorSplashCanvas()
-            35 -> {
+            35 -> FloatingOrbsBackground(orbCount = viewModel.orbsCount)
+            36 -> {
                 val customUri = viewModel.customTextureUri
                 if (customUri != null) {
                     AsyncImage(
@@ -352,13 +353,6 @@ fun ChapterView(
             .copy(alpha = viewModel.overlayOpacity)
         if (viewModel.bgImageIndex != 0) {
             Box(modifier = Modifier.fillMaxSize().background(overlayColor))
-        }
-
-        if (viewModel.renderOrbs) {
-            FloatingOrbsBackground(
-                modifier = Modifier.fillMaxSize(),
-                orbCount = viewModel.orbsCount
-            )
         }
 
         Column {
