@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -369,6 +371,7 @@ fun SyncedMultiVersionReader(
             if (viewModel.multiViewLayout == "horizontal") {
                 Row(Modifier.fillMaxSize()) {
                     RenderChapter(true, primaryState, databaseHelper, Modifier.weight(1f))
+                    VerticalDivider(color = MaterialTheme.colorScheme.secondary.copy(0.2f))
                     RenderChapter(false, secondaryState, secondaryDatabaseHelper, Modifier.weight(1f))
                 }
             } else {
@@ -455,6 +458,7 @@ fun IndependentMultiVersionReader(
                     }
                 }
             }
+            VerticalDivider(color = MaterialTheme.colorScheme.secondary.copy(0.2f))
             ChapterPager(config = secondaryConfig, modifier = Modifier.weight(1f), scheduleFade = scheduleFade, onPassageChange = onSecondaryPassageChange) { _, passage, isCurrentPage ->
                 val content = secondaryLoadedVerses[passage.bookNumber to passage.chapter] ?: emptyList()
                 Box(modifier = Modifier.fillMaxSize()) {

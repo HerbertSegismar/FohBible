@@ -63,11 +63,13 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.fountofhopedotorg.fohbible.MainActivity
 import com.fountofhopedotorg.fohbible.R
 import com.fountofhopedotorg.fohbible.Screen
 import com.fountofhopedotorg.fohbible.composables.Footer
 import com.fountofhopedotorg.fohbible.composables.ImageSection
 import com.fountofhopedotorg.fohbible.composables.MatrixNative
+import com.fountofhopedotorg.fohbible.composables.randomColor
 import com.fountofhopedotorg.fohbible.data.BibleData
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
@@ -115,7 +117,7 @@ private object VerseShareHelper {
 private suspend fun loadRandomVerses(context: Context, dbHelper: DatabaseHelper?): List<Verse> =
     withContext(Dispatchers.IO) {
         val helper = dbHelper ?: DatabaseHelper(
-            context as com.fountofhopedotorg.fohbible.MainActivity,
+            context as MainActivity,
             databaseName = "kj2.sqlite3"
         )
         val verses = helper.getRandomVerses()
@@ -143,32 +145,58 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     val viewModel = viewModel<AppViewModel>()
 
+    val uniqueQuickActionImages = remember {
+        val totalImages = viewModel.textures
+        totalImages.shuffled().take(5)
+    }
+
     var dailyVerses by remember { mutableStateOf<List<Verse>?>(null) }
     var popularDevotionals by remember { mutableStateOf<List<PopularDevotional>>(emptyList()) }
 
     LaunchedEffect(Unit) {
         dailyVerses = loadRandomVerses(context, databaseHelper)
     }
+
     LaunchedEffect(Unit) {
         popularDevotionals = getRandomDevotionals()
     }
 
     val quickActions = listOf(
-        QuickAction("Reader", Icons.Filled.Book, MaterialTheme.colorScheme.primary) {
-            onNavigateToScreen(Screen.Reader())
-        },
-        QuickAction("Bookmarks", Icons.Filled.Bookmark, MaterialTheme.colorScheme.primary) {
-            onNavigateToScreen(Screen.Bookmarks)
-        },
-        QuickAction("Notes", Icons.AutoMirrored.Filled.Note, MaterialTheme.colorScheme.primary) {
-            onNavigateToScreen(Screen.Notes)
-        },
-        QuickAction("Search", Icons.Filled.Search, MaterialTheme.colorScheme.primary) {
-            onNavigateToScreen(Screen.Search)
-        },
-        QuickAction("Settings", Icons.Filled.Settings, MaterialTheme.colorScheme.primary) {
-            onNavigateToScreen(Screen.Settings)
-        }
+        QuickAction(
+            title = "Reader",
+            icon = Icons.Filled.Book,
+            color = MaterialTheme.colorScheme.primary,
+            backgroundImage = getAssetImagePath(uniqueQuickActionImages[0]),
+            onClick = { onNavigateToScreen(Screen.Reader()) }
+        ),
+        QuickAction(
+            title = "Bookmarks",
+            icon = Icons.Filled.Bookmark,
+            color = MaterialTheme.colorScheme.primary,
+            backgroundImage = getAssetImagePath(uniqueQuickActionImages[1]),
+            onClick = { onNavigateToScreen(Screen.Bookmarks) }
+        ),
+        QuickAction(
+            title = "Notes",
+            icon = Icons.AutoMirrored.Filled.Note,
+            color = MaterialTheme.colorScheme.primary,
+            backgroundImage = getAssetImagePath(uniqueQuickActionImages[2]),
+            onClick = { onNavigateToScreen(Screen.Notes) }
+        ),
+        QuickAction(
+            title = "Search",
+            icon = Icons.Filled.Search,
+            color = MaterialTheme.colorScheme.primary,
+            backgroundImage = getAssetImagePath(uniqueQuickActionImages[3]),
+            onClick = { onNavigateToScreen(Screen.Search) }
+        ),
+        QuickAction(
+            title = "Settings",
+            icon = Icons.Filled.Settings,
+            color = MaterialTheme.colorScheme.primary,
+            backgroundImage = getAssetImagePath(uniqueQuickActionImages[4]),
+            onClick = { onNavigateToScreen(Screen.Settings) }
+        )
     )
 
     LazyColumn(
@@ -179,7 +207,10 @@ fun HomeScreen(
 
         item { HomeHeader() }
 
-        item {  ImageSection(onNavigateToReader = onNavigateToReader) }
+        item {  ImageSection(
+            onNavigateToReader = onNavigateToReader,
+            databaseHelper = DatabaseHelper(context, viewModel.currentDbName)
+        ) }
 
         item {
             DailyVerseCard(
@@ -204,7 +235,7 @@ fun HomeScreen(
                     }
                 },
                 databaseHelper = databaseHelper ?: DatabaseHelper(
-                    context as com.fountofhopedotorg.fohbible.MainActivity,
+                    context as MainActivity,
                     "kj2.sqlite3"
                 ),
                 viewModel = viewModel
@@ -306,34 +337,67 @@ private fun QuickActionCarouselItem(action: QuickAction) {
             .height(120.dp)
             .clickable(onClick = action.onClick),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = action.color.copy(alpha = 0.1f))
+        elevation = CardDefaults.cardElevation(6.dp)
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = action.icon,
-                contentDescription = action.title,
-                tint = action.color,
-                modifier = Modifier.size(32.dp).then(
-                    if (action.title == "Notes") Modifier.rotate(90f) else Modifier
+        Box(modifier = Modifier.fillMaxSize()) {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(action.backgroundImage)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)),
+                contentScale = ContentScale.Crop,
+                alpha = 0.9f
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.Black,
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.75f),
+                                MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f),
+                                Color.Black.copy(alpha = 0.25f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
+
+            // Content
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = action.icon,
+                    contentDescription = action.title,
+                    tint = Color.White,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .then(if (action.title == "Notes") Modifier.rotate(90f) else Modifier)
                 )
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = action.title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
+
+                Spacer(Modifier.height(8.dp))
+
+                Text(
+                    text = action.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = Color.White
+                )
+            }
         }
     }
 }
-
 @Composable
 private fun DailyVerseCard(
     verses: List<Verse>?,
@@ -581,12 +645,20 @@ private fun DevotionalItem(
                 .clip(RoundedCornerShape(12.dp))
                 .background(
                     brush = Brush.verticalGradient(
-                        colors = listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)
+                        colors = listOf(
+                            randomColor().copy(0.4f),
+                            randomColor().copy(0.02f)
+                        )
                     )
                 ),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Filled.PlayArrow, contentDescription = "Play", tint = Color.White, modifier = Modifier.size(24.dp))
+            Icon(
+                Icons.Filled.PlayArrow,
+                contentDescription = "Play",
+                tint = Color.White,
+                modifier = Modifier.size(24.dp)
+            )
         }
         Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(text = devotional.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
@@ -665,4 +737,8 @@ private fun getRandomDevotionals(): List<PopularDevotional> {
         PopularDevotional("The Bronze Serpent", "So Moses made a bronze serpent and put it up on a pole...", "Numbers", 21, 9)
     )
     return allDevotionals.shuffled(Random).take(5)
+}
+
+private fun getAssetImagePath(fileName: String): String {
+    return "file:///android_asset/textures/$fileName"
 }

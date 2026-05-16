@@ -257,7 +257,8 @@ data class QuickAction(
     val title: String,
     val icon: ImageVector,
     val color: Color,
-    val onClick: () -> Unit
+    val onClick: () -> Unit,
+    val backgroundImage: Any
 )
 
 data class PopularDevotional(

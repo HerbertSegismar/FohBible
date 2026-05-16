@@ -24,7 +24,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
 
-// CHANGED: Now extends AndroidViewModel to have access to Application context
 @Stable
 class AppViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -40,6 +39,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             )
         )
     }
+
+    val textures = listOf(
+        "1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg", "6.jpg", "7.jpg", "8.jpg", "9.jpg", "10.jpg", "11.jpg", "12.jpg", "13.jpg", "14.jpg", "15.jpg", "16.jpg", "17.jpg",
+        "18.jpg", "19.jpg", "20.jpg", "21.jpg", "22.jpg", "23.jpg", "24.jpg", "25.jpg", "26.jpg", "27.jpg", "28.jpg", "29.jpg", "30.jpg", "31.jpg", "32.jpg", "33.jpg"
+    )
 
     val imageFilesSm = listOf(
         "w1.jpg", "w2.jpg", "w3.jpg", "w4.jpg", "w5.jpg", "w6.jpg", "w7.jpg",
@@ -127,15 +131,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     var lastRefreshMessage by mutableStateOf("")
     var lastRefreshSuccess by mutableStateOf(false)
     var showReaderOverlayColorWheel by mutableStateOf(false)
-
-    // ADDED: Expose a databaseHelper for the current Bible version
-    // Because currentDbName can change, we make it a property that reacts to changes.
-    // For simplicity, a lazy property is used here – it will use the initial database name.
-    // If you need it to switch automatically, you can replace this with a custom getter that returns
-    // a new DatabaseHelper whenever currentDbName changes, but be careful about lifecycle.
-    val databaseHelper by lazy {
-        DatabaseHelper(getApplication(), currentDbName)
-    }
 
     fun updateDictionaryForBibleLanguage(bibleFile: String) {
         val lang = BibleVersionUtils.getLanguageForVersion(bibleFile)

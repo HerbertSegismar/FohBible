@@ -65,6 +65,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.fountofhopedotorg.fohbible.data.BibleData
+import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.InspirationalVerseRef
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.models.AppViewModel
@@ -78,9 +79,10 @@ import java.io.FileOutputStream
 
 @Composable
 fun ImageSection(
+    databaseHelper: DatabaseHelper,
     onNavigateToReader: (PassageSelection) -> Unit
 ) {
-    val viewModel = viewModel<AppViewModel>()
+    val viewModel :  AppViewModel = viewModel()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -110,7 +112,7 @@ fun ImageSection(
 
         try {
             val ref = inspirationalRefs.random()
-            val verses = viewModel.databaseHelper.getVerses(ref.bookNumber, ref.chapter)
+            val verses = databaseHelper.getVerses(ref.bookNumber, ref.chapter)
 
             val selectedVerses = if (ref.endVerse != null) {
                 verses.filter { it.verseNumber in ref.verse..ref.endVerse }
@@ -134,10 +136,11 @@ fun ImageSection(
                 selectedRef = ref
             }
         } catch (_: Exception) {
-            randomText = "I can do all things through Christ who strengthens me. - Philippians 4:13"
+            randomText = inspirationalTexts.random()
             selectedRef = null
         }
     }
+
 
     suspend fun captureCompositeImage(): Bitmap? {
         return withContext(Dispatchers.Main) {
@@ -342,7 +345,7 @@ fun ImageSection(
                 enabled = !isProcessing && captureReady,
                 modifier = Modifier.size(30.dp)
             ) {
-                Icon(Icons.Default.Download, contentDescription = "Download", tint = Color.White, modifier = Modifier.size(22.dp))
+                Icon(Icons.Default.Download, contentDescription = "Download", tint = Color.White, modifier = Modifier.size(25.dp).padding(top = 2.dp))
             }
         }
 
