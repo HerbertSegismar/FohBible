@@ -62,6 +62,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         "om1.jpg", "om2.jpg", "om3.jpg", "om4.jpg", "om5.jpg"
     )
 
+    var disabledVersions by mutableStateOf<Set<String>>(emptySet())
     var versionInfoForDialog by mutableStateOf("")
     var showVersionInfoDialog by mutableStateOf(false)
     var selectedPrimaryDictLanguage by mutableStateOf("English")

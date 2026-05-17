@@ -144,6 +144,8 @@ private val SELECTED_CROSS_REFERENCE_DB_KEY = stringPreferencesKey("selected_cro
 private val PREDEFINED_HIGHLIGHT_COLORS_KEY = stringPreferencesKey("predefined_highlight_colors")
 private val RENDER_ORBS_KEY = booleanPreferencesKey("show_orbs")
 private val ORBS_COUNT_KEY = intPreferencesKey("orbs_count")
+private val DISABLED_VERSIONS_KEY = stringPreferencesKey("disabled_versions")
+
 val ComponentActivity.appDataStore: DataStore<Preferences> by preferencesDataStore(name = "app_preferences")
 
 class MainActivity : ComponentActivity() {
@@ -269,8 +271,12 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                 }
             }
             if (predefinedHighlightColors.isEmpty()) resetHighlightColorsToDefault()
+            val disabledVersionsStr = prefs[DISABLED_VERSIONS_KEY] ?: ""
+            viewModel.disabledVersions = if (disabledVersionsStr.isBlank()) emptySet()
+            else disabledVersionsStr.split(",").toSet()
         }
     }
+    SavePreference({ viewModel.disabledVersions.joinToString(",") }, DISABLED_VERSIONS_KEY, dataStore)
     SavePreference({ viewModel.renderOrbs }, RENDER_ORBS_KEY, dataStore)
     SavePreference({ viewModel.orbsCount }, ORBS_COUNT_KEY, dataStore)
     SavePreference({ viewModel.lightThemeReaderFontColor.toArgb() }, LIGHT_THEME_READER_FONT_COLOR_KEY, dataStore)

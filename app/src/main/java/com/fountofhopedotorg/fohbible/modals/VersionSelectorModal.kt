@@ -78,28 +78,24 @@ fun VersionSelectionModal(
     val mutedColor = colors["muted"] ?: MaterialTheme.colorScheme.onSurfaceVariant
     val borderColor = colors["border"] ?: MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
 
-    val groupedVersions = remember(searchQuery) {
+    val groupedVersions = remember(searchQuery, viewModel.disabledVersions) {
         derivedStateOf {
-            val all = BibleVersionUtils.getVersionsGroupedByLanguage()
+            val all = BibleVersionUtils.getFilteredVersionsGroupedByLanguage(viewModel.disabledVersions)
             if (searchQuery.isBlank()) {
                 all
             } else {
                 val filtered = mutableMapOf<String, List<Pair<String, String>>>()
                 for ((language, versions) in all) {
-                    val languageMatches = language.contains(searchQuery, ignoreCase = true)
-
-                    if (languageMatches) {
+                    if (language.contains(searchQuery, ignoreCase = true)) {
                         filtered[language] = versions
                     } else {
-                        val matchingVersions = versions.filter { (key, shortName) ->
+                        val matching = versions.filter { (key, shortName) ->
                             val description = BibleVersionUtils.descriptionMap[key] ?: ""
                             shortName.contains(searchQuery, ignoreCase = true) ||
                                     description.contains(searchQuery, ignoreCase = true) ||
                                     key.contains(searchQuery, ignoreCase = true)
                         }
-                        if (matchingVersions.isNotEmpty()) {
-                            filtered[language] = matchingVersions
-                        }
+                        if (matching.isNotEmpty()) filtered[language] = matching
                     }
                 }
                 filtered

@@ -66,6 +66,7 @@ import com.fountofhopedotorg.fohbible.composables.RotatingPhoneGraphics
 import com.fountofhopedotorg.fohbible.composables.SettingsItem
 import com.fountofhopedotorg.fohbible.composables.SettingsOpacitySlider
 import com.fountofhopedotorg.fohbible.composables.SettingsSection
+import com.fountofhopedotorg.fohbible.composables.VersionManagementDialog
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.modals.FontModal
 import com.fountofhopedotorg.fohbible.modals.OrbsCountModal
@@ -83,6 +84,7 @@ const val MIN_ORB_COUNT = 1
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen() {
+    var showVersionManagementDialog by remember { mutableStateOf(false) }
     val primary = MaterialTheme.colorScheme.primary
     val viewColor = primary.copy(alpha = 0.2f)
     val viewModel: AppViewModel = viewModel()
@@ -188,8 +190,6 @@ fun SettingsScreen() {
                 }
             }
         }
-
-        // ----- Reader Settings -----
         item {
             SettingsSection(title = "Reader Settings", subtitle = "Customize your Bible reading experience") {
                 // Primary version
@@ -244,19 +244,6 @@ fun SettingsScreen() {
                         }
                     }
                 }
-                SettingsItem(
-                    title = "Multi-Version Display",
-                    subtitle = "Show two Bible versions side by side"
-                ) {
-                    Switch(
-                        checked = viewModel.multiVersion,
-                        onCheckedChange = { viewModel.multiVersion = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = primary,
-                            checkedTrackColor = primary.copy(alpha = 0.5f)
-                        )
-                    )
-                }
                 if (viewModel.multiVersion) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Card(
@@ -289,7 +276,8 @@ fun SettingsScreen() {
                                 )
                                 Text(
                                     text = if (viewModel.secondaryVersionAbbr.isNotEmpty()) {
-                                        BibleVersionUtils.descriptionMap[viewModel.secondaryDbName] ?: "Bible translation"
+                                        BibleVersionUtils.descriptionMap[viewModel.secondaryDbName]
+                                            ?: "Bible translation"
                                     } else {
                                         "Select a secondary version"
                                     },
@@ -314,6 +302,22 @@ fun SettingsScreen() {
                             }
                         }
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+                SettingsItem(
+                    title = "Multi-Version Display",
+                    subtitle = "Show two Bible versions side by side"
+                ) {
+                    Switch(
+                        checked = viewModel.multiVersion,
+                        onCheckedChange = { viewModel.multiVersion = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = primary,
+                            checkedTrackColor = primary.copy(alpha = 0.5f)
+                        )
+                    )
+                }
+                if (viewModel.multiVersion) {
                     Spacer(modifier = Modifier.height(8.dp))
                     SettingsItem(
                         title = "Multi-View Layout",
@@ -606,8 +610,6 @@ fun SettingsScreen() {
                 }
             }
         }
-
-        // ----- Word Marker Palette Colors -----
         item {
             SettingsSection(
                 title = "Word Marker Palette Colors",
@@ -644,8 +646,20 @@ fun SettingsScreen() {
                 }
             }
         }
-
-        // ----- Database Management -----
+        item {
+            SettingsSection(
+                title = "Version Management",
+                subtitle = "Choose which Bible versions appear in the version selector"
+            ) {
+                Button(
+                    onClick = { showVersionManagementDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = primary)
+                ) {
+                    Text("Enable / Disable Versions", color = Color.White)
+                }
+            }
+        }
         item {
             SettingsSection(
                 title = "Database Management",
@@ -673,8 +687,6 @@ fun SettingsScreen() {
                 )
             }
         }
-
-        // ----- More Options -----
         item {
             SettingsSection(title = "More Options", subtitle = "Additional preferences") {
                 SettingsItem(
@@ -699,8 +711,6 @@ fun SettingsScreen() {
                 }
             }
         }
-
-        // ----- Quick Actions -----
         item {
             SettingsSection(title = "Quick Actions", subtitle = "Common tasks") {
                 Row(
@@ -776,6 +786,12 @@ fun SettingsScreen() {
             }
         )
     }
+    if (showVersionManagementDialog) {
+        VersionManagementDialog(
+            viewModel = viewModel,
+            onDismiss = { showVersionManagementDialog = false }
+        )
+    }
     if (showResetConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showResetConfirmDialog = false },
@@ -796,7 +812,7 @@ fun SettingsScreen() {
             confirmButton = {
                 TextButton(
                     onClick = {
-                        // Reset all ViewModel properties to defaults
+                        viewModel.disabledVersions = emptySet()
                         viewModel.headerButtonsColor = Color(0xFFFFFFFF)
                         viewModel.renderOrbs = false
                         viewModel.orbsCount = 3

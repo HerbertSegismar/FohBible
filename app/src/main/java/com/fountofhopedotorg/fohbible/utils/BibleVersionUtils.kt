@@ -200,18 +200,20 @@ object BibleVersionUtils {
         "bpv.sqlite3" to "Bikolano"
     )
 
-    fun getVersionsGroupedByLanguage(): Map<String, List<Pair<String, String>>> {
+    fun getLanguageForVersion(key: String): String {
+        return versionLanguage[key] ?: "English"
+    }
+
+    fun getFilteredVersionsGroupedByLanguage(disabledVersions: Set<String>): Map<String, List<Pair<String, String>>> {
+        val enabledVersionMap = versionMap.filterKeys { it !in disabledVersions }
         val groups = mutableMapOf<String, MutableList<Pair<String, String>>>()
-        versionMap.forEach { (key, shortName) ->
+        enabledVersionMap.forEach { (key, shortName) ->
             val lang = versionLanguage[key] ?: "Other"
             groups.getOrPut(lang) { mutableListOf() }.add(key to shortName)
         }
         groups.forEach { (_, list) -> list.sortBy { it.second } }
-        val order = listOf("English", "English Messianic") + groups.keys.filter { it != "English" && it != "English Messianic" }.sorted()
-        return groups.toSortedMap(compareBy { order.indexOf(it).takeIf { idx -> idx >=0 } ?: Int.MAX_VALUE })
-    }
-
-    fun getLanguageForVersion(key: String): String {
-        return versionLanguage[key] ?: "English"
+        val order = listOf("English", "English Messianic") +
+                groups.keys.filter { it != "English" && it != "English Messianic" }.sorted()
+        return groups.toSortedMap(compareBy { order.indexOf(it).takeIf { idx -> idx >= 0 } ?: Int.MAX_VALUE })
     }
 }
