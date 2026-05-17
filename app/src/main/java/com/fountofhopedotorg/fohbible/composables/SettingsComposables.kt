@@ -318,7 +318,7 @@ fun VersionManagementDialog(
                                         }
                                     }
                                     Switch(
-                                        checked = enabled,
+                                        checked = if (isActiveVersion) true else enabled,
                                         onCheckedChange = { checked ->
                                             if (!isActiveVersion) {
                                                 viewModel.disabledVersions = if (checked) {

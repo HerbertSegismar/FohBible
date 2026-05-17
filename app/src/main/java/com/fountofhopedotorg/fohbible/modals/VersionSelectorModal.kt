@@ -77,10 +77,19 @@ fun VersionSelectionModal(
     val textColor = colors["text"] ?: MaterialTheme.colorScheme.onSurface
     val mutedColor = colors["muted"] ?: MaterialTheme.colorScheme.onSurfaceVariant
     val borderColor = colors["border"] ?: MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+    val activeVersionKeys = remember(viewModel.currentDbName, viewModel.secondaryDbName) {
+        mutableSetOf(viewModel.currentDbName).apply {
+            if (viewModel.multiVersion) add(viewModel.secondaryDbName)
+        }
+    }
 
-    val groupedVersions = remember(searchQuery, viewModel.disabledVersions) {
+    val effectiveDisabledVersions = remember(viewModel.disabledVersions, activeVersionKeys) {
+        viewModel.disabledVersions - activeVersionKeys
+    }
+
+    val groupedVersions = remember(searchQuery, effectiveDisabledVersions) {
         derivedStateOf {
-            val all = BibleVersionUtils.getFilteredVersionsGroupedByLanguage(viewModel.disabledVersions)
+            val all = BibleVersionUtils.getFilteredVersionsGroupedByLanguage(effectiveDisabledVersions)
             if (searchQuery.isBlank()) {
                 all
             } else {
