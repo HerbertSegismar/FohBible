@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -139,7 +140,8 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     onNavigateToReader: (PassageSelection) -> Unit,
     onNavigateToScreen: (Screen) -> Unit,
-    databaseHelper: DatabaseHelper? = null
+    databaseHelper: DatabaseHelper? = null,
+    onAddEditableTextClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -257,6 +259,16 @@ fun HomeScreen(
                 devotionals = popularDevotionals,
                 onNavigateToReader = onNavigateToReader
             )
+        }
+        item {
+            Button(
+                onClick = onAddEditableTextClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) {
+                Text("Create Graphical Notes", color = Color.White)
+            }
         }
 
         item { Spacer(Modifier.height(40.dp)) }

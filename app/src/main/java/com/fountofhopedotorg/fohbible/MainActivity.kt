@@ -31,6 +31,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -80,6 +81,7 @@ import com.fountofhopedotorg.fohbible.modals.VersionSelectionModal
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.data.BibleVersionInfo
 import com.fountofhopedotorg.fohbible.data.BibleVersionInfoRepository
+import com.fountofhopedotorg.fohbible.graphicals.GraphicalNotesScreen
 import com.fountofhopedotorg.fohbible.screens.BookmarksScreen
 import com.fountofhopedotorg.fohbible.screens.HomeScreen
 import com.fountofhopedotorg.fohbible.screens.NotesScreen
@@ -396,7 +398,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                 contentWindowInsets = WindowInsets(hInset, vInset, hInset, vInset),
                 topBar = {
                     if (currentScreen !is Screen.Reader || !viewModel.isReaderFullScreen) {
-                        androidx.compose.material3.Surface(
+                        Surface(
                             modifier = Modifier.padding(horizontal = hInset),
                             color = Color.Transparent
                         ) {
@@ -466,7 +468,8 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                     else -> viewModel.navigateTo(screen)
                                 }
                             },
-                            databaseHelper = dbHelper
+                            databaseHelper = dbHelper,
+                            onAddEditableTextClick = { viewModel.navigateTo(Screen.GraphicalNotes) }
                         )
                         is Screen.Reader -> {
                             val passage = currentScreen.passage ?: viewModel.primaryPassage
@@ -515,6 +518,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 viewModel.currentVersionAbbr = BibleVersionUtils.versionMap[newVersionKey] ?: "Bible"
                             }
                         )
+                        Screen.GraphicalNotes -> GraphicalNotesScreen()
                     }
                     if (viewModel.showNavigationModal) {
                         NavigationModal(
@@ -772,6 +776,7 @@ sealed class Screen {
     object Notes : Screen()
     object Settings : Screen()
     object Search : Screen()
+    object GraphicalNotes : Screen()
 }
 
 private fun copyUriToInternalStorage(context: Context, sourceUri: Uri): String? {

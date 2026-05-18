@@ -863,3 +863,41 @@ fun getVersesWithSubheadings(
     }
     return contentMap.toSortedMap().flatMap { it.value }
 }
+
+
+sealed class ReferenceResult {
+    data class Single(val verse: Verse) : ReferenceResult()
+    data class Range(val verses: List<Verse>) : ReferenceResult()
+    data class Chapter(val verses: List<Verse>) : ReferenceResult()
+    object Invalid : ReferenceResult()
+}
+
+fun fetchByReference(reference: String, versesHelper: DatabaseHelper): ReferenceResult {
+    val pattern = Regex("""^([A-Za-z0-9 ]+?)\s+(\d+)(?::(\d+)(?:-(\d+))?)?$""")
+    val match = pattern.find(reference.trim()) ?: return ReferenceResult.Invalid
+
+    val bookName = match.groupValues[1].trim()
+    val chapter = match.groupValues[2].toIntOrNull() ?: return ReferenceResult.Invalid
+    val startVerse = match.groupValues[3].toIntOrNull()
+    val endVerse = match.groupValues[4].toIntOrNull()
+    val bookInfo = BibleData.allBooks.find { it.name.equals(bookName, ignoreCase = true) }
+    if (bookInfo == null) return ReferenceResult.Invalid
+    val chapterVerses = versesHelper.getVerses(bookInfo.customNumber, chapter)
+    if (chapterVerses.isEmpty()) return ReferenceResult.Invalid
+
+    return when {
+        startVerse == null -> {
+            ReferenceResult.Chapter(chapterVerses)
+        }
+        endVerse == null -> {
+            val verse = chapterVerses.find { it.verseNumber == startVerse }
+            if (verse != null) ReferenceResult.Single(verse)
+            else ReferenceResult.Invalid
+        }
+        else -> {
+            val rangeVerses = chapterVerses.filter { it.verseNumber in startVerse..endVerse }
+            if (rangeVerses.isNotEmpty()) ReferenceResult.Range(rangeVerses)
+            else ReferenceResult.Invalid
+        }
+    }
+}

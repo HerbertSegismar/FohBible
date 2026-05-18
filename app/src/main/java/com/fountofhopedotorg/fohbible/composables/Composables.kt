@@ -557,6 +557,7 @@ fun HomeAppBar(
         is Screen.Notes -> "Notes"
         is Screen.Settings -> "Settings"
         is Screen.Search -> "Search"
+        is Screen.GraphicalNotes -> "GraphicalNotes"
     }
     TopAppBar(
         title = { Text(text = screenTitle, color = viewModel.headerButtonsColor, fontWeight = FontWeight.Bold, modifier = Modifier
