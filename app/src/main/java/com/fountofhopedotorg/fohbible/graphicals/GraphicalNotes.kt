@@ -8,12 +8,16 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -32,6 +36,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -76,14 +81,163 @@ fun GraphicalNotesScreen() {
     var referenceInput by remember { mutableStateOf("") }
     var fetchedVerses by remember { mutableStateOf<List<Verse>>(emptyList()) }
     var fetchError by remember { mutableStateOf<String?>(null) }
+    var currentReference by remember { mutableStateOf("") }
 
     Scaffold { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .heightIn(max = 1600.dp)
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 500.dp)
+                    .background(themeColors.primary.copy(alpha = 0.1f))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Fetch Bible Verse",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        OutlinedTextField(
+                            value = referenceInput,
+                            onValueChange = { referenceInput = it },
+                            label = { Text("Reference (e.g., John 3:16)") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            isError = fetchError != null
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                fetchError = null
+                                when (val result = fetchByReference(referenceInput, dbHelper)) {
+                                    is ReferenceResult.Single -> {
+                                        fetchedVerses = listOf(result.verse)
+                                        currentReference = buildReferenceString(
+                                            bookName = result.bookName,
+                                            chapter = result.verse.chapter,
+                                            startVerse = result.verse.verseNumber,
+                                            endVerse = null
+                                        )
+                                    }
+                                    is ReferenceResult.Range -> {
+                                        fetchedVerses = result.verses
+                                        val first = result.verses.first()
+                                        val last = result.verses.last()
+                                        currentReference = buildReferenceString(
+                                            bookName = result.bookName,
+                                            chapter = first.chapter,
+                                            startVerse = first.verseNumber,
+                                            endVerse = last.verseNumber
+                                        )
+                                    }
+                                    is ReferenceResult.Chapter -> {
+                                        fetchedVerses = result.verses
+                                        val first = result.verses.first()
+                                        currentReference = buildReferenceString(
+                                            bookName = result.bookName,
+                                            chapter = first.chapter,
+                                            startVerse = null,
+                                            endVerse = null
+                                        )
+                                    }
+                                    ReferenceResult.Invalid -> {
+                                        fetchedVerses = emptyList()
+                                        currentReference = ""
+                                        fetchError = "Invalid reference or verse not found"
+                                    }
+                                }
+                            }
+                        ) {
+                            Text("Fetch")
+                        }
+                    }
+
+                    if (fetchError != null) {
+                        Text(
+                            text = fetchError!!,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+
+                    if (fetchedVerses.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Fetched Verses:",
+                            style = MaterialTheme.typography.titleSmall
+                        )
+
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface
+                            )
+                        ) {
+                            Column {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(themeColors.primary.copy(alpha = 0.15f))
+                                        .padding(12.dp)
+                                ) {
+                                    Text(
+                                        text = currentReference,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = themeColors.primary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .verticalScroll(rememberScrollState())
+                                        .padding(12.dp)
+                                ) {
+                                    fetchedVerses.forEach { verse ->
+                                        val processed = verseProcessor.processVerse(
+                                            verseText = verse.text,
+                                            baseFontSize = 16.sp,
+                                            themeColors = themeColors,
+                                            isOldTestament = viewModel.isOldTestament,
+                                            options = ProcessingOptions(showHeaders = false)
+                                        )
+
+                                        Text(
+                                            text = buildAnnotatedString {
+                                                withStyle(SpanStyle(color = themeColors.verseNumber)) {
+                                                    append("${verse.verseNumber} ")
+                                                }
+                                                append(processed.body)
+                                            },
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            modifier = Modifier.padding(vertical = 4.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -107,131 +261,37 @@ fun GraphicalNotesScreen() {
                     Text("Add")
                 }
             }
-
             Spacer(modifier = Modifier.height(16.dp))
-            Box(
-                modifier = Modifier.fillMaxWidth().background(themeColors.primary.copy(0.1f))
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Fetch Bible Verse",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
+            LazyColumn {
+                items(addedTexts, key = { it }) { text ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
                     ) {
-                        OutlinedTextField(
-                            value = referenceInput,
-                            onValueChange = { referenceInput = it },
-                            label = { Text("Reference (e.g., John 3:16)") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            isError = fetchError != null
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Button(
-                            onClick = {
-                                fetchError = null
-                                when (val result = fetchByReference(referenceInput, dbHelper)) {
-                                    is ReferenceResult.Single -> {
-                                        fetchedVerses = listOf(result.verse)
-                                    }
-                                    is ReferenceResult.Range -> {
-                                        fetchedVerses = result.verses
-                                    }
-                                    is ReferenceResult.Chapter -> {
-                                        fetchedVerses = result.verses
-                                    }
-                                    ReferenceResult.Invalid -> {
-                                        fetchedVerses = emptyList()
-                                        fetchError = "Invalid reference or verse not found"
-                                    }
-                                }
-                            }
-                        ) {
-                            Text("Fetch")
-                        }
-                    }
-                    if (fetchError != null) {
                         Text(
-                            text = fetchError!!,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(top = 4.dp)
+                            text = text,
+                            modifier = Modifier.padding(16.dp),
+                            style = MaterialTheme.typography.bodyLarge
                         )
-                    }
-                    if (fetchedVerses.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Fetched Verses:",
-                            style = MaterialTheme.typography.titleSmall
-                        )
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 4.dp)
-                        ) {
-                            fetchedVerses.forEach { verse ->
-                                val processed = verseProcessor.processVerse(
-                                    verseText = verse.text,
-                                    baseFontSize = 16.sp,
-                                    themeColors = themeColors,
-                                    isOldTestament = viewModel.isOldTestament,
-                                    options = ProcessingOptions(showHeaders = false)
-                                )
-
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 2.dp)
-                                ) {
-                                    Text(
-                                        text = buildAnnotatedString {
-                                            withStyle(
-                                                SpanStyle(
-                                                    color = themeColors.verseNumber
-                                                )
-                                            ) {
-                                                append("${verse.verseNumber} ")
-                                            }
-                                            append(processed.body)
-                                        },
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        modifier = Modifier.padding(12.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-            if (addedTexts.isEmpty()) {
-                Text(
-                    text = "No texts added yet.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                LazyColumn {
-                    items(addedTexts, key = { it }) { text ->
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = text,
-                                modifier = Modifier.padding(16.dp),
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                        }
                     }
                 }
             }
         }
+    }
+}
+
+private fun buildReferenceString(
+    bookName: String,
+    chapter: Int?,
+    startVerse: Int?,
+    endVerse: Int?
+): String {
+    val fullBook = bookName.replaceFirstChar { it.uppercase() }
+    return when {
+        startVerse == null -> "$fullBook $chapter"
+        endVerse == null -> "$fullBook $chapter:$startVerse"
+        startVerse == endVerse -> "$fullBook $chapter:$startVerse"
+        else -> "$fullBook $chapter:$startVerse-$endVerse"
     }
 }

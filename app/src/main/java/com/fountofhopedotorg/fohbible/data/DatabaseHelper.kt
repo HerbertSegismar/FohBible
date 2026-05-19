@@ -6,6 +6,7 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import com.fountofhopedotorg.fohbible.functions.customDistance
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Locale.getDefault
@@ -866,9 +867,9 @@ fun getVersesWithSubheadings(
 
 
 sealed class ReferenceResult {
-    data class Single(val verse: Verse) : ReferenceResult()
-    data class Range(val verses: List<Verse>) : ReferenceResult()
-    data class Chapter(val verses: List<Verse>) : ReferenceResult()
+    data class Single(val verse: Verse, val bookName: String) : ReferenceResult()
+    data class Range(val verses: List<Verse>, val bookName: String) : ReferenceResult()
+    data class Chapter(val verses: List<Verse>, val bookName: String) : ReferenceResult()
     object Invalid : ReferenceResult()
 }
 
@@ -876,28 +877,73 @@ fun fetchByReference(reference: String, versesHelper: DatabaseHelper): Reference
     val pattern = Regex("""^([A-Za-z0-9 ]+?)\s+(\d+)(?::(\d+)(?:-(\d+))?)?$""")
     val match = pattern.find(reference.trim()) ?: return ReferenceResult.Invalid
 
-    val bookName = match.groupValues[1].trim()
+    val bookNameInput = match.groupValues[1].trim()
     val chapter = match.groupValues[2].toIntOrNull() ?: return ReferenceResult.Invalid
     val startVerse = match.groupValues[3].toIntOrNull()
     val endVerse = match.groupValues[4].toIntOrNull()
-    val bookInfo = BibleData.allBooks.find { it.name.equals(bookName, ignoreCase = true) }
-    if (bookInfo == null) return ReferenceResult.Invalid
+
+    val bookInfo = findClosestBook(bookNameInput) ?: return ReferenceResult.Invalid
     val chapterVerses = versesHelper.getVerses(bookInfo.customNumber, chapter)
     if (chapterVerses.isEmpty()) return ReferenceResult.Invalid
 
+    fun Verse.enrich() = this.copy(bookName = bookInfo.name, chapter = chapter)
+
     return when {
         startVerse == null -> {
-            ReferenceResult.Chapter(chapterVerses)
+            ReferenceResult.Chapter(
+                chapterVerses.map { it.enrich() },
+                bookName = bookInfo.name
+            )
         }
         endVerse == null -> {
             val verse = chapterVerses.find { it.verseNumber == startVerse }
-            if (verse != null) ReferenceResult.Single(verse)
-            else ReferenceResult.Invalid
+            if (verse != null)
+                ReferenceResult.Single(verse.enrich(), bookName = bookInfo.name)
+            else
+                ReferenceResult.Invalid
         }
         else -> {
             val rangeVerses = chapterVerses.filter { it.verseNumber in startVerse..endVerse }
-            if (rangeVerses.isNotEmpty()) ReferenceResult.Range(rangeVerses)
-            else ReferenceResult.Invalid
+            if (rangeVerses.isNotEmpty())
+                ReferenceResult.Range(
+                    rangeVerses.map { it.enrich() },
+                    bookName = bookInfo.name
+                )
+            else
+                ReferenceResult.Invalid
         }
     }
+}
+
+private fun findClosestBook(input: String): BibleBook? {
+    if (input.isBlank()) return null
+
+    val normalizedInput = input.lowercase(getDefault()).trim()
+
+    BibleData.allBooks.firstOrNull {
+        it.name.lowercase(getDefault()) == normalizedInput
+    }?.let { return it }
+
+    BibleData.allBooks.firstOrNull {
+        it.name.lowercase(getDefault()).contains(normalizedInput)
+    }?.let { return it }
+
+    BibleData.allBooks.firstOrNull {
+        it.name.lowercase(getDefault()).startsWith(normalizedInput)
+    }?.let { return it }
+
+    var bestBook: BibleBook? = null
+    var bestScore = Int.MAX_VALUE
+
+    for (book in BibleData.allBooks) {
+        val bookName = book.name.lowercase(getDefault())
+        val distance = customDistance(normalizedInput, bookName)
+
+        if (distance < bestScore) {
+            bestScore = distance
+            bestBook = book
+        }
+    }
+
+    return if (bestScore <= 4) bestBook else null
 }
