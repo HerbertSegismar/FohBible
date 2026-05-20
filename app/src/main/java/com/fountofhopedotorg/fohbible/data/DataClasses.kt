@@ -10,6 +10,7 @@ import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.unit.TextUnit
 import com.fountofhopedotorg.fohbible.MainActivity
 import com.fountofhopedotorg.fohbible.ui.theme.DefaultPrimaryColor
+import java.util.UUID
 
 data class PassageSelection(
     val bookNumber: Int,
@@ -250,6 +251,14 @@ data class Droplet(
     val tailLength: Float = 0f
 )
 
+data class CanvasNote(
+    val id: String = UUID.randomUUID().toString(),
+    val content: String,
+    val offset: Offset = Offset.Zero,
+    val width: Float = 280f,
+    val height: Float = 200f,
+    val backgroundColor: Color = Color.White
+)
 
 data class SearchOptions(val bookRange: Pair<Int, Int>? = null)
 
