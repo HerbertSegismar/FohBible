@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -17,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
@@ -37,7 +37,17 @@ import com.fountofhopedotorg.fohbible.data.*
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
+import java.util.UUID
 import kotlin.math.roundToInt
+
+data class CanvasNote(
+    val id: String = UUID.randomUUID().toString(),
+    val content: String,
+    val offset: Offset = Offset.Zero,
+    val width: Float = 280f,
+    val height: Float = 220f,
+    val backgroundColor: Color = Color.White
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,11 +98,7 @@ fun GraphicalNotesScreen() {
                 .padding(16.dp)
                 .verticalScroll(mainScrollState)
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(themeColors.primary.copy(alpha = 0.1f))
-            ) {
+            Box(modifier = Modifier.fillMaxWidth().background(themeColors.primary.copy(alpha = 0.1f))) {
                 Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
                     Text("Fetch Bible Verse", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
@@ -144,22 +150,11 @@ fun GraphicalNotesScreen() {
 
                         Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                             Column {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(themeColors.primary.copy(alpha = 0.15f))
-                                        .padding(12.dp)
-                                ) {
+                                Box(modifier = Modifier.fillMaxWidth().background(themeColors.primary.copy(alpha = 0.15f)).padding(12.dp)) {
                                     Text(currentReference, style = MaterialTheme.typography.titleMedium, color = themeColors.primary, fontWeight = FontWeight.Bold)
                                 }
 
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .heightIn(max = 280.dp)
-                                        .verticalScroll(rememberScrollState())
-                                        .padding(12.dp)
-                                ) {
+                                Column(modifier = Modifier.fillMaxWidth().heightIn(max = 280.dp).verticalScroll(rememberScrollState()).padding(12.dp)) {
                                     fetchedVerses.forEach { verse ->
                                         val processed = verseProcessor.processVerse(
                                             verseText = verse.text,
@@ -169,10 +164,8 @@ fun GraphicalNotesScreen() {
                                             options = ProcessingOptions(showHeaders = false)
                                         )
                                         Text(
-                                            text = buildAnnotatedString {
-                                                withStyle(SpanStyle(color = themeColors.verseNumber)) {
-                                                    append("${verse.verseNumber} ")
-                                                }
+                                            buildAnnotatedString {
+                                                withStyle(SpanStyle(color = themeColors.verseNumber)) { append("${verse.verseNumber} ") }
                                                 append(processed.body)
                                             },
                                             modifier = Modifier.padding(vertical = 4.dp)
@@ -180,23 +173,16 @@ fun GraphicalNotesScreen() {
                                     }
                                 }
 
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(12.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
+                                Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Button(onClick = {
                                         val passage = buildPassageText(currentReference, fetchedVerses, verseProcessor, themeColors, viewModel)
                                         if (passage.isNotBlank()) addedTexts.add(passage)
-                                    }, modifier = Modifier.weight(1f)) {
-                                        Text("Add to Notes")
-                                    }
+                                    }, modifier = Modifier.weight(1f)) { Text("Add to Notes") }
 
                                     Button(onClick = {
                                         val passage = buildPassageText(currentReference, fetchedVerses, verseProcessor, themeColors, viewModel)
                                         if (passage.isNotBlank()) canvasNotes.add(CanvasNote(content = passage))
-                                    }, modifier = Modifier.weight(1f)) {
-                                        Text("Add to Canvas")
-                                    }
+                                    }, modifier = Modifier.weight(1f)) { Text("Add to Canvas") }
                                 }
                             }
                         }
@@ -206,13 +192,7 @@ fun GraphicalNotesScreen() {
 
             Spacer(Modifier.height(20.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(
-                    value = currentText,
-                    onValueChange = { currentText = it },
-                    label = { Text("Enter text") },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true
-                )
+                OutlinedTextField(value = currentText, onValueChange = { currentText = it }, label = { Text("Enter text") }, modifier = Modifier.weight(1f), singleLine = true)
                 Spacer(Modifier.width(8.dp))
                 Button(onClick = {
                     if (currentText.isNotBlank()) {
@@ -256,6 +236,9 @@ fun GraphicalNotesScreen() {
                     var currentHeight by remember(note.id) { mutableFloatStateOf(note.height) }
 
                     val density = LocalDensity.current
+                    val contentLines = note.content.lines()
+                    val referenceLine = contentLines.firstOrNull() ?: "Note"
+                    val bodyText = if (contentLines.size > 1) contentLines.drop(1).joinToString("\n") else ""
 
                     Box(
                         modifier = Modifier
@@ -266,11 +249,7 @@ fun GraphicalNotesScreen() {
                                 detectDragGestures { change, dragAmount ->
                                     change.consume()
                                     currentOffset += dragAmount
-                                    canvasNotes[index] = canvasNotes[index].copy(
-                                        offset = currentOffset,
-                                        width = currentWidth,
-                                        height = currentHeight
-                                    )
+                                    canvasNotes[index] = canvasNotes[index].copy(offset = currentOffset, width = currentWidth, height = currentHeight)
                                 }
                             }
                     ) {
@@ -279,29 +258,28 @@ fun GraphicalNotesScreen() {
                             colors = CardDefaults.cardColors(containerColor = note.backgroundColor),
                             elevation = CardDefaults.cardElevation(8.dp)
                         ) {
-                            Column(modifier = Modifier.padding(14.dp).fillMaxSize()) {
-                                Text(
-                                    text = note.content,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    maxLines = 12,
-                                    overflow = TextOverflow.Ellipsis,
-                                    color = if (note.backgroundColor.luminance() < 0.5f) Color.White else Color.Black
-                                )
-
-                                Spacer(Modifier.weight(1f))
-
+                            Column(modifier = Modifier.fillMaxSize()) {
                                 Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(note.backgroundColor.copy(alpha = 0.95f))
+                                        .padding(horizontal = 14.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    Text(
+                                        text = referenceLine,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
+                                    )
+
+                                    Spacer(Modifier.width(12.dp))
                                     Box(
                                         modifier = Modifier
                                             .size(16.dp)
-                                            .background(
-                                                brush = Brush.horizontalGradient(listOf(note.backgroundColor, note.backgroundColor.copy(alpha = 0.8f))),
-                                                shape = CircleShape
-                                            )
+                                            .background(brush = Brush.horizontalGradient(listOf(note.backgroundColor, note.backgroundColor.copy(alpha = 0.8f))), shape = CircleShape)
                                             .border(1.5.dp, MaterialTheme.colorScheme.outline, CircleShape)
                                             .clickable {
                                                 noteToColorEdit = note
@@ -309,38 +287,46 @@ fun GraphicalNotesScreen() {
                                             }
                                     )
 
+                                    Spacer(Modifier.width(6.dp))
                                     IconButton(onClick = { canvasNotes.removeAt(index) }) {
                                         Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
                                     }
                                 }
+                                Column(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(horizontal = 14.dp)
+                                        .verticalScroll(rememberScrollState())
+                                ) {
+                                    Text(
+                                        text = bodyText.ifBlank { note.content },
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = if (note.backgroundColor.luminance() < 0.5f) Color.White else Color.Black
+                                    )
+                                }
                             }
                         }
+
                         Box(
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
-                                .size(16.dp)
+                                .size(32.dp)
                                 .pointerInput(note.id) {
                                     detectDragGestures { change, dragAmount ->
                                         change.consume()
                                         val newWidth = (currentWidth + dragAmount.x).coerceAtLeast(160f)
-                                        val newHeight = (currentHeight + dragAmount.y).coerceAtLeast(100f)
-
+                                        val newHeight = (currentHeight + dragAmount.y).coerceAtLeast(120f)
                                         currentWidth = newWidth
                                         currentHeight = newHeight
-
-                                        canvasNotes[index] = canvasNotes[index].copy(
-                                            offset = currentOffset,
-                                            width = newWidth,
-                                            height = newHeight
-                                        )
+                                        canvasNotes[index] = canvasNotes[index].copy(offset = currentOffset, width = newWidth, height = newHeight)
                                     }
                                 }
                         ) {
                             Box(
                                 modifier = Modifier
                                     .align(Alignment.BottomEnd)
-                                    .size(24.dp)
-                                    .background(MaterialTheme.colorScheme.primary.copy(0.2f), RoundedCornerShape(4.dp))
+                                    .size(12.dp)
+                                    .background(MaterialTheme.colorScheme.secondary)
                             )
                         }
                     }
