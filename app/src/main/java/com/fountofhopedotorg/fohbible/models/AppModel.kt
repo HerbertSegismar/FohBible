@@ -9,11 +9,13 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.fountofhopedotorg.fohbible.Screen
 import com.fountofhopedotorg.fohbible.data.BibleData
+import com.fountofhopedotorg.fohbible.data.CanvasNote
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.data.Testament
@@ -26,6 +28,48 @@ import java.io.IOException
 
 @Stable
 class AppViewModel(application: Application) : AndroidViewModel(application) {
+
+    val addedTexts = mutableStateListOf<String>()
+    val canvasNotes = mutableStateListOf<CanvasNote>()
+
+    fun addText(text: String) {
+        if (text.isNotBlank()) {
+            addedTexts.add(text.trim())
+        }
+    }
+
+    fun addToCanvas(note: CanvasNote) {
+        canvasNotes.add(note)
+    }
+
+    fun removeFromCanvas(index: Int) {
+        if (index in canvasNotes.indices) {
+            canvasNotes.removeAt(index)
+        }
+    }
+
+    fun updateNotePosition(id: String, offset: Offset, width: Float, height: Float) {
+        val index = canvasNotes.indexOfFirst { it.id == id }
+        if (index != -1) {
+            canvasNotes[index] = canvasNotes[index].copy(
+                offset = offset,
+                width = width,
+                height = height
+            )
+        }
+    }
+
+    fun updateNoteColor(id: String, color: Color) {
+        val index = canvasNotes.indexOfFirst { it.id == id }
+        if (index != -1) {
+            canvasNotes[index] = canvasNotes[index].copy(backgroundColor = color)
+        }
+    }
+
+    fun clearAllNotes() {
+        addedTexts.clear()
+        canvasNotes.clear()
+    }
 
     val predefinedHighlightColors = mutableStateListOf<Color>().apply {
         addAll(
