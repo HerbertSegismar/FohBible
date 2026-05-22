@@ -22,7 +22,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -69,21 +68,21 @@ fun ShapeSelectionCard(
 }
 
 @Composable
-fun SquareShape(modifier: Modifier = Modifier, color: Color = randomColor().copy(0.4f),) {
+fun SquareShape(modifier: Modifier = Modifier, color: Color = randomColor().copy(0.4f)) {
     Canvas(modifier = modifier) {
         drawRect(color = color)
     }
 }
 
 @Composable
-fun CircleShape(modifier: Modifier = Modifier, color: Color = randomColor().copy(0.4f),) {
+fun CircleShape(modifier: Modifier = Modifier, color: Color = randomColor().copy(0.4f)) {
     Canvas(modifier = modifier) {
         drawCircle(color = color)
     }
 }
 
 @Composable
-fun TriangleShape(modifier: Modifier = Modifier, color: Color = randomColor().copy(0.4f),) {
+fun TriangleShape(modifier: Modifier = Modifier, color: Color = randomColor().copy(0.4f)) {
     Canvas(modifier = modifier) {
         val trianglePath = Path().apply {
             moveTo(size.width / 2f, 0f)
