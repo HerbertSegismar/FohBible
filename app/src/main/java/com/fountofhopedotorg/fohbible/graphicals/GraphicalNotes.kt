@@ -2,14 +2,12 @@ package com.fountofhopedotorg.fohbible.graphicals
 
 import android.os.Build
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -24,19 +22,14 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Fill
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -44,6 +37,7 @@ import com.fountofhopedotorg.fohbible.composables.CanvasSvgItem
 import com.fountofhopedotorg.fohbible.composables.CanvasTextItem
 import com.fountofhopedotorg.fohbible.composables.CircleShape
 import com.fountofhopedotorg.fohbible.composables.ColorWheelDialog
+import com.fountofhopedotorg.fohbible.composables.CustomPolygonDialog
 import com.fountofhopedotorg.fohbible.composables.PolygonShape
 import com.fountofhopedotorg.fohbible.composables.ShapeSelectionCard
 import com.fountofhopedotorg.fohbible.composables.SquareShape
@@ -541,139 +535,4 @@ fun GraphicalNotesScreen() {
             }
         )
     }
-}
-
-@Composable
-fun CustomPolygonDialog(
-    onDismiss: () -> Unit,
-    onConfirm: (List<Offset>) -> Unit
-) {
-    val points = remember { mutableStateListOf<Offset>() }
-    var drawingAreaSize by remember { mutableStateOf(IntSize.Zero) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Tap to add polygon points") },
-        text = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(1f)
-                        .background(Color(0xFFF0F0F0), RoundedCornerShape(8.dp))
-                        .onSizeChanged { drawingAreaSize = it }
-                        .pointerInput(Unit) {
-                            detectTapGestures { tapOffset ->
-                                if (drawingAreaSize.width > 0 && drawingAreaSize.height > 0) {
-                                    val normX = tapOffset.x / drawingAreaSize.width
-                                    val normY = tapOffset.y / drawingAreaSize.height
-                                    val clamped = Offset(
-                                        normX.coerceIn(0f, 1f),
-                                        normY.coerceIn(0f, 1f)
-                                    )
-                                    points.add(clamped)
-                                }
-                            }
-                        }
-                ) {
-                    Canvas(modifier = Modifier.fillMaxSize()) {
-                        val canvasSize = this.size
-                        if (points.size >= 3) {
-                            val path = Path().apply {
-                                moveTo(
-                                    points[0].x * canvasSize.width,
-                                    points[0].y * canvasSize.height
-                                )
-                                for (i in 1 until points.size) {
-                                    lineTo(
-                                        points[i].x * canvasSize.width,
-                                        points[i].y * canvasSize.height
-                                    )
-                                }
-                                close()
-                            }
-                            drawPath(
-                                path = path,
-                                color = Color(0x4000BCD4),
-                                style = Fill
-                            )
-                            drawPath(
-                                path = path,
-                                color = Color(0xFF00BCD4),
-                                style = Stroke(width = 3f)
-                            )
-                        }
-
-                        if (points.size >= 2) {
-                            for (i in 0 until points.size - 1) {
-                                drawLine(
-                                    color = Color.Gray,
-                                    start = Offset(
-                                        points[i].x * canvasSize.width,
-                                        points[i].y * canvasSize.height
-                                    ),
-                                    end = Offset(
-                                        points[i + 1].x * canvasSize.width,
-                                        points[i + 1].y * canvasSize.height
-                                    ),
-                                    strokeWidth = 2f
-                                )
-                            }
-                        }
-
-                        points.forEach { point ->
-                            drawCircle(
-                                color = Color.Red,
-                                radius = 8f,
-                                center = Offset(
-                                    point.x * canvasSize.width,
-                                    point.y * canvasSize.height
-                                )
-                            )
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = { if (points.isNotEmpty()) points.removeAt(points.lastIndex) },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Undo")
-                    }
-                    OutlinedButton(
-                        onClick = { points.clear() },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Clear")
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    if (points.size >= 3) {
-                        onConfirm(points.toList())
-                    }
-                },
-                enabled = points.size >= 3
-            ) {
-                Text("Add to Canvas")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
 }
