@@ -1,5 +1,6 @@
 package com.fountofhopedotorg.fohbible.composables
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -36,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
@@ -51,6 +53,50 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
+
+
+@Composable
+fun ShapeSelectionCard(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+    shapePreview: @Composable () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .clickable { onClick() }
+            .padding(12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        shapePreview()
+    }
+}
+
+@Composable
+fun SquareShape(modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.primary) {
+    Canvas(modifier = modifier) {
+        drawRect(color = color)
+    }
+}
+
+@Composable
+fun CircleShape(modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.primary) {
+    Canvas(modifier = modifier) {
+        drawCircle(color = color)
+    }
+}
+
+@Composable
+fun TriangleShape(modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.primary) {
+    Canvas(modifier = modifier) {
+        val trianglePath = Path().apply {
+            moveTo(size.width / 2f, 0f)
+            lineTo(size.width, size.height)
+            lineTo(0f, size.height)
+            close()
+        }
+        drawPath(path = trianglePath, color = color)
+    }
+}
 
 @Composable
 fun CanvasNoteItem(

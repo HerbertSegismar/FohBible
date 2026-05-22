@@ -29,7 +29,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.composables.CanvasNoteItem
+import com.fountofhopedotorg.fohbible.composables.CircleShape
 import com.fountofhopedotorg.fohbible.composables.ColorWheelDialog
+import com.fountofhopedotorg.fohbible.composables.ShapeSelectionCard
+import com.fountofhopedotorg.fohbible.composables.SquareShape
+import com.fountofhopedotorg.fohbible.composables.TriangleShape
 import com.fountofhopedotorg.fohbible.data.*
 import com.fountofhopedotorg.fohbible.functions.buildPassageText
 import com.fountofhopedotorg.fohbible.functions.buildReferenceString
@@ -40,6 +44,7 @@ import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.Q)
 @Composable
 fun GraphicalNotesScreen() {
@@ -81,6 +86,9 @@ fun GraphicalNotesScreen() {
     var showColorPicker by remember { mutableStateOf(false) }
     var noteToColorEdit by remember { mutableStateOf<CanvasNote?>(null) }
     val mainScrollState = rememberScrollState()
+    var inputModeExpanded by remember { mutableStateOf(false) }
+    val inputModes = listOf("Add Text", "Fetch Verse", "Add SVG")
+    var selectedInputMode by remember { mutableStateOf(inputModes[0]) }
 
     Column(
         modifier = Modifier
@@ -89,118 +97,195 @@ fun GraphicalNotesScreen() {
             .verticalScroll(mainScrollState)
     ) {
         Spacer(Modifier.height(16.dp))
-        Box(modifier = Modifier.fillMaxWidth().background(themeColors.primary.copy(alpha = 0.1f))) {
-            Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
-                Text("Fetch Bible Verse", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(8.dp))
 
+        ExposedDropdownMenuBox(
+            expanded = inputModeExpanded,
+            onExpandedChange = { inputModeExpanded = it },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            OutlinedTextField(
+                value = selectedInputMode,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Input Mode") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = inputModeExpanded) },
+                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                modifier = Modifier
+                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true)
+                    .fillMaxWidth()
+            )
+            ExposedDropdownMenu(
+                expanded = inputModeExpanded,
+                onDismissRequest = { inputModeExpanded = false }
+            ) {
+                inputModes.forEach { mode ->
+                    DropdownMenuItem(
+                        text = { Text(mode) },
+                        onClick = {
+                            selectedInputMode = mode
+                            inputModeExpanded = false
+                        }
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        when (selectedInputMode) {
+            "Add Text" -> {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
-                        value = referenceInput,
-                        onValueChange = { referenceInput = it },
-                        label = { Text("Reference (e.g., John 3:16)") },
+                        value = currentText,
+                        onValueChange = { currentText = it },
+                        label = { Text("Enter text") },
                         modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        isError = fetchError != null
+                        singleLine = true
                     )
                     Spacer(Modifier.width(8.dp))
                     Button(onClick = {
-                        fetchError = null
-                        when (val result = fetchByReference(referenceInput, dbHelper)) {
-                            is ReferenceResult.Single -> {
-                                fetchedVerses = listOf(result.verse)
-                                currentReference = buildReferenceString(result.bookName, result.verse.chapter, result.verse.verseNumber, null)
-                            }
-                            is ReferenceResult.Range -> {
-                                fetchedVerses = result.verses
-                                val first = result.verses.first()
-                                val last = result.verses.last()
-                                currentReference = buildReferenceString(result.bookName, first.chapter, first.verseNumber, last.verseNumber)
-                            }
-                            is ReferenceResult.Chapter -> {
-                                fetchedVerses = result.verses
-                                val first = result.verses.first()
-                                currentReference = buildReferenceString(result.bookName, first.chapter, null, null)
-                            }
-                            ReferenceResult.Invalid -> {
-                                fetchedVerses = emptyList()
-                                currentReference = ""
-                                fetchError = "Invalid reference or verse not found"
-                            }
+                        if (currentText.isNotBlank()) {
+                            viewModel.addText(currentText)
+                            currentText = ""
                         }
-                    }) { Text("Fetch") }
+                    }) { Text("Add") }
                 }
+            }
 
-                if (fetchError != null) {
-                    Text(fetchError!!, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 4.dp))
-                }
-
-                if (fetchedVerses.isNotEmpty()) {
-                    Spacer(Modifier.height(12.dp))
-                    Text("Fetched Verses:", style = MaterialTheme.typography.titleSmall)
-
-                    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                        Column {
-                            Box(modifier = Modifier.fillMaxWidth().background(themeColors.primary.copy(alpha = 0.15f)).padding(12.dp)) {
-                                Text(currentReference, style = MaterialTheme.typography.titleMedium, color = themeColors.primary, fontWeight = FontWeight.Bold)
-                            }
-
-                            Column(modifier = Modifier.fillMaxWidth().heightIn(max = 280.dp).verticalScroll(rememberScrollState()).padding(12.dp)) {
-                                fetchedVerses.forEach { verse ->
-                                    val processed = verseProcessor.processVerse(
-                                        verseText = verse.text,
-                                        baseFontSize = 16.sp,
-                                        themeColors = themeColors,
-                                        isOldTestament = viewModel.isOldTestament,
-                                        options = ProcessingOptions(showHeaders = false)
-                                    )
-                                    Text(
-                                        buildAnnotatedString {
-                                            withStyle(SpanStyle(color = themeColors.verseNumber)) { append("${verse.verseNumber} ") }
-                                            append(processed.body)
-                                        },
-                                        modifier = Modifier.padding(vertical = 4.dp)
-                                    )
+            "Fetch Verse" -> {
+                Box(modifier = Modifier.fillMaxWidth().background(themeColors.primary.copy(alpha = 0.1f))) {
+                    Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                            OutlinedTextField(
+                                value = referenceInput,
+                                onValueChange = { referenceInput = it },
+                                label = { Text("Reference (e.g., John 3:16)") },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                isError = fetchError != null
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Button(onClick = {
+                                fetchError = null
+                                when (val result = fetchByReference(referenceInput, dbHelper)) {
+                                    is ReferenceResult.Single -> {
+                                        fetchedVerses = listOf(result.verse)
+                                        currentReference = buildReferenceString(result.bookName, result.verse.chapter, result.verse.verseNumber, null)
+                                    }
+                                    is ReferenceResult.Range -> {
+                                        fetchedVerses = result.verses
+                                        val first = result.verses.first()
+                                        val last = result.verses.last()
+                                        currentReference = buildReferenceString(result.bookName, first.chapter, first.verseNumber, last.verseNumber)
+                                    }
+                                    is ReferenceResult.Chapter -> {
+                                        fetchedVerses = result.verses
+                                        val first = result.verses.first()
+                                        currentReference = buildReferenceString(result.bookName, first.chapter, null, null)
+                                    }
+                                    ReferenceResult.Invalid -> {
+                                        fetchedVerses = emptyList()
+                                        currentReference = ""
+                                        fetchError = "Invalid reference or verse not found"
+                                    }
                                 }
-                            }
+                            }) { Text("Fetch") }
+                        }
 
-                            Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                val passage = remember(currentReference, fetchedVerses, themeColors) {
-                                    buildPassageText(currentReference, fetchedVerses, verseProcessor, themeColors, viewModel)
-                                }
-                                Button(onClick = {
-                                    if (passage.isNotBlank()) viewModel.addText(passage)
-                                }, modifier = Modifier.weight(1f)) {
-                                    Text("Add to Notes")
-                                }
-                                Button(onClick = {
-                                    if (passage.isNotBlank()) viewModel.addToCanvas(CanvasNote(content = passage))
-                                }, modifier = Modifier.weight(1f)) {
-                                    Text("Add to Canvas")
+                        if (fetchError != null) {
+                            Text(fetchError!!, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 4.dp))
+                        }
+
+                        if (fetchedVerses.isNotEmpty()) {
+                            Spacer(Modifier.height(12.dp))
+                            Text("Fetched Verses:", style = MaterialTheme.typography.titleSmall)
+
+                            Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                                Column {
+                                    Box(modifier = Modifier.fillMaxWidth().background(themeColors.primary.copy(alpha = 0.15f)).padding(12.dp)) {
+                                        Text(currentReference, style = MaterialTheme.typography.titleMedium, color = themeColors.primary, fontWeight = FontWeight.Bold)
+                                    }
+
+                                    Column(modifier = Modifier.fillMaxWidth().heightIn(max = 280.dp).verticalScroll(rememberScrollState()).padding(12.dp)) {
+                                        fetchedVerses.forEach { verse ->
+                                            val processed = verseProcessor.processVerse(
+                                                verseText = verse.text,
+                                                baseFontSize = 16.sp,
+                                                themeColors = themeColors,
+                                                isOldTestament = viewModel.isOldTestament,
+                                                options = ProcessingOptions(showHeaders = false)
+                                            )
+                                            Text(
+                                                buildAnnotatedString {
+                                                    withStyle(SpanStyle(color = themeColors.verseNumber)) { append("${verse.verseNumber} ") }
+                                                    append(processed.body)
+                                                },
+                                                modifier = Modifier.padding(vertical = 4.dp)
+                                            )
+                                        }
+                                    }
+
+                                    Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        val passage = remember(currentReference, fetchedVerses, themeColors) {
+                                            buildPassageText(currentReference, fetchedVerses, verseProcessor, themeColors, viewModel)
+                                        }
+                                        Button(onClick = {
+                                            if (passage.isNotBlank()) viewModel.addText(passage)
+                                        }, modifier = Modifier.weight(1f)) {
+                                            Text("Add to Notes")
+                                        }
+                                        Button(onClick = {
+                                            if (passage.isNotBlank()) viewModel.addToCanvas(CanvasNote(content = passage))
+                                        }, modifier = Modifier.weight(1f)) {
+                                            Text("Add to Canvas")
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-        }
 
-        Spacer(Modifier.height(20.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = currentText,
-                onValueChange = { currentText = it },
-                label = { Text("Enter text") },
-                modifier = Modifier.weight(1f),
-                singleLine = true
-            )
-            Spacer(Modifier.width(8.dp))
-            Button(onClick = {
-                if (currentText.isNotBlank()) {
-                    viewModel.addText(currentText)
-                    currentText = ""
+            "Add SVG" -> {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = themeColors.primary.copy(alpha = 0.05f))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Tap a shape to add to canvas:",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = themeColors.textColor
+                        )
+                        Spacer(Modifier.height(12.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            ShapeSelectionCard(
+                                modifier = Modifier.weight(1f),
+                                onClick = { viewModel.addToCanvas(CanvasNote(content = "Shape: Square")) }
+                            ) {
+                                SquareShape(modifier = Modifier.size(40.dp), color = themeColors.primary)
+                            }
+                            ShapeSelectionCard(
+                                modifier = Modifier.weight(1f),
+                                onClick = { viewModel.addToCanvas(CanvasNote(content = "Shape: Circle")) }
+                            ) {
+                                CircleShape(modifier = Modifier.size(40.dp), color = themeColors.primary)
+                            }
+                            ShapeSelectionCard(
+                                modifier = Modifier.weight(1f),
+                                onClick = { viewModel.addToCanvas(CanvasNote(content = "Shape: Triangle")) }
+                            ) {
+                                TriangleShape(modifier = Modifier.size(40.dp), color = themeColors.primary)
+                            }
+                        }
+                    }
                 }
-            }) { Text("Add") }
+            }
         }
 
         Spacer(Modifier.height(20.dp))
