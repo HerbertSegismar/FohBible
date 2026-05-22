@@ -25,6 +25,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
+import java.util.UUID
 
 @Stable
 class AppViewModel(application: Application) : AndroidViewModel(application) {
@@ -32,14 +33,25 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val addedTexts = mutableStateListOf<String>()
     val canvasNotes = mutableStateListOf<CanvasNote>()
 
+    fun removeText(text: String) {
+        addedTexts.remove(text)
+    }
+
+    fun updateText(oldText: String, newText: String) {
+        val index = addedTexts.indexOf(oldText)
+        if (index != -1) {
+            addedTexts[index] = newText
+        }
+    }
+
     fun addText(text: String) {
         if (text.isNotBlank()) {
-            addedTexts.add(text.trim())
+            addedTexts.add(text)
         }
     }
 
     fun addToCanvas(note: CanvasNote) {
-        canvasNotes.add(note)
+        canvasNotes.add(note.copy(id = UUID.randomUUID().toString()))
     }
 
     fun removeFromCanvas(index: Int) {

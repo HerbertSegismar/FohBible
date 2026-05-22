@@ -2,13 +2,18 @@ package com.fountofhopedotorg.fohbible.graphicals
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
@@ -17,23 +22,33 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.fountofhopedotorg.fohbible.composables.CanvasNoteItem
+import com.fountofhopedotorg.fohbible.composables.CanvasSvgItem
+import com.fountofhopedotorg.fohbible.composables.CanvasTextItem
 import com.fountofhopedotorg.fohbible.composables.CircleShape
 import com.fountofhopedotorg.fohbible.composables.ColorWheelDialog
+import com.fountofhopedotorg.fohbible.composables.PolygonShape
 import com.fountofhopedotorg.fohbible.composables.ShapeSelectionCard
 import com.fountofhopedotorg.fohbible.composables.SquareShape
 import com.fountofhopedotorg.fohbible.composables.TriangleShape
+import com.fountofhopedotorg.fohbible.composables.randomColor
 import com.fountofhopedotorg.fohbible.data.*
 import com.fountofhopedotorg.fohbible.functions.buildPassageText
 import com.fountofhopedotorg.fohbible.functions.buildReferenceString
@@ -52,6 +67,8 @@ fun GraphicalNotesScreen() {
     val viewModel: AppViewModel = viewModel()
     val coroutineScope = rememberCoroutineScope()
     val graphicsLayer = rememberGraphicsLayer()
+    var showCustomPolygonDialog by remember { mutableStateOf(false) }
+    var selectedNoteId by remember { mutableStateOf<String?>(null) }
 
     val dbHelper = remember(viewModel.currentDbName) {
         DatabaseHelper(context, viewModel.currentDbName)
@@ -89,6 +106,8 @@ fun GraphicalNotesScreen() {
     var inputModeExpanded by remember { mutableStateOf(false) }
     val inputModes = listOf("Add Text", "Fetch Verse", "Add SVG")
     var selectedInputMode by remember { mutableStateOf(inputModes[0]) }
+    var noteToEdit by remember { mutableStateOf<String?>(null) }
+    var editedNoteText by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -148,7 +167,7 @@ fun GraphicalNotesScreen() {
                             viewModel.addText(currentText)
                             currentText = ""
                         }
-                    }) { Text("Add") }
+                    }) { Text("Add", color = Color.White) }
                 }
             }
 
@@ -264,23 +283,51 @@ fun GraphicalNotesScreen() {
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
+                            val pentagonPoints = listOf(
+                                Offset(0.5f, 0f),
+                                Offset(1f, 0.4f),
+                                Offset(0.8f, 1f),
+                                Offset(0.2f, 1f),
+                                Offset(0f, 0.4f)
+                            )
                             ShapeSelectionCard(
                                 modifier = Modifier.weight(1f),
                                 onClick = { viewModel.addToCanvas(CanvasNote(content = "Shape: Square")) }
                             ) {
-                                SquareShape(modifier = Modifier.size(40.dp), color = themeColors.primary)
+                                SquareShape(modifier = Modifier.size(40.dp))
                             }
                             ShapeSelectionCard(
                                 modifier = Modifier.weight(1f),
                                 onClick = { viewModel.addToCanvas(CanvasNote(content = "Shape: Circle")) }
                             ) {
-                                CircleShape(modifier = Modifier.size(40.dp), color = themeColors.primary)
+                                CircleShape(modifier = Modifier.size(40.dp))
                             }
                             ShapeSelectionCard(
                                 modifier = Modifier.weight(1f),
                                 onClick = { viewModel.addToCanvas(CanvasNote(content = "Shape: Triangle")) }
                             ) {
-                                TriangleShape(modifier = Modifier.size(40.dp), color = themeColors.primary)
+                                TriangleShape(modifier = Modifier.size(40.dp))
+                            }
+                            ShapeSelectionCard(
+                                modifier = Modifier.weight(1f),
+                                onClick = { viewModel.addToCanvas(CanvasNote(content = "Shape: Pentagon")) }
+                            ) {
+                                PolygonShape(
+                                    points = pentagonPoints,
+                                    modifier = Modifier.size(40.dp)
+                                )
+                            }
+
+                            ShapeSelectionCard(
+                                modifier = Modifier.weight(1f),
+                                onClick = { showCustomPolygonDialog = true }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "Custom Polygon",
+                                    modifier = Modifier.size(48.dp),
+                                    tint = randomColor().copy(0.8f),
+                                )
                             }
                         }
                     }
@@ -293,12 +340,57 @@ fun GraphicalNotesScreen() {
         Spacer(Modifier.height(8.dp))
 
         LazyColumn(modifier = Modifier.heightIn(max = 260.dp)) {
-            items(viewModel.addedTexts, key = { it }) { text ->
+            items(viewModel.addedTexts, key = { it.hashCode() }) { text ->
                 Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(text, modifier = Modifier.weight(1f), maxLines = 3, overflow = TextOverflow.Ellipsis)
-                        Button(onClick = { viewModel.addToCanvas(CanvasNote(content = text)) }) {
-                            Text("→ Canvas")
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = text,
+                            modifier = Modifier.weight(1f),
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    noteToEdit = text
+                                    editedNoteText = text
+                                },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    tint = themeColors.primary,
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "Edit Note",
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.size(4.dp))
+                            IconButton(
+                                onClick = { viewModel.removeText(text) },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Delete Note",
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.size(12.dp))
+                            Button(
+                                onClick = { viewModel.addToCanvas(CanvasNote(content = text)) },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                modifier = Modifier.height(32.dp)
+                            ) {
+                                Text("→ Canvas", color = Color.White, fontSize = 12.sp)
+                            }
                         }
                     }
                 }
@@ -307,37 +399,19 @@ fun GraphicalNotesScreen() {
 
         Spacer(Modifier.height(24.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = {
-                    coroutineScope.launch { saveCanvasAsImage(graphicsLayer, context, "JPG") }
-                }) {
-                    Icon(Icons.Default.Save, null)
-                    Spacer(Modifier.width(4.dp))
-                    Text("JPG")
-                }
-                Button(onClick = {
-                    coroutineScope.launch { saveCanvasAsPDF(graphicsLayer, context) }
-                }) {
-                    Icon(Icons.Default.PictureAsPdf, null)
-                    Spacer(Modifier.width(4.dp))
-                    Text("PDF")
-                }
-            }
-        }
-
-        Spacer(Modifier.height(8.dp))
-
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(700.dp)
                 .clipToBounds()
-                .background(if (isDark) Color(0xFF1E2937) else Color(0xFFF1F5F9), shape = MaterialTheme.shapes.medium)
+                .background(if (isDark) Color(0xFF1E2937) else themeColors.primary.copy(0.1f), shape = MaterialTheme.shapes.medium)
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onTap = {
+                            selectedNoteId = null
+                        }
+                    )
+                }
         ) {
             Box(
                 modifier = Modifier
@@ -350,19 +424,62 @@ fun GraphicalNotesScreen() {
                     }
             ) {
                 viewModel.canvasNotes.forEachIndexed { index, note ->
-                    CanvasNoteItem(
-                        note = note,
-                        onUpdatePosition = { offset, width, height ->
-                            viewModel.updateNotePosition(note.id, offset, width, height)
-                        },
-                        onColorPickerRequested = {
-                            noteToColorEdit = note
-                            showColorPicker = true
-                        },
-                        onDeleteRequested = {
-                            viewModel.removeFromCanvas(index)
-                        }
-                    )
+                    if (note.content.startsWith("Shape:")) {
+                        CanvasSvgItem(
+                            note = note,
+                            isSelected = selectedNoteId == note.id,
+                            onSelect = { selectedNoteId = note.id },
+                            onUpdatePosition = { offset, width, height ->
+                                viewModel.updateNotePosition(note.id, offset, width, height)
+                            },
+                            onColorPickerRequested = {
+                                noteToColorEdit = note
+                                showColorPicker = true
+                            },
+                            onDeleteRequested = {
+                                viewModel.removeFromCanvas(index)
+                            }
+                        )
+                    } else {
+                        CanvasTextItem(
+                            note = note,
+                            isSelected = selectedNoteId == note.id,
+                            onSelect = { selectedNoteId = note.id },
+                            onUpdatePosition = { offset, width, height ->
+                                viewModel.updateNotePosition(note.id, offset, width, height)
+                            },
+                            onColorPickerRequested = {
+                                noteToColorEdit = note
+                                showColorPicker = true
+                            },
+                            onDeleteRequested = {
+                                viewModel.removeFromCanvas(index)
+                            }
+                        )
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = {
+                    coroutineScope.launch { saveCanvasAsImage(graphicsLayer, context, "JPG") }
+                }) {
+                    Icon(Icons.Default.Save, null, tint = Color.White)
+                    Spacer(Modifier.width(4.dp))
+                    Text("JPG", color = Color.White)
+                }
+                Button(onClick = {
+                    coroutineScope.launch { saveCanvasAsPDF(graphicsLayer, context) }
+                }) {
+                    Icon(Icons.Default.PictureAsPdf, null, tint = Color.White)
+                    Spacer(Modifier.width(4.dp))
+                    Text("PDF", color = Color.White)
                 }
             }
         }
@@ -383,4 +500,180 @@ fun GraphicalNotesScreen() {
             initialColor = noteToColorEdit?.backgroundColor ?: Color.White
         )
     }
+
+    if (noteToEdit != null) {
+        AlertDialog(
+            onDismissRequest = { noteToEdit = null },
+            title = { Text("Edit Note") },
+            text = {
+                OutlinedTextField(
+                    value = editedNoteText,
+                    onValueChange = { editedNoteText = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 1
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.updateText(noteToEdit!!, editedNoteText)
+                        noteToEdit = null
+                    }
+                ) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { noteToEdit = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showCustomPolygonDialog) {
+        CustomPolygonDialog(
+            onDismiss = { showCustomPolygonDialog = false },
+            onConfirm = { points ->
+                val serialized = points.joinToString(";") { "${it.x},${it.y}" }
+                viewModel.addToCanvas(CanvasNote(content = "Shape: CustomPolygon:$serialized"))
+                showCustomPolygonDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+fun CustomPolygonDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (List<Offset>) -> Unit
+) {
+    val points = remember { mutableStateListOf<Offset>() }
+    var drawingAreaSize by remember { mutableStateOf(IntSize.Zero) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Tap to add polygon points") },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                        .background(Color(0xFFF0F0F0), RoundedCornerShape(8.dp))
+                        .onSizeChanged { drawingAreaSize = it }
+                        .pointerInput(Unit) {
+                            detectTapGestures { tapOffset ->
+                                if (drawingAreaSize.width > 0 && drawingAreaSize.height > 0) {
+                                    val normX = tapOffset.x / drawingAreaSize.width
+                                    val normY = tapOffset.y / drawingAreaSize.height
+                                    val clamped = Offset(
+                                        normX.coerceIn(0f, 1f),
+                                        normY.coerceIn(0f, 1f)
+                                    )
+                                    points.add(clamped)
+                                }
+                            }
+                        }
+                ) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val canvasSize = this.size
+                        if (points.size >= 3) {
+                            val path = Path().apply {
+                                moveTo(
+                                    points[0].x * canvasSize.width,
+                                    points[0].y * canvasSize.height
+                                )
+                                for (i in 1 until points.size) {
+                                    lineTo(
+                                        points[i].x * canvasSize.width,
+                                        points[i].y * canvasSize.height
+                                    )
+                                }
+                                close()
+                            }
+                            drawPath(
+                                path = path,
+                                color = Color(0x4000BCD4),
+                                style = Fill
+                            )
+                            drawPath(
+                                path = path,
+                                color = Color(0xFF00BCD4),
+                                style = Stroke(width = 3f)
+                            )
+                        }
+
+                        if (points.size >= 2) {
+                            for (i in 0 until points.size - 1) {
+                                drawLine(
+                                    color = Color.Gray,
+                                    start = Offset(
+                                        points[i].x * canvasSize.width,
+                                        points[i].y * canvasSize.height
+                                    ),
+                                    end = Offset(
+                                        points[i + 1].x * canvasSize.width,
+                                        points[i + 1].y * canvasSize.height
+                                    ),
+                                    strokeWidth = 2f
+                                )
+                            }
+                        }
+
+                        points.forEach { point ->
+                            drawCircle(
+                                color = Color.Red,
+                                radius = 8f,
+                                center = Offset(
+                                    point.x * canvasSize.width,
+                                    point.y * canvasSize.height
+                                )
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { if (points.isNotEmpty()) points.removeAt(points.lastIndex) },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Undo")
+                    }
+                    OutlinedButton(
+                        onClick = { points.clear() },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Clear")
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (points.size >= 3) {
+                        onConfirm(points.toList())
+                    }
+                },
+                enabled = points.size >= 3
+            ) {
+                Text("Add to Canvas")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
