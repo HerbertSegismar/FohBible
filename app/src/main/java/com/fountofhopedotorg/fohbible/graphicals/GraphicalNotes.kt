@@ -2,14 +2,15 @@ package com.fountofhopedotorg.fohbible.graphicals
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FormatShapes
@@ -57,6 +58,9 @@ import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowRight
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Edit
 
@@ -79,6 +83,7 @@ fun GraphicalNotesScreen() {
     var selectedInputMode by rememberSaveable { mutableStateOf("Add Text") }
     var noteToEdit by rememberSaveable { mutableStateOf<String?>(null) }
     var editedNoteText by rememberSaveable { mutableStateOf("") }
+    var showCanvasElementsTree by rememberSaveable { mutableStateOf(true) }  // Toggle state
     val dbHelper = remember(viewModel.currentDbName) {
         DatabaseHelper(context, viewModel.currentDbName)
     }
@@ -327,106 +332,124 @@ fun GraphicalNotesScreen() {
 
         Spacer(Modifier.height(20.dp))
 
-        Text("Canvas Elements", style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(8.dp))
-
-        if (viewModel.canvasNotes.isEmpty()) {
-            Text(
-                "No elements on canvas yet.",
-                modifier = Modifier.padding(vertical = 8.dp),
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+        // Toggle button for Canvas Elements tree
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { showCanvasElementsTree = !showCanvasElementsTree }
+                .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("Canvas Elements", style = MaterialTheme.typography.titleMedium)
+            Icon(
+                imageVector = if (showCanvasElementsTree) Icons.Default.ArrowDropDown else Icons.AutoMirrored.Filled.ArrowRight,
+                contentDescription = if (showCanvasElementsTree) "Collapse" else "Expand",
+                tint = themeColors.textColor
             )
-        } else {
-            LazyColumn(modifier = Modifier.heightIn(max = 260.dp)) {
-                items(viewModel.canvasNotes, key = { it.id }) { note ->
-                    val isSelected = selectedNoteId == note.id
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                            .pointerInput(note.id) {
-                                detectTapGestures { selectedNoteId = note.id }
-                            },
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (isSelected) themeColors.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            if (note.content.startsWith("Shape:")) {
-                                Icon(
-                                    imageVector = Icons.Default.FormatShapes,
-                                    contentDescription = "Shape",
-                                    modifier = Modifier.size(18.dp),
-                                    tint = themeColors.primary
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Default.TextFields,
-                                    contentDescription = "Text",
-                                    modifier = Modifier.size(18.dp),
-                                    tint = themeColors.primary
-                                )
-                            }
-                            Spacer(Modifier.width(8.dp))
+        }
 
-                            Text(
-                                text = note.content.replaceFirst("Shape: ", "").let {
-                                    if (it.length > 30) it.take(30) + "…" else it
-                                },
-                                modifier = Modifier.weight(1f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-
-                            IconButton(
-                                onClick = {
-                                    noteToEdit = note.id
-                                    editedNoteText = note.content
-                                },
-                                modifier = Modifier.size(32.dp)
+        AnimatedVisibility(visible = showCanvasElementsTree) {
+            Column {
+                if (viewModel.canvasNotes.isEmpty()) {
+                    Text(
+                        "No elements on canvas yet.",
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                } else {
+                    LazyColumn(modifier = Modifier.heightIn(max = 260.dp)) {
+                        items(viewModel.canvasNotes, key = { it.id }) { note ->
+                            val isSelected = selectedNoteId == note.id
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                                    .pointerInput(note.id) {
+                                        detectTapGestures { selectedNoteId = note.id }
+                                    },
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isSelected) themeColors.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface
+                                )
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Edit,
-                                    contentDescription = "Edit",
-                                    tint = themeColors.primary,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    if (note.content.startsWith("Shape:")) {
+                                        Icon(
+                                            imageVector = Icons.Default.FormatShapes,
+                                            contentDescription = "Shape",
+                                            modifier = Modifier.size(18.dp),
+                                            tint = themeColors.primary
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = Icons.Default.TextFields,
+                                            contentDescription = "Text",
+                                            modifier = Modifier.size(18.dp),
+                                            tint = themeColors.primary
+                                        )
+                                    }
+                                    Spacer(Modifier.width(8.dp))
 
-                            IconButton(
-                                onClick = {
-                                    viewModel.addToCanvas(CanvasNote(content = note.content))
-                                },
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.ContentCopy,
-                                    contentDescription = "Duplicate",
-                                    tint = themeColors.primary,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
+                                    Text(
+                                        text = note.content.replaceFirst("Shape: ", "").let {
+                                            if (it.length > 30) it.take(30) + "…" else it
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
 
-                            IconButton(
-                                onClick = {
-                                    val index = viewModel.canvasNotes.indexOf(note)
-                                    if (index != -1) viewModel.removeFromCanvas(index)
-                                    if (selectedNoteId == note.id) selectedNoteId = null
-                                },
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Delete,
-                                    contentDescription = "Delete",
-                                    tint = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(18.dp)
-                                )
+                                    IconButton(
+                                        onClick = {
+                                            noteToEdit = note.id
+                                            editedNoteText = note.content
+                                        },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "Edit",
+                                            tint = themeColors.primary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+
+                                    IconButton(
+                                        onClick = {
+                                            viewModel.addToCanvas(CanvasNote(content = note.content))
+                                        },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.ContentCopy,
+                                            contentDescription = "Duplicate",
+                                            tint = themeColors.primary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+
+                                    IconButton(
+                                        onClick = {
+                                            val index = viewModel.canvasNotes.indexOf(note)
+                                            if (index != -1) viewModel.removeFromCanvas(index)
+                                            if (selectedNoteId == note.id) selectedNoteId = null
+                                        },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Delete",
+                                            tint = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -434,7 +457,7 @@ fun GraphicalNotesScreen() {
             }
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(16.dp))
 
         Box(
             modifier = Modifier
