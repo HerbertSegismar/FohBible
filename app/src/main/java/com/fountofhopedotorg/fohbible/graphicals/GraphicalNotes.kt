@@ -10,10 +10,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FormatShapes
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.ShapeLine
+import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -97,9 +101,7 @@ fun GraphicalNotesScreen() {
     var showColorPicker by remember { mutableStateOf(false) }
     var noteToColorEdit by remember { mutableStateOf<CanvasNote?>(null) }
     val mainScrollState = rememberScrollState()
-    var inputModeExpanded by remember { mutableStateOf(false) }
-    val inputModes = listOf("Add Text", "Fetch Verse", "Add SVG")
-    var selectedInputMode by remember { mutableStateOf(inputModes[0]) }
+    var selectedInputMode by remember { mutableStateOf("Add Text") }
     var noteToEdit by remember { mutableStateOf<String?>(null) }
     var editedNoteText by remember { mutableStateOf("") }
 
@@ -111,33 +113,32 @@ fun GraphicalNotesScreen() {
     ) {
         Spacer(Modifier.height(16.dp))
 
-        ExposedDropdownMenuBox(
-            expanded = inputModeExpanded,
-            onExpandedChange = { inputModeExpanded = it },
-            modifier = Modifier.fillMaxWidth()
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            OutlinedTextField(
-                value = selectedInputMode,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Input Mode") },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = inputModeExpanded) },
-                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                modifier = Modifier
-                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true)
-                    .fillMaxWidth()
+            val modes = listOf(
+                Triple("Add Text", Icons.Default.TextFields, "Add Text"),
+                Triple("Fetch Verse", Icons.Default.Book, "Fetch Verse"),
+                Triple("Add SVG", Icons.Default.FormatShapes, "Add SVG")
             )
-            ExposedDropdownMenu(
-                expanded = inputModeExpanded,
-                onDismissRequest = { inputModeExpanded = false }
-            ) {
-                inputModes.forEach { mode ->
-                    DropdownMenuItem(
-                        text = { Text(mode) },
-                        onClick = {
-                            selectedInputMode = mode
-                            inputModeExpanded = false
-                        }
+
+            modes.forEach { (mode, icon, desc) ->
+                val isSelected = selectedInputMode == mode
+                IconButton(
+                    onClick = { selectedInputMode = mode },
+                    modifier = Modifier
+                        .padding(horizontal = 8.dp)
+                        .background(
+                            color = if (isSelected) themeColors.primary.copy(alpha = 0.2f) else Color.Transparent,
+                            shape = androidx.compose.foundation.shape.CircleShape
+                        )
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = desc,
+                        tint = if (isSelected) themeColors.primary else themeColors.textColor.copy(alpha = 0.6f)
                     )
                 }
             }
@@ -280,27 +281,27 @@ fun GraphicalNotesScreen() {
                             val pentagonPoints = listOf(
                                 Offset(0.5f, 0f),
                                 Offset(1f, 0.4f),
-                                Offset(0.8f, 1f),
-                                Offset(0.2f, 1f),
+                                Offset(0.8f, 0.9f),
+                                Offset(0.2f, 0.9f),
                                 Offset(0f, 0.4f)
                             )
                             ShapeSelectionCard(
                                 modifier = Modifier.weight(1f),
                                 onClick = { viewModel.addToCanvas(CanvasNote(content = "Shape: Square")) }
                             ) {
-                                SquareShape(modifier = Modifier.size(40.dp))
+                                SquareShape(modifier = Modifier.size(35.dp))
                             }
                             ShapeSelectionCard(
                                 modifier = Modifier.weight(1f),
                                 onClick = { viewModel.addToCanvas(CanvasNote(content = "Shape: Circle")) }
                             ) {
-                                CircleShape(modifier = Modifier.size(40.dp))
+                                CircleShape(modifier = Modifier.size(35.dp))
                             }
                             ShapeSelectionCard(
                                 modifier = Modifier.weight(1f),
                                 onClick = { viewModel.addToCanvas(CanvasNote(content = "Shape: Triangle")) }
                             ) {
-                                TriangleShape(modifier = Modifier.size(40.dp))
+                                TriangleShape(modifier = Modifier.size(35.dp))
                             }
                             ShapeSelectionCard(
                                 modifier = Modifier.weight(1f),
@@ -317,9 +318,9 @@ fun GraphicalNotesScreen() {
                                 onClick = { showCustomPolygonDialog = true }
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Edit,
+                                    imageVector = Icons.Default.ShapeLine,
                                     contentDescription = "Custom Polygon",
-                                    modifier = Modifier.size(48.dp),
+                                    modifier = Modifier.size(35.dp),
                                     tint = randomColor().copy(0.8f),
                                 )
                             }
