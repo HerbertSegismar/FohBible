@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.ShapeLine
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -65,9 +66,21 @@ fun GraphicalNotesScreen() {
     val viewModel: AppViewModel = viewModel()
     val coroutineScope = rememberCoroutineScope()
     val graphicsLayer = rememberGraphicsLayer()
-    var showCustomPolygonDialog by remember { mutableStateOf(false) }
-    var selectedNoteId by remember { mutableStateOf<String?>(null) }
 
+    // ── persisted simple states ──────────────────────
+    var showCustomPolygonDialog by rememberSaveable { mutableStateOf(false) }
+    var selectedNoteId by rememberSaveable { mutableStateOf<String?>(null) }
+    var currentText by rememberSaveable { mutableStateOf("") }
+    var referenceInput by rememberSaveable { mutableStateOf("") }
+    var fetchError by rememberSaveable { mutableStateOf<String?>(null) }
+    var showColorPicker by rememberSaveable { mutableStateOf(false) }
+    var noteToColorEditId by rememberSaveable { mutableStateOf<String?>(null) }   // ← replaced noteToColorEdit
+    var selectedInputMode by rememberSaveable { mutableStateOf("Add Text") }
+    var noteToEdit by rememberSaveable { mutableStateOf<String?>(null) }
+    var editedNoteText by rememberSaveable { mutableStateOf("") }
+    // ─────────────────────────────────────────────────
+
+    // database helper – scoped to db name (already survives rotation inside ViewModel)
     val dbHelper = remember(viewModel.currentDbName) {
         DatabaseHelper(context, viewModel.currentDbName)
     }
@@ -93,17 +106,10 @@ fun GraphicalNotesScreen() {
         )
     }
 
-    var currentText by remember { mutableStateOf("") }
-    var referenceInput by remember { mutableStateOf("") }
-    var fetchedVerses by remember { mutableStateOf<List<Verse>>(emptyList()) }
-    var fetchError by remember { mutableStateOf<String?>(null) }
-    var currentReference by remember { mutableStateOf("") }
-    var showColorPicker by remember { mutableStateOf(false) }
-    var noteToColorEdit by remember { mutableStateOf<CanvasNote?>(null) }
     val mainScrollState = rememberScrollState()
-    var selectedInputMode by remember { mutableStateOf("Add Text") }
-    var noteToEdit by remember { mutableStateOf<String?>(null) }
-    var editedNoteText by remember { mutableStateOf("") }
+
+    // ── fetchedVerses & currentReference now live in ViewModel ──
+    // (they are declared as `var … by mutableStateOf(…)` inside AppViewModel)
 
     Column(
         modifier = Modifier
@@ -113,6 +119,7 @@ fun GraphicalNotesScreen() {
     ) {
         Spacer(Modifier.height(16.dp))
 
+        // ── mode selector ── (unchanged)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
@@ -183,23 +190,23 @@ fun GraphicalNotesScreen() {
                                 fetchError = null
                                 when (val result = fetchByReference(referenceInput, dbHelper)) {
                                     is ReferenceResult.Single -> {
-                                        fetchedVerses = listOf(result.verse)
-                                        currentReference = buildReferenceString(result.bookName, result.verse.chapter, result.verse.verseNumber, null)
+                                        viewModel.fetchedVerses = listOf(result.verse)
+                                        viewModel.currentReference = buildReferenceString(result.bookName, result.verse.chapter, result.verse.verseNumber, null)
                                     }
                                     is ReferenceResult.Range -> {
-                                        fetchedVerses = result.verses
+                                        viewModel.fetchedVerses = result.verses
                                         val first = result.verses.first()
                                         val last = result.verses.last()
-                                        currentReference = buildReferenceString(result.bookName, first.chapter, first.verseNumber, last.verseNumber)
+                                        viewModel.currentReference = buildReferenceString(result.bookName, first.chapter, first.verseNumber, last.verseNumber)
                                     }
                                     is ReferenceResult.Chapter -> {
-                                        fetchedVerses = result.verses
+                                        viewModel.fetchedVerses = result.verses
                                         val first = result.verses.first()
-                                        currentReference = buildReferenceString(result.bookName, first.chapter, null, null)
+                                        viewModel.currentReference = buildReferenceString(result.bookName, first.chapter, null, null)
                                     }
                                     ReferenceResult.Invalid -> {
-                                        fetchedVerses = emptyList()
-                                        currentReference = ""
+                                        viewModel.fetchedVerses = emptyList()
+                                        viewModel.currentReference = ""
                                         fetchError = "Invalid reference or verse not found"
                                     }
                                 }
@@ -210,18 +217,18 @@ fun GraphicalNotesScreen() {
                             Text(fetchError!!, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 4.dp))
                         }
 
-                        if (fetchedVerses.isNotEmpty()) {
+                        if (viewModel.fetchedVerses.isNotEmpty()) {
                             Spacer(Modifier.height(12.dp))
                             Text("Fetched Verses:", style = MaterialTheme.typography.titleSmall)
 
                             Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                                 Column {
                                     Box(modifier = Modifier.fillMaxWidth().background(themeColors.primary.copy(alpha = 0.15f)).padding(12.dp)) {
-                                        Text(currentReference, style = MaterialTheme.typography.titleMedium, color = themeColors.primary, fontWeight = FontWeight.Bold)
+                                        Text(viewModel.currentReference, style = MaterialTheme.typography.titleMedium, color = themeColors.primary, fontWeight = FontWeight.Bold)
                                     }
 
                                     Column(modifier = Modifier.fillMaxWidth().heightIn(max = 280.dp).verticalScroll(rememberScrollState()).padding(12.dp)) {
-                                        fetchedVerses.forEach { verse ->
+                                        viewModel.fetchedVerses.forEach { verse ->
                                             val processed = verseProcessor.processVerse(
                                                 verseText = verse.text,
                                                 baseFontSize = 16.sp,
@@ -240,8 +247,8 @@ fun GraphicalNotesScreen() {
                                     }
 
                                     Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        val passage = remember(currentReference, fetchedVerses, themeColors) {
-                                            buildPassageText(currentReference, fetchedVerses, verseProcessor, themeColors, viewModel)
+                                        val passage = remember(viewModel.currentReference, viewModel.fetchedVerses, themeColors) {
+                                            buildPassageText(viewModel.currentReference, viewModel.fetchedVerses, verseProcessor, themeColors, viewModel)
                                         }
                                         Button(onClick = {
                                             if (passage.isNotBlank()) viewModel.addText(passage)
@@ -394,6 +401,7 @@ fun GraphicalNotesScreen() {
 
         Spacer(Modifier.height(24.dp))
 
+        // ── Canvas area ──
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -428,7 +436,7 @@ fun GraphicalNotesScreen() {
                                 viewModel.updateNotePosition(note.id, offset, width, height)
                             },
                             onColorPickerRequested = {
-                                noteToColorEdit = note
+                                noteToColorEditId = note.id   // ← store only the id
                                 showColorPicker = true
                             },
                             onDeleteRequested = {
@@ -444,7 +452,7 @@ fun GraphicalNotesScreen() {
                                 viewModel.updateNotePosition(note.id, offset, width, height)
                             },
                             onColorPickerRequested = {
-                                noteToColorEdit = note
+                                noteToColorEditId = note.id   // ← store only the id
                                 showColorPicker = true
                             },
                             onDeleteRequested = {
@@ -481,21 +489,24 @@ fun GraphicalNotesScreen() {
         Spacer(Modifier.height(16.dp))
     }
 
-    if (showColorPicker && noteToColorEdit != null) {
+    // ── Color Picker (now uses noteToColorEditId) ──
+    if (showColorPicker && noteToColorEditId != null) {
+        val targetNote = viewModel.canvasNotes.find { it.id == noteToColorEditId }
         ColorWheelDialog(
             onDismissRequest = {
                 showColorPicker = false
-                noteToColorEdit = null
+                noteToColorEditId = null
             },
             onColorSelected = { selectedColor ->
-                viewModel.updateNoteColor(noteToColorEdit!!.id, selectedColor)
+                viewModel.updateNoteColor(noteToColorEditId!!, selectedColor)
                 showColorPicker = false
-                noteToColorEdit = null
+                noteToColorEditId = null
             },
-            initialColor = noteToColorEdit?.backgroundColor ?: Color.White
+            initialColor = targetNote?.backgroundColor ?: Color.White
         )
     }
 
+    // ── Note Edit Dialog ──
     if (noteToEdit != null) {
         AlertDialog(
             onDismissRequest = { noteToEdit = null },
@@ -526,6 +537,7 @@ fun GraphicalNotesScreen() {
         )
     }
 
+    // ── Custom Polygon Dialog ──
     if (showCustomPolygonDialog) {
         CustomPolygonDialog(
             onDismiss = { showCustomPolygonDialog = false },
