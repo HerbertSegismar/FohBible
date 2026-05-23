@@ -12,7 +12,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FormatShapes
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Save
@@ -57,6 +56,9 @@ import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Edit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.Q)
@@ -67,7 +69,6 @@ fun GraphicalNotesScreen() {
     val coroutineScope = rememberCoroutineScope()
     val graphicsLayer = rememberGraphicsLayer()
 
-    // ── persisted simple states ──────────────────────
     var showCustomPolygonDialog by rememberSaveable { mutableStateOf(false) }
     var selectedNoteId by rememberSaveable { mutableStateOf<String?>(null) }
     var currentText by rememberSaveable { mutableStateOf("") }
@@ -132,7 +133,7 @@ fun GraphicalNotesScreen() {
                         .padding(horizontal = 8.dp)
                         .background(
                             color = if (isSelected) themeColors.primary.copy(alpha = 0.2f) else Color.Transparent,
-                            shape = androidx.compose.foundation.shape.CircleShape
+                            shape = CircleShape
                         )
                 ) {
                     Icon(
@@ -159,7 +160,7 @@ fun GraphicalNotesScreen() {
                     Spacer(Modifier.width(8.dp))
                     Button(onClick = {
                         if (currentText.isNotBlank()) {
-                            viewModel.addText(currentText)
+                            viewModel.addToCanvas(CanvasNote(content = currentText))
                             currentText = ""
                         }
                     }) { Text("Add", color = Color.White) }
@@ -239,14 +240,9 @@ fun GraphicalNotesScreen() {
                                         }
                                     }
 
-                                    Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.Center) {
                                         val passage = remember(viewModel.currentReference, viewModel.fetchedVerses, themeColors) {
                                             buildPassageText(viewModel.currentReference, viewModel.fetchedVerses, verseProcessor, themeColors, viewModel)
-                                        }
-                                        Button(onClick = {
-                                            if (passage.isNotBlank()) viewModel.addText(passage)
-                                        }, modifier = Modifier.weight(1f)) {
-                                            Text("Add to Notes")
                                         }
                                         Button(onClick = {
                                             if (passage.isNotBlank()) viewModel.addToCanvas(CanvasNote(content = passage))
@@ -312,7 +308,6 @@ fun GraphicalNotesScreen() {
                                     modifier = Modifier.size(40.dp)
                                 )
                             }
-
                             ShapeSelectionCard(
                                 modifier = Modifier.weight(1f),
                                 onClick = { showCustomPolygonDialog = true }
@@ -321,7 +316,7 @@ fun GraphicalNotesScreen() {
                                     imageVector = Icons.Default.ShapeLine,
                                     contentDescription = "Custom Polygon",
                                     modifier = Modifier.size(35.dp),
-                                    tint = randomColor().copy(0.8f),
+                                    tint = randomColor().copy(0.8f)
                                 )
                             }
                         }
@@ -331,60 +326,107 @@ fun GraphicalNotesScreen() {
         }
 
         Spacer(Modifier.height(20.dp))
-        Text("Notes", style = MaterialTheme.typography.titleMedium)
+
+        Text("Canvas Elements", style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(8.dp))
 
-        LazyColumn(modifier = Modifier.heightIn(max = 260.dp)) {
-            items(viewModel.addedTexts, key = { it.hashCode() }) { text ->
-                Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = text,
-                            modifier = Modifier.weight(1f),
-                            maxLines = 3,
-                            overflow = TextOverflow.Ellipsis
+        if (viewModel.canvasNotes.isEmpty()) {
+            Text(
+                "No elements on canvas yet.",
+                modifier = Modifier.padding(vertical = 8.dp),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+            )
+        } else {
+            LazyColumn(modifier = Modifier.heightIn(max = 260.dp)) {
+                items(viewModel.canvasNotes, key = { it.id }) { note ->
+                    val isSelected = selectedNoteId == note.id
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .pointerInput(note.id) {
+                                detectTapGestures { selectedNoteId = note.id }
+                            },
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isSelected) themeColors.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface
                         )
-
+                    ) {
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            if (note.content.startsWith("Shape:")) {
+                                Icon(
+                                    imageVector = Icons.Default.FormatShapes,
+                                    contentDescription = "Shape",
+                                    modifier = Modifier.size(18.dp),
+                                    tint = themeColors.primary
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.TextFields,
+                                    contentDescription = "Text",
+                                    modifier = Modifier.size(18.dp),
+                                    tint = themeColors.primary
+                                )
+                            }
+                            Spacer(Modifier.width(8.dp))
+
+                            Text(
+                                text = note.content.replaceFirst("Shape: ", "").let {
+                                    if (it.length > 30) it.take(30) + "…" else it
+                                },
+                                modifier = Modifier.weight(1f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+
                             IconButton(
                                 onClick = {
-                                    noteToEdit = text
-                                    editedNoteText = text
+                                    noteToEdit = note.id
+                                    editedNoteText = note.content
                                 },
                                 modifier = Modifier.size(32.dp)
                             ) {
                                 Icon(
-                                    tint = themeColors.primary,
                                     imageVector = Icons.Default.Edit,
-                                    contentDescription = "Edit Note",
+                                    contentDescription = "Edit",
+                                    tint = themeColors.primary,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
-                            Spacer(modifier = Modifier.size(4.dp))
+
                             IconButton(
-                                onClick = { viewModel.removeText(text) },
+                                onClick = {
+                                    viewModel.addToCanvas(CanvasNote(content = note.content))
+                                },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ContentCopy,
+                                    contentDescription = "Duplicate",
+                                    tint = themeColors.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+
+                            IconButton(
+                                onClick = {
+                                    val index = viewModel.canvasNotes.indexOf(note)
+                                    if (index != -1) viewModel.removeFromCanvas(index)
+                                    if (selectedNoteId == note.id) selectedNoteId = null
+                                },
                                 modifier = Modifier.size(32.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Delete,
-                                    contentDescription = "Delete Note",
+                                    contentDescription = "Delete",
                                     tint = MaterialTheme.colorScheme.error,
                                     modifier = Modifier.size(18.dp)
                                 )
-                            }
-                            Spacer(modifier = Modifier.size(12.dp))
-                            Button(
-                                onClick = { viewModel.addToCanvas(CanvasNote(content = text)) },
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                                modifier = Modifier.height(32.dp)
-                            ) {
-                                Text("→ Canvas", color = Color.White, fontSize = 12.sp)
                             }
                         }
                     }
@@ -393,6 +435,7 @@ fun GraphicalNotesScreen() {
         }
 
         Spacer(Modifier.height(24.dp))
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -400,20 +443,14 @@ fun GraphicalNotesScreen() {
                 .clipToBounds()
                 .background(if (isDark) Color(0xFF1E2937) else themeColors.primary.copy(0.1f), shape = MaterialTheme.shapes.medium)
                 .pointerInput(Unit) {
-                    detectTapGestures(
-                        onTap = {
-                            selectedNoteId = null
-                        }
-                    )
+                    detectTapGestures(onTap = { selectedNoteId = null })
                 }
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .drawWithContent {
-                        graphicsLayer.record {
-                            this@drawWithContent.drawContent()
-                        }
+                        graphicsLayer.record { this@drawWithContent.drawContent() }
                         drawContent()
                     }
             ) {
@@ -430,9 +467,7 @@ fun GraphicalNotesScreen() {
                                 noteToColorEditId = note.id
                                 showColorPicker = true
                             },
-                            onDeleteRequested = {
-                                viewModel.removeFromCanvas(index)
-                            }
+                            onDeleteRequested = { viewModel.removeFromCanvas(index) }
                         )
                     } else {
                         CanvasTextItem(
@@ -446,15 +481,15 @@ fun GraphicalNotesScreen() {
                                 noteToColorEditId = note.id
                                 showColorPicker = true
                             },
-                            onDeleteRequested = {
-                                viewModel.removeFromCanvas(index)
-                            }
+                            onDeleteRequested = { viewModel.removeFromCanvas(index) }
                         )
                     }
                 }
             }
         }
+
         Spacer(Modifier.height(8.dp))
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -479,6 +514,40 @@ fun GraphicalNotesScreen() {
         }
         Spacer(Modifier.height(16.dp))
     }
+
+    if (noteToEdit != null) {
+        AlertDialog(
+            onDismissRequest = { noteToEdit = null },
+            title = { Text("Edit Canvas Note") },
+            text = {
+                OutlinedTextField(
+                    value = editedNoteText,
+                    onValueChange = { editedNoteText = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 1
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val noteId = noteToEdit!!
+                        val index = viewModel.canvasNotes.indexOfFirst { it.id == noteId }
+                        if (index != -1) {
+                            val old = viewModel.canvasNotes[index]
+                            val updated = old.copy(content = editedNoteText)
+                            viewModel.removeFromCanvas(index)
+                            viewModel.addToCanvas(updated)
+                        }
+                        noteToEdit = null
+                    }
+                ) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(onClick = { noteToEdit = null }) { Text("Cancel") }
+            }
+        )
+    }
+
     if (showColorPicker && noteToColorEditId != null) {
         val targetNote = viewModel.canvasNotes.find { it.id == noteToColorEditId }
         ColorWheelDialog(
@@ -492,35 +561,6 @@ fun GraphicalNotesScreen() {
                 noteToColorEditId = null
             },
             initialColor = targetNote?.backgroundColor ?: Color.White
-        )
-    }
-    if (noteToEdit != null) {
-        AlertDialog(
-            onDismissRequest = { noteToEdit = null },
-            title = { Text("Edit Note") },
-            text = {
-                OutlinedTextField(
-                    value = editedNoteText,
-                    onValueChange = { editedNoteText = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 1
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.updateText(noteToEdit!!, editedNoteText)
-                        noteToEdit = null
-                    }
-                ) {
-                    Text("Save")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { noteToEdit = null }) {
-                    Text("Cancel")
-                }
-            }
         )
     }
 
