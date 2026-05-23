@@ -50,6 +50,11 @@ import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
+data class BezierNodeData(
+    val anchor: Offset,
+    val handleIn: Offset,
+    val handleOut: Offset
+)
 
 @Composable
 fun ShapeSelectionCard(
@@ -115,6 +120,41 @@ fun PolygonShape(
 }
 
 @Composable
+fun BezierPolygonShape(
+    nodes: List<BezierNodeData>,
+    modifier: Modifier = Modifier,
+    color: Color = randomColor().copy(0.8f)
+) {
+    Canvas(modifier = modifier) {
+        if (nodes.isEmpty()) return@Canvas
+
+        val path = Path().apply {
+            val first = nodes[0]
+            moveTo(first.anchor.x * size.width, first.anchor.y * size.height)
+
+            for (i in 1 until nodes.size) {
+                val prev = nodes[i - 1]
+                val curr = nodes[i]
+                cubicTo(
+                    prev.handleOut.x * size.width, prev.handleOut.y * size.height,
+                    curr.handleIn.x * size.width, curr.handleIn.y * size.height,
+                    curr.anchor.x * size.width, curr.anchor.y * size.height
+                )
+            }
+
+            val last = nodes.last()
+            cubicTo(
+                last.handleOut.x * size.width, last.handleOut.y * size.height,
+                first.handleIn.x * size.width, first.handleIn.y * size.height,
+                first.anchor.x * size.width, first.anchor.y * size.height
+            )
+            close()
+        }
+        drawPath(path = path, color = color)
+    }
+}
+
+@Composable
 fun CanvasSvgItem(
     note: CanvasNote,
     isSelected: Boolean,
@@ -137,31 +177,57 @@ fun CanvasSvgItem(
     val parsedData = remember(note.content) {
         if (isCustomPolygon) {
             val serializedPoints = note.content.removePrefix("Shape: CustomPolygon:")
-            val rawPoints = serializedPoints.split(";").mapNotNull { pointStr ->
-                val coords = pointStr.split(",")
-                if (coords.size == 2) {
-                    val x = coords[0].toFloatOrNull() ?: 0f
-                    val y = coords[1].toFloatOrNull() ?: 0f
-                    Offset(x, y)
-                } else null
+            val rawNodes = serializedPoints.split(";").mapNotNull { nodeStr ->
+                val parts = nodeStr.split(":")
+
+                if (parts.size == 3) {
+                    val a = parts[0].split(",")
+                    val hi = parts[1].split(",")
+                    val ho = parts[2].split(",")
+
+                    if (a.size == 2 && hi.size == 2 && ho.size == 2) {
+                        BezierNodeData(
+                            anchor = Offset(a[0].toFloatOrNull() ?: 0f, a[1].toFloatOrNull() ?: 0f),
+                            handleIn = Offset(hi[0].toFloatOrNull() ?: 0f, hi[1].toFloatOrNull() ?: 0f),
+                            handleOut = Offset(ho[0].toFloatOrNull() ?: 0f, ho[1].toFloatOrNull() ?: 0f)
+                        )
+                    } else null
+                } else {
+                    val coords = parts[0].split(",")
+                    if (coords.size == 2) {
+                        val pt = Offset(coords[0].toFloatOrNull() ?: 0f, coords[1].toFloatOrNull() ?: 0f)
+                        BezierNodeData(pt, pt, pt) // If no handles exist, treat them same as the anchor
+                    } else null
+                }
             }
 
-            if (rawPoints.size >= 3) {
-                val minX = rawPoints.minOf { it.x }
-                val maxX = rawPoints.maxOf { it.x }
-                val minY = rawPoints.minOf { it.y }
-                val maxY = rawPoints.maxOf { it.y }
+            if (rawNodes.size >= 3) {
+                val allPoints = rawNodes.flatMap { listOf(it.anchor, it.handleIn, it.handleOut) }
+                val minX = allPoints.minOf { it.x }
+                val maxX = allPoints.maxOf { it.x }
+                val minY = allPoints.minOf { it.y }
+                val maxY = allPoints.maxOf { it.y }
 
                 val polyWidth = maxX - minX
                 val polyHeight = maxY - minY
 
-                val normalizedPoints = rawPoints.map { pt ->
-                    Offset(
-                        x = if (polyWidth > 0) (pt.x - minX) / polyWidth else 0.5f,
-                        y = if (polyHeight > 0) (pt.y - minY) / polyHeight else 0.5f
+                val normalizedNodes = rawNodes.map { node ->
+                    BezierNodeData(
+                        anchor = Offset(
+                            x = if (polyWidth > 0) (node.anchor.x - minX) / polyWidth else 0.5f,
+                            y = if (polyHeight > 0) (node.anchor.y - minY) / polyHeight else 0.5f
+                        ),
+                        handleIn = Offset(
+                            x = if (polyWidth > 0) (node.handleIn.x - minX) / polyWidth else 0.5f,
+                            y = if (polyHeight > 0) (node.handleIn.y - minY) / polyHeight else 0.5f
+                        ),
+                        handleOut = Offset(
+                            x = if (polyWidth > 0) (node.handleOut.x - minX) / polyWidth else 0.5f,
+                            y = if (polyHeight > 0) (node.handleOut.y - minY) / polyHeight else 0.5f
+                        )
                     )
                 }
-                Triple(normalizedPoints, polyWidth, polyHeight)
+                Triple(normalizedNodes, polyWidth, polyHeight)
             } else null
         } else null
     }
@@ -240,8 +306,8 @@ fun CanvasSvgItem(
                     }
 
                     parsedData != null -> {
-                        PolygonShape(
-                            points = parsedData.first,
+                        BezierPolygonShape(
+                            nodes = parsedData.first,
                             modifier = Modifier.fillMaxSize(),
                             color = note.backgroundColor
                         )

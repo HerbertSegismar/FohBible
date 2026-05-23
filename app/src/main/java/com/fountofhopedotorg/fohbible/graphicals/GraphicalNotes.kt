@@ -74,13 +74,10 @@ fun GraphicalNotesScreen() {
     var referenceInput by rememberSaveable { mutableStateOf("") }
     var fetchError by rememberSaveable { mutableStateOf<String?>(null) }
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
-    var noteToColorEditId by rememberSaveable { mutableStateOf<String?>(null) }   // ← replaced noteToColorEdit
+    var noteToColorEditId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedInputMode by rememberSaveable { mutableStateOf("Add Text") }
     var noteToEdit by rememberSaveable { mutableStateOf<String?>(null) }
     var editedNoteText by rememberSaveable { mutableStateOf("") }
-    // ─────────────────────────────────────────────────
-
-    // database helper – scoped to db name (already survives rotation inside ViewModel)
     val dbHelper = remember(viewModel.currentDbName) {
         DatabaseHelper(context, viewModel.currentDbName)
     }
@@ -108,9 +105,6 @@ fun GraphicalNotesScreen() {
 
     val mainScrollState = rememberScrollState()
 
-    // ── fetchedVerses & currentReference now live in ViewModel ──
-    // (they are declared as `var … by mutableStateOf(…)` inside AppViewModel)
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -119,7 +113,6 @@ fun GraphicalNotesScreen() {
     ) {
         Spacer(Modifier.height(16.dp))
 
-        // ── mode selector ── (unchanged)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
@@ -400,8 +393,6 @@ fun GraphicalNotesScreen() {
         }
 
         Spacer(Modifier.height(24.dp))
-
-        // ── Canvas area ──
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -436,7 +427,7 @@ fun GraphicalNotesScreen() {
                                 viewModel.updateNotePosition(note.id, offset, width, height)
                             },
                             onColorPickerRequested = {
-                                noteToColorEditId = note.id   // ← store only the id
+                                noteToColorEditId = note.id
                                 showColorPicker = true
                             },
                             onDeleteRequested = {
@@ -452,7 +443,7 @@ fun GraphicalNotesScreen() {
                                 viewModel.updateNotePosition(note.id, offset, width, height)
                             },
                             onColorPickerRequested = {
-                                noteToColorEditId = note.id   // ← store only the id
+                                noteToColorEditId = note.id
                                 showColorPicker = true
                             },
                             onDeleteRequested = {
@@ -488,8 +479,6 @@ fun GraphicalNotesScreen() {
         }
         Spacer(Modifier.height(16.dp))
     }
-
-    // ── Color Picker (now uses noteToColorEditId) ──
     if (showColorPicker && noteToColorEditId != null) {
         val targetNote = viewModel.canvasNotes.find { it.id == noteToColorEditId }
         ColorWheelDialog(
@@ -505,8 +494,6 @@ fun GraphicalNotesScreen() {
             initialColor = targetNote?.backgroundColor ?: Color.White
         )
     }
-
-    // ── Note Edit Dialog ──
     if (noteToEdit != null) {
         AlertDialog(
             onDismissRequest = { noteToEdit = null },
@@ -537,12 +524,13 @@ fun GraphicalNotesScreen() {
         )
     }
 
-    // ── Custom Polygon Dialog ──
     if (showCustomPolygonDialog) {
         CustomPolygonDialog(
             onDismiss = { showCustomPolygonDialog = false },
             onConfirm = { points ->
-                val serialized = points.joinToString(";") { "${it.x},${it.y}" }
+                val serialized = points.joinToString(";") { node ->
+                    "${node.anchor.x},${node.anchor.y}:${node.handleIn.x},${node.handleIn.y}:${node.handleOut.x},${node.handleOut.y}"
+                }
                 viewModel.addToCanvas(CanvasNote(content = "Shape: CustomPolygon:$serialized"))
                 showCustomPolygonDialog = false
             }

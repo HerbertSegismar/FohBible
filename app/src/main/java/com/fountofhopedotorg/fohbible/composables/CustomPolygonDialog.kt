@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -71,12 +72,29 @@ import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
-private val OffsetListSaver = listSaver<List<Offset>, String>(
-    save = { list -> list.map { "${it.x}:${it.y}" } },
+enum class ActiveControl { ANCHOR, HANDLE_IN, HANDLE_OUT }
+
+data class BezierNode(
+    val anchor: Offset,
+    val handleIn: Offset,
+    val handleOut: Offset
+)
+
+private val BezierNodeListSaver = listSaver<List<BezierNode>, String>(
+    save = { list ->
+        list.map { "${it.anchor.x},${it.anchor.y}:${it.handleIn.x},${it.handleIn.y}:${it.handleOut.x},${it.handleOut.y}" }
+    },
     restore = { strings ->
         strings.map { s ->
-            val (x, y) = s.split(":")
-            Offset(x.toFloat(), y.toFloat())
+            val parts = s.split(":")
+            val a = parts[0].split(",")
+            val hi = parts[1].split(",")
+            val ho = parts[2].split(",")
+            BezierNode(
+                Offset(a[0].toFloat(), a[1].toFloat()),
+                Offset(hi[0].toFloat(), hi[1].toFloat()),
+                Offset(ho[0].toFloat(), ho[1].toFloat())
+            )
         }
     }
 )
@@ -84,12 +102,13 @@ private val OffsetListSaver = listSaver<List<Offset>, String>(
 @Composable
 fun CustomPolygonDialog(
     onDismiss: () -> Unit,
-    onConfirm: (List<Offset>) -> Unit
+    onConfirm: (List<BezierNode>) -> Unit
 ) {
-    var points by rememberSaveable(stateSaver = OffsetListSaver) { mutableStateOf(emptyList()) }
-    var redoStack by rememberSaveable(stateSaver = OffsetListSaver) { mutableStateOf(emptyList()) }
+    var points by rememberSaveable(stateSaver = BezierNodeListSaver) { mutableStateOf(emptyList()) }
+    var redoStack by rememberSaveable(stateSaver = BezierNodeListSaver) { mutableStateOf(emptyList()) }
     var selectedIndex by rememberSaveable { mutableIntStateOf(-1) }
     var nudgeAmountIndex by rememberSaveable { mutableIntStateOf(0) }
+    var activeControl by rememberSaveable { mutableStateOf(ActiveControl.ANCHOR) }
 
     var drawingAreaSize by remember { mutableStateOf(IntSize.Zero) }
     val nudgeAmounts = listOf(0.01f, 0.05f, 0.1f)
@@ -101,11 +120,38 @@ fun CustomPolygonDialog(
     val nudgePoint = { dx: Float, dy: Float ->
         if (selectedIndex in points.indices) {
             val p = points[selectedIndex]
-            points = points.toMutableList().also {
-                it[selectedIndex] = Offset(
-                    x = (p.x + dx).coerceIn(0f, 1f),
-                    y = (p.y + dy).coerceIn(0f, 1f)
-                )
+            points = points.toMutableList().also { list ->
+                when (activeControl) {
+                    ActiveControl.ANCHOR -> {
+                        val newAnchor = Offset(
+                            (p.anchor.x + dx).coerceIn(0f, 1f),
+                            (p.anchor.y + dy).coerceIn(0f, 1f)
+                        )
+                        val moveX = newAnchor.x - p.anchor.x
+                        val moveY = newAnchor.y - p.anchor.y
+                        list[selectedIndex] = p.copy(
+                            anchor = newAnchor,
+                            handleIn = Offset((p.handleIn.x + moveX).coerceIn(0f, 1f), (p.handleIn.y + moveY).coerceIn(0f, 1f)),
+                            handleOut = Offset((p.handleOut.x + moveX).coerceIn(0f, 1f), (p.handleOut.y + moveY).coerceIn(0f, 1f))
+                        )
+                    }
+                    ActiveControl.HANDLE_IN -> {
+                        list[selectedIndex] = p.copy(
+                            handleIn = Offset(
+                                (p.handleIn.x + dx).coerceIn(0f, 1f),
+                                (p.handleIn.y + dy).coerceIn(0f, 1f)
+                            )
+                        )
+                    }
+                    ActiveControl.HANDLE_OUT -> {
+                        list[selectedIndex] = p.copy(
+                            handleOut = Offset(
+                                (p.handleOut.x + dx).coerceIn(0f, 1f),
+                                (p.handleOut.y + dy).coerceIn(0f, 1f)
+                            )
+                        )
+                    }
+                }
             }
         }
     }
@@ -124,8 +170,9 @@ fun CustomPolygonDialog(
                                 normX.coerceIn(0f, 1f),
                                 normY.coerceIn(0f, 1f)
                             )
-                            points = points + clamped
+                            points = points + BezierNode(clamped, clamped, clamped)
                             selectedIndex = points.lastIndex
+                            activeControl = ActiveControl.ANCHOR
                             redoStack = emptyList()
                         }
                     }
@@ -136,48 +183,72 @@ fun CustomPolygonDialog(
                 if (points.size >= 3) {
                     val path = Path().apply {
                         moveTo(
-                            points[0].x * canvasSize.width,
-                            points[0].y * canvasSize.height
+                            points[0].anchor.x * canvasSize.width,
+                            points[0].anchor.y * canvasSize.height
                         )
                         for (i in 1 until points.size) {
-                            lineTo(
-                                points[i].x * canvasSize.width,
-                                points[i].y * canvasSize.height
+                            val prev = points[i - 1]
+                            val curr = points[i]
+                            cubicTo(
+                                prev.handleOut.x * canvasSize.width, prev.handleOut.y * canvasSize.height,
+                                curr.handleIn.x * canvasSize.width, curr.handleIn.y * canvasSize.height,
+                                curr.anchor.x * canvasSize.width, curr.anchor.y * canvasSize.height
                             )
                         }
+                        val last = points.last()
+                        val first = points.first()
+                        cubicTo(
+                            last.handleOut.x * canvasSize.width, last.handleOut.y * canvasSize.height,
+                            first.handleIn.x * canvasSize.width, first.handleIn.y * canvasSize.height,
+                            first.anchor.x * canvasSize.width, first.anchor.y * canvasSize.height
+                        )
                         close()
                     }
                     drawPath(path, color = Color(0x4000BCD4), style = Fill)
                     drawPath(path, color = Color(0xFF00BCD4), style = Stroke(width = 3f))
                 }
-
                 if (points.size >= 2) {
-                    for (i in 0 until points.size - 1) {
+                    for (i in 0 until points.size) {
+                        val curr = points[i]
+                        val next = points[(i + 1) % points.size]
+                        if (i == points.lastIndex && points.size < 3) continue
                         drawLine(
-                            color = Color.Gray,
-                            start = Offset(
-                                points[i].x * canvasSize.width,
-                                points[i].y * canvasSize.height
-                            ),
-                            end = Offset(
-                                points[i + 1].x * canvasSize.width,
-                                points[i + 1].y * canvasSize.height
-                            ),
+                            color = Color.LightGray,
+                            start = Offset(curr.anchor.x * canvasSize.width, curr.anchor.y * canvasSize.height),
+                            end = Offset(next.anchor.x * canvasSize.width, next.anchor.y * canvasSize.height),
                             strokeWidth = 2f
                         )
                     }
                 }
-
                 points.forEachIndexed { index, point ->
                     val isSelected = index == selectedIndex
+                    val anchorPos = Offset(point.anchor.x * canvasSize.width, point.anchor.y * canvasSize.height)
+
                     drawCircle(
-                        color = if (isSelected) Color.Blue else Color.Red,
-                        radius = if (isSelected) 12f else 8f,
-                        center = Offset(
-                            point.x * canvasSize.width,
-                            point.y * canvasSize.height
-                        )
+                        color = if (isSelected && activeControl == ActiveControl.ANCHOR) Color.Blue
+                        else if (isSelected) Color.Cyan
+                        else Color.Red,
+                        radius = if (isSelected && activeControl == ActiveControl.ANCHOR) 12f else 8f,
+                        center = anchorPos
                     )
+                    if (isSelected) {
+                        val hiPos = Offset(point.handleIn.x * canvasSize.width, point.handleIn.y * canvasSize.height)
+                        val hoPos = Offset(point.handleOut.x * canvasSize.width, point.handleOut.y * canvasSize.height)
+
+                        drawLine(Color.Gray, anchorPos, hiPos, 2f)
+                        drawCircle(
+                            color = if (activeControl == ActiveControl.HANDLE_IN) Color.Green else Color.DarkGray,
+                            radius = if (activeControl == ActiveControl.HANDLE_IN) 10f else 6f,
+                            center = hiPos
+                        )
+
+                        drawLine(Color.Gray, anchorPos, hoPos, 2f)
+                        drawCircle(
+                            color = if (activeControl == ActiveControl.HANDLE_OUT) Color.Magenta else Color.DarkGray,
+                            radius = if (activeControl == ActiveControl.HANDLE_OUT) 10f else 6f,
+                            center = hoPos
+                        )
+                    }
                 }
             }
         }
@@ -206,13 +277,18 @@ fun CustomPolygonDialog(
                     onClick = {
                         val newPoint = if (selectedIndex in points.indices) {
                             val p = points[selectedIndex]
-                            Offset((p.x + 0.05f).coerceIn(0f, 1f), (p.y + 0.05f).coerceIn(0f, 1f))
+                            BezierNode(
+                                Offset((p.anchor.x + 0.05f).coerceIn(0f, 1f), (p.anchor.y + 0.05f).coerceIn(0f, 1f)),
+                                Offset((p.handleIn.x + 0.05f).coerceIn(0f, 1f), (p.handleIn.y + 0.05f).coerceIn(0f, 1f)),
+                                Offset((p.handleOut.x + 0.05f).coerceIn(0f, 1f), (p.handleOut.y + 0.05f).coerceIn(0f, 1f))
+                            )
                         } else {
-                            Offset(0.5f, 0.5f)
+                            BezierNode(Offset(0.5f, 0.5f), Offset(0.5f, 0.5f), Offset(0.5f, 0.5f))
                         }
                         val insertIndex = if (selectedIndex in points.indices) selectedIndex + 1 else points.size
                         points = points.toMutableList().apply { add(insertIndex, newPoint) }
                         selectedIndex = insertIndex
+                        activeControl = ActiveControl.ANCHOR
                         redoStack = emptyList()
                     }
                 ) {
@@ -291,6 +367,27 @@ fun CustomPolygonDialog(
             }
 
             Spacer(Modifier.height(8.dp))
+            TextButton(
+                onClick = {
+                    activeControl = when (activeControl) {
+                        ActiveControl.ANCHOR -> ActiveControl.HANDLE_IN
+                        ActiveControl.HANDLE_IN -> ActiveControl.HANDLE_OUT
+                        ActiveControl.HANDLE_OUT -> ActiveControl.ANCHOR
+                    }
+                },
+                colors = ButtonDefaults.textButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                ),
+                enabled = points.isNotEmpty()
+            ) {
+                Text(
+                    text = "Editing: ${activeControl.name.replace("_", " ")}",
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+
             HybridJoystick(
                 nudgeAmount = currentNudgeAmount,
                 enabled = points.isNotEmpty(),
