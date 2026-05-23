@@ -1,4 +1,3 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
 package com.fountofhopedotorg.fohbible.composables
 
 import androidx.compose.foundation.BorderStroke
@@ -94,7 +93,8 @@ fun ColorWheelDialog(
     var selectedColor by remember { mutableStateOf(initialColor) }
     var brightness by remember { mutableFloatStateOf(initialColor.getBrightness()) }
     var saturation by remember { mutableFloatStateOf(initialColor.getSaturation()) }
-    val initialHex = "#${(initialColor.toArgb() and 0xFFFFFF).toString(16).padStart(6, '0').uppercase()}"
+    var opacity by remember { mutableFloatStateOf(initialColor.alpha) }
+    val initialHex = colorToHexString(initialColor)
     var hexTextFieldValue by remember {
         mutableStateOf(TextFieldValue(initialHex, selection = TextRange(initialHex.length)))
     }
@@ -166,7 +166,9 @@ fun ColorWheelDialog(
                                     onColorSelected = { color ->
                                         selectedColor = color
                                         saturation = color.getSaturation()
-                                        val newHex = "#${(color.toArgb() and 0xFFFFFF).toString(16).padStart(6, '0').uppercase()}"
+                                        brightness = color.getBrightness()
+                                        opacity = color.alpha
+                                        val newHex = colorToHexString(color)
                                         hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
                                         isValidHex = true
                                     }
@@ -180,17 +182,24 @@ fun ColorWheelDialog(
                                 ColorAdjustmentsSection(
                                     brightness = brightness,
                                     saturation = saturation,
+                                    opacity = opacity,
                                     selectedColor = selectedColor,
                                     onBrightnessChange = {
                                         brightness = it
                                         selectedColor = adjustBrightness(selectedColor, it)
-                                        val newHex = "#${(selectedColor.toArgb() and 0xFFFFFF).toString(16).padStart(6, '0').uppercase()}"
+                                        val newHex = colorToHexString(selectedColor)
                                         hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
                                     },
                                     onSaturationChange = {
                                         saturation = it
                                         selectedColor = adjustSaturation(selectedColor, it)
-                                        val newHex = "#${(selectedColor.toArgb() and 0xFFFFFF).toString(16).padStart(6, '0').uppercase()}"
+                                        val newHex = colorToHexString(selectedColor)
+                                        hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
+                                    },
+                                    onOpacityChange = {
+                                        opacity = it
+                                        selectedColor = adjustOpacity(selectedColor, it)
+                                        val newHex = colorToHexString(selectedColor)
                                         hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
                                     }
                                 )
@@ -226,6 +235,7 @@ fun ColorWheelDialog(
                                                     selectedColor = Color(colorInt)
                                                     brightness = selectedColor.getBrightness()
                                                     saturation = selectedColor.getSaturation()
+                                                    opacity = selectedColor.alpha
                                                     isValidHex = true
                                                 } catch (_: Exception) {
                                                     isValidHex = false
@@ -244,7 +254,8 @@ fun ColorWheelDialog(
                                             selectedColor = color
                                             brightness = color.getBrightness()
                                             saturation = color.getSaturation()
-                                            val newHex = "#${(color.toArgb() and 0xFFFFFF).toString(16).padStart(6, '0').uppercase()}"
+                                            opacity = color.alpha
+                                            val newHex = colorToHexString(color)
                                             hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
                                             isValidHex = true
                                         }
@@ -283,7 +294,9 @@ fun ColorWheelDialog(
                                     onColorSelected = { color ->
                                         selectedColor = color
                                         saturation = color.getSaturation()
-                                        val newHex = "#${(color.toArgb() and 0xFFFFFF).toString(16).padStart(6, '0').uppercase()}"
+                                        brightness = color.getBrightness()
+                                        opacity = color.alpha
+                                        val newHex = colorToHexString(color)
                                         hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
                                         isValidHex = true
                                     }
@@ -310,6 +323,7 @@ fun ColorWheelDialog(
                                                 selectedColor = Color(colorInt)
                                                 brightness = selectedColor.getBrightness()
                                                 saturation = selectedColor.getSaturation()
+                                                opacity = selectedColor.alpha
                                                 isValidHex = true
                                             } catch (_: Exception) {
                                                 isValidHex = false
@@ -324,17 +338,24 @@ fun ColorWheelDialog(
                                 ColorAdjustmentsSection(
                                     brightness = brightness,
                                     saturation = saturation,
+                                    opacity = opacity,
                                     selectedColor = selectedColor,
                                     onBrightnessChange = {
                                         brightness = it
                                         selectedColor = adjustBrightness(selectedColor, it)
-                                        val newHex = "#${(selectedColor.toArgb() and 0xFFFFFF).toString(16).padStart(6, '0').uppercase()}"
+                                        val newHex = colorToHexString(selectedColor)
                                         hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
                                     },
                                     onSaturationChange = {
                                         saturation = it
                                         selectedColor = adjustSaturation(selectedColor, it)
-                                        val newHex = "#${(selectedColor.toArgb() and 0xFFFFFF).toString(16).padStart(6, '0').uppercase()}"
+                                        val newHex = colorToHexString(selectedColor)
+                                        hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
+                                    },
+                                    onOpacityChange = {
+                                        opacity = it
+                                        selectedColor = adjustOpacity(selectedColor, it)
+                                        val newHex = colorToHexString(selectedColor)
                                         hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
                                     }
                                 )
@@ -345,7 +366,8 @@ fun ColorWheelDialog(
                                         selectedColor = color
                                         brightness = color.getBrightness()
                                         saturation = color.getSaturation()
-                                        val newHex = "#${(color.toArgb() and 0xFFFFFF).toString(16).padStart(6, '0').uppercase()}"
+                                        opacity = color.alpha
+                                        val newHex = colorToHexString(color)
                                         hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
                                         isValidHex = true
                                     }
@@ -371,6 +393,15 @@ fun ColorWheelDialog(
         }
     }
 }
+
+private fun colorToHexString(color: Color): String {
+    return if (color.alpha == 1f) {
+        String.format("#%06X", color.toArgb() and 0xFFFFFF)
+    } else {
+        String.format("#%08X", color.toArgb())
+    }
+}
+
 private fun processHexInput(input: String, selection: TextRange): TextFieldValue {
     var processed = input.uppercase()
     var newSelection = selection
@@ -680,9 +711,11 @@ fun ColorPreviewSection(
 fun ColorAdjustmentsSection(
     brightness: Float,
     saturation: Float,
+    opacity: Float,
     selectedColor: Color,
     onBrightnessChange: (Float) -> Unit,
-    onSaturationChange: (Float) -> Unit
+    onSaturationChange: (Float) -> Unit,
+    onOpacityChange: (Float) -> Unit
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -705,9 +738,7 @@ fun ColorAdjustmentsSection(
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
-        Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -731,9 +762,7 @@ fun ColorAdjustmentsSection(
                 thumbColor = selectedColor
             )
         }
-        Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -757,9 +786,34 @@ fun ColorAdjustmentsSection(
                 thumbColor = selectedColor
             )
         }
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Opacity",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.Medium
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "${(opacity * 100).toInt()}%",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            CustomSlider(
+                value = opacity,
+                onValueChange = onOpacityChange,
+                thumbColor = selectedColor.copy(alpha = opacity)
+            )
+        }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomSlider(
     value: Float,
@@ -1055,14 +1109,18 @@ fun adjustBrightness(color: Color, brightness: Float): Color {
     val hsv = FloatArray(3)
     AndroidColor.colorToHSV(color.toArgb(), hsv)
     hsv[2] = brightness.coerceIn(0f, 1f)
-    return Color(AndroidColor.HSVToColor(hsv))
+    return Color.hsv(hsv[0], hsv[1], hsv[2]).copy(alpha = color.alpha)
 }
 
 fun adjustSaturation(color: Color, saturation: Float): Color {
     val hsv = FloatArray(3)
     AndroidColor.colorToHSV(color.toArgb(), hsv)
     hsv[1] = saturation.coerceIn(0f, 1f)
-    return Color(AndroidColor.HSVToColor(hsv))
+    return Color.hsv(hsv[0], hsv[1], hsv[2]).copy(alpha = color.alpha)
+}
+
+fun adjustOpacity(color: Color, opacity: Float): Color {
+    return color.copy(alpha = opacity.coerceIn(0f, 1f))
 }
 fun validateHex(hex: String): Boolean {
     if (hex.isEmpty() || !hex.startsWith("#")) return false
