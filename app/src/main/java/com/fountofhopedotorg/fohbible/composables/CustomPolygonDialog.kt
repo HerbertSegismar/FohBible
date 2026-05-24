@@ -101,12 +101,36 @@ private val BezierNodeListSaver = listSaver<List<BezierNode>, String>(
 
 @Composable
 fun CustomPolygonDialog(
+    initialSerializedPoints: String? = null,
     onDismiss: () -> Unit,
     onConfirm: (List<BezierNode>) -> Unit
 ) {
-    var points by rememberSaveable(stateSaver = BezierNodeListSaver) { mutableStateOf(emptyList()) }
+    var points by rememberSaveable(stateSaver = BezierNodeListSaver) {
+        mutableStateOf(
+            if (!initialSerializedPoints.isNullOrBlank()) {
+                try {
+                    initialSerializedPoints.split(";").map { nodeStr ->
+                        val parts = nodeStr.split(":")
+                        val anchorParts = parts[0].split(",")
+                        val handleInParts = parts[1].split(",")
+                        val handleOutParts = parts[2].split(",")
+                        BezierNode(
+                            anchor = Offset(anchorParts[0].toFloat(), anchorParts[1].toFloat()),
+                            handleIn = Offset(handleInParts[0].toFloat(), handleInParts[1].toFloat()),
+                            handleOut = Offset(handleOutParts[0].toFloat(), handleOutParts[1].toFloat())
+                        )
+                    }
+                } catch (_: Exception) {
+                    emptyList()
+                }
+            } else {
+                emptyList()
+            }
+        )
+    }
+
     var redoStack by rememberSaveable(stateSaver = BezierNodeListSaver) { mutableStateOf(emptyList()) }
-    var selectedIndex by rememberSaveable { mutableIntStateOf(-1) }
+    var selectedIndex by rememberSaveable { mutableIntStateOf(if (points.isNotEmpty()) 0 else -1) }
     var nudgeAmountIndex by rememberSaveable { mutableIntStateOf(0) }
     var activeControl by rememberSaveable { mutableStateOf(ActiveControl.ANCHOR) }
 
@@ -116,6 +140,8 @@ fun CustomPolygonDialog(
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    val isEditing = !initialSerializedPoints.isNullOrBlank()
 
     val nudgePoint = { dx: Float, dy: Float ->
         if (selectedIndex in points.indices) {
@@ -262,7 +288,7 @@ fun CustomPolygonDialog(
         ) {
             if (isLandscape) {
                 Text(
-                    text = "Tap to Add Polygon Points",
+                    text = if (isEditing) "Edit Polygon Points" else "Tap to Add Polygon Points",
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -424,7 +450,7 @@ fun CustomPolygonDialog(
             ) {
                 if (!isLandscape) {
                     Text(
-                        text = "Tap to Add Polygon Points",
+                        text = if (isEditing) "Edit Polygon Points" else "Tap to Add Polygon Points",
                         style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(bottom = 16.dp)
@@ -499,7 +525,7 @@ fun CustomPolygonDialog(
                             },
                             enabled = points.size >= 3
                         ) {
-                            Text("Add to Canvas")
+                            Text(if (isEditing) "Save Changes" else "Add to Canvas")
                         }
                     }
                 }

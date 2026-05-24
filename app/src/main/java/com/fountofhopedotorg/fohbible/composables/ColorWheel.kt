@@ -79,8 +79,13 @@ import kotlin.math.min
 import kotlin.math.sin
 import kotlin.math.sqrt
 import android.content.res.Configuration
+import androidx.compose.material.icons.filled.BrightnessMedium
+import androidx.compose.material.icons.filled.Colorize
+import androidx.compose.material.icons.filled.Opacity
+import androidx.compose.material.icons.filled.Tonality
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import android.graphics.Color as AndroidColor
 
@@ -593,13 +598,24 @@ fun ColorPreviewSection(
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(
-            text = "Selected Color",
-            style = MaterialTheme.typography.titleSmall.copy(
-                fontWeight = FontWeight.SemiBold
-            ),
-            color = MaterialTheme.colorScheme.onSurface
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                Icons.Filled.CheckCircle,
+                contentDescription = "Selected Color",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp)
+            )
+            Text(
+                text = "Selected Color",
+                style = MaterialTheme.typography.titleSmall.copy(
+                    fontWeight = FontWeight.SemiBold
+                ),
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -738,77 +754,81 @@ fun ColorAdjustmentsSection(
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text(
-                    text = "Brightness",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = FontWeight.Medium
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface
+                Icon(
+                    imageVector = Icons.Default.BrightnessMedium,
+                    contentDescription = "Brightness",
+                    tint = MaterialTheme.colorScheme.secondary
+                )
+                CustomSlider(
+                    value = brightness,
+                    onValueChange = onBrightnessChange,
+                    thumbColor = selectedColor,
+                    modifier = Modifier.weight(1f)
                 )
                 Text(
                     text = "${(brightness * 100).toInt()}%",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.width(40.dp),
+                    textAlign = TextAlign.End
                 )
             }
-            CustomSlider(
-                value = brightness,
-                onValueChange = onBrightnessChange,
-                thumbColor = selectedColor
-            )
-        }
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text(
-                    text = "Saturation",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = FontWeight.Medium
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface
+                Icon(
+                    imageVector = Icons.Default.Tonality,
+                    contentDescription = "Saturation",
+                    tint = MaterialTheme.colorScheme.secondary
+                )
+                CustomSlider(
+                    value = saturation,
+                    onValueChange = onSaturationChange,
+                    thumbColor = selectedColor,
+                    modifier = Modifier.weight(1f)
                 )
                 Text(
                     text = "${(saturation * 100).toInt()}%",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.width(40.dp),
+                    textAlign = TextAlign.End
                 )
             }
-            CustomSlider(
-                value = saturation,
-                onValueChange = onSaturationChange,
-                thumbColor = selectedColor
-            )
-        }
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text(
-                    text = "Opacity",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = FontWeight.Medium
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface
+                Icon(
+                    imageVector = Icons.Default.Opacity,
+                    contentDescription = "Opacity",
+                    tint = MaterialTheme.colorScheme.secondary
+                )
+                CustomSlider(
+                    value = opacity,
+                    onValueChange = onOpacityChange,
+                    thumbColor = selectedColor.copy(alpha = opacity),
+                    modifier = Modifier.weight(1f)
                 )
                 Text(
                     text = "${(opacity * 100).toInt()}%",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.width(40.dp),
+                    textAlign = TextAlign.End
                 )
             }
-            CustomSlider(
-                value = opacity,
-                onValueChange = onOpacityChange,
-                thumbColor = selectedColor.copy(alpha = opacity)
-            )
         }
     }
 }
@@ -818,12 +838,13 @@ fun ColorAdjustmentsSection(
 fun CustomSlider(
     value: Float,
     onValueChange: (Float) -> Unit,
-    thumbColor: Color
+    thumbColor: Color,
+    modifier: Modifier = Modifier
 ) {
     Slider(
         value = value,
         onValueChange = onValueChange,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
         thumb = {
             Box(
                 modifier = Modifier
@@ -848,14 +869,24 @@ fun ColorPaletteSection(
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(
-            text = "Color Palette",
-            style = MaterialTheme.typography.titleSmall.copy(
-                fontWeight = FontWeight.SemiBold
-            ),
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                Icons.Filled.Colorize,
+                contentDescription = "Color Wheel",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp)
+            )
+            Text(
+                text = "Color Palette",
+                style = MaterialTheme.typography.titleSmall.copy(
+                    fontWeight = FontWeight.SemiBold
+                ),
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -928,11 +959,12 @@ fun ActionButtonsSection(
                     Icons.Filled.CheckCircle,
                     contentDescription = "Apply",
                     modifier = Modifier.size(18.dp),
-                    tint = if (isValidHex) buttonTextColor else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    tint = if (isValidHex) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                 )
                 Text(
                     text = "Apply",
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (isValidHex) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                 )
             }
         }

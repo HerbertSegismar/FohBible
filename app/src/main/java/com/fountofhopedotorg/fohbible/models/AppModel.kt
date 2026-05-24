@@ -30,26 +30,7 @@ import java.util.UUID
 
 @Stable
 class AppViewModel(application: Application) : AndroidViewModel(application) {
-
-    val addedTexts = mutableStateListOf<String>()
-    val canvasNotes = mutableStateListOf<CanvasNote>()
-
-    fun removeText(text: String) {
-        addedTexts.remove(text)
-    }
-
-    fun updateText(oldText: String, newText: String) {
-        val index = addedTexts.indexOf(oldText)
-        if (index != -1) {
-            addedTexts[index] = newText
-        }
-    }
-
-    fun addText(text: String) {
-        if (text.isNotBlank()) {
-            addedTexts.add(text)
-        }
-    }
+    var canvasNotes = mutableStateListOf<CanvasNote>()
 
     fun addToCanvas(note: CanvasNote) {
         canvasNotes.add(note.copy(id = UUID.randomUUID().toString()))
@@ -77,11 +58,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         if (index != -1) {
             canvasNotes[index] = canvasNotes[index].copy(backgroundColor = color)
         }
-    }
-
-    fun clearAllNotes() {
-        addedTexts.clear()
-        canvasNotes.clear()
     }
 
     val predefinedHighlightColors = mutableStateListOf<Color>().apply {
@@ -306,6 +282,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun updateCurrentScreen(newScreen: Screen) {
         if (navigationStack.isNotEmpty()) {
             navigationStack[navigationStack.lastIndex] = newScreen
+        }
+    }
+
+    fun updateNoteContent(id: String, newContent: String) {
+        val index = canvasNotes.indexOfFirst { it.id == id }
+        if (index != -1) {
+            canvasNotes[index] = canvasNotes[index].copy(content = newContent)
         }
     }
 }

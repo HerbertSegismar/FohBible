@@ -10,11 +10,16 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowRight
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FormatShapes
-import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.ShapeLine
 import androidx.compose.material.icons.filled.TextFields
@@ -51,18 +56,15 @@ import com.fountofhopedotorg.fohbible.composables.randomColor
 import com.fountofhopedotorg.fohbible.data.*
 import com.fountofhopedotorg.fohbible.functions.buildPassageText
 import com.fountofhopedotorg.fohbible.functions.buildReferenceString
+import com.fountofhopedotorg.fohbible.functions.getRandomColor
+import com.fountofhopedotorg.fohbible.functions.getSerializedPointsForShape
 import com.fountofhopedotorg.fohbible.functions.saveCanvasAsImage
 import com.fountofhopedotorg.fohbible.functions.saveCanvasAsPDF
+import com.fountofhopedotorg.fohbible.functions.saveCanvasAsSVG
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import kotlinx.coroutines.launch
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowRight
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Edit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.Q)
@@ -83,7 +85,13 @@ fun GraphicalNotesScreen() {
     var selectedInputMode by rememberSaveable { mutableStateOf("Add Text") }
     var noteToEdit by rememberSaveable { mutableStateOf<String?>(null) }
     var editedNoteText by rememberSaveable { mutableStateOf("") }
-    var showCanvasElementsTree by rememberSaveable { mutableStateOf(true) }  // Toggle state
+    var showCanvasElementsTree by rememberSaveable { mutableStateOf(true) }
+    var showSaveMenu by rememberSaveable { mutableStateOf(false) }
+
+    // Tracking the polygon being edited
+    var polygonNoteToEditId by rememberSaveable { mutableStateOf<String?>(null) }
+    var initialPolygonString by rememberSaveable { mutableStateOf("") }
+
     val dbHelper = remember(viewModel.currentDbName) {
         DatabaseHelper(context, viewModel.currentDbName)
     }
@@ -288,25 +296,25 @@ fun GraphicalNotesScreen() {
                             )
                             ShapeSelectionCard(
                                 modifier = Modifier.weight(1f),
-                                onClick = { viewModel.addToCanvas(CanvasNote(content = "Shape: Square")) }
+                                onClick = { viewModel.addToCanvas(CanvasNote(content = "Shape: Square", backgroundColor = getRandomColor())) }
                             ) {
                                 SquareShape(modifier = Modifier.size(35.dp))
                             }
                             ShapeSelectionCard(
                                 modifier = Modifier.weight(1f),
-                                onClick = { viewModel.addToCanvas(CanvasNote(content = "Shape: Circle")) }
+                                onClick = { viewModel.addToCanvas(CanvasNote(content = "Shape: Circle", backgroundColor = getRandomColor())) }
                             ) {
                                 CircleShape(modifier = Modifier.size(35.dp))
                             }
                             ShapeSelectionCard(
                                 modifier = Modifier.weight(1f),
-                                onClick = { viewModel.addToCanvas(CanvasNote(content = "Shape: Triangle")) }
+                                onClick = { viewModel.addToCanvas(CanvasNote(content = "Shape: Triangle", backgroundColor = getRandomColor())) }
                             ) {
                                 TriangleShape(modifier = Modifier.size(35.dp))
                             }
                             ShapeSelectionCard(
                                 modifier = Modifier.weight(1f),
-                                onClick = { viewModel.addToCanvas(CanvasNote(content = "Shape: Pentagon")) }
+                                onClick = { viewModel.addToCanvas(CanvasNote(content = "Shape: Pentagon", backgroundColor = getRandomColor())) }
                             ) {
                                 PolygonShape(
                                     points = pentagonPoints,
@@ -315,7 +323,11 @@ fun GraphicalNotesScreen() {
                             }
                             ShapeSelectionCard(
                                 modifier = Modifier.weight(1f),
-                                onClick = { showCustomPolygonDialog = true }
+                                onClick = {
+                                    polygonNoteToEditId = null
+                                    initialPolygonString = ""
+                                    showCustomPolygonDialog = true
+                                }
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.ShapeLine,
@@ -332,7 +344,6 @@ fun GraphicalNotesScreen() {
 
         Spacer(Modifier.height(20.dp))
 
-        // Toggle button for Canvas Elements tree
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -379,12 +390,32 @@ fun GraphicalNotesScreen() {
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     if (note.content.startsWith("Shape:")) {
-                                        Icon(
-                                            imageVector = Icons.Default.FormatShapes,
-                                            contentDescription = "Shape",
-                                            modifier = Modifier.size(18.dp),
-                                            tint = themeColors.primary
+                                        val shapeName = note.content.removePrefix("Shape: ").trim()
+                                        val pentagonPoints = listOf(
+                                            Offset(0.5f, 0f),
+                                            Offset(1f, 0.4f),
+                                            Offset(0.8f, 0.9f),
+                                            Offset(0.2f, 0.9f),
+                                            Offset(0f, 0.4f)
                                         )
+
+                                        Box(
+                                            modifier = Modifier.size(24.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            when {
+                                                shapeName.startsWith("Square") -> SquareShape(modifier = Modifier.size(18.dp))
+                                                shapeName.startsWith("Circle") -> CircleShape(modifier = Modifier.size(18.dp))
+                                                shapeName.startsWith("Triangle") -> TriangleShape(modifier = Modifier.size(18.dp))
+                                                shapeName.startsWith("Pentagon") -> PolygonShape(points = pentagonPoints, modifier = Modifier.size(18.dp))
+                                                else -> Icon(
+                                                    imageVector = Icons.Default.ShapeLine,
+                                                    contentDescription = "Custom Shape",
+                                                    modifier = Modifier.size(18.dp),
+                                                    tint = themeColors.primary
+                                                )
+                                            }
+                                        }
                                     } else {
                                         Icon(
                                             imageVector = Icons.Default.TextFields,
@@ -396,8 +427,10 @@ fun GraphicalNotesScreen() {
                                     Spacer(Modifier.width(8.dp))
 
                                     Text(
-                                        text = note.content.replaceFirst("Shape: ", "").let {
-                                            if (it.length > 30) it.take(30) + "…" else it
+                                        text = note.content.removePrefix("Shape: ").let { content ->
+                                            if (content.startsWith("CustomPolygon")) "Custom Polygon" else content
+                                        }.let { cleanedText ->
+                                            if (cleanedText.length > 30) cleanedText.take(30) + "…" else cleanedText
                                         },
                                         modifier = Modifier.weight(1f),
                                         maxLines = 1,
@@ -407,8 +440,28 @@ fun GraphicalNotesScreen() {
 
                                     IconButton(
                                         onClick = {
-                                            noteToEdit = note.id
-                                            editedNoteText = note.content
+                                            if (note.content.startsWith("Shape: ")) {
+                                                if (note.content.startsWith("Shape: CustomPolygon:")) {
+                                                    polygonNoteToEditId = note.id
+                                                    initialPolygonString = note.content.removePrefix("Shape: CustomPolygon:")
+                                                    showCustomPolygonDialog = true
+                                                } else {
+                                                    val shapeType = note.content.removePrefix("Shape: ")
+                                                    val prefilledPoints = getSerializedPointsForShape(shapeType)
+
+                                                    if (prefilledPoints.isNotEmpty()) {
+                                                        polygonNoteToEditId = note.id
+                                                        initialPolygonString = prefilledPoints
+                                                        showCustomPolygonDialog = true
+                                                    } else {
+                                                        noteToEdit = note.id
+                                                        editedNoteText = note.content
+                                                    }
+                                                }
+                                            } else {
+                                                noteToEdit = note.id
+                                                editedNoteText = note.content
+                                            }
                                         },
                                         modifier = Modifier.size(32.dp)
                                     ) {
@@ -518,20 +571,47 @@ fun GraphicalNotesScreen() {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = {
-                    coroutineScope.launch { saveCanvasAsImage(graphicsLayer, context, "JPG") }
-                }) {
-                    Icon(Icons.Default.Save, null, tint = Color.White)
+            Box {
+                Button(onClick = { showSaveMenu = true }) {
+                    Icon(Icons.Default.Save, contentDescription = "Save As", tint = Color.White)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Save As...", color = Color.White)
                     Spacer(Modifier.width(4.dp))
-                    Text("JPG", color = Color.White)
+                    Icon(Icons.Default.ArrowDropDown, contentDescription = "Expand", tint = Color.White)
                 }
-                Button(onClick = {
-                    coroutineScope.launch { saveCanvasAsPDF(graphicsLayer, context) }
-                }) {
-                    Icon(Icons.Default.PictureAsPdf, null, tint = Color.White)
-                    Spacer(Modifier.width(4.dp))
-                    Text("PDF", color = Color.White)
+
+                DropdownMenu(
+                    expanded = showSaveMenu,
+                    onDismissRequest = { showSaveMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("PNG") },
+                        onClick = {
+                            showSaveMenu = false
+                            coroutineScope.launch { saveCanvasAsImage(graphicsLayer, context, "PNG") }
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("JPG") },
+                        onClick = {
+                            showSaveMenu = false
+                            coroutineScope.launch { saveCanvasAsImage(graphicsLayer, context, "JPG") }
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("PDF") },
+                        onClick = {
+                            showSaveMenu = false
+                            coroutineScope.launch { saveCanvasAsPDF(graphicsLayer, context) }
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("SVG") },
+                        onClick = {
+                            showSaveMenu = false
+                            coroutineScope.launch { saveCanvasAsSVG(graphicsLayer, context) }
+                        }
+                    )
                 }
             }
         }
@@ -589,13 +669,29 @@ fun GraphicalNotesScreen() {
 
     if (showCustomPolygonDialog) {
         CustomPolygonDialog(
-            onDismiss = { showCustomPolygonDialog = false },
+            initialSerializedPoints = initialPolygonString.takeIf { it.isNotEmpty() },
+            onDismiss = {
+                showCustomPolygonDialog = false
+                polygonNoteToEditId = null
+                initialPolygonString = ""
+            },
+
             onConfirm = { points ->
                 val serialized = points.joinToString(";") { node ->
                     "${node.anchor.x},${node.anchor.y}:${node.handleIn.x},${node.handleIn.y}:${node.handleOut.x},${node.handleOut.y}"
                 }
-                viewModel.addToCanvas(CanvasNote(content = "Shape: CustomPolygon:$serialized"))
+                val contentString = "Shape: CustomPolygon:$serialized"
+
+                if (polygonNoteToEditId != null) {
+                    viewModel.updateNoteContent(polygonNoteToEditId!!, contentString)
+                    selectedNoteId = polygonNoteToEditId
+                } else {
+                    viewModel.addToCanvas(CanvasNote(content = contentString, backgroundColor = getRandomColor()))
+                }
+
                 showCustomPolygonDialog = false
+                polygonNoteToEditId = null
+                initialPolygonString = ""
             }
         )
     }
