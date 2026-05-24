@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.unit.sp
+import com.fountofhopedotorg.fohbible.data.CanvasNote
 import com.fountofhopedotorg.fohbible.data.ProcessingOptions
 import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.data.Verse
@@ -230,4 +231,30 @@ fun getRandomColor(): Color {
         blue = Random.nextFloat(),
         alpha = 1f
     )
+}
+
+fun getElementDisplayName(note: CanvasNote, currentIndex: Int, allNotes: List<CanvasNote>): String {
+    val category = when {
+        note.content.startsWith("Image:") -> "Image"
+        note.content.startsWith("Shape: Square") -> "Square"
+        note.content.startsWith("Shape: Circle") -> "Circle"
+        note.content.startsWith("Shape: Triangle") -> "Triangle"
+        note.content.startsWith("Shape: Pentagon") -> "Pentagon"
+        note.content.startsWith("Shape: CustomPolygon") -> "Custom Polygon"
+        else -> "Text"
+    }
+    val count = allNotes.take(currentIndex + 1).count { other ->
+        val otherCategory = when {
+            other.content.startsWith("Image:") -> "Image"
+            other.content.startsWith("Shape: Square") -> "Square"
+            other.content.startsWith("Shape: Circle") -> "Circle"
+            other.content.startsWith("Shape: Triangle") -> "Triangle"
+            other.content.startsWith("Shape: Pentagon") -> "Pentagon"
+            other.content.startsWith("Shape: CustomPolygon") -> "Custom Polygon"
+            else -> "Text"
+        }
+        otherCategory == category
+    }
+
+    return "$category $count"
 }

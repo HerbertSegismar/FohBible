@@ -1,14 +1,19 @@
 package com.fountofhopedotorg.fohbible.graphicals
 
+import android.net.Uri
 import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -20,6 +25,10 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FormatShapes
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.ShapeLine
 import androidx.compose.material.icons.filled.TextFields
@@ -32,9 +41,11 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -43,6 +54,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.fountofhopedotorg.fohbible.composables.CanvasImageItem
 import com.fountofhopedotorg.fohbible.composables.CanvasSvgItem
 import com.fountofhopedotorg.fohbible.composables.CanvasTextItem
 import com.fountofhopedotorg.fohbible.composables.CircleShape
@@ -56,6 +68,7 @@ import com.fountofhopedotorg.fohbible.composables.randomColor
 import com.fountofhopedotorg.fohbible.data.*
 import com.fountofhopedotorg.fohbible.functions.buildPassageText
 import com.fountofhopedotorg.fohbible.functions.buildReferenceString
+import com.fountofhopedotorg.fohbible.functions.getElementDisplayName
 import com.fountofhopedotorg.fohbible.functions.getRandomColor
 import com.fountofhopedotorg.fohbible.functions.getSerializedPointsForShape
 import com.fountofhopedotorg.fohbible.functions.saveCanvasAsImage
@@ -65,6 +78,7 @@ import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.Q)
@@ -87,10 +101,16 @@ fun GraphicalNotesScreen() {
     var editedNoteText by rememberSaveable { mutableStateOf("") }
     var showCanvasElementsTree by rememberSaveable { mutableStateOf(true) }
     var showSaveMenu by rememberSaveable { mutableStateOf(false) }
-
-    // Tracking the polygon being edited
     var polygonNoteToEditId by rememberSaveable { mutableStateOf<String?>(null) }
     var initialPolygonString by rememberSaveable { mutableStateOf("") }
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            viewModel.addToCanvas(CanvasNote(content = "Image: $uri"))
+        }
+    }
 
     val dbHelper = remember(viewModel.currentDbName) {
         DatabaseHelper(context, viewModel.currentDbName)
@@ -135,7 +155,8 @@ fun GraphicalNotesScreen() {
             val modes = listOf(
                 Triple("Add Text", Icons.Default.TextFields, "Add Text"),
                 Triple("Fetch Verse", Icons.Default.Book, "Fetch Verse"),
-                Triple("Add SVG", Icons.Default.FormatShapes, "Add SVG")
+                Triple("Add SVG", Icons.Default.FormatShapes, "Add SVG"),
+                Triple("Add Image", Icons.Default.Image, "Add Image")
             )
 
             modes.forEach { (mode, icon, desc) ->
@@ -340,6 +361,29 @@ fun GraphicalNotesScreen() {
                     }
                 }
             }
+            "Add Image" -> {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = themeColors.primary.copy(alpha = 0.05f))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Load an image from your device:",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = themeColors.textColor
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Button(onClick = { imagePickerLauncher.launch("image/*") }) {
+                            Icon(Icons.Default.PhotoLibrary, contentDescription = "Gallery")
+                            Spacer(Modifier.width(8.dp))
+                            Text("Choose from Gallery")
+                        }
+                    }
+                }
+            }
         }
 
         Spacer(Modifier.height(20.dp))
@@ -369,74 +413,156 @@ fun GraphicalNotesScreen() {
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )
                 } else {
-                    LazyColumn(modifier = Modifier.heightIn(max = 260.dp)) {
-                        items(viewModel.canvasNotes, key = { it.id }) { note ->
+                    // State for drag reordering
+                    var draggedIndex by remember { mutableStateOf<Int?>(null) }
+                    var dragOffset by remember { mutableFloatStateOf(0f) }
+                    val density = LocalDensity.current
+                    val itemHeightPx = remember(density) { with(density) { 56.dp.toPx() } } // approximate row height
+
+                    val listState = rememberLazyListState()
+
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.heightIn(max = 260.dp)
+                    ) {
+                        itemsIndexed(
+                            viewModel.canvasNotes,
+                            key = { _, note -> note.id }
+                        ) { index, note ->
                             val isSelected = selectedNoteId == note.id
+
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp)
+                                    .graphicsLayer {
+                                        // Visually lift the dragged item
+                                        if (draggedIndex == index) {
+                                            translationY = dragOffset
+                                        }
+                                    }
                                     .pointerInput(note.id) {
+                                        // Tap to select (short press)
                                         detectTapGestures { selectedNoteId = note.id }
+                                    }
+                                    .pointerInput(note.id) {
+                                        detectDragGesturesAfterLongPress(
+                                            onDragStart = { offset ->
+                                                // Dynamically fetch the current position at drag start
+                                                val currentIndex = viewModel.canvasNotes.indexOfFirst { it.id == note.id }
+                                                if (currentIndex == -1) return@detectDragGesturesAfterLongPress
+                                                draggedIndex = currentIndex
+                                                dragOffset = offset.y
+                                            },
+                                            onDrag = { change, dragAmount ->
+                                                change.consume()
+                                                dragOffset += dragAmount.y
+                                            },
+                                            onDragEnd = {
+                                                val fromIndex = draggedIndex ?: return@detectDragGesturesAfterLongPress
+                                                val currentIndex = viewModel.canvasNotes.indexOfFirst { it.id == note.id }
+                                                if (currentIndex == -1 || fromIndex != currentIndex) {
+                                                    // If the item moved externally during drag, ignore
+                                                    draggedIndex = null
+                                                    dragOffset = 0f
+                                                    return@detectDragGesturesAfterLongPress
+                                                }
+                                                val target = (fromIndex + (dragOffset / itemHeightPx).roundToInt())
+                                                    .coerceIn(0, viewModel.canvasNotes.size - 1)
+                                                if (target != fromIndex) {
+                                                    viewModel.reorderCanvasNotes(fromIndex, target)
+                                                }
+                                                draggedIndex = null
+                                                dragOffset = 0f
+                                            },
+                                            onDragCancel = {
+                                                draggedIndex = null
+                                                dragOffset = 0f
+                                            }
+                                        )
                                     },
                                 colors = CardDefaults.cardColors(
-                                    containerColor = if (isSelected) themeColors.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface
+                                    containerColor = if (isSelected)
+                                        themeColors.primary.copy(alpha = 0.15f)
+                                    else
+                                        MaterialTheme.colorScheme.surface
                                 )
                             ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                                        .padding(horizontal = 8.dp, vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    if (note.content.startsWith("Shape:")) {
-                                        val shapeName = note.content.removePrefix("Shape: ").trim()
-                                        val pentagonPoints = listOf(
-                                            Offset(0.5f, 0f),
-                                            Offset(1f, 0.4f),
-                                            Offset(0.8f, 0.9f),
-                                            Offset(0.2f, 0.9f),
-                                            Offset(0f, 0.4f)
-                                        )
-
-                                        Box(
-                                            modifier = Modifier.size(24.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            when {
-                                                shapeName.startsWith("Square") -> SquareShape(modifier = Modifier.size(18.dp))
-                                                shapeName.startsWith("Circle") -> CircleShape(modifier = Modifier.size(18.dp))
-                                                shapeName.startsWith("Triangle") -> TriangleShape(modifier = Modifier.size(18.dp))
-                                                shapeName.startsWith("Pentagon") -> PolygonShape(points = pentagonPoints, modifier = Modifier.size(18.dp))
-                                                else -> Icon(
-                                                    imageVector = Icons.Default.ShapeLine,
-                                                    contentDescription = "Custom Shape",
-                                                    modifier = Modifier.size(18.dp),
-                                                    tint = themeColors.primary
-                                                )
+                                    // Element icon (unchanged)
+                                    Box(modifier = Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+                                        when {
+                                            note.content.startsWith("Shape:") -> {
+                                                val shapeName = note.content.removePrefix("Shape: ").trim()
+                                                when {
+                                                    shapeName.startsWith("Square") -> SquareShape(modifier = Modifier.size(18.dp))
+                                                    shapeName.startsWith("Circle") -> CircleShape(modifier = Modifier.size(18.dp))
+                                                    shapeName.startsWith("Triangle") -> TriangleShape(modifier = Modifier.size(18.dp))
+                                                    shapeName.startsWith("Pentagon") -> PolygonShape(
+                                                        points = listOf(
+                                                            Offset(0.5f, 0f), Offset(1f, 0.4f), Offset(0.8f, 0.9f),
+                                                            Offset(0.2f, 0.9f), Offset(0f, 0.4f)
+                                                        ),
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                    else -> Icon(Icons.Default.ShapeLine, null, modifier = Modifier.size(18.dp), tint = themeColors.primary)
+                                                }
                                             }
+                                            note.content.startsWith("Image:") -> Icon(Icons.Default.Image, null, modifier = Modifier.size(18.dp), tint = themeColors.primary)
+                                            else -> Icon(Icons.Default.TextFields, null, modifier = Modifier.size(18.dp), tint = themeColors.primary)
                                         }
-                                    } else {
-                                        Icon(
-                                            imageVector = Icons.Default.TextFields,
-                                            contentDescription = "Text",
-                                            modifier = Modifier.size(18.dp),
-                                            tint = themeColors.primary
-                                        )
                                     }
+
                                     Spacer(Modifier.width(8.dp))
 
+                                    // Element label
                                     Text(
-                                        text = note.content.removePrefix("Shape: ").let { content ->
-                                            if (content.startsWith("CustomPolygon")) "Custom Polygon" else content
-                                        }.let { cleanedText ->
-                                            if (cleanedText.length > 30) cleanedText.take(30) + "…" else cleanedText
-                                        },
+                                        text = getElementDisplayName(note, index, viewModel.canvasNotes),
                                         modifier = Modifier.weight(1f),
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                         style = MaterialTheme.typography.bodyMedium
                                     )
+
+                                    // Vertical up/down arrows (stacked)
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier.padding(end = 4.dp)
+                                    ) {
+                                        IconButton(
+                                            onClick = {
+                                                if (index > 0) viewModel.reorderCanvasNotes(index, index - 1)
+                                            },
+                                            enabled = index > 0,
+                                            modifier = Modifier.size(24.dp) // small touch target
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.KeyboardArrowUp,
+                                                contentDescription = "Move up",
+                                                tint = if (index > 0) themeColors.primary else Color.Gray,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                        }
+                                        IconButton(
+                                            onClick = {
+                                                if (index < viewModel.canvasNotes.size - 1) viewModel.reorderCanvasNotes(index, index + 1)
+                                            },
+                                            enabled = index < viewModel.canvasNotes.size - 1,
+                                            modifier = Modifier.size(24.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.KeyboardArrowDown,
+                                                contentDescription = "Move down",
+                                                tint = if (index < viewModel.canvasNotes.size - 1) themeColors.primary else Color.Gray,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                        }
+                                    }
 
                                     IconButton(
                                         onClick = {
@@ -448,7 +574,6 @@ fun GraphicalNotesScreen() {
                                                 } else {
                                                     val shapeType = note.content.removePrefix("Shape: ")
                                                     val prefilledPoints = getSerializedPointsForShape(shapeType)
-
                                                     if (prefilledPoints.isNotEmpty()) {
                                                         polygonNoteToEditId = note.id
                                                         initialPolygonString = prefilledPoints
@@ -474,9 +599,7 @@ fun GraphicalNotesScreen() {
                                     }
 
                                     IconButton(
-                                        onClick = {
-                                            viewModel.addToCanvas(CanvasNote(content = note.content))
-                                        },
+                                        onClick = { viewModel.addToCanvas(CanvasNote(content = note.content)) },
                                         modifier = Modifier.size(32.dp)
                                     ) {
                                         Icon(
@@ -489,8 +612,8 @@ fun GraphicalNotesScreen() {
 
                                     IconButton(
                                         onClick = {
-                                            val index = viewModel.canvasNotes.indexOf(note)
-                                            if (index != -1) viewModel.removeFromCanvas(index)
+                                            val idx = viewModel.canvasNotes.indexOf(note)
+                                            if (idx != -1) viewModel.removeFromCanvas(idx)
                                             if (selectedNoteId == note.id) selectedNoteId = null
                                         },
                                         modifier = Modifier.size(32.dp)
@@ -530,9 +653,10 @@ fun GraphicalNotesScreen() {
                         drawContent()
                     }
             ) {
-                viewModel.canvasNotes.forEachIndexed { index, note ->
-                    if (note.content.startsWith("Shape:")) {
-                        CanvasSvgItem(
+                viewModel.canvasNotes.forEach { note ->
+                    key(note.id) {
+                        when {
+                            note.content.startsWith("Shape:") -> CanvasSvgItem(
                             note = note,
                             isSelected = selectedNoteId == note.id,
                             onSelect = { selectedNoteId = note.id },
@@ -543,10 +667,24 @@ fun GraphicalNotesScreen() {
                                 noteToColorEditId = note.id
                                 showColorPicker = true
                             },
-                            onDeleteRequested = { viewModel.removeFromCanvas(index) }
+                                onDeleteRequested = {
+                                    val idx = viewModel.canvasNotes.indexOfFirst { it.id == note.id }
+                                    if (idx != -1) viewModel.removeFromCanvas(idx)
+                                }
                         )
-                    } else {
-                        CanvasTextItem(
+                        note.content.startsWith("Image:") -> CanvasImageItem(
+                            note = note,
+                            isSelected = selectedNoteId == note.id,
+                            onSelect = { selectedNoteId = note.id },
+                            onUpdatePosition = { offset, width, height ->
+                                viewModel.updateNotePosition(note.id, offset, width, height)
+                            },
+                            onDeleteRequested = {
+                                val idx = viewModel.canvasNotes.indexOfFirst { it.id == note.id }
+                                if (idx != -1) viewModel.removeFromCanvas(idx)
+                            }
+                        )
+                        else -> CanvasTextItem(
                             note = note,
                             isSelected = selectedNoteId == note.id,
                             onSelect = { selectedNoteId = note.id },
@@ -557,8 +695,12 @@ fun GraphicalNotesScreen() {
                                 noteToColorEditId = note.id
                                 showColorPicker = true
                             },
-                            onDeleteRequested = { viewModel.removeFromCanvas(index) }
+                            onDeleteRequested = {
+                                val idx = viewModel.canvasNotes.indexOfFirst { it.id == note.id }
+                                if (idx != -1) viewModel.removeFromCanvas(idx)
+                            }
                         )
+                        }
                     }
                 }
             }

@@ -291,4 +291,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             canvasNotes[index] = canvasNotes[index].copy(content = newContent)
         }
     }
+
+    fun reorderCanvasNotes(from: Int, to: Int) {
+        if (from == to || from !in canvasNotes.indices || to !in canvasNotes.indices) return
+        val item = canvasNotes.removeAt(from)
+        canvasNotes.add(to, item)
+    }
 }

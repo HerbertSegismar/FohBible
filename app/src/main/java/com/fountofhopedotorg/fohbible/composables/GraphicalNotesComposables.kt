@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -44,11 +45,13 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.fountofhopedotorg.fohbible.data.CanvasNote
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import androidx.core.net.toUri
 
 data class BezierNodeData(
     val anchor: Offset,
@@ -163,7 +166,7 @@ fun CanvasSvgItem(
     onColorPickerRequested: () -> Unit,
     onDeleteRequested: () -> Unit
 ) {
-    var offset by remember { mutableStateOf(Offset(50f, 50f)) }
+    var offset by remember { mutableStateOf(note.offset) }
     var scaleX by remember { mutableFloatStateOf(1f) }
     var scaleY by remember { mutableFloatStateOf(1f) }
     var rotation by remember { mutableFloatStateOf(0f) }
@@ -196,7 +199,7 @@ fun CanvasSvgItem(
                     val coords = parts[0].split(",")
                     if (coords.size == 2) {
                         val pt = Offset(coords[0].toFloatOrNull() ?: 0f, coords[1].toFloatOrNull() ?: 0f)
-                        BezierNodeData(pt, pt, pt) // If no handles exist, treat them same as the anchor
+                        BezierNodeData(pt, pt, pt)
                     } else null
                 }
             }
@@ -261,7 +264,8 @@ fun CanvasSvgItem(
                         scaleX = (scaleX * zoom).coerceIn(0.2f, 5f)
                         scaleY = (scaleY * zoom).coerceIn(0.2f, 5f)
                         rotation += rot
-                        onUpdatePosition(offset, 0f, 0f)
+
+                        onUpdatePosition(offset, note.width, note.height)
                     }
                 }
                 .pointerInput(Unit) {
@@ -426,6 +430,189 @@ fun CanvasSvgItem(
 }
 
 @Composable
+fun CanvasImageItem(
+    note: CanvasNote,
+    isSelected: Boolean,
+    onSelect: () -> Unit,
+    onUpdatePosition: (Offset, Float, Float) -> Unit,
+    onDeleteRequested: () -> Unit
+) {
+    var offset by remember { mutableStateOf(note.offset) }
+    var scaleX by remember { mutableFloatStateOf(1f) }
+    var scaleY by remember { mutableFloatStateOf(1f) }
+    var rotation by remember { mutableFloatStateOf(0f) }
+
+    var baseSize by remember { mutableStateOf(IntSize.Zero) }
+
+    val handleSize = 24.dp
+    val handleRadiusPx = with(LocalDensity.current) { handleSize.toPx() / 2f }
+
+    val uriString = note.content.removePrefix("Image: ")
+    val uri = uriString.toUri()
+
+    Box(
+        modifier = Modifier
+            .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
+            .wrapContentSize(unbounded = true)
+    ) {
+        Box(
+            modifier = Modifier
+                .graphicsLayer {
+                    this.scaleX = scaleX
+                    this.scaleY = scaleY
+                    rotationZ = rotation
+                }
+                .onSizeChanged { baseSize = it }
+                .pointerInput(Unit) {
+                    detectTransformGestures { _, pan, zoom, rot ->
+                        val angleRad = rotation * (Math.PI / 180.0)
+                        val localPanX = pan.x * scaleX
+                        val localPanY = pan.y * scaleY
+
+                        val screenPanX = localPanX * cos(angleRad) - localPanY * sin(angleRad)
+                        val screenPanY = localPanX * sin(angleRad) + localPanY * cos(angleRad)
+                        offset += Offset(screenPanX.toFloat(), screenPanY.toFloat())
+
+                        scaleX = (scaleX * zoom).coerceIn(0.2f, 5f)
+                        scaleY = (scaleY * zoom).coerceIn(0.2f, 5f)
+                        rotation += rot
+
+                        onUpdatePosition(offset, note.width, note.height)
+                    }
+                }
+                .pointerInput(Unit) {
+                    detectTapGestures {
+                        onSelect()
+                    }
+                }
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(note.width.dp)
+                    .height(note.height.dp)
+                    .padding(handleSize / 2),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isSelected) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .border(1.dp, Color.Gray.copy(alpha = 0.5f))
+                    )
+                }
+
+                AsyncImage(
+                    model = uri,
+                    contentDescription = "Canvas Image",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit
+                )
+            }
+        }
+
+
+        if (isSelected && baseSize != IntSize.Zero) {
+            val cx = baseSize.width / 2f
+            val cy = baseSize.height / 2f
+
+            fun getTargetHandleOffset(localX: Float, localY: Float): IntOffset {
+                val dx = localX - cx
+                val dy = localY - cy
+                val scaledDx = dx * scaleX
+                val scaledDy = dy * scaleY
+                val rad = rotation * (Math.PI / 180.0)
+                val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
+                val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
+                return IntOffset(
+                    (cx + rx - handleRadiusPx).roundToInt(),
+                    (cy + ry - handleRadiusPx).roundToInt()
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .offset { getTargetHandleOffset(0f, 0f) }
+                    .size(handleSize)
+                    .background(Color.White, CircleShape)
+                    .border(1.dp, Color.Gray.copy(alpha = 0.5f), CircleShape)
+                    .clickable { onDeleteRequested() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Close, contentDescription = "Delete", tint = Color.Red, modifier = Modifier.size(14.dp))
+            }
+            Box(
+                modifier = Modifier
+                    .offset { getTargetHandleOffset(baseSize.width.toFloat(), 0f) }
+                    .size(handleSize)
+                    .pointerInput(baseSize) {
+                        detectDragGestures { change, dragAmount ->
+                            change.consume()
+
+                            val rad = rotation * (Math.PI / 180.0)
+                            val dx = baseSize.width.toFloat() - cx
+                            val dy = 0f - cy
+
+                            val scaledDx = dx * scaleX
+                            val scaledDy = dy * scaleY
+                            val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
+                            val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
+
+                            val currentAngle = atan2(ry, rx)
+                            val newAngle = atan2(ry + dragAmount.y, rx + dragAmount.x)
+
+                            var deltaAngle = Math.toDegrees(newAngle - currentAngle).toFloat()
+                            if (deltaAngle > 180f) deltaAngle -= 360f
+                            else if (deltaAngle < -180f) deltaAngle += 360f
+
+                            rotation += deltaAngle
+                        }
+                    }
+                    .background(Color.White, CircleShape)
+                    .border(1.dp, Color.Gray.copy(alpha = 0.5f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Refresh, contentDescription = "Rotate", tint = Color.DarkGray, modifier = Modifier.size(14.dp))
+            }
+
+            Box(
+                modifier = Modifier
+                    .offset { getTargetHandleOffset(baseSize.width.toFloat(), baseSize.height.toFloat()) }
+                    .size(handleSize)
+                    .pointerInput(baseSize) {
+                        detectDragGestures { change, dragAmount ->
+                            change.consume()
+
+                            val rad = rotation * (Math.PI / 180.0)
+                            val dx = baseSize.width.toFloat() - cx
+                            val dy = baseSize.height.toFloat() - cy
+
+                            val scaledDx = dx * scaleX
+                            val scaledDy = dy * scaleY
+                            val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
+                            val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
+
+                            val newRx = rx + dragAmount.x
+                            val newRy = ry + dragAmount.y
+
+                            val unrotatedRad = -rad
+                            val newScaledDx = newRx * cos(unrotatedRad) - newRy * sin(unrotatedRad)
+                            val newScaledDy = newRx * sin(unrotatedRad) + newRy * cos(unrotatedRad)
+
+                            if (dx != 0f) scaleX = (newScaledDx / dx).toFloat().coerceIn(0.2f, 5f)
+                            if (dy != 0f) scaleY = (newScaledDy / dy).toFloat().coerceIn(0.2f, 5f)
+                        }
+                    }
+                    .background(Color.White, CircleShape)
+                    .border(1.dp, Color.Gray.copy(alpha = 0.5f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(modifier = Modifier.size(10.dp).background(Color.DarkGray, CircleShape))
+            }
+        }
+    }
+}
+
+@Composable
 fun CanvasTextItem(
     note: CanvasNote,
     isSelected: Boolean,
@@ -434,7 +621,7 @@ fun CanvasTextItem(
     onColorPickerRequested: () -> Unit,
     onDeleteRequested: () -> Unit
 ) {
-    var offset by remember { mutableStateOf(Offset(50f, 50f)) }
+    var offset by remember { mutableStateOf(note.offset) }
     var scaleX by remember { mutableFloatStateOf(1f) }
     var scaleY by remember { mutableFloatStateOf(1f) }
     var rotation by remember { mutableFloatStateOf(0f) }
@@ -470,7 +657,8 @@ fun CanvasTextItem(
                         scaleX = (scaleX * zoom).coerceIn(0.2f, 5f)
                         scaleY = (scaleY * zoom).coerceIn(0.2f, 5f)
                         rotation += rot
-                        onUpdatePosition(offset, 0f, 0f)
+
+                        onUpdatePosition(offset, note.width, note.height)
                     }
                 }
                 .pointerInput(Unit) {
