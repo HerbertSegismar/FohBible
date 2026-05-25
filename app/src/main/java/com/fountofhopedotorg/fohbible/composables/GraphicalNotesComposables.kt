@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
@@ -31,9 +32,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -76,6 +79,23 @@ fun ShapeSelectionCard(
 }
 
 @Composable
+fun LineShape(
+    modifier: Modifier = Modifier,
+    color: Color = randomColor().copy(0.4f),
+    strokeWidth: Float = 8f
+) {
+    Canvas(modifier = modifier) {
+        drawLine(
+            color = color,
+            start = Offset(0f, size.height),
+            end = Offset(size.width, 0f),
+            strokeWidth = strokeWidth,
+            cap = StrokeCap.Round
+        )
+    }
+}
+
+@Composable
 fun SquareShape(modifier: Modifier = Modifier, color: Color = randomColor().copy(0.4f)) {
     Canvas(modifier = modifier) {
         drawRect(color = color)
@@ -94,8 +114,8 @@ fun TriangleShape(modifier: Modifier = Modifier, color: Color = randomColor().co
     Canvas(modifier = modifier) {
         val trianglePath = Path().apply {
             moveTo(size.width / 2f, 0f)
-            lineTo(size.width, size.height)
-            lineTo(0f, size.height)
+            lineTo(size.width, size.height * 0.9f)
+            lineTo(0f, size.height * 0.9f)
             close()
         }
         drawPath(path = trianglePath, color = color)
@@ -161,6 +181,7 @@ fun BezierPolygonShape(
 fun CanvasSvgItem(
     note: CanvasNote,
     isSelected: Boolean,
+    isLocked: Boolean,
     onSelect: () -> Unit,
     onUpdatePosition: (Offset, Float, Float) -> Unit,
     onColorPickerRequested: () -> Unit,
@@ -242,6 +263,7 @@ fun CanvasSvgItem(
         modifier = Modifier
             .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
             .wrapContentSize(unbounded = true)
+            .alpha(if (isLocked) 0.5f else 1f)
     ) {
         Box(
             modifier = Modifier
@@ -251,7 +273,8 @@ fun CanvasSvgItem(
                     rotationZ = rotation
                 }
                 .onSizeChanged { baseSize = it }
-                .pointerInput(Unit) {
+                .pointerInput(isLocked) {
+                    if (isLocked) return@pointerInput
                     detectTransformGestures { _, pan, zoom, rot ->
                         val angleRad = rotation * (Math.PI / 180.0)
                         val localPanX = pan.x * scaleX
@@ -293,7 +316,7 @@ fun CanvasSvgItem(
                     note.content == "Shape: Square" -> SquareShape(modifier = Modifier.fillMaxSize(), color = note.backgroundColor)
                     note.content == "Shape: Circle" -> CircleShape(modifier = Modifier.fillMaxSize(), color = note.backgroundColor)
                     note.content == "Shape: Triangle" -> TriangleShape(modifier = Modifier.fillMaxSize(), color = note.backgroundColor)
-
+                    note.content == "Shape: Line" -> LineShape(modifier = Modifier.fillMaxSize(), color = note.backgroundColor)
                     note.content == "Shape: Pentagon" -> {
                         val pentagonPoints = listOf(
                             Offset(0.5f, 0f),
@@ -319,7 +342,22 @@ fun CanvasSvgItem(
                 }
             }
         }
-        if (isSelected && baseSize != IntSize.Zero) {
+        if (isLocked) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Lock,
+                    contentDescription = "Locked",
+                    tint = Color.White.copy(alpha = 0.7f),
+                    modifier = Modifier
+                        .size(48.dp)
+                        .align(Alignment.Center)
+                )
+            }
+        }
+        if (isSelected && baseSize != IntSize.Zero && !isLocked) {
             val cx = baseSize.width / 2f
             val cy = baseSize.height / 2f
 
@@ -433,6 +471,7 @@ fun CanvasSvgItem(
 fun CanvasImageItem(
     note: CanvasNote,
     isSelected: Boolean,
+    isLocked: Boolean,
     onSelect: () -> Unit,
     onUpdatePosition: (Offset, Float, Float) -> Unit,
     onDeleteRequested: () -> Unit
@@ -454,6 +493,7 @@ fun CanvasImageItem(
         modifier = Modifier
             .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
             .wrapContentSize(unbounded = true)
+            .alpha(if (isLocked) 0.5f else 1f)
     ) {
         Box(
             modifier = Modifier
@@ -463,7 +503,8 @@ fun CanvasImageItem(
                     rotationZ = rotation
                 }
                 .onSizeChanged { baseSize = it }
-                .pointerInput(Unit) {
+                .pointerInput(isLocked) {
+                    if (isLocked) return@pointerInput
                     detectTransformGestures { _, pan, zoom, rot ->
                         val angleRad = rotation * (Math.PI / 180.0)
                         val localPanX = pan.x * scaleX
@@ -509,9 +550,23 @@ fun CanvasImageItem(
                 )
             }
         }
+        if (isLocked) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Lock,
+                    contentDescription = "Locked",
+                    tint = Color.White.copy(alpha = 0.7f),
+                    modifier = Modifier
+                        .size(48.dp)
+                        .align(Alignment.Center)
+                )
+            }
+        }
 
-
-        if (isSelected && baseSize != IntSize.Zero) {
+        if (isSelected && baseSize != IntSize.Zero && !isLocked){
             val cx = baseSize.width / 2f
             val cy = baseSize.height / 2f
 
@@ -616,6 +671,7 @@ fun CanvasImageItem(
 fun CanvasTextItem(
     note: CanvasNote,
     isSelected: Boolean,
+    isLocked: Boolean,
     onSelect: () -> Unit,
     onUpdatePosition: (Offset, Float, Float) -> Unit,
     onColorPickerRequested: () -> Unit,
@@ -635,6 +691,7 @@ fun CanvasTextItem(
         modifier = Modifier
             .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
             .wrapContentSize(unbounded = true)
+            .alpha(if (isLocked) 0.5f else 1f)
     ) {
         Box(
             modifier = Modifier
@@ -644,7 +701,8 @@ fun CanvasTextItem(
                     rotationZ = rotation
                 }
                 .onSizeChanged { baseSize = it }
-                .pointerInput(Unit) {
+                .pointerInput(isLocked) {
+                    if (isLocked) return@pointerInput
                     detectTransformGestures { _, pan, zoom, rot ->
                         val angleRad = rotation * (Math.PI / 180.0)
                         val localPanX = pan.x * scaleX
@@ -692,8 +750,22 @@ fun CanvasTextItem(
                 )
             }
         }
-
-        if (isSelected && baseSize != IntSize.Zero) {
+        if (isLocked) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Lock,
+                    contentDescription = "Locked",
+                    tint = Color.White.copy(alpha = 0.7f),
+                    modifier = Modifier
+                        .size(48.dp)
+                        .align(Alignment.Center)
+                )
+            }
+        }
+        if (isSelected && baseSize != IntSize.Zero && !isLocked) {
             val cx = baseSize.width / 2f
             val cy = baseSize.height / 2f
 

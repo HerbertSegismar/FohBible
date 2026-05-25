@@ -38,6 +38,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.androidx.compose.material3.lint)
     implementation(libs.androidx.compose.remote.creation.core)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.coil.compose)

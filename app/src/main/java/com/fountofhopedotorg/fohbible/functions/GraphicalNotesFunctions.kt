@@ -168,7 +168,6 @@ suspend fun saveCanvasAsSVG(
     try {
         val bitmap = graphicsLayer.toImageBitmap().asAndroidBitmap()
 
-        // Convert the bitmap into a Base64 string to embed into the SVG
         val outputStream = ByteArrayOutputStream()
         bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
         val base64String = Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
@@ -176,7 +175,6 @@ suspend fun saveCanvasAsSVG(
         val width = bitmap.width
         val height = bitmap.height
 
-        // Wrap the Base64 image stream in standard SVG tags
         val svgContent = """
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $width $height" width="$width" height="$height">
                 <image width="$width" height="$height" href="data:image/png;base64,$base64String" />
@@ -240,6 +238,7 @@ fun getElementDisplayName(note: CanvasNote, currentIndex: Int, allNotes: List<Ca
         note.content.startsWith("Shape: Circle") -> "Circle"
         note.content.startsWith("Shape: Triangle") -> "Triangle"
         note.content.startsWith("Shape: Pentagon") -> "Pentagon"
+        note.content.startsWith("Shape: Line") -> "Line"
         note.content.startsWith("Shape: CustomPolygon") -> "Custom Polygon"
         else -> "Text"
     }
@@ -250,6 +249,7 @@ fun getElementDisplayName(note: CanvasNote, currentIndex: Int, allNotes: List<Ca
             other.content.startsWith("Shape: Circle") -> "Circle"
             other.content.startsWith("Shape: Triangle") -> "Triangle"
             other.content.startsWith("Shape: Pentagon") -> "Pentagon"
+            other.content.startsWith("Shape: Line") -> "Line"
             other.content.startsWith("Shape: CustomPolygon") -> "Custom Polygon"
             else -> "Text"
         }

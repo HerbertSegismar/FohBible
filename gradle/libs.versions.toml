@@ -20,6 +20,7 @@ navigationCompose = "2.9.8"
 foundationLayout = "1.11.1"
 pagingCommon = "3.5.0"
 remoteCreationCore = "1.0.0-alpha010"
+material3Lint = "1.4.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -49,6 +50,7 @@ kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutine
 androidx-compose-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout", version.ref = "foundationLayout" }
 androidx-paging-common = { group = "androidx.paging", name = "paging-common", version.ref = "pagingCommon" }
 androidx-compose-remote-creation-core = { group = "androidx.compose.remote", name = "remote-creation-core", version.ref = "remoteCreationCore" }
+androidx-compose-material3-lint = { group = "androidx.compose.material3", name = "material3-lint", version.ref = "material3Lint" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -297,4 +297,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val item = canvasNotes.removeAt(from)
         canvasNotes.add(to, item)
     }
+
+    fun toggleVisibility(noteId: String) {
+        val index = canvasNotes.indexOfFirst { it.id == noteId }
+        if (index != -1) {
+            canvasNotes[index] = canvasNotes[index].copy(isVisible = !canvasNotes[index].isVisible)
+        }
+    }
+
+    fun toggleLock(noteId: String) {
+        val index = canvasNotes.indexOfFirst { it.id == noteId }
+        if (index != -1) {
+            canvasNotes[index] = canvasNotes[index].copy(isLocked = !canvasNotes[index].isLocked)
+        }
+    }
 }

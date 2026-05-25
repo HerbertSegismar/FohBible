@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -33,7 +35,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -233,7 +234,7 @@ fun CustomPolygonDialog(
                     drawPath(path, color = Color(0x4000BCD4), style = Fill)
                     drawPath(path, color = Color(0xFF00BCD4), style = Stroke(width = 3f))
                 }
-                if (points.size >= 2) {
+                if (points.size == 2) {
                     for (i in 0 until points.size) {
                         val curr = points[i]
                         val next = points[(i + 1) % points.size]
@@ -393,24 +394,11 @@ fun CustomPolygonDialog(
             }
 
             Spacer(Modifier.height(8.dp))
-            TextButton(
-                onClick = {
-                    activeControl = when (activeControl) {
-                        ActiveControl.ANCHOR -> ActiveControl.HANDLE_IN
-                        ActiveControl.HANDLE_IN -> ActiveControl.HANDLE_OUT
-                        ActiveControl.HANDLE_OUT -> ActiveControl.ANCHOR
-                    }
-                },
-                colors = ButtonDefaults.textButtonColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-                ),
-                enabled = points.isNotEmpty()
-            ) {
-                Text(
-                    text = "Editing: ${activeControl.name.replace("_", " ")}",
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
+            BezierModeSelector(
+                activeControl = activeControl,
+                onControlSelected = { activeControl = it },
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
 
             Spacer(Modifier.height(8.dp))
 
@@ -446,28 +434,32 @@ fun CustomPolygonDialog(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(24.dp)
+                    .padding(12.dp)
             ) {
                 if (!isLandscape) {
                     Text(
                         text = if (isEditing) "Edit Polygon Points" else "Tap to Add Polygon Points",
                         style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(bottom = 16.dp)
+                        modifier = Modifier
+                            .padding(bottom = 16.dp)
+                            .fillMaxWidth()
+                            .wrapContentWidth(Alignment.CenterHorizontally)
                     )
                 }
 
                 Box(modifier = Modifier.weight(1f)) {
                     if (isLandscape) {
                         Row(
-                            modifier = Modifier.fillMaxSize(),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.fillMaxSize().padding(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .fillMaxHeight(),
+                                    .fillMaxHeight()
+                                    .aspectRatio(1f),
                                 contentAlignment = Alignment.Center
                             ) {
                                 canvasArea(Modifier)
@@ -484,11 +476,20 @@ fun CustomPolygonDialog(
                     } else {
                         Column(
                             modifier = Modifier.fillMaxSize(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.SpaceEvenly
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            canvasArea(Modifier.weight(1f, fill = false))
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .aspectRatio(1f)
+                                    .fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                canvasArea(Modifier.fillMaxSize())
+                            }
+
                             Spacer(Modifier.height(16.dp))
+
                             controlsArea(Modifier.fillMaxWidth())
                         }
                     }
@@ -680,5 +681,89 @@ fun HybridJoystick(
                 style = androidx.compose.ui.text.TextStyle(fontSize = 12.sp)
             )
         }
+    }
+}
+
+@Composable
+fun BezierModeSelector(
+    activeControl: ActiveControl,
+    onControlSelected: (ActiveControl) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Canvas(
+        modifier = modifier
+            .size(180.dp, 50.dp)
+            .pointerInput(Unit) {
+                detectTapGestures { tapOffset ->
+                    val w = size.width
+                    val h = size.height
+
+                    val anchorPos = Offset(w * 0.5f, h * 0.5f)
+                    val handleInPos = Offset(w * 0.1f, h * 0.5f)
+                    val handleOutPos = Offset(w * 0.9f, h * 0.5f)
+
+                    val distAnchor = (tapOffset - anchorPos).getDistance()
+                    val distIn = (tapOffset - handleInPos).getDistance()
+                    val distOut = (tapOffset - handleOutPos).getDistance()
+
+                    val threshold = 36f
+
+                    when {
+                        distIn < threshold -> onControlSelected(ActiveControl.HANDLE_IN)
+                        distOut < threshold -> onControlSelected(ActiveControl.HANDLE_OUT)
+                        distAnchor < threshold -> onControlSelected(ActiveControl.ANCHOR)
+                    }
+                }
+            }
+    ) {
+        val w = size.width
+        val h = size.height
+
+        val anchor = Offset(w * 0.5f, h * 0.5f)
+        val handleIn = Offset(w * 0.1f, h * 0.5f)
+        val handleOut = Offset(w * 0.9f, h * 0.5f)
+
+        val path = Path().apply {
+            moveTo(handleIn.x, handleIn.y)
+
+            cubicTo(
+                w * 0.2f, h * 0.1f,
+                w * 0.4f, h * 0.1f,
+                anchor.x, anchor.y
+            )
+
+            cubicTo(
+                w * 0.6f, h * 0.9f,
+                w * 0.8f, h * 0.9f,
+                handleOut.x, handleOut.y
+            )
+        }
+
+        drawPath(
+            path = path,
+            color = Color(0xFF00BCD4),
+            style = Stroke(width = 5.5f)
+        )
+        val isAnchorSelected = activeControl == ActiveControl.ANCHOR
+        val isInSelected = activeControl == ActiveControl.HANDLE_IN
+        val isOutSelected = activeControl == ActiveControl.HANDLE_OUT
+
+        drawCircle(
+            color = if (isAnchorSelected) Color.Blue else Color.Gray,
+            radius = if (isAnchorSelected) 30f else 20f,
+            center = anchor
+        )
+
+        drawCircle(
+            color = if (isInSelected) Color.Green else Color.Gray,
+            radius = if (isInSelected) 20f else 15f,
+            center = handleIn
+        )
+
+        drawCircle(
+            color = if (isOutSelected) Color.Magenta else Color.Gray,
+            radius = if (isOutSelected) 20f else 15f,
+            center = handleOut
+        )
     }
 }

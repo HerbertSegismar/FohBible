@@ -26,8 +26,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FormatShapes
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.ShapeLine
@@ -79,6 +77,26 @@ import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.unit.IntOffset
+import com.fountofhopedotorg.fohbible.composables.LineShape
 
 @OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.Q)
@@ -319,19 +337,19 @@ fun GraphicalNotesScreen() {
                                 modifier = Modifier.weight(1f),
                                 onClick = { viewModel.addToCanvas(CanvasNote(content = "Shape: Square", backgroundColor = getRandomColor())) }
                             ) {
-                                SquareShape(modifier = Modifier.size(35.dp))
+                                SquareShape(modifier = Modifier.size(25.dp))
                             }
                             ShapeSelectionCard(
                                 modifier = Modifier.weight(1f),
                                 onClick = { viewModel.addToCanvas(CanvasNote(content = "Shape: Circle", backgroundColor = getRandomColor())) }
                             ) {
-                                CircleShape(modifier = Modifier.size(35.dp))
+                                CircleShape(modifier = Modifier.size(25.dp))
                             }
                             ShapeSelectionCard(
                                 modifier = Modifier.weight(1f),
                                 onClick = { viewModel.addToCanvas(CanvasNote(content = "Shape: Triangle", backgroundColor = getRandomColor())) }
                             ) {
-                                TriangleShape(modifier = Modifier.size(35.dp))
+                                TriangleShape(modifier = Modifier.size(25.dp))
                             }
                             ShapeSelectionCard(
                                 modifier = Modifier.weight(1f),
@@ -339,8 +357,14 @@ fun GraphicalNotesScreen() {
                             ) {
                                 PolygonShape(
                                     points = pentagonPoints,
-                                    modifier = Modifier.size(40.dp)
+                                    modifier = Modifier.size(26.dp)
                                 )
+                            }
+                            ShapeSelectionCard(
+                                modifier = Modifier.weight(1f),
+                                onClick = { viewModel.addToCanvas(CanvasNote(content = "Shape: Line", backgroundColor = getRandomColor())) }
+                            ) {
+                                LineShape(modifier = Modifier.size(18.dp).padding(top = 6.dp))
                             }
                             ShapeSelectionCard(
                                 modifier = Modifier.weight(1f),
@@ -353,7 +377,7 @@ fun GraphicalNotesScreen() {
                                 Icon(
                                     imageVector = Icons.Default.ShapeLine,
                                     contentDescription = "Custom Polygon",
-                                    modifier = Modifier.size(35.dp),
+                                    modifier = Modifier.size(25.dp),
                                     tint = randomColor().copy(0.8f)
                                 )
                             }
@@ -413,42 +437,53 @@ fun GraphicalNotesScreen() {
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )
                 } else {
-                    // State for drag reordering
                     var draggedIndex by remember { mutableStateOf<Int?>(null) }
                     var dragOffset by remember { mutableFloatStateOf(0f) }
                     val density = LocalDensity.current
-                    val itemHeightPx = remember(density) { with(density) { 56.dp.toPx() } } // approximate row height
+                    val itemHeightPx = remember(density) { with(density) { 56.dp.toPx() } }
 
                     val listState = rememberLazyListState()
 
                     LazyColumn(
                         state = listState,
-                        modifier = Modifier.heightIn(max = 260.dp)
+                        modifier = Modifier.heightIn(max = 500.dp)
                     ) {
                         itemsIndexed(
                             viewModel.canvasNotes,
                             key = { _, note -> note.id }
                         ) { index, note ->
                             val isSelected = selectedNoteId == note.id
+                            val density = LocalDensity.current
+                            val maxDragRangeDp = 28.dp
+                            val maxDragRangePx = with(density) { maxDragRangeDp.toPx() }
+                            val triggerThresholdPx = maxDragRangePx * 0.8f
+                            val uniqueKey = viewModel.canvasNotes.getOrNull(index)?.hashCode() ?: index
+                            val offsetY = remember(uniqueKey) { Animatable(0f) }
+                            val isUpEnabled = index > 0
+                            val isDownEnabled = index < viewModel.canvasNotes.size - 1
+                            val isPrimedUp = offsetY.value <= -triggerThresholdPx && isUpEnabled
+                            val isPrimedDown = offsetY.value >= triggerThresholdPx && isDownEnabled
+
+                            val currentApplyIndex by rememberUpdatedState(index)
+                            val currentIsUpEnabled by rememberUpdatedState(isUpEnabled)
+                            val currentIsDownEnabled by rememberUpdatedState(isDownEnabled)
 
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp)
+                                    .animateItem()
                                     .graphicsLayer {
-                                        // Visually lift the dragged item
                                         if (draggedIndex == index) {
                                             translationY = dragOffset
                                         }
                                     }
                                     .pointerInput(note.id) {
-                                        // Tap to select (short press)
                                         detectTapGestures { selectedNoteId = note.id }
                                     }
                                     .pointerInput(note.id) {
                                         detectDragGesturesAfterLongPress(
                                             onDragStart = { offset ->
-                                                // Dynamically fetch the current position at drag start
                                                 val currentIndex = viewModel.canvasNotes.indexOfFirst { it.id == note.id }
                                                 if (currentIndex == -1) return@detectDragGesturesAfterLongPress
                                                 draggedIndex = currentIndex
@@ -462,7 +497,6 @@ fun GraphicalNotesScreen() {
                                                 val fromIndex = draggedIndex ?: return@detectDragGesturesAfterLongPress
                                                 val currentIndex = viewModel.canvasNotes.indexOfFirst { it.id == note.id }
                                                 if (currentIndex == -1 || fromIndex != currentIndex) {
-                                                    // If the item moved externally during drag, ignore
                                                     draggedIndex = null
                                                     dragOffset = 0f
                                                     return@detectDragGesturesAfterLongPress
@@ -494,23 +528,24 @@ fun GraphicalNotesScreen() {
                                         .padding(horizontal = 8.dp, vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    // Element icon (unchanged)
                                     Box(modifier = Modifier.size(24.dp), contentAlignment = Alignment.Center) {
                                         when {
                                             note.content.startsWith("Shape:") -> {
                                                 val shapeName = note.content.removePrefix("Shape: ").trim()
+                                                val shapeColor = note.backgroundColor
                                                 when {
-                                                    shapeName.startsWith("Square") -> SquareShape(modifier = Modifier.size(18.dp))
-                                                    shapeName.startsWith("Circle") -> CircleShape(modifier = Modifier.size(18.dp))
-                                                    shapeName.startsWith("Triangle") -> TriangleShape(modifier = Modifier.size(18.dp))
+                                                    shapeName.startsWith("Square") -> SquareShape(modifier = Modifier.size(18.dp), color = shapeColor)
+                                                    shapeName.startsWith("Circle") -> CircleShape(modifier = Modifier.size(18.dp), color = shapeColor)
+                                                    shapeName.startsWith("Triangle") -> TriangleShape(modifier = Modifier.size(18.dp), color = shapeColor)
+                                                    shapeName.startsWith("Line") -> LineShape(modifier = Modifier.size(18.dp), color = shapeColor)
                                                     shapeName.startsWith("Pentagon") -> PolygonShape(
                                                         points = listOf(
                                                             Offset(0.5f, 0f), Offset(1f, 0.4f), Offset(0.8f, 0.9f),
                                                             Offset(0.2f, 0.9f), Offset(0f, 0.4f)
                                                         ),
-                                                        modifier = Modifier.size(18.dp)
+                                                        modifier = Modifier.size(18.dp), color = shapeColor
                                                     )
-                                                    else -> Icon(Icons.Default.ShapeLine, null, modifier = Modifier.size(18.dp), tint = themeColors.primary)
+                                                    else -> Icon(Icons.Default.ShapeLine, null, modifier = Modifier.size(18.dp), tint = shapeColor)
                                                 }
                                             }
                                             note.content.startsWith("Image:") -> Icon(Icons.Default.Image, null, modifier = Modifier.size(18.dp), tint = themeColors.primary)
@@ -520,7 +555,6 @@ fun GraphicalNotesScreen() {
 
                                     Spacer(Modifier.width(8.dp))
 
-                                    // Element label
                                     Text(
                                         text = getElementDisplayName(note, index, viewModel.canvasNotes),
                                         modifier = Modifier.weight(1f),
@@ -528,40 +562,98 @@ fun GraphicalNotesScreen() {
                                         overflow = TextOverflow.Ellipsis,
                                         style = MaterialTheme.typography.bodyMedium
                                     )
-
-                                    // Vertical up/down arrows (stacked)
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        modifier = Modifier.padding(end = 4.dp)
+                                    Box(
+                                        modifier = Modifier
+                                            .padding(horizontal = 8.dp)
+                                            .width(20.dp)
+                                            .height(36.dp),
+                                        contentAlignment = Alignment.Center
                                     ) {
-                                        IconButton(
-                                            onClick = {
-                                                if (index > 0) viewModel.reorderCanvasNotes(index, index - 1)
-                                            },
-                                            enabled = index > 0,
-                                            modifier = Modifier.size(24.dp) // small touch target
+                                        Box(
+                                            modifier = Modifier
+                                                .width(4.dp)
+                                                .fillMaxHeight()
+                                                .background(
+                                                    color = themeColors.primary.copy(alpha = 0.2f),
+                                                    shape = CircleShape
+                                                )
+                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .offset { IntOffset(0, offsetY.value.roundToInt()) }
+                                                .size(20.dp)
+                                                .background(
+                                                    color = when {
+                                                        isPrimedUp || isPrimedDown -> themeColors.primary
+                                                        !isUpEnabled && !isDownEnabled -> Color.Gray
+                                                        else -> themeColors.primary.copy(alpha = 0.7f)
+                                                    },
+                                                    shape = CircleShape
+                                                )
+                                                .pointerInput(uniqueKey) {
+                                                    detectDragGestures(
+                                                        onDrag = { change, dragAmount ->
+                                                            change.consume()
+                                                            coroutineScope.launch {
+                                                                val targetValue = offsetY.value + dragAmount.y
+                                                                val clampedValue = targetValue.coerceIn(-maxDragRangePx, maxDragRangePx)
+                                                                offsetY.snapTo(clampedValue)
+                                                            }
+                                                        },
+                                                        onDragEnd = {
+                                                            if (offsetY.value <= -triggerThresholdPx && currentIsUpEnabled) {
+                                                                viewModel.reorderCanvasNotes(currentApplyIndex, currentApplyIndex - 1)
+                                                            } else if (offsetY.value >= triggerThresholdPx && currentIsDownEnabled) {
+                                                                viewModel.reorderCanvasNotes(currentApplyIndex, currentApplyIndex + 1)
+                                                            }
+                                                            coroutineScope.launch {
+                                                                offsetY.animateTo(
+                                                                    targetValue = 0f,
+                                                                    animationSpec = spring(
+                                                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                                        stiffness = Spring.StiffnessMedium
+                                                                    )
+                                                                )
+                                                            }
+                                                        },
+                                                        onDragCancel = {
+                                                            coroutineScope.launch {
+                                                                offsetY.animateTo(0f, spring())
+                                                            }
+                                                        }
+                                                    )
+                                                },
+                                            contentAlignment = Alignment.Center
                                         ) {
-                                            Icon(
-                                                imageVector = Icons.Default.KeyboardArrowUp,
-                                                contentDescription = "Move up",
-                                                tint = if (index > 0) themeColors.primary else Color.Gray,
-                                                modifier = Modifier.size(24.dp)
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(6.dp)
+                                                    .background(Color.White, CircleShape)
                                             )
                                         }
-                                        IconButton(
-                                            onClick = {
-                                                if (index < viewModel.canvasNotes.size - 1) viewModel.reorderCanvasNotes(index, index + 1)
-                                            },
-                                            enabled = index < viewModel.canvasNotes.size - 1,
-                                            modifier = Modifier.size(24.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.KeyboardArrowDown,
-                                                contentDescription = "Move down",
-                                                tint = if (index < viewModel.canvasNotes.size - 1) themeColors.primary else Color.Gray,
-                                                modifier = Modifier.size(24.dp)
-                                            )
-                                        }
+                                    }
+                                    IconButton(
+                                        onClick = { viewModel.toggleVisibility(note.id) },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (note.isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                            contentDescription = if (note.isVisible) "Hide Element" else "Show Element",
+                                            tint = if (note.isVisible) themeColors.primary else Color.Gray,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+
+                                    IconButton(
+                                        onClick = { viewModel.toggleLock(note.id) },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (note.isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
+                                            contentDescription = if (note.isLocked) "Unlock Element" else "Lock Element",
+                                            tint = if (note.isLocked) Color.Gray else themeColors.primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
                                     }
 
                                     IconButton(
@@ -654,52 +746,61 @@ fun GraphicalNotesScreen() {
                     }
             ) {
                 viewModel.canvasNotes.forEach { note ->
+                    if (!note.isVisible) return@forEach
+
                     key(note.id) {
                         when {
                             note.content.startsWith("Shape:") -> CanvasSvgItem(
-                            note = note,
-                            isSelected = selectedNoteId == note.id,
-                            onSelect = { selectedNoteId = note.id },
-                            onUpdatePosition = { offset, width, height ->
-                                viewModel.updateNotePosition(note.id, offset, width, height)
-                            },
-                            onColorPickerRequested = {
-                                noteToColorEditId = note.id
-                                showColorPicker = true
-                            },
+                                note = note,
+                                isSelected = selectedNoteId == note.id,
+                                isLocked = note.isLocked,
+                                onSelect = { if (!note.isLocked) selectedNoteId = note.id },
+                                onUpdatePosition = { offset, w, h ->
+                                    viewModel.updateNotePosition(note.id, offset, w, h)
+                                },
+                                onColorPickerRequested = {
+                                    if (!note.isLocked) {
+                                        noteToColorEditId = note.id
+                                        showColorPicker = true
+                                    }
+                                },
                                 onDeleteRequested = {
                                     val idx = viewModel.canvasNotes.indexOfFirst { it.id == note.id }
                                     if (idx != -1) viewModel.removeFromCanvas(idx)
                                 }
-                        )
-                        note.content.startsWith("Image:") -> CanvasImageItem(
-                            note = note,
-                            isSelected = selectedNoteId == note.id,
-                            onSelect = { selectedNoteId = note.id },
-                            onUpdatePosition = { offset, width, height ->
-                                viewModel.updateNotePosition(note.id, offset, width, height)
-                            },
-                            onDeleteRequested = {
-                                val idx = viewModel.canvasNotes.indexOfFirst { it.id == note.id }
-                                if (idx != -1) viewModel.removeFromCanvas(idx)
-                            }
-                        )
-                        else -> CanvasTextItem(
-                            note = note,
-                            isSelected = selectedNoteId == note.id,
-                            onSelect = { selectedNoteId = note.id },
-                            onUpdatePosition = { offset, width, height ->
-                                viewModel.updateNotePosition(note.id, offset, width, height)
-                            },
-                            onColorPickerRequested = {
-                                noteToColorEditId = note.id
-                                showColorPicker = true
-                            },
-                            onDeleteRequested = {
-                                val idx = viewModel.canvasNotes.indexOfFirst { it.id == note.id }
-                                if (idx != -1) viewModel.removeFromCanvas(idx)
-                            }
-                        )
+                            )
+                            note.content.startsWith("Image:") -> CanvasImageItem(
+                                note = note,
+                                isSelected = selectedNoteId == note.id,
+                                isLocked = note.isLocked,
+                                onSelect = { if (!note.isLocked) selectedNoteId = note.id },
+                                onUpdatePosition = { offset, w, h ->
+                                    viewModel.updateNotePosition(note.id, offset, w, h)
+                                },
+                                onDeleteRequested = {
+                                    val idx = viewModel.canvasNotes.indexOfFirst { it.id == note.id }
+                                    if (idx != -1) viewModel.removeFromCanvas(idx)
+                                }
+                            )
+                            else -> CanvasTextItem(
+                                note = note,
+                                isSelected = selectedNoteId == note.id,
+                                isLocked = note.isLocked,                    // NEW
+                                onSelect = { if (!note.isLocked) selectedNoteId = note.id },
+                                onUpdatePosition = { offset, w, h ->
+                                    viewModel.updateNotePosition(note.id, offset, w, h)
+                                },
+                                onColorPickerRequested = {
+                                    if (!note.isLocked) {
+                                        noteToColorEditId = note.id
+                                        showColorPicker = true
+                                    }
+                                },
+                                onDeleteRequested = {
+                                    val idx = viewModel.canvasNotes.indexOfFirst { it.id == note.id }
+                                    if (idx != -1) viewModel.removeFromCanvas(idx)
+                                }
+                            )
                         }
                     }
                 }
