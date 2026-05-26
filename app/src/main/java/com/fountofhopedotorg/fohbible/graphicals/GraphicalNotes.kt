@@ -82,6 +82,8 @@ fun GraphicalNotesScreen() {
     var editHeight by rememberSaveable { mutableStateOf("") }
     var editRotation by rememberSaveable { mutableStateOf("") }
     var editPropertiesNoteId by rememberSaveable { mutableStateOf<String?>(null) }
+    var editColorForDialog by remember { mutableStateOf(Color.White) }
+    var showEditColorPicker by remember { mutableStateOf(false) }
 
     var showCustomPolygonDialog by rememberSaveable { mutableStateOf(false) }
     var selectedNoteId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -785,16 +787,16 @@ fun GraphicalNotesScreen() {
                                             editWidth = note.width.toString()
                                             editHeight = note.height.toString()
                                             editRotation = note.rotation.toString()
+                                            editColorForDialog = note.backgroundColor
                                             showEditPropertiesDialog = true
                                         }
                                     }
                                 },
                                 enabled = selectedNoteIds.size == 1
                             ) {
-                                Icon(Icons.Default.Settings, contentDescription = "Edit Properties")
+                                Icon(Icons.Default.Transform, contentDescription = "Edit Properties")
                             }
 
-                            // Close Icon
                             IconButton(onClick = { selectedNoteIds = emptySet() }) {
                                 Icon(Icons.Default.Close, contentDescription = "Close")
                             }
@@ -1081,7 +1083,6 @@ fun GraphicalNotesScreen() {
         )
     }
 
-    // ---- New Edit Properties Dialog ----
     if (showEditPropertiesDialog && editPropertiesNoteId != null) {
         AlertDialog(
             onDismissRequest = {
@@ -1121,6 +1122,36 @@ fun GraphicalNotesScreen() {
                         label = { Text("Rotation Angle (degrees)") },
                         singleLine = true
                     )
+
+                    OutlinedTextField(
+                        value = " ",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Color") },
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = LocalTextStyle.current.copy(
+                            color = Color.Transparent
+                        ),
+                        leadingIcon = {
+                            Box(
+                                modifier = Modifier
+                                    .padding(start = 12.dp)
+                                    .size(32.dp)
+                                    .background(
+                                        editColorForDialog,
+                                        RoundedCornerShape(6.dp)
+                                    )
+                                    .border(
+                                        1.dp,
+                                        MaterialTheme.colorScheme.outline,
+                                        RoundedCornerShape(6.dp)
+                                    )
+                                    .clickable {
+                                        showEditColorPicker = true
+                                    }
+                            )
+                        }
+                    )
                 }
             },
             confirmButton = {
@@ -1134,6 +1165,7 @@ fun GraphicalNotesScreen() {
                         val rot = editRotation.toFloatOrNull()
                         if (x != null && y != null && w != null && h != null && rot != null) {
                             viewModel.updateNoteProperties(noteId, x, y, w, h, rot)
+                            viewModel.updateNoteColor(noteId, editColorForDialog)
                         }
                         showEditPropertiesDialog = false
                         editPropertiesNoteId = null
@@ -1146,6 +1178,17 @@ fun GraphicalNotesScreen() {
                     editPropertiesNoteId = null
                 }) { Text("Cancel") }
             }
+        )
+    }
+
+    if (showEditColorPicker) {
+        ColorWheelDialog(
+            onDismissRequest = { showEditColorPicker = false },
+            onColorSelected = { selectedColor ->
+                editColorForDialog = selectedColor
+                showEditColorPicker = false
+            },
+            initialColor = editColorForDialog
         )
     }
 }
