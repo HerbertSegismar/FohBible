@@ -257,9 +257,13 @@ data class CanvasNote(
     val offset: Offset = Offset.Zero,
     val width: Float = 280f,
     val height: Float = 200f,
+    val rotation: Float = 0f,
     val backgroundColor: Color = Color.White,
+    val position: Offset = Offset.Zero,
     val isVisible: Boolean = true,
-    val isLocked: Boolean = false
+    val isLocked: Boolean = false,
+    val customName: String? = null,
+    val groupId: String? = null
 )
 
 data class SearchOptions(val bookRange: Pair<Int, Int>? = null)

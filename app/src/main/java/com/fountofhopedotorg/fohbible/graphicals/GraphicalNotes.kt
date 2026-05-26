@@ -6,30 +6,27 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowRight
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Book
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.FormatShapes
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.PhotoLibrary
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material.icons.filled.ShapeLine
-import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -49,54 +46,18 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.fountofhopedotorg.fohbible.composables.CanvasImageItem
-import com.fountofhopedotorg.fohbible.composables.CanvasSvgItem
-import com.fountofhopedotorg.fohbible.composables.CanvasTextItem
-import com.fountofhopedotorg.fohbible.composables.CircleShape
-import com.fountofhopedotorg.fohbible.composables.ColorWheelDialog
-import com.fountofhopedotorg.fohbible.composables.CustomPolygonDialog
-import com.fountofhopedotorg.fohbible.composables.PolygonShape
-import com.fountofhopedotorg.fohbible.composables.ShapeSelectionCard
-import com.fountofhopedotorg.fohbible.composables.SquareShape
-import com.fountofhopedotorg.fohbible.composables.TriangleShape
-import com.fountofhopedotorg.fohbible.composables.randomColor
+import com.fountofhopedotorg.fohbible.composables.*
 import com.fountofhopedotorg.fohbible.data.*
-import com.fountofhopedotorg.fohbible.functions.buildPassageText
-import com.fountofhopedotorg.fohbible.functions.buildReferenceString
-import com.fountofhopedotorg.fohbible.functions.getElementDisplayName
-import com.fountofhopedotorg.fohbible.functions.getRandomColor
-import com.fountofhopedotorg.fohbible.functions.getSerializedPointsForShape
-import com.fountofhopedotorg.fohbible.functions.saveCanvasAsImage
-import com.fountofhopedotorg.fohbible.functions.saveCanvasAsPDF
-import com.fountofhopedotorg.fohbible.functions.saveCanvasAsSVG
+import com.fountofhopedotorg.fohbible.functions.*
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.unit.IntOffset
-import com.fountofhopedotorg.fohbible.composables.LineShape
 
 @OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.Q)
@@ -106,6 +67,21 @@ fun GraphicalNotesScreen() {
     val viewModel: AppViewModel = viewModel()
     val coroutineScope = rememberCoroutineScope()
     val graphicsLayer = rememberGraphicsLayer()
+
+    var noteToRenameId by rememberSaveable { mutableStateOf<String?>(null) }
+    var renameText by rememberSaveable { mutableStateOf("") }
+    var selectedNoteIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var showGroupDialog by rememberSaveable { mutableStateOf(false) }
+    var groupName by rememberSaveable { mutableStateOf("") }
+
+    // ---- State for Edit Properties dialog ----
+    var showEditPropertiesDialog by rememberSaveable { mutableStateOf(false) }
+    var editX by rememberSaveable { mutableStateOf("") }
+    var editY by rememberSaveable { mutableStateOf("") }
+    var editWidth by rememberSaveable { mutableStateOf("") }
+    var editHeight by rememberSaveable { mutableStateOf("") }
+    var editRotation by rememberSaveable { mutableStateOf("") }
+    var editPropertiesNoteId by rememberSaveable { mutableStateOf<String?>(null) }
 
     var showCustomPolygonDialog by rememberSaveable { mutableStateOf(false) }
     var selectedNoteId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -457,6 +433,7 @@ fun GraphicalNotesScreen() {
                             val maxDragRangeDp = 28.dp
                             val maxDragRangePx = with(density) { maxDragRangeDp.toPx() }
                             val triggerThresholdPx = maxDragRangePx * 0.8f
+
                             val uniqueKey = viewModel.canvasNotes.getOrNull(index)?.hashCode() ?: index
                             val offsetY = remember(uniqueKey) { Animatable(0f) }
                             val isUpEnabled = index > 0
@@ -528,7 +505,31 @@ fun GraphicalNotesScreen() {
                                         .padding(horizontal = 8.dp, vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Box(modifier = Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .clickable(
+                                                interactionSource = remember { MutableInteractionSource() },
+                                                indication = null
+                                            ) {
+                                                selectedNoteIds = if (selectedNoteIds.contains(note.id)) {
+                                                    selectedNoteIds - note.id
+                                                } else {
+                                                    selectedNoteIds + note.id
+                                                }
+                                            }.then(
+                                                if (selectedNoteIds.contains(note.id)) {
+                                                    Modifier.border(
+                                                        width = 2.dp,
+                                                        color = themeColors.primary,
+                                                        shape = RoundedCornerShape(6.dp)
+                                                    )
+                                                } else {
+                                                    Modifier
+                                                }
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
                                         when {
                                             note.content.startsWith("Shape:") -> {
                                                 val shapeName = note.content.removePrefix("Shape: ").trim()
@@ -553,6 +554,7 @@ fun GraphicalNotesScreen() {
                                         }
                                     }
 
+
                                     Spacer(Modifier.width(8.dp))
 
                                     Text(
@@ -562,6 +564,9 @@ fun GraphicalNotesScreen() {
                                         overflow = TextOverflow.Ellipsis,
                                         style = MaterialTheme.typography.bodyMedium
                                     )
+
+                                    // Removed: the per‑element rename button (Icons.AutoMirrored.Filled.Label)
+
                                     Box(
                                         modifier = Modifier
                                             .padding(horizontal = 8.dp)
@@ -721,6 +726,80 @@ fun GraphicalNotesScreen() {
                             }
                         }
                     }
+
+                    AnimatedVisibility(visible = selectedNoteIds.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Group Icon
+                            IconButton(
+                                onClick = {
+                                    if (selectedNoteIds.size > 1) {
+                                        groupName = "Group ${selectedNoteIds.size}"
+                                        showGroupDialog = true
+                                    }
+                                },
+                                enabled = selectedNoteIds.size > 1
+                            ) {
+                                Icon(Icons.Default.Group, contentDescription = "Group")
+                            }
+
+                            // Ungroup Icon
+                            IconButton(onClick = {
+                                viewModel.ungroupNotes(selectedNoteIds)
+                                selectedNoteIds = emptySet()
+                            }) {
+                                Icon(Icons.Default.GroupRemove, contentDescription = "Ungroup")
+                            }
+
+                            // Rename Icon
+                            IconButton(
+                                onClick = {
+                                    if (selectedNoteIds.size == 1) {
+                                        val targetId = selectedNoteIds.first()
+                                        val note = viewModel.canvasNotes.find { it.id == targetId }
+                                        if (note != null) {
+                                            noteToRenameId = targetId
+                                            renameText = getElementDisplayName(note, viewModel.canvasNotes.indexOf(note), viewModel.canvasNotes)
+                                        }
+                                    }
+                                },
+                                enabled = selectedNoteIds.size == 1
+                            ) {
+                                Icon(Icons.Default.DriveFileRenameOutline, contentDescription = "Rename")
+                            }
+
+                            IconButton(
+                                onClick = {
+                                    if (selectedNoteIds.size == 1) {
+                                        val targetId = selectedNoteIds.first()
+                                        val note = viewModel.canvasNotes.find { it.id == targetId }
+                                        if (note != null) {
+                                            editPropertiesNoteId = targetId
+                                            editX = note.offset.x.toString()
+                                            editY = note.offset.y.toString()
+                                            editWidth = note.width.toString()
+                                            editHeight = note.height.toString()
+                                            editRotation = note.rotation.toString()
+                                            showEditPropertiesDialog = true
+                                        }
+                                    }
+                                },
+                                enabled = selectedNoteIds.size == 1
+                            ) {
+                                Icon(Icons.Default.Settings, contentDescription = "Edit Properties")
+                            }
+
+                            // Close Icon
+                            IconButton(onClick = { selectedNoteIds = emptySet() }) {
+                                Icon(Icons.Default.Close, contentDescription = "Close")
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -785,7 +864,7 @@ fun GraphicalNotesScreen() {
                             else -> CanvasTextItem(
                                 note = note,
                                 isSelected = selectedNoteId == note.id,
-                                isLocked = note.isLocked,                    // NEW
+                                isLocked = note.isLocked,
                                 onSelect = { if (!note.isLocked) selectedNoteId = note.id },
                                 onUpdatePosition = { offset, w, h ->
                                     viewModel.updateNotePosition(note.id, offset, w, h)
@@ -861,6 +940,7 @@ fun GraphicalNotesScreen() {
         Spacer(Modifier.height(16.dp))
     }
 
+    // Existing dialogs (noteToEdit, noteToRenameId, showGroupDialog, showColorPicker, showCustomPolygonDialog)
     if (noteToEdit != null) {
         AlertDialog(
             onDismissRequest = { noteToEdit = null },
@@ -893,6 +973,69 @@ fun GraphicalNotesScreen() {
             }
         )
     }
+    if (noteToRenameId != null) {
+        AlertDialog(
+            onDismissRequest = {
+                noteToRenameId = null
+                renameText = ""
+            },
+            title = { Text("Rename Element") },
+            text = {
+                OutlinedTextField(
+                    value = renameText,
+                    onValueChange = { renameText = it },
+                    label = { Text("New name") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (renameText.isNotBlank()) {
+                            viewModel.renameCanvasNote(noteToRenameId!!, renameText)
+                        }
+                        noteToRenameId = null
+                        renameText = ""
+                    }
+                ) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    noteToRenameId = null
+                    renameText = ""
+                }) { Text("Cancel") }
+            }
+        )
+    }
+    if (showGroupDialog) {
+        AlertDialog(
+            onDismissRequest = { showGroupDialog = false },
+            title = { Text("Group Selected Elements") },
+            text = {
+                OutlinedTextField(
+                    value = groupName,
+                    onValueChange = { groupName = it },
+                    label = { Text("Group Name") },
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (groupName.isNotBlank() && selectedNoteIds.isNotEmpty()) {
+                            viewModel.createGroup(selectedNoteIds.toList(), groupName)
+                            selectedNoteIds = emptySet()
+                            showGroupDialog = false
+                            groupName = ""
+                        }
+                    }
+                ) { Text("Create Group") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showGroupDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
 
     if (showColorPicker && noteToColorEditId != null) {
         val targetNote = viewModel.canvasNotes.find { it.id == noteToColorEditId }
@@ -918,7 +1061,6 @@ fun GraphicalNotesScreen() {
                 polygonNoteToEditId = null
                 initialPolygonString = ""
             },
-
             onConfirm = { points ->
                 val serialized = points.joinToString(";") { node ->
                     "${node.anchor.x},${node.anchor.y}:${node.handleIn.x},${node.handleIn.y}:${node.handleOut.x},${node.handleOut.y}"
@@ -935,6 +1077,74 @@ fun GraphicalNotesScreen() {
                 showCustomPolygonDialog = false
                 polygonNoteToEditId = null
                 initialPolygonString = ""
+            }
+        )
+    }
+
+    // ---- New Edit Properties Dialog ----
+    if (showEditPropertiesDialog && editPropertiesNoteId != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showEditPropertiesDialog = false
+                editPropertiesNoteId = null
+            },
+            title = { Text("Edit Element Properties") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = editX,
+                        onValueChange = { editX = it },
+                        label = { Text("X Position") },
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = editY,
+                        onValueChange = { editY = it },
+                        label = { Text("Y Position") },
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = editWidth,
+                        onValueChange = { editWidth = it },
+                        label = { Text("Width") },
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = editHeight,
+                        onValueChange = { editHeight = it },
+                        label = { Text("Height") },
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = editRotation,
+                        onValueChange = { editRotation = it },
+                        label = { Text("Rotation Angle (degrees)") },
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val noteId = editPropertiesNoteId!!
+                        val x = editX.toFloatOrNull()
+                        val y = editY.toFloatOrNull()
+                        val w = editWidth.toFloatOrNull()
+                        val h = editHeight.toFloatOrNull()
+                        val rot = editRotation.toFloatOrNull()
+                        if (x != null && y != null && w != null && h != null && rot != null) {
+                            viewModel.updateNoteProperties(noteId, x, y, w, h, rot)
+                        }
+                        showEditPropertiesDialog = false
+                        editPropertiesNoteId = null
+                    }
+                ) { Text("Apply") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showEditPropertiesDialog = false
+                    editPropertiesNoteId = null
+                }) { Text("Cancel") }
             }
         )
     }

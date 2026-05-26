@@ -20,6 +20,7 @@ import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.data.Testament
 import com.fountofhopedotorg.fohbible.data.Verse
+import com.fountofhopedotorg.fohbible.functions.getElementDisplayName
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
 import com.fountofhopedotorg.fohbible.utils.InteractiveModalUtils
 import kotlinx.coroutines.Dispatchers
@@ -309,6 +310,60 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val index = canvasNotes.indexOfFirst { it.id == noteId }
         if (index != -1) {
             canvasNotes[index] = canvasNotes[index].copy(isLocked = !canvasNotes[index].isLocked)
+        }
+    }
+
+    fun renameCanvasNote(noteId: String, newName: String) {
+        val index = canvasNotes.indexOfFirst { it.id == noteId }
+        if (index != -1) {
+            val updatedNote = canvasNotes[index].copy(customName = newName.trim())
+            canvasNotes[index] = updatedNote
+        }
+    }
+
+    fun createGroup(noteIds: List<String>, groupName: String) {
+        if (noteIds.size < 2) return
+
+        val groupId = "group_${UUID.randomUUID().toString().take(8)}"
+        for (i in canvasNotes.indices) {
+            if (noteIds.contains(canvasNotes[i].id)) {
+                val note = canvasNotes[i]
+                canvasNotes[i] = note.copy(
+                    groupId = groupId,
+                    customName = note.customName ?: getElementDisplayName(note, i, canvasNotes)
+                )
+            }
+        }
+
+        val groupHeader = CanvasNote(
+            content = "Group: $groupName",
+            customName = groupName,
+            groupId = groupId,
+            backgroundColor = Color(0xFF4CAF50).copy(alpha = 0.25f),
+            width = 320f,
+            height = 48f,
+            position = Offset(100f, 100f)
+        )
+        addToCanvas(groupHeader)
+    }
+
+    fun ungroupNotes(noteIds: Set<String>) {
+        for (i in canvasNotes.indices) {
+            if (noteIds.contains(canvasNotes[i].id)) {
+                canvasNotes[i] = canvasNotes[i].copy(groupId = null)
+            }
+        }
+    }
+
+    fun updateNoteProperties(id: String, x: Float, y: Float, width: Float, height: Float, rotation: Float) {
+        val index = canvasNotes.indexOfFirst { it.id == id }
+        if (index != -1) {
+            canvasNotes[index] = canvasNotes[index].copy(
+                offset = Offset(x, y),
+                width = width,
+                height = height,
+                rotation = rotation
+            )
         }
     }
 }

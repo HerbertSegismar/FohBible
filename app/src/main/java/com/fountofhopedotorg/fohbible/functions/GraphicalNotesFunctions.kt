@@ -231,7 +231,14 @@ fun getRandomColor(): Color {
     )
 }
 
-fun getElementDisplayName(note: CanvasNote, currentIndex: Int, allNotes: List<CanvasNote>): String {
+fun getElementDisplayName(
+    note: CanvasNote,
+    currentIndex: Int,
+    allNotes: List<CanvasNote>
+): String {
+    if (!note.customName.isNullOrBlank()) {
+        return note.customName
+    }
     val category = when {
         note.content.startsWith("Image:") -> "Image"
         note.content.startsWith("Shape: Square") -> "Square"
@@ -242,6 +249,7 @@ fun getElementDisplayName(note: CanvasNote, currentIndex: Int, allNotes: List<Ca
         note.content.startsWith("Shape: CustomPolygon") -> "Custom Polygon"
         else -> "Text"
     }
+
     val count = allNotes.take(currentIndex + 1).count { other ->
         val otherCategory = when {
             other.content.startsWith("Image:") -> "Image"

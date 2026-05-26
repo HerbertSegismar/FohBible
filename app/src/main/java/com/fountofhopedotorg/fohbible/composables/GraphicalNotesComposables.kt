@@ -87,8 +87,8 @@ fun LineShape(
     Canvas(modifier = modifier) {
         drawLine(
             color = color,
-            start = Offset(0f, size.height),
-            end = Offset(size.width, 0f),
+            start = Offset(0f, size.height/2),
+            end = Offset(size.width, size.height/2),
             strokeWidth = strokeWidth,
             cap = StrokeCap.Round
         )
@@ -114,8 +114,8 @@ fun TriangleShape(modifier: Modifier = Modifier, color: Color = randomColor().co
     Canvas(modifier = modifier) {
         val trianglePath = Path().apply {
             moveTo(size.width / 2f, 0f)
-            lineTo(size.width, size.height * 0.9f)
-            lineTo(0f, size.height * 0.9f)
+            lineTo(size.width, size.height)
+            lineTo(0f, size.height)
             close()
         }
         drawPath(path = trianglePath, color = color)
@@ -187,10 +187,12 @@ fun CanvasSvgItem(
     onColorPickerRequested: () -> Unit,
     onDeleteRequested: () -> Unit
 ) {
-    var offset by remember { mutableStateOf(note.offset) }
+    var offset by remember(note.offset) { mutableStateOf(note.offset) }
+    var rotation by remember(note.id, note.rotation) {
+        mutableFloatStateOf(note.rotation)
+    }
     var scaleX by remember { mutableFloatStateOf(1f) }
     var scaleY by remember { mutableFloatStateOf(1f) }
-    var rotation by remember { mutableFloatStateOf(0f) }
 
     var baseSize by remember { mutableStateOf(IntSize.Zero) }
 
@@ -476,10 +478,12 @@ fun CanvasImageItem(
     onUpdatePosition: (Offset, Float, Float) -> Unit,
     onDeleteRequested: () -> Unit
 ) {
-    var offset by remember { mutableStateOf(note.offset) }
+    var offset by remember(note.offset) { mutableStateOf(note.offset) }
+    var rotation by remember(note.id, note.rotation) {
+        mutableFloatStateOf(note.rotation)
+    }
     var scaleX by remember { mutableFloatStateOf(1f) }
     var scaleY by remember { mutableFloatStateOf(1f) }
-    var rotation by remember { mutableFloatStateOf(0f) }
 
     var baseSize by remember { mutableStateOf(IntSize.Zero) }
 
@@ -677,10 +681,12 @@ fun CanvasTextItem(
     onColorPickerRequested: () -> Unit,
     onDeleteRequested: () -> Unit
 ) {
-    var offset by remember { mutableStateOf(note.offset) }
+    var offset by remember(note.offset) { mutableStateOf(note.offset) }
+    var rotation by remember(note.id, note.rotation) {
+        mutableFloatStateOf(note.rotation)
+    }
     var scaleX by remember { mutableFloatStateOf(1f) }
     var scaleY by remember { mutableFloatStateOf(1f) }
-    var rotation by remember { mutableFloatStateOf(0f) }
 
     var baseSize by remember { mutableStateOf(IntSize.Zero) }
 
