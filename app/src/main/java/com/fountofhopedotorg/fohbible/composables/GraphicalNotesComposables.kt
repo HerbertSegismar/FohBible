@@ -37,6 +37,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -146,15 +147,14 @@ fun PolygonShape(
 fun BezierPolygonShape(
     nodes: List<BezierNodeData>,
     modifier: Modifier = Modifier,
-    color: Color = randomColor().copy(0.8f)
+    color: Color = randomColor().copy(0.8f),
+    closed: Boolean = true
 ) {
     Canvas(modifier = modifier) {
         if (nodes.isEmpty()) return@Canvas
-
         val path = Path().apply {
             val first = nodes[0]
             moveTo(first.anchor.x * size.width, first.anchor.y * size.height)
-
             for (i in 1 until nodes.size) {
                 val prev = nodes[i - 1]
                 val curr = nodes[i]
@@ -164,16 +164,21 @@ fun BezierPolygonShape(
                     curr.anchor.x * size.width, curr.anchor.y * size.height
                 )
             }
-
-            val last = nodes.last()
-            cubicTo(
-                last.handleOut.x * size.width, last.handleOut.y * size.height,
-                first.handleIn.x * size.width, first.handleIn.y * size.height,
-                first.anchor.x * size.width, first.anchor.y * size.height
-            )
-            close()
+            if (closed) {
+                val last = nodes.last()
+                cubicTo(
+                    last.handleOut.x * size.width, last.handleOut.y * size.height,
+                    first.handleIn.x * size.width, first.handleIn.y * size.height,
+                    first.anchor.x * size.width, first.anchor.y * size.height
+                )
+                close()
+            }
         }
-        drawPath(path = path, color = color)
+        if (closed) {
+            drawPath(path, color = color)
+        } else {
+            drawPath(path, color = color, style = Stroke(width = 4f))
+        }
     }
 }
 
@@ -198,11 +203,16 @@ fun CanvasSvgItem(
 
     val handleSize = 24.dp
     val handleRadiusPx = with(LocalDensity.current) { handleSize.toPx() / 2f }
-    val isCustomPolygon = note.content.startsWith("Shape: CustomPolygon:")
+
+    // ---- CHANGE: detect both CustomPolygon and CustomLine ----
+    val isCustomPolygon = note.content.startsWith("Shape:CustomPolygon:")
+    val isCustomLine = note.content.startsWith("Shape:CustomLine:")
+    val isAnyCustomBezier = isCustomPolygon || isCustomLine
 
     val parsedData = remember(note.content) {
-        if (isCustomPolygon) {
-            val serializedPoints = note.content.removePrefix("Shape: CustomPolygon:")
+        if (isAnyCustomBezier) {
+            val prefix = if (isCustomPolygon) "Shape:CustomPolygon:" else "Shape:CustomLine:"
+            val serializedPoints = note.content.removePrefix(prefix)
             val rawNodes = serializedPoints.split(";").mapNotNull { nodeStr ->
                 val parts = nodeStr.split(":")
 
@@ -227,7 +237,7 @@ fun CanvasSvgItem(
                 }
             }
 
-            if (rawNodes.size >= 3) {
+            if (rawNodes.size >= (if (isCustomLine) 2 else 3)) {  // line needs at least 2, polygon 3
                 val allPoints = rawNodes.flatMap { listOf(it.anchor, it.handleIn, it.handleOut) }
                 val minX = allPoints.minOf { it.x }
                 val maxX = allPoints.maxOf { it.x }
@@ -334,11 +344,13 @@ fun CanvasSvgItem(
                         )
                     }
 
+                    // ---- CHANGE: closed based on type ----
                     parsedData != null -> {
                         BezierPolygonShape(
                             nodes = parsedData.first,
                             modifier = Modifier.fillMaxSize(),
-                            color = note.backgroundColor
+                            color = note.backgroundColor,
+                            closed = !isCustomLine   // line stays open, polygon closed
                         )
                     }
                 }

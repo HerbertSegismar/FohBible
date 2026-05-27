@@ -73,8 +73,6 @@ fun GraphicalNotesScreen() {
     var selectedNoteIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var showGroupDialog by rememberSaveable { mutableStateOf(false) }
     var groupName by rememberSaveable { mutableStateOf("") }
-
-    // ---- State for Edit Properties dialog ----
     var showEditPropertiesDialog by rememberSaveable { mutableStateOf(false) }
     var editX by rememberSaveable { mutableStateOf("") }
     var editY by rememberSaveable { mutableStateOf("") }
@@ -99,6 +97,7 @@ fun GraphicalNotesScreen() {
     var showSaveMenu by rememberSaveable { mutableStateOf(false) }
     var polygonNoteToEditId by rememberSaveable { mutableStateOf<String?>(null) }
     var initialPolygonString by rememberSaveable { mutableStateOf("") }
+    var initialIsLineMode by rememberSaveable { mutableStateOf(false) }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -349,6 +348,7 @@ fun GraphicalNotesScreen() {
                                 onClick = {
                                     polygonNoteToEditId = null
                                     initialPolygonString = ""
+                                    initialIsLineMode = false
                                     showCustomPolygonDialog = true
                                 }
                             ) {
@@ -440,8 +440,6 @@ fun GraphicalNotesScreen() {
                             val offsetY = remember(uniqueKey) { Animatable(0f) }
                             val isUpEnabled = index > 0
                             val isDownEnabled = index < viewModel.canvasNotes.size - 1
-                            val isPrimedUp = offsetY.value <= -triggerThresholdPx && isUpEnabled
-                            val isPrimedDown = offsetY.value >= triggerThresholdPx && isDownEnabled
 
                             val currentApplyIndex by rememberUpdatedState(index)
                             val currentIsUpEnabled by rememberUpdatedState(isUpEnabled)
@@ -566,9 +564,6 @@ fun GraphicalNotesScreen() {
                                         overflow = TextOverflow.Ellipsis,
                                         style = MaterialTheme.typography.bodyMedium
                                     )
-
-                                    // Removed: the per‑element rename button (Icons.AutoMirrored.Filled.Label)
-
                                     Box(
                                         modifier = Modifier
                                             .padding(horizontal = 8.dp)
@@ -590,11 +585,7 @@ fun GraphicalNotesScreen() {
                                                 .offset { IntOffset(0, offsetY.value.roundToInt()) }
                                                 .size(20.dp)
                                                 .background(
-                                                    color = when {
-                                                        isPrimedUp || isPrimedDown -> themeColors.primary
-                                                        !isUpEnabled && !isDownEnabled -> Color.Gray
-                                                        else -> themeColors.primary.copy(alpha = 0.7f)
-                                                    },
+                                                    color = themeColors.primary.copy(alpha = 0.7f),
                                                     shape = CircleShape
                                                 )
                                                 .pointerInput(uniqueKey) {
@@ -666,9 +657,15 @@ fun GraphicalNotesScreen() {
                                     IconButton(
                                         onClick = {
                                             if (note.content.startsWith("Shape: ")) {
-                                                if (note.content.startsWith("Shape: CustomPolygon:")) {
+                                                if (note.content.startsWith("Shape:CustomPolygon:")) {
                                                     polygonNoteToEditId = note.id
-                                                    initialPolygonString = note.content.removePrefix("Shape: CustomPolygon:")
+                                                    initialPolygonString = note.content.removePrefix("Shape:CustomPolygon:")
+                                                    initialIsLineMode = false
+                                                    showCustomPolygonDialog = true
+                                                } else if (note.content.startsWith("Shape:CustomLine:")) {
+                                                    polygonNoteToEditId = note.id
+                                                    initialPolygonString = note.content.removePrefix("Shape:CustomLine:")
+                                                    initialIsLineMode = true
                                                     showCustomPolygonDialog = true
                                                 } else {
                                                     val shapeType = note.content.removePrefix("Shape: ")
@@ -676,6 +673,7 @@ fun GraphicalNotesScreen() {
                                                     if (prefilledPoints.isNotEmpty()) {
                                                         polygonNoteToEditId = note.id
                                                         initialPolygonString = prefilledPoints
+                                                        initialIsLineMode = false
                                                         showCustomPolygonDialog = true
                                                     } else {
                                                         noteToEdit = note.id
@@ -758,7 +756,6 @@ fun GraphicalNotesScreen() {
                                 Icon(Icons.Default.GroupRemove, contentDescription = "Ungroup")
                             }
 
-                            // Rename Icon
                             IconButton(
                                 onClick = {
                                     if (selectedNoteIds.size == 1) {
@@ -942,7 +939,6 @@ fun GraphicalNotesScreen() {
         Spacer(Modifier.height(16.dp))
     }
 
-    // Existing dialogs (noteToEdit, noteToRenameId, showGroupDialog, showColorPicker, showCustomPolygonDialog)
     if (noteToEdit != null) {
         AlertDialog(
             onDismissRequest = { noteToEdit = null },
@@ -1058,16 +1054,20 @@ fun GraphicalNotesScreen() {
     if (showCustomPolygonDialog) {
         CustomPolygonDialog(
             initialSerializedPoints = initialPolygonString.takeIf { it.isNotEmpty() },
+            isLineMode = initialIsLineMode,
             onDismiss = {
                 showCustomPolygonDialog = false
                 polygonNoteToEditId = null
                 initialPolygonString = ""
+                initialIsLineMode = false
             },
-            onConfirm = { points ->
+            onConfirm = { points, isLine ->
                 val serialized = points.joinToString(";") { node ->
                     "${node.anchor.x},${node.anchor.y}:${node.handleIn.x},${node.handleIn.y}:${node.handleOut.x},${node.handleOut.y}"
                 }
-                val contentString = "Shape: CustomPolygon:$serialized"
+
+                val shapeType = if (isLine) "CustomLine" else "CustomPolygon"
+                val contentString = "Shape:$shapeType:$serialized"
 
                 if (polygonNoteToEditId != null) {
                     viewModel.updateNoteContent(polygonNoteToEditId!!, contentString)
@@ -1079,6 +1079,7 @@ fun GraphicalNotesScreen() {
                 showCustomPolygonDialog = false
                 polygonNoteToEditId = null
                 initialPolygonString = ""
+                initialIsLineMode = false
             }
         )
     }

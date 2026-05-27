@@ -35,6 +35,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -103,9 +105,12 @@ private val BezierNodeListSaver = listSaver<List<BezierNode>, String>(
 @Composable
 fun CustomPolygonDialog(
     initialSerializedPoints: String? = null,
+    isLineMode: Boolean = false,
     onDismiss: () -> Unit,
-    onConfirm: (List<BezierNode>) -> Unit
+    onConfirm: (List<BezierNode>, Boolean) -> Unit
 ) {
+    var isCloseState by rememberSaveable { mutableStateOf(!isLineMode) }
+
     var points by rememberSaveable(stateSaver = BezierNodeListSaver) {
         mutableStateOf(
             if (!initialSerializedPoints.isNullOrBlank()) {
@@ -141,8 +146,14 @@ fun CustomPolygonDialog(
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-
     val isEditing = !initialSerializedPoints.isNullOrBlank()
+
+    val minPointsRequired = if (!isCloseState) 2 else 3
+    val titleText = if (!isCloseState) {
+        if (isEditing) "Edit Line Points" else "Tap to Add Line Points"
+    } else {
+        if (isEditing) "Edit Polygon Points" else "Tap to Add Polygon Points"
+    }
 
     val nudgePoint = { dx: Float, dy: Float ->
         if (selectedIndex in points.indices) {
@@ -207,7 +218,8 @@ fun CustomPolygonDialog(
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val canvasSize = this.size
-                if (points.size >= 3) {
+
+                if (points.size >= minPointsRequired) {
                     val path = Path().apply {
                         moveTo(
                             points[0].anchor.x * canvasSize.width,
@@ -222,31 +234,36 @@ fun CustomPolygonDialog(
                                 curr.anchor.x * canvasSize.width, curr.anchor.y * canvasSize.height
                             )
                         }
-                        val last = points.last()
-                        val first = points.first()
-                        cubicTo(
-                            last.handleOut.x * canvasSize.width, last.handleOut.y * canvasSize.height,
-                            first.handleIn.x * canvasSize.width, first.handleIn.y * canvasSize.height,
-                            first.anchor.x * canvasSize.width, first.anchor.y * canvasSize.height
-                        )
-                        close()
+
+                        if (isCloseState) {
+                            val last = points.last()
+                            val first = points.first()
+                            cubicTo(
+                                last.handleOut.x * canvasSize.width, last.handleOut.y * canvasSize.height,
+                                first.handleIn.x * canvasSize.width, first.handleIn.y * canvasSize.height,
+                                first.anchor.x * canvasSize.width, first.anchor.y * canvasSize.height
+                            )
+                            close()
+                        }
                     }
-                    drawPath(path, color = Color(0x4000BCD4), style = Fill)
+
+                    if (isCloseState) {
+                        drawPath(path, color = Color(0x4000BCD4), style = Fill)
+                    }
                     drawPath(path, color = Color(0xFF00BCD4), style = Stroke(width = 3f))
                 }
-                if (points.size == 2) {
-                    for (i in 0 until points.size) {
-                        val curr = points[i]
-                        val next = points[(i + 1) % points.size]
-                        if (i == points.lastIndex && points.size < 3) continue
-                        drawLine(
-                            color = Color.LightGray,
-                            start = Offset(curr.anchor.x * canvasSize.width, curr.anchor.y * canvasSize.height),
-                            end = Offset(next.anchor.x * canvasSize.width, next.anchor.y * canvasSize.height),
-                            strokeWidth = 2f
-                        )
-                    }
+
+                if (isCloseState && points.size == 2) {
+                    val curr = points[0]
+                    val next = points[1]
+                    drawLine(
+                        color = Color.LightGray,
+                        start = Offset(curr.anchor.x * canvasSize.width, curr.anchor.y * canvasSize.height),
+                        end = Offset(next.anchor.x * canvasSize.width, next.anchor.y * canvasSize.height),
+                        strokeWidth = 2f
+                    )
                 }
+
                 points.forEachIndexed { index, point ->
                     val isSelected = index == selectedIndex
                     val anchorPos = Offset(point.anchor.x * canvasSize.width, point.anchor.y * canvasSize.height)
@@ -289,7 +306,7 @@ fun CustomPolygonDialog(
         ) {
             if (isLandscape) {
                 Text(
-                    text = if (isEditing) "Edit Polygon Points" else "Tap to Add Polygon Points",
+                    text = titleText,
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -393,11 +410,10 @@ fun CustomPolygonDialog(
                 }
             }
 
-            Spacer(Modifier.height(8.dp))
             BezierModeSelector(
                 activeControl = activeControl,
                 onControlSelected = { activeControl = it },
-                modifier = Modifier.padding(vertical = 8.dp)
+                modifier = Modifier.padding(vertical = 4.dp)
             )
 
             Spacer(Modifier.height(8.dp))
@@ -438,7 +454,7 @@ fun CustomPolygonDialog(
             ) {
                 if (!isLandscape) {
                     Text(
-                        text = if (isEditing) "Edit Polygon Points" else "Tap to Add Polygon Points",
+                        text = titleText,
                         style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier
@@ -498,15 +514,31 @@ fun CustomPolygonDialog(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 16.dp)
+                        .padding(horizontal = 12.dp)
                 ) {
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
+                        horizontalArrangement = Arrangement.spacedBy(3.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        TextButton(onClick = onDismiss) { Text("Close") }
-                        Spacer(Modifier.width(8.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        ) {
+                            Text("Close")
+                            Checkbox(
+                                checked = isCloseState,
+                                onCheckedChange = { isCloseState = it },
+                                colors = CheckboxDefaults.colors(
+                                    checkedColor = MaterialTheme.colorScheme.primary,
+                                    checkmarkColor = Color.White
+                                )
+                            )
+                        }
+
+                        TextButton(onClick = onDismiss) { Text("Cancel") }
+
                         TextButton(
                             onClick = {
                                 points = emptyList()
@@ -517,14 +549,14 @@ fun CustomPolygonDialog(
                         ) {
                             Text("Clear")
                         }
-                        Spacer(Modifier.width(8.dp))
+
                         TextButton(
                             onClick = {
-                                if (points.size >= 3) {
-                                    onConfirm(points)
+                                if (points.size >= minPointsRequired) {
+                                    onConfirm(points, !isCloseState)
                                 }
                             },
-                            enabled = points.size >= 3
+                            enabled = points.size >= minPointsRequired
                         ) {
                             Text(if (isEditing) "Save Changes" else "Add to Canvas")
                         }
@@ -692,7 +724,7 @@ fun BezierModeSelector(
 ) {
     Canvas(
         modifier = modifier
-            .size(180.dp, 50.dp)
+            .size(180.dp, 40.dp)
             .pointerInput(Unit) {
                 detectTapGestures { tapOffset ->
                     val w = size.width

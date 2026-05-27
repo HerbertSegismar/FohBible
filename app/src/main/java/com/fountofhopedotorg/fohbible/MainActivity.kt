@@ -1,5 +1,6 @@
 package com.fountofhopedotorg.fohbible
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.res.Configuration
@@ -161,6 +162,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@SuppressLint("NewApi")
 @Composable
 fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
     var bibleInfoData by remember { mutableStateOf<BibleVersionInfo?>(null) }
