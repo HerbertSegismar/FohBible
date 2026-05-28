@@ -532,20 +532,41 @@ fun GraphicalNotesScreen() {
                                     ) {
                                         when {
                                             note.content.startsWith("Shape:") -> {
-                                                val shapeName = note.content.removePrefix("Shape: ").trim()
+                                                val shapeContent = note.content.removePrefix("Shape:").removePrefix(" ").trim()
                                                 val shapeColor = note.backgroundColor
+
                                                 when {
-                                                    shapeName.startsWith("Square") -> SquareShape(modifier = Modifier.size(18.dp), color = shapeColor)
-                                                    shapeName.startsWith("Circle") -> CircleShape(modifier = Modifier.size(18.dp), color = shapeColor)
-                                                    shapeName.startsWith("Triangle") -> TriangleShape(modifier = Modifier.size(18.dp), color = shapeColor)
-                                                    shapeName.startsWith("Line") -> LineShape(modifier = Modifier.size(18.dp), color = shapeColor)
-                                                    shapeName.startsWith("Pentagon") -> PolygonShape(
+                                                    shapeContent.startsWith("Square") -> SquareShape(modifier = Modifier.size(18.dp), color = shapeColor)
+                                                    shapeContent.startsWith("Circle") -> CircleShape(modifier = Modifier.size(18.dp), color = shapeColor)
+                                                    shapeContent.startsWith("Triangle") -> TriangleShape(modifier = Modifier.size(18.dp), color = shapeColor)
+                                                    shapeContent.startsWith("Pentagon") -> PolygonShape(
                                                         points = listOf(
                                                             Offset(0.5f, 0f), Offset(1f, 0.4f), Offset(0.8f, 0.9f),
                                                             Offset(0.2f, 0.9f), Offset(0f, 0.4f)
                                                         ),
-                                                        modifier = Modifier.size(18.dp), color = shapeColor
+                                                        modifier = Modifier.size(18.dp),
+                                                        color = shapeColor
                                                     )
+                                                    shapeContent.startsWith("Line") -> LineShape(modifier = Modifier.size(18.dp), color = shapeColor)
+
+                                                    shapeContent.startsWith("CustomLine:") -> {
+                                                        val pointsData = shapeContent.removePrefix("CustomLine:")
+                                                        CustomPathPreview(
+                                                            pointsData = pointsData,
+                                                            isClosed = false,
+                                                            color = shapeColor,
+                                                            modifier = Modifier.size(18.dp)
+                                                        )
+                                                    }
+                                                    shapeContent.startsWith("CustomPolygon:") -> {
+                                                        val pointsData = shapeContent.removePrefix("CustomPolygon:")
+                                                        CustomPathPreview(
+                                                            pointsData = pointsData,
+                                                            isClosed = true,
+                                                            color = shapeColor,
+                                                            modifier = Modifier.size(18.dp)
+                                                        )
+                                                    }
                                                     else -> Icon(Icons.Default.ShapeLine, null, modifier = Modifier.size(18.dp), tint = shapeColor)
                                                 }
                                             }
@@ -656,31 +677,49 @@ fun GraphicalNotesScreen() {
 
                                     IconButton(
                                         onClick = {
-                                            if (note.content.startsWith("Shape: ")) {
-                                                if (note.content.startsWith("Shape:CustomPolygon:")) {
-                                                    polygonNoteToEditId = note.id
-                                                    initialPolygonString = note.content.removePrefix("Shape:CustomPolygon:")
-                                                    initialIsLineMode = false
-                                                    showCustomPolygonDialog = true
-                                                } else if (note.content.startsWith("Shape:CustomLine:")) {
-                                                    polygonNoteToEditId = note.id
-                                                    initialPolygonString = note.content.removePrefix("Shape:CustomLine:")
-                                                    initialIsLineMode = true
-                                                    showCustomPolygonDialog = true
-                                                } else {
-                                                    val shapeType = note.content.removePrefix("Shape: ")
-                                                    val prefilledPoints = getSerializedPointsForShape(shapeType)
-                                                    if (prefilledPoints.isNotEmpty()) {
+                                            if (note.content.startsWith("Shape:")) {
+                                                val content = note.content.trim()
+
+                                                when {
+                                                    content.startsWith("Shape:CustomPolygon:") -> {
                                                         polygonNoteToEditId = note.id
-                                                        initialPolygonString = prefilledPoints
+                                                        initialPolygonString = content.removePrefix("Shape:CustomPolygon:")
                                                         initialIsLineMode = false
                                                         showCustomPolygonDialog = true
-                                                    } else {
-                                                        noteToEdit = note.id
-                                                        editedNoteText = note.content
+                                                    }
+
+                                                    content.startsWith("Shape:CustomLine:") -> {
+                                                        polygonNoteToEditId = note.id
+                                                        initialPolygonString = content.removePrefix("Shape:CustomLine:")
+                                                        initialIsLineMode = true
+                                                        showCustomPolygonDialog = true
+                                                    }
+
+                                                    content.startsWith("Shape: Line") || content == "Shape: Line" -> {
+                                                        polygonNoteToEditId = note.id
+                                                        initialPolygonString =
+                                                            getSerializedPointsForShape("Line")
+                                                        initialIsLineMode = true
+                                                        showCustomPolygonDialog = true
+                                                    }
+
+                                                    else -> {
+                                                        val shapeType = content.removePrefix("Shape:").trim()
+                                                        val prefilledPoints = getSerializedPointsForShape(shapeType)
+
+                                                        if (prefilledPoints.isNotEmpty()) {
+                                                            polygonNoteToEditId = note.id
+                                                            initialPolygonString = prefilledPoints
+                                                            initialIsLineMode = false
+                                                            showCustomPolygonDialog = true
+                                                        } else {
+                                                            noteToEdit = note.id
+                                                            editedNoteText = content
+                                                        }
                                                     }
                                                 }
-                                            } else {
+                                            }
+                                            else {
                                                 noteToEdit = note.id
                                                 editedNoteText = note.content
                                             }
@@ -930,7 +969,13 @@ fun GraphicalNotesScreen() {
                         text = { Text("SVG") },
                         onClick = {
                             showSaveMenu = false
-                            coroutineScope.launch { saveCanvasAsSVG(graphicsLayer, context) }
+                            coroutineScope.launch {
+                                saveCanvasAsSVG(
+                                    graphicsLayer = graphicsLayer,
+                                    context = context,
+                                    canvasNotes = viewModel.canvasNotes
+                                )
+                            }
                         }
                     )
                 }

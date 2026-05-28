@@ -37,6 +37,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -892,6 +894,71 @@ fun CanvasTextItem(
                 contentAlignment = Alignment.Center
             ) {
                 Box(modifier = Modifier.size(10.dp).background(Color.DarkGray, CircleShape))
+            }
+        }
+    }
+}
+
+@Composable
+fun CustomPathPreview(
+    pointsData: String,
+    isClosed: Boolean,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val segments = pointsData.split(";").filter { it.isNotEmpty() }
+
+        if (segments.size >= 2) {
+            val path = Path()
+            for (i in segments.indices) {
+                val segment = segments[i]
+                val parts = segment.split(":")
+                val mainCoords = parts[0].split(",")
+                if (mainCoords.size < 2) continue
+
+                val px = (mainCoords[0].toFloatOrNull() ?: 0f) * w
+                val py = (mainCoords[1].toFloatOrNull() ?: 0f) * h
+
+                if (i == 0) {
+                    path.moveTo(px, py)
+                } else {
+                    val handles = if (parts.size > 1) parts[1].split(",") else emptyList()
+                    when (handles.size) {
+                        4 -> {
+                            val cp1x = (handles[0].toFloatOrNull() ?: 0f) * w
+                            val cp1y = (handles[1].toFloatOrNull() ?: 0f) * h
+                            val cp2x = (handles[2].toFloatOrNull() ?: 0f) * w
+                            val cp2y = (handles[3].toFloatOrNull() ?: 0f) * h
+                            path.cubicTo(cp1x, cp1y, cp2x, cp2y, px, py)
+                        }
+                        2 -> {
+                            val cpx = (handles[0].toFloatOrNull() ?: 0f) * w
+                            val cpy = (handles[1].toFloatOrNull() ?: 0f) * h
+                            path.quadraticTo(cpx, cpy, px, py)
+                        }
+                        else -> {
+                            path.lineTo(px, py)
+                        }
+                    }
+                }
+            }
+            if (isClosed) {
+                path.close()
+                drawPath(path = path, color = color, style = Fill)
+                drawPath(
+                    path = path,
+                    color = color.copy(alpha = 0.8f),
+                    style = Stroke(width = 1.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+                )
+            } else {
+                drawPath(
+                    path = path,
+                    color = color,
+                    style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+                )
             }
         }
     }
