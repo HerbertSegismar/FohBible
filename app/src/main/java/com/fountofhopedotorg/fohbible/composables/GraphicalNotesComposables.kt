@@ -58,6 +58,7 @@ import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import androidx.core.net.toUri
+import com.fountofhopedotorg.fohbible.functions.getRandomColor
 
 data class BezierNodeData(
     val anchor: Offset,
@@ -84,7 +85,7 @@ fun ShapeSelectionCard(
 @Composable
 fun LineShape(
     modifier: Modifier = Modifier,
-    color: Color = randomColor().copy(0.4f),
+    color: Color = getRandomColor().copy(0.4f),
     strokeWidth: Float = 8f
 ) {
     Canvas(modifier = modifier) {
@@ -99,21 +100,21 @@ fun LineShape(
 }
 
 @Composable
-fun SquareShape(modifier: Modifier = Modifier, color: Color = randomColor().copy(0.4f)) {
+fun SquareShape(modifier: Modifier = Modifier, color: Color = getRandomColor().copy(0.4f)) {
     Canvas(modifier = modifier) {
         drawRect(color = color)
     }
 }
 
 @Composable
-fun CircleShape(modifier: Modifier = Modifier, color: Color = randomColor().copy(0.4f)) {
+fun CircleShape(modifier: Modifier = Modifier, color: Color = getRandomColor().copy(0.4f)) {
     Canvas(modifier = modifier) {
         drawCircle(color = color)
     }
 }
 
 @Composable
-fun TriangleShape(modifier: Modifier = Modifier, color: Color = randomColor().copy(0.4f)) {
+fun TriangleShape(modifier: Modifier = Modifier, color: Color = getRandomColor().copy(0.4f)) {
     Canvas(modifier = modifier) {
         val trianglePath = Path().apply {
             moveTo(size.width / 2f, 0f)
@@ -129,7 +130,7 @@ fun TriangleShape(modifier: Modifier = Modifier, color: Color = randomColor().co
 fun PolygonShape(
     points: List<Offset>,
     modifier: Modifier = Modifier,
-    color: Color = randomColor().copy(0.8f),
+    color: Color = getRandomColor().copy(0.8f),
 ) {
     Canvas(modifier = modifier) {
         if (points.isEmpty()) return@Canvas
@@ -149,7 +150,7 @@ fun PolygonShape(
 fun BezierPolygonShape(
     nodes: List<BezierNodeData>,
     modifier: Modifier = Modifier,
-    color: Color = randomColor().copy(0.8f),
+    color: Color = getRandomColor().copy(0.8f),
     closed: Boolean = true
 ) {
     Canvas(modifier = modifier) {

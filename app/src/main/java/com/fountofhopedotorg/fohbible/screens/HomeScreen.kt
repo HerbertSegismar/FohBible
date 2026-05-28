@@ -70,13 +70,13 @@ import com.fountofhopedotorg.fohbible.Screen
 import com.fountofhopedotorg.fohbible.composables.Footer
 import com.fountofhopedotorg.fohbible.composables.ImageSection
 import com.fountofhopedotorg.fohbible.composables.MatrixNative
-import com.fountofhopedotorg.fohbible.composables.randomColor
 import com.fountofhopedotorg.fohbible.data.BibleData
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.data.PopularDevotional
 import com.fountofhopedotorg.fohbible.data.QuickAction
 import com.fountofhopedotorg.fohbible.data.Verse
+import com.fountofhopedotorg.fohbible.functions.getRandomColor
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
 import com.fountofhopedotorg.fohbible.utils.getFontFamily
@@ -658,8 +658,8 @@ private fun DevotionalItem(
                 .background(
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            randomColor().copy(0.4f),
-                            randomColor().copy(0.02f)
+                            getRandomColor().copy(0.4f),
+                            getRandomColor().copy(0.02f)
                         )
                     )
                 ),

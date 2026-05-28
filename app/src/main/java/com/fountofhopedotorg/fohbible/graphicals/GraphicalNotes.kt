@@ -9,6 +9,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -35,7 +36,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -58,6 +63,29 @@ import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+
+// Helper to compute the bounding box of a group
+private data class BoundingBox(
+    val minX: Float, val minY: Float,
+    val maxX: Float, val maxY: Float
+)
+
+private fun getGroupBoundingBox(notes: List<CanvasNote>): BoundingBox? {
+    if (notes.isEmpty()) return null
+    var minX = Float.MAX_VALUE; var minY = Float.MAX_VALUE
+    var maxX = Float.MIN_VALUE; var maxY = Float.MIN_VALUE
+    notes.forEach { note ->
+        val x = note.offset.x
+        val y = note.offset.y
+        val w = note.width
+        val h = note.height
+        minX = minOf(minX, x)
+        minY = minOf(minY, y)
+        maxX = maxOf(maxX, x + w)
+        maxY = maxOf(maxY, y + h)
+    }
+    return BoundingBox(minX, minY, maxX, maxY)
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.Q)
@@ -99,6 +127,9 @@ fun GraphicalNotesScreen() {
     var initialPolygonString by rememberSaveable { mutableStateOf("") }
     var initialIsLineMode by rememberSaveable { mutableStateOf(false) }
 
+    // Group‑move state
+    var dragGroupDelta by remember { mutableStateOf(Offset.Zero) }
+
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -134,6 +165,52 @@ fun GraphicalNotesScreen() {
 
     val mainScrollState = rememberScrollState()
 
+    // ── Group helpers ──
+    val notesGrouped = remember(viewModel.canvasNotes) {
+        viewModel.canvasNotes.groupBy { it.groupId }
+    }
+
+    // Set of group IDs that are currently selected (any of their members)
+    val selectedGroups = remember(selectedNoteIds, viewModel.canvasNotes) {
+        viewModel.canvasNotes
+            .filter { it.groupId != null && it.id in selectedNoteIds }
+            .map { it.groupId!! }
+            .toSet()
+    }
+
+    // Toggle selection of an entire group when a member is tapped in the tree
+    fun toggleGroupSelection(note: CanvasNote) {
+        val groupId = note.groupId
+        if (groupId != null) {
+            val groupNotes = viewModel.canvasNotes.filter { it.groupId == groupId }
+            val allIds = groupNotes.map { it.id }.toSet()
+            selectedNoteIds = if (selectedNoteIds.containsAll(allIds)) {
+                selectedNoteIds - allIds
+            } else {
+                selectedNoteIds + allIds
+            }
+        } else {
+            selectedNoteIds = if (selectedNoteIds.contains(note.id))
+                selectedNoteIds - note.id
+            else
+                selectedNoteIds + note.id
+        }
+    }
+
+    // When a grouped note is tapped on the canvas, select the whole group
+    fun onCanvasNoteTap(note: CanvasNote) {
+        val groupId = note.groupId
+        if (groupId != null) {
+            val groupNotes = viewModel.canvasNotes.filter { it.groupId == groupId }
+            selectedNoteIds = groupNotes.map { it.id }.toSet()
+            selectedNoteId = note.id
+        } else {
+            selectedNoteIds = setOf(note.id)
+            selectedNoteId = note.id
+        }
+    }
+
+    // ── UI ──
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -142,6 +219,7 @@ fun GraphicalNotesScreen() {
     ) {
         Spacer(Modifier.height(16.dp))
 
+        // Input mode selector
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
@@ -356,13 +434,14 @@ fun GraphicalNotesScreen() {
                                     imageVector = Icons.Default.ShapeLine,
                                     contentDescription = "Custom Polygon",
                                     modifier = Modifier.size(25.dp),
-                                    tint = randomColor().copy(0.8f)
+                                    tint = getRandomColor().copy(0.8f)
                                 )
                             }
                         }
                     }
                 }
             }
+
             "Add Image" -> {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -390,6 +469,7 @@ fun GraphicalNotesScreen() {
 
         Spacer(Modifier.height(20.dp))
 
+        // Canvas elements tree with group‑aware selection
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -505,6 +585,7 @@ fun GraphicalNotesScreen() {
                                         .padding(horizontal = 8.dp, vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    // Multi‑select checkbox with group‑aware toggle
                                     Box(
                                         modifier = Modifier
                                             .size(32.dp)
@@ -512,11 +593,7 @@ fun GraphicalNotesScreen() {
                                                 interactionSource = remember { MutableInteractionSource() },
                                                 indication = null
                                             ) {
-                                                selectedNoteIds = if (selectedNoteIds.contains(note.id)) {
-                                                    selectedNoteIds - note.id
-                                                } else {
-                                                    selectedNoteIds + note.id
-                                                }
+                                                toggleGroupSelection(note)
                                             }.then(
                                                 if (selectedNoteIds.contains(note.id)) {
                                                     Modifier.border(
@@ -575,7 +652,6 @@ fun GraphicalNotesScreen() {
                                         }
                                     }
 
-
                                     Spacer(Modifier.width(8.dp))
 
                                     Text(
@@ -585,6 +661,8 @@ fun GraphicalNotesScreen() {
                                         overflow = TextOverflow.Ellipsis,
                                         style = MaterialTheme.typography.bodyMedium
                                     )
+
+                                    // Drag handle for reordering
                                     Box(
                                         modifier = Modifier
                                             .padding(horizontal = 8.dp)
@@ -651,6 +729,8 @@ fun GraphicalNotesScreen() {
                                             )
                                         }
                                     }
+
+                                    // Visibility toggle
                                     IconButton(
                                         onClick = { viewModel.toggleVisibility(note.id) },
                                         modifier = Modifier.size(32.dp)
@@ -663,6 +743,7 @@ fun GraphicalNotesScreen() {
                                         )
                                     }
 
+                                    // Lock toggle
                                     IconButton(
                                         onClick = { viewModel.toggleLock(note.id) },
                                         modifier = Modifier.size(32.dp)
@@ -675,6 +756,7 @@ fun GraphicalNotesScreen() {
                                         )
                                     }
 
+                                    // Edit button (handles shapes/polygons correctly)
                                     IconButton(
                                         onClick = {
                                             if (note.content.startsWith("Shape:")) {
@@ -697,8 +779,7 @@ fun GraphicalNotesScreen() {
 
                                                     content.startsWith("Shape: Line") || content == "Shape: Line" -> {
                                                         polygonNoteToEditId = note.id
-                                                        initialPolygonString =
-                                                            getSerializedPointsForShape("Line")
+                                                        initialPolygonString = getSerializedPointsForShape("Line")
                                                         initialIsLineMode = true
                                                         showCustomPolygonDialog = true
                                                     }
@@ -734,6 +815,7 @@ fun GraphicalNotesScreen() {
                                         )
                                     }
 
+                                    // Duplicate
                                     IconButton(
                                         onClick = { viewModel.addToCanvas(CanvasNote(content = note.content)) },
                                         modifier = Modifier.size(32.dp)
@@ -746,6 +828,7 @@ fun GraphicalNotesScreen() {
                                         )
                                     }
 
+                                    // Delete
                                     IconButton(
                                         onClick = {
                                             val idx = viewModel.canvasNotes.indexOf(note)
@@ -766,7 +849,12 @@ fun GraphicalNotesScreen() {
                         }
                     }
 
+                    // Group action bar
                     AnimatedVisibility(visible = selectedNoteIds.isNotEmpty()) {
+                        // Only show ungroup if any selected note has a groupId
+                        val hasGroupSelection = viewModel.canvasNotes.any {
+                            it.groupId != null && it.id in selectedNoteIds
+                        }
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -774,7 +862,6 @@ fun GraphicalNotesScreen() {
                             horizontalArrangement = Arrangement.SpaceEvenly,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Group Icon
                             IconButton(
                                 onClick = {
                                     if (selectedNoteIds.size > 1) {
@@ -786,12 +873,13 @@ fun GraphicalNotesScreen() {
                             ) {
                                 Icon(Icons.Default.Group, contentDescription = "Group")
                             }
-
-                            // Ungroup Icon
-                            IconButton(onClick = {
-                                viewModel.ungroupNotes(selectedNoteIds)
-                                selectedNoteIds = emptySet()
-                            }) {
+                            IconButton(
+                                onClick = {
+                                    viewModel.ungroupNotes(selectedNoteIds)
+                                    selectedNoteIds = emptySet()
+                                },
+                                enabled = hasGroupSelection
+                            ) {
                                 Icon(Icons.Default.GroupRemove, contentDescription = "Ungroup")
                             }
 
@@ -844,6 +932,7 @@ fun GraphicalNotesScreen() {
 
         Spacer(Modifier.height(16.dp))
 
+        // ── Canvas with group‑move and bounding boxes ──
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -851,7 +940,11 @@ fun GraphicalNotesScreen() {
                 .clipToBounds()
                 .background(if (isDark) Color(0xFF1E2937) else themeColors.primary.copy(0.1f), shape = MaterialTheme.shapes.medium)
                 .pointerInput(Unit) {
-                    detectTapGestures(onTap = { selectedNoteId = null })
+                    detectTapGestures(onTap = {
+                        selectedNoteId = null
+                        selectedNoteIds = emptySet()
+                        dragGroupDelta = Offset.Zero
+                    })
                 }
         ) {
             Box(
@@ -862,63 +955,121 @@ fun GraphicalNotesScreen() {
                         drawContent()
                     }
             ) {
+                // Draw individual items, applying group offset if part of a selected group
                 viewModel.canvasNotes.forEach { note ->
                     if (!note.isVisible) return@forEach
 
                     key(note.id) {
-                        when {
-                            note.content.startsWith("Shape:") -> CanvasSvgItem(
-                                note = note,
-                                isSelected = selectedNoteId == note.id,
-                                isLocked = note.isLocked,
-                                onSelect = { if (!note.isLocked) selectedNoteId = note.id },
-                                onUpdatePosition = { offset, w, h ->
-                                    viewModel.updateNotePosition(note.id, offset, w, h)
-                                },
-                                onColorPickerRequested = {
-                                    if (!note.isLocked) {
-                                        noteToColorEditId = note.id
-                                        showColorPicker = true
+                        val isInSelectedGroup = note.groupId in selectedGroups
+                        // Wrap in Box with offset modifier to visually shift the group
+                        Box(
+                            modifier = if (isInSelectedGroup) {
+                                Modifier.offset { IntOffset(dragGroupDelta.x.roundToInt(), dragGroupDelta.y.roundToInt()) }
+                            } else {
+                                Modifier
+                            }
+                        ) {
+                            when {
+                                note.content.startsWith("Shape:") -> CanvasSvgItem(
+                                    note = note,
+                                    isSelected = selectedNoteIds.contains(note.id),
+                                    isLocked = note.isLocked,
+                                    onSelect = { if (!note.isLocked) onCanvasNoteTap(note) },
+                                    onUpdatePosition = { offset, w, h ->
+                                        // When dragging a group member, update group delta
+                                        if (isInSelectedGroup) {
+                                            // Compute delta from original position
+                                            val newDelta = offset - note.offset
+                                            dragGroupDelta = newDelta
+                                        } else {
+                                            viewModel.updateNotePosition(note.id, offset, w, h)
+                                        }
+                                    },
+                                    onColorPickerRequested = {
+                                        if (!note.isLocked) {
+                                            noteToColorEditId = note.id
+                                            showColorPicker = true
+                                        }
+                                    },
+                                    onDeleteRequested = {
+                                        val idx = viewModel.canvasNotes.indexOfFirst { it.id == note.id }
+                                        if (idx != -1) viewModel.removeFromCanvas(idx)
                                     }
-                                },
-                                onDeleteRequested = {
-                                    val idx = viewModel.canvasNotes.indexOfFirst { it.id == note.id }
-                                    if (idx != -1) viewModel.removeFromCanvas(idx)
-                                }
-                            )
-                            note.content.startsWith("Image:") -> CanvasImageItem(
-                                note = note,
-                                isSelected = selectedNoteId == note.id,
-                                isLocked = note.isLocked,
-                                onSelect = { if (!note.isLocked) selectedNoteId = note.id },
-                                onUpdatePosition = { offset, w, h ->
-                                    viewModel.updateNotePosition(note.id, offset, w, h)
-                                },
-                                onDeleteRequested = {
-                                    val idx = viewModel.canvasNotes.indexOfFirst { it.id == note.id }
-                                    if (idx != -1) viewModel.removeFromCanvas(idx)
-                                }
-                            )
-                            else -> CanvasTextItem(
-                                note = note,
-                                isSelected = selectedNoteId == note.id,
-                                isLocked = note.isLocked,
-                                onSelect = { if (!note.isLocked) selectedNoteId = note.id },
-                                onUpdatePosition = { offset, w, h ->
-                                    viewModel.updateNotePosition(note.id, offset, w, h)
-                                },
-                                onColorPickerRequested = {
-                                    if (!note.isLocked) {
-                                        noteToColorEditId = note.id
-                                        showColorPicker = true
+                                )
+                                note.content.startsWith("Image:") -> CanvasImageItem(
+                                    note = note,
+                                    isSelected = selectedNoteIds.contains(note.id),
+                                    isLocked = note.isLocked,
+                                    onSelect = { if (!note.isLocked) onCanvasNoteTap(note) },
+                                    onUpdatePosition = { offset, w, h ->
+                                        if (isInSelectedGroup) {
+                                            dragGroupDelta = offset - note.offset
+                                        } else {
+                                            viewModel.updateNotePosition(note.id, offset, w, h)
+                                        }
+                                    },
+                                    onDeleteRequested = {
+                                        val idx = viewModel.canvasNotes.indexOfFirst { it.id == note.id }
+                                        if (idx != -1) viewModel.removeFromCanvas(idx)
                                     }
-                                },
-                                onDeleteRequested = {
-                                    val idx = viewModel.canvasNotes.indexOfFirst { it.id == note.id }
-                                    if (idx != -1) viewModel.removeFromCanvas(idx)
-                                }
-                            )
+                                )
+                                else -> CanvasTextItem(
+                                    note = note,
+                                    isSelected = selectedNoteIds.contains(note.id),
+                                    isLocked = note.isLocked,
+                                    onSelect = { if (!note.isLocked) onCanvasNoteTap(note) },
+                                    onUpdatePosition = { offset, w, h ->
+                                        if (isInSelectedGroup) {
+                                            dragGroupDelta = offset - note.offset
+                                        } else {
+                                            viewModel.updateNotePosition(note.id, offset, w, h)
+                                        }
+                                    },
+                                    onColorPickerRequested = {
+                                        if (!note.isLocked) {
+                                            noteToColorEditId = note.id
+                                            showColorPicker = true
+                                        }
+                                    },
+                                    onDeleteRequested = {
+                                        val idx = viewModel.canvasNotes.indexOfFirst { it.id == note.id }
+                                        if (idx != -1) viewModel.removeFromCanvas(idx)
+                                    }
+                                )
+                            }
                         }
+                    }
+                }
+
+                // Draw group bounding boxes on top
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    selectedGroups.forEach { groupId ->
+                        val groupNotes = notesGrouped[groupId] ?: return@forEach
+                        val bbox = getGroupBoundingBox(groupNotes) ?: return@forEach
+                        val left = bbox.minX + dragGroupDelta.x
+                        val top = bbox.minY + dragGroupDelta.y
+                        val right = bbox.maxX + dragGroupDelta.x
+                        val bottom = bbox.maxY + dragGroupDelta.y
+                        val rect = Rect(left, top, right, bottom)
+
+                        // Dashed outline
+                        drawRect(
+                            color = themeColors.primary.copy(alpha = 0.8f),
+                            topLeft = Offset(rect.left, rect.top),
+                            size = Size(rect.width, rect.height),
+                            style = Stroke(
+                                width = 2.dp.toPx(),
+                                pathEffect = PathEffect.dashPathEffect(
+                                    floatArrayOf(10f, 10f), 0f
+                                )
+                            )
+                        )
+                        // Corner handles
+                        val handleRadius = 6.dp.toPx()
+                        drawCircle(themeColors.primary, handleRadius, Offset(rect.left, rect.top))
+                        drawCircle(themeColors.primary, handleRadius, Offset(rect.right, rect.top))
+                        drawCircle(themeColors.primary, handleRadius, Offset(rect.left, rect.bottom))
+                        drawCircle(themeColors.primary, handleRadius, Offset(rect.right, rect.bottom))
                     }
                 }
             }
@@ -926,6 +1077,7 @@ fun GraphicalNotesScreen() {
 
         Spacer(Modifier.height(8.dp))
 
+        // Save menu
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -984,6 +1136,7 @@ fun GraphicalNotesScreen() {
         Spacer(Modifier.height(16.dp))
     }
 
+    // ── Dialogs (unchanged, included for completeness) ──
     if (noteToEdit != null) {
         AlertDialog(
             onDismissRequest = { noteToEdit = null },

@@ -108,7 +108,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import com.fountofhopedotorg.fohbible.functions.ColorOptionItem
-import kotlin.random.Random
 
 @Composable
 fun LoadingIndicator() {
@@ -121,16 +120,6 @@ fun LoadingIndicator() {
         Spacer(modifier = Modifier.height(16.dp))
         Text("Loading verses...")
     }
-}
-
-@Composable
-fun randomColor(alpha: Float = 1f): Color {
-    return Color(
-        red = Random.nextFloat(),
-        green = Random.nextFloat(),
-        blue = Random.nextFloat(),
-        alpha = alpha
-    )
 }
 
 @Composable
