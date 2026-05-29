@@ -266,6 +266,15 @@ data class CanvasNote(
     val groupId: String? = null
 )
 
+data class CanvasTreeNode(
+    val id: String,
+    val name: String,
+    val isGroup: Boolean,
+    val depth: Int = 0,
+    val childIds: List<String> = emptyList(),
+    val isExpanded: Boolean = false
+)
+
 data class SearchOptions(val bookRange: Pair<Int, Int>? = null)
 
 data class QuickAction(
@@ -274,6 +283,23 @@ data class QuickAction(
     val color: Color,
     val onClick: () -> Unit,
     val backgroundImage: Any
+)
+
+data class ParsedSegment(
+    val anchor: Offset,
+    val handleIn: Offset?,
+    val handleOut: Offset?
+)
+
+data class BezierNodeData(
+    val anchor: Offset,
+    val handleIn: Offset,
+    val handleOut: Offset
+)
+
+data class BoundingBox(
+    val minX: Float, val minY: Float,
+    val maxX: Float, val maxY: Float
 )
 
 data class PopularDevotional(

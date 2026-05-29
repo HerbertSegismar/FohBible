@@ -58,13 +58,8 @@ import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import androidx.core.net.toUri
+import com.fountofhopedotorg.fohbible.data.BezierNodeData
 import com.fountofhopedotorg.fohbible.functions.getRandomColor
-
-data class BezierNodeData(
-    val anchor: Offset,
-    val handleIn: Offset,
-    val handleOut: Offset
-)
 
 @Composable
 fun ShapeSelectionCard(
@@ -206,8 +201,6 @@ fun CanvasSvgItem(
 
     val handleSize = 24.dp
     val handleRadiusPx = with(LocalDensity.current) { handleSize.toPx() / 2f }
-
-    // ---- CHANGE: detect both CustomPolygon and CustomLine ----
     val isCustomPolygon = note.content.startsWith("Shape:CustomPolygon:")
     val isCustomLine = note.content.startsWith("Shape:CustomLine:")
     val isAnyCustomBezier = isCustomPolygon || isCustomLine
@@ -346,14 +339,12 @@ fun CanvasSvgItem(
                             color = note.backgroundColor
                         )
                     }
-
-                    // ---- CHANGE: closed based on type ----
                     parsedData != null -> {
                         BezierPolygonShape(
                             nodes = parsedData.first,
                             modifier = Modifier.fillMaxSize(),
                             color = note.backgroundColor,
-                            closed = !isCustomLine   // line stays open, polygon closed
+                            closed = !isCustomLine
                         )
                     }
                 }

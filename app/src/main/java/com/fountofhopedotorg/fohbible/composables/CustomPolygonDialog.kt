@@ -440,8 +440,8 @@ fun CustomPolygonDialog(
     ) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth(if (isLandscape) 0.75f else 0.9f)
-                .fillMaxHeight(if (isLandscape) 1f else 0.85f),
+                .fillMaxWidth(0.95f)
+                .fillMaxHeight(if (isLandscape) 0.97f else 0.95f),
             shape = RoundedCornerShape(28.dp),
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 6.dp
@@ -466,29 +466,87 @@ fun CustomPolygonDialog(
                 Box(modifier = Modifier.weight(1f)) {
                     if (isLandscape) {
                         Row(
-                            modifier = Modifier.fillMaxSize().padding(12.dp),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(6.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .weight(1f)
+                                    .weight(0.85f)
                                     .fillMaxHeight()
                                     .aspectRatio(1f),
                                 contentAlignment = Alignment.Center
                             ) {
                                 canvasArea(Modifier)
                             }
-                            Box(
+
+                            Column(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .fillMaxHeight(),
-                                contentAlignment = Alignment.Center
+                                    .fillMaxHeight()
                             ) {
-                                controlsArea(Modifier)
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxWidth(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    controlsArea(Modifier)
+                                }
+
+                                // Buttons row – moved here for landscape
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 36.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(vertical = 4.dp)
+                                    ) {
+                                        Text("Close")
+                                        Checkbox(
+                                            checked = isCloseState,
+                                            onCheckedChange = { isCloseState = it },
+                                            colors = CheckboxDefaults.colors(
+                                                checkedColor = MaterialTheme.colorScheme.primary,
+                                                checkmarkColor = Color.White
+                                            )
+                                        )
+                                    }
+
+                                    TextButton(onClick = onDismiss) { Text("Cancel") }
+
+                                    TextButton(
+                                        onClick = {
+                                            points = emptyList()
+                                            redoStack = emptyList()
+                                            selectedIndex = -1
+                                        },
+                                        enabled = points.isNotEmpty()
+                                    ) {
+                                        Text("Clear")
+                                    }
+
+                                    TextButton(
+                                        onClick = {
+                                            if (points.size >= minPointsRequired) {
+                                                onConfirm(points, !isCloseState)
+                                            }
+                                        },
+                                        enabled = points.size >= minPointsRequired
+                                    ) {
+                                        Text(if (isEditing) "Save Changes" else "Add to Canvas")
+                                    }
+                                }
                             }
                         }
                     } else {
+                        // Portrait layout – unchanged
                         Column(
                             modifier = Modifier.fillMaxSize(),
                             horizontalAlignment = Alignment.CenterHorizontally
@@ -510,54 +568,55 @@ fun CustomPolygonDialog(
                     }
                 }
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp)
-                ) {
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(3.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                if (!isLandscape) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp)
                     ) {
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(vertical = 4.dp)
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("Close")
-                            Checkbox(
-                                checked = isCloseState,
-                                onCheckedChange = { isCloseState = it },
-                                colors = CheckboxDefaults.colors(
-                                    checkedColor = MaterialTheme.colorScheme.primary,
-                                    checkmarkColor = Color.White
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            ) {
+                                Text("Close")
+                                Checkbox(
+                                    checked = isCloseState,
+                                    onCheckedChange = { isCloseState = it },
+                                    colors = CheckboxDefaults.colors(
+                                        checkedColor = MaterialTheme.colorScheme.primary,
+                                        checkmarkColor = Color.White
+                                    )
                                 )
-                            )
-                        }
+                            }
 
-                        TextButton(onClick = onDismiss) { Text("Cancel") }
+                            TextButton(onClick = onDismiss) { Text("Cancel") }
 
-                        TextButton(
-                            onClick = {
-                                points = emptyList()
-                                redoStack = emptyList()
-                                selectedIndex = -1
-                            },
-                            enabled = points.isNotEmpty()
-                        ) {
-                            Text("Clear")
-                        }
+                            TextButton(
+                                onClick = {
+                                    points = emptyList()
+                                    redoStack = emptyList()
+                                    selectedIndex = -1
+                                },
+                                enabled = points.isNotEmpty()
+                            ) {
+                                Text("Clear")
+                            }
 
-                        TextButton(
-                            onClick = {
-                                if (points.size >= minPointsRequired) {
-                                    onConfirm(points, !isCloseState)
-                                }
-                            },
-                            enabled = points.size >= minPointsRequired
-                        ) {
-                            Text(if (isEditing) "Save Changes" else "Add to Canvas")
+                            TextButton(
+                                onClick = {
+                                    if (points.size >= minPointsRequired) {
+                                        onConfirm(points, !isCloseState)
+                                    }
+                                },
+                                enabled = points.size >= minPointsRequired
+                            ) {
+                                Text(if (isEditing) "Save Changes" else "Add to Canvas")
+                            }
                         }
                     }
                 }

@@ -15,12 +15,15 @@ import android.widget.Toast.LENGTH_LONG
 import android.widget.Toast.LENGTH_SHORT
 import android.widget.Toast.makeText
 import androidx.annotation.RequiresApi
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.unit.sp
+import com.fountofhopedotorg.fohbible.data.BoundingBox
 import com.fountofhopedotorg.fohbible.data.CanvasNote
+import com.fountofhopedotorg.fohbible.data.ParsedSegment
 import com.fountofhopedotorg.fohbible.data.ProcessingOptions
 import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.data.Verse
@@ -294,43 +297,70 @@ private fun buildShapeSvg(note: CanvasNote, w: Float, h: Float, hexColor: String
 
 private fun buildPathD(segments: List<String>, w: Float, h: Float, close: Boolean): String {
     if (segments.isEmpty()) return ""
+
+    val parsed = segments.map { seg ->
+        val parts = seg.split(":")
+        val anchorCoords = parts[0].split(",")
+        val anchor = Offset(
+            (anchorCoords[0].toFloatOrNull() ?: 0f) * w,
+            (anchorCoords[1].toFloatOrNull() ?: 0f) * h
+        )
+
+        val handleIn = if (parts.size > 1) {
+            val hi = parts[1].split(",")
+            if (hi.size == 2) Offset(
+                (hi[0].toFloatOrNull() ?: 0f) * w,
+                (hi[1].toFloatOrNull() ?: 0f) * h
+            ) else null
+        } else null
+
+        val handleOut = if (parts.size > 2) {
+            val ho = parts[2].split(",")
+            if (ho.size == 2) Offset(
+                (ho[0].toFloatOrNull() ?: 0f) * w,
+                (ho[1].toFloatOrNull() ?: 0f) * h
+            ) else null
+        } else null
+
+        ParsedSegment(anchor, handleIn, handleOut)
+    }
+
     val d = StringBuilder()
+    d.append("M ${parsed[0].anchor.x} ${parsed[0].anchor.y} ")
 
-    for (i in segments.indices) {
-        val segment = segments[i]
-        val parts = segment.split(":")
-        val mainCoords = parts[0].split(",")
-        if (mainCoords.size < 2) continue
+    for (i in 1 until parsed.size) {
+        val prev = parsed[i - 1]
+        val curr = parsed[i]
 
-        val px = (mainCoords[0].toFloatOrNull() ?: 0f) * w
-        val py = (mainCoords[1].toFloatOrNull() ?: 0f) * h
-
-        if (i == 0) {
-            d.append("M $px $py ")
+        if (prev.handleOut != null && curr.handleIn != null) {
+            d.append("C ${prev.handleOut.x} ${prev.handleOut.y}, ${curr.handleIn.x} ${curr.handleIn.y}, ${curr.anchor.x} ${curr.anchor.y} ")
+        } else if (curr.handleIn != null) {
+            d.append("Q ${curr.handleIn.x} ${curr.handleIn.y}, ${curr.anchor.x} ${curr.anchor.y} ")
         } else {
-            val handles = if (parts.size > 1) parts[1].split(",") else emptyList()
-
-            when (handles.size) {
-                4 -> {
-                    val cp1x = (handles[0].toFloatOrNull() ?: 0f) * w
-                    val cp1y = (handles[1].toFloatOrNull() ?: 0f) * h
-                    val cp2x = (handles[2].toFloatOrNull() ?: 0f) * w
-                    val cp2y = (handles[3].toFloatOrNull() ?: 0f) * h
-                    d.append("C $cp1x $cp1y, $cp2x $cp2y, $px $py ")
-                }
-                2 -> {
-                    val cpx = (handles[0].toFloatOrNull() ?: 0f) * w
-                    val cpy = (handles[1].toFloatOrNull() ?: 0f) * h
-                    d.append("Q $cpx $cpy, $px $py ")
-                }
-                else -> {
-                    d.append("L $px $py ")
-                }
-            }
+            // Line to
+            d.append("L ${curr.anchor.x} ${curr.anchor.y} ")
         }
     }
+
     if (close) d.append("Z")
     return d.toString().trim()
+}
+
+fun getGroupBoundingBox(notes: List<CanvasNote>): BoundingBox? {
+    if (notes.isEmpty()) return null
+    var minX = Float.MAX_VALUE; var minY = Float.MAX_VALUE
+    var maxX = Float.MIN_VALUE; var maxY = Float.MIN_VALUE
+    notes.forEach { note ->
+        val x = note.offset.x
+        val y = note.offset.y
+        val w = note.width
+        val h = note.height
+        minX = minOf(minX, x)
+        minY = minOf(minY, y)
+        maxX = maxOf(maxX, x + w)
+        maxY = maxOf(maxY, y + h)
+    }
+    return BoundingBox(minX, minY, maxX, maxY)
 }
 
 private fun colorToHex(color: Color): String {

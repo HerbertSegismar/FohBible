@@ -64,29 +64,6 @@ import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-// Helper to compute the bounding box of a group
-private data class BoundingBox(
-    val minX: Float, val minY: Float,
-    val maxX: Float, val maxY: Float
-)
-
-private fun getGroupBoundingBox(notes: List<CanvasNote>): BoundingBox? {
-    if (notes.isEmpty()) return null
-    var minX = Float.MAX_VALUE; var minY = Float.MAX_VALUE
-    var maxX = Float.MIN_VALUE; var maxY = Float.MIN_VALUE
-    notes.forEach { note ->
-        val x = note.offset.x
-        val y = note.offset.y
-        val w = note.width
-        val h = note.height
-        minX = minOf(minX, x)
-        minY = minOf(minY, y)
-        maxX = maxOf(maxX, x + w)
-        maxY = maxOf(maxY, y + h)
-    }
-    return BoundingBox(minX, minY, maxX, maxY)
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.Q)
 @Composable
@@ -126,8 +103,6 @@ fun GraphicalNotesScreen() {
     var polygonNoteToEditId by rememberSaveable { mutableStateOf<String?>(null) }
     var initialPolygonString by rememberSaveable { mutableStateOf("") }
     var initialIsLineMode by rememberSaveable { mutableStateOf(false) }
-
-    // Group‑move state
     var dragGroupDelta by remember { mutableStateOf(Offset.Zero) }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -164,21 +139,15 @@ fun GraphicalNotesScreen() {
     }
 
     val mainScrollState = rememberScrollState()
-
-    // ── Group helpers ──
     val notesGrouped = remember(viewModel.canvasNotes) {
         viewModel.canvasNotes.groupBy { it.groupId }
     }
-
-    // Set of group IDs that are currently selected (any of their members)
     val selectedGroups = remember(selectedNoteIds, viewModel.canvasNotes) {
         viewModel.canvasNotes
             .filter { it.groupId != null && it.id in selectedNoteIds }
             .map { it.groupId!! }
             .toSet()
     }
-
-    // Toggle selection of an entire group when a member is tapped in the tree
     fun toggleGroupSelection(note: CanvasNote) {
         val groupId = note.groupId
         if (groupId != null) {
@@ -197,7 +166,6 @@ fun GraphicalNotesScreen() {
         }
     }
 
-    // When a grouped note is tapped on the canvas, select the whole group
     fun onCanvasNoteTap(note: CanvasNote) {
         val groupId = note.groupId
         if (groupId != null) {
@@ -210,7 +178,6 @@ fun GraphicalNotesScreen() {
         }
     }
 
-    // ── UI ──
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -218,8 +185,6 @@ fun GraphicalNotesScreen() {
             .verticalScroll(mainScrollState)
     ) {
         Spacer(Modifier.height(16.dp))
-
-        // Input mode selector
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
@@ -468,8 +433,6 @@ fun GraphicalNotesScreen() {
         }
 
         Spacer(Modifier.height(20.dp))
-
-        // Canvas elements tree with group‑aware selection
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -536,7 +499,10 @@ fun GraphicalNotesScreen() {
                                         }
                                     }
                                     .pointerInput(note.id) {
-                                        detectTapGestures { selectedNoteId = note.id }
+                                        detectTapGestures {
+                                            selectedNoteId = note.id
+                                            selectedNoteIds = setOf(note.id)
+                                        }
                                     }
                                     .pointerInput(note.id) {
                                         detectDragGesturesAfterLongPress(
@@ -585,7 +551,6 @@ fun GraphicalNotesScreen() {
                                         .padding(horizontal = 8.dp, vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    // Multi‑select checkbox with group‑aware toggle
                                     Box(
                                         modifier = Modifier
                                             .size(32.dp)
@@ -661,8 +626,6 @@ fun GraphicalNotesScreen() {
                                         overflow = TextOverflow.Ellipsis,
                                         style = MaterialTheme.typography.bodyMedium
                                     )
-
-                                    // Drag handle for reordering
                                     Box(
                                         modifier = Modifier
                                             .padding(horizontal = 8.dp)
@@ -729,8 +692,6 @@ fun GraphicalNotesScreen() {
                                             )
                                         }
                                     }
-
-                                    // Visibility toggle
                                     IconButton(
                                         onClick = { viewModel.toggleVisibility(note.id) },
                                         modifier = Modifier.size(32.dp)
@@ -742,8 +703,6 @@ fun GraphicalNotesScreen() {
                                             modifier = Modifier.size(20.dp)
                                         )
                                     }
-
-                                    // Lock toggle
                                     IconButton(
                                         onClick = { viewModel.toggleLock(note.id) },
                                         modifier = Modifier.size(32.dp)
@@ -755,8 +714,6 @@ fun GraphicalNotesScreen() {
                                             modifier = Modifier.size(20.dp)
                                         )
                                     }
-
-                                    // Edit button (handles shapes/polygons correctly)
                                     IconButton(
                                         onClick = {
                                             if (note.content.startsWith("Shape:")) {
@@ -814,8 +771,6 @@ fun GraphicalNotesScreen() {
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
-
-                                    // Duplicate
                                     IconButton(
                                         onClick = { viewModel.addToCanvas(CanvasNote(content = note.content)) },
                                         modifier = Modifier.size(32.dp)
@@ -827,8 +782,6 @@ fun GraphicalNotesScreen() {
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
-
-                                    // Delete
                                     IconButton(
                                         onClick = {
                                             val idx = viewModel.canvasNotes.indexOf(note)
@@ -848,10 +801,7 @@ fun GraphicalNotesScreen() {
                             }
                         }
                     }
-
-                    // Group action bar
                     AnimatedVisibility(visible = selectedNoteIds.isNotEmpty()) {
-                        // Only show ungroup if any selected note has a groupId
                         val hasGroupSelection = viewModel.canvasNotes.any {
                             it.groupId != null && it.id in selectedNoteIds
                         }
@@ -931,8 +881,6 @@ fun GraphicalNotesScreen() {
         }
 
         Spacer(Modifier.height(16.dp))
-
-        // ── Canvas with group‑move and bounding boxes ──
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -955,13 +903,11 @@ fun GraphicalNotesScreen() {
                         drawContent()
                     }
             ) {
-                // Draw individual items, applying group offset if part of a selected group
                 viewModel.canvasNotes.forEach { note ->
                     if (!note.isVisible) return@forEach
 
                     key(note.id) {
                         val isInSelectedGroup = note.groupId in selectedGroups
-                        // Wrap in Box with offset modifier to visually shift the group
                         Box(
                             modifier = if (isInSelectedGroup) {
                                 Modifier.offset { IntOffset(dragGroupDelta.x.roundToInt(), dragGroupDelta.y.roundToInt()) }
@@ -976,9 +922,7 @@ fun GraphicalNotesScreen() {
                                     isLocked = note.isLocked,
                                     onSelect = { if (!note.isLocked) onCanvasNoteTap(note) },
                                     onUpdatePosition = { offset, w, h ->
-                                        // When dragging a group member, update group delta
                                         if (isInSelectedGroup) {
-                                            // Compute delta from original position
                                             val newDelta = offset - note.offset
                                             dragGroupDelta = newDelta
                                         } else {
@@ -1040,8 +984,6 @@ fun GraphicalNotesScreen() {
                         }
                     }
                 }
-
-                // Draw group bounding boxes on top
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     selectedGroups.forEach { groupId ->
                         val groupNotes = notesGrouped[groupId] ?: return@forEach
@@ -1052,7 +994,6 @@ fun GraphicalNotesScreen() {
                         val bottom = bbox.maxY + dragGroupDelta.y
                         val rect = Rect(left, top, right, bottom)
 
-                        // Dashed outline
                         drawRect(
                             color = themeColors.primary.copy(alpha = 0.8f),
                             topLeft = Offset(rect.left, rect.top),
@@ -1064,7 +1005,6 @@ fun GraphicalNotesScreen() {
                                 )
                             )
                         )
-                        // Corner handles
                         val handleRadius = 6.dp.toPx()
                         drawCircle(themeColors.primary, handleRadius, Offset(rect.left, rect.top))
                         drawCircle(themeColors.primary, handleRadius, Offset(rect.right, rect.top))
@@ -1076,8 +1016,6 @@ fun GraphicalNotesScreen() {
         }
 
         Spacer(Modifier.height(8.dp))
-
-        // Save menu
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -1135,8 +1073,6 @@ fun GraphicalNotesScreen() {
         }
         Spacer(Modifier.height(16.dp))
     }
-
-    // ── Dialogs (unchanged, included for completeness) ──
     if (noteToEdit != null) {
         AlertDialog(
             onDismissRequest = { noteToEdit = null },
