@@ -221,26 +221,36 @@ fun GraphicalNotesScreen() {
 
         when (selectedInputMode) {
             "Add Text" -> {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    OutlinedTextField(
-                        value = currentText,
-                        onValueChange = { currentText = it },
-                        label = { Text("Enter text") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Button(onClick = {
-                        if (currentText.isNotBlank()) {
-                            viewModel.addToCanvas(CanvasNote(content = currentText))
-                            currentText = ""
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = themeColors.primary.copy(alpha = 0.05f))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                            OutlinedTextField(
+                                value = currentText,
+                                onValueChange = { currentText = it },
+                                label = { Text("Enter text") },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Button(onClick = {
+                                if (currentText.isNotBlank()) {
+                                    viewModel.addToCanvas(CanvasNote(content = currentText))
+                                    currentText = ""
+                                }
+                            }) { Text("Add", color = Color.White) }
                         }
-                    }) { Text("Add", color = Color.White) }
-                }
+                    }
+                    }
             }
 
             "Fetch Verse" -> {
-                Box(modifier = Modifier.fillMaxWidth().background(themeColors.primary.copy(alpha = 0.1f))) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = themeColors.primary.copy(alpha = 0.05f))
+                ) {
                     Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                             OutlinedTextField(
@@ -276,7 +286,7 @@ fun GraphicalNotesScreen() {
                                         fetchError = "Invalid reference or verse not found"
                                     }
                                 }
-                            }) { Text("Fetch") }
+                            }) { Text("Fetch", color = Color.White) }
                         }
 
                         if (fetchError != null) {
@@ -423,9 +433,9 @@ fun GraphicalNotesScreen() {
                         )
                         Spacer(Modifier.height(12.dp))
                         Button(onClick = { imagePickerLauncher.launch("image/*") }) {
-                            Icon(Icons.Default.PhotoLibrary, contentDescription = "Gallery")
+                            Icon(Icons.Default.PhotoLibrary, contentDescription = "Gallery", tint = Color.White)
                             Spacer(Modifier.width(8.dp))
-                            Text("Choose from Gallery")
+                            Text("Choose from Gallery", color = Color.White)
                         }
                     }
                 }

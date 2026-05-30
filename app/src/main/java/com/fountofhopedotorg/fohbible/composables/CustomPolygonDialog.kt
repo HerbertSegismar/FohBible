@@ -71,16 +71,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.fountofhopedotorg.fohbible.data.BezierNode
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 enum class ActiveControl { ANCHOR, HANDLE_IN, HANDLE_OUT }
-
-data class BezierNode(
-    val anchor: Offset,
-    val handleIn: Offset,
-    val handleOut: Offset
-)
 
 private val BezierNodeListSaver = listSaver<List<BezierNode>, String>(
     save = { list ->
@@ -474,7 +469,7 @@ fun CustomPolygonDialog(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .weight(0.85f)
+                                    .weight(0.95f)
                                     .fillMaxHeight()
                                     .aspectRatio(1f),
                                 contentAlignment = Alignment.Center
@@ -495,8 +490,6 @@ fun CustomPolygonDialog(
                                 ) {
                                     controlsArea(Modifier)
                                 }
-
-                                // Buttons row – moved here for landscape
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -506,9 +499,9 @@ fun CustomPolygonDialog(
                                 ) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.padding(vertical = 4.dp)
+                                        modifier = Modifier.padding(vertical = 4.dp).weight(1f)
                                     ) {
-                                        Text("Close")
+                                        Text("Fill")
                                         Checkbox(
                                             checked = isCloseState,
                                             onCheckedChange = { isCloseState = it },
@@ -546,7 +539,6 @@ fun CustomPolygonDialog(
                             }
                         }
                     } else {
-                        // Portrait layout – unchanged
                         Column(
                             modifier = Modifier.fillMaxSize(),
                             horizontalAlignment = Alignment.CenterHorizontally
@@ -581,9 +573,9 @@ fun CustomPolygonDialog(
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(vertical = 4.dp)
+                                modifier = Modifier.padding(vertical = 4.dp).weight(1f)
                             ) {
-                                Text("Close")
+                                Text("Fill")
                                 Checkbox(
                                     checked = isCloseState,
                                     onCheckedChange = { isCloseState = it },

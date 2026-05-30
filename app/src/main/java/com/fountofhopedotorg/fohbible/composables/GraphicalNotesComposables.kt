@@ -233,7 +233,7 @@ fun CanvasSvgItem(
                 }
             }
 
-            if (rawNodes.size >= (if (isCustomLine) 2 else 3)) {  // line needs at least 2, polygon 3
+            if (rawNodes.size >= (if (isCustomLine) 2 else 3)) {
                 val allPoints = rawNodes.flatMap { listOf(it.anchor, it.handleIn, it.handleOut) }
                 val minX = allPoints.minOf { it.x }
                 val maxX = allPoints.maxOf { it.x }
@@ -949,7 +949,7 @@ fun CustomPathPreview(
                 drawPath(
                     path = path,
                     color = color,
-                    style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+                    style = Stroke(width = 0.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
                 )
             }
         }

@@ -263,16 +263,13 @@ data class CanvasNote(
     val isVisible: Boolean = true,
     val isLocked: Boolean = false,
     val customName: String? = null,
-    val groupId: String? = null
+    val groupId: String? = null,
 )
 
-data class CanvasTreeNode(
-    val id: String,
-    val name: String,
-    val isGroup: Boolean,
-    val depth: Int = 0,
-    val childIds: List<String> = emptyList(),
-    val isExpanded: Boolean = false
+data class BezierNode(
+    val anchor: Offset,
+    val handleIn: Offset,
+    val handleOut: Offset
 )
 
 data class SearchOptions(val bookRange: Pair<Int, Int>? = null)
