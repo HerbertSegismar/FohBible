@@ -107,6 +107,20 @@ fun CanvasElementsPanel(
             add(DisplayItem.NoteItem(note, originalIndex, isGrouped = false))
         }
     }
+    val groupBounds = remember(displayItems) {
+        val bounds = mutableMapOf<String?, Pair<Int, Int>>()
+        displayItems.forEachIndexed { index, item ->
+            if (item is DisplayItem.NoteItem) {
+                val current = bounds[item.groupId]
+                if (current == null) {
+                    bounds[item.groupId] = index to index
+                } else {
+                    bounds[item.groupId] = current.first to index
+                }
+            }
+        }
+        bounds
+    }
 
     Column {
         Row(
@@ -134,7 +148,7 @@ fun CanvasElementsPanel(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )
                 } else {
-                    var draggedIndex by remember { mutableStateOf<Int?>(null) }
+                    var draggedDisplayIndex by remember { mutableStateOf<Int?>(null) }
                     var dragOffset by remember { mutableFloatStateOf(0f) }
                     val itemHeightPx = remember(density) { with(density) { 56.dp.toPx() } }
                     val listState = rememberLazyListState()
@@ -180,63 +194,61 @@ fun CanvasElementsPanel(
                                     AnimatedVisibility(
                                         visible = isVisible,
                                         enter = expandVertically() + fadeIn(),
-                                        exit = shrinkVertically() + fadeOut()
+                                        exit = shrinkVertically() + fadeOut(),
+                                        modifier = Modifier.animateItem()
                                     ) {
-                                        val itemModifier = Modifier
-                                            .animateItem()
-                                            .then(
-                                                if (isGrouped) Modifier.padding(start = 16.dp)
-                                                else Modifier
-                                            )
+                                        val itemModifier = if (isGrouped) Modifier.padding(start = 16.dp) else Modifier
+                                        val bounds = groupBounds[groupId]
+                                        val isUpEnabled = bounds != null && displayIndex > bounds.first
+                                        val isDownEnabled = bounds != null && displayIndex < bounds.second
 
                                         CanvasElementItem(
                                             viewModel = viewModel,
                                             note = note,
                                             originalIndex = originalIndex,
                                             isSelected = selectedNoteId == note.id,
-                                            isDragTarget = draggedIndex == originalIndex,
-                                            isUpEnabled = !isGrouped && originalIndex > 0,
-                                            isDownEnabled = !isGrouped && originalIndex < viewModel.canvasNotes.size - 1,
-                                            dragOffset = if (draggedIndex == originalIndex) dragOffset else 0f,
+                                            isDragTarget = draggedDisplayIndex == displayIndex,
+                                            isUpEnabled = isUpEnabled,
+                                            isDownEnabled = isDownEnabled,
+                                            dragOffset = if (draggedDisplayIndex == displayIndex) dragOffset else 0f,
                                             selectedNoteIds = selectedNoteIds,
                                             isGrouped = isGrouped,
                                             onRowTap = { onSingleSelect(note) },
                                             onToggleGroupSelection = { onToggleGroupSelection(note) },
                                             onDragStart = { offset ->
-                                                if (!isGrouped) {
-                                                    draggedIndex = originalIndex
-                                                    dragOffset = offset.y
-                                                }
+                                                draggedDisplayIndex = displayIndex
+                                                dragOffset = offset.y
                                             },
                                             onDrag = { change, dragAmount ->
-                                                if (!isGrouped) {
-                                                    change.consume()
-                                                    dragOffset += dragAmount.y
-                                                }
+                                                change.consume()
+                                                dragOffset += dragAmount.y
                                             },
                                             onDragEnd = {
-                                                if (!isGrouped) {
-                                                    val fromIndex = draggedIndex
-                                                    if (fromIndex != null) {
-                                                        val target =
-                                                            (fromIndex + (dragOffset / itemHeightPx).roundToInt())
-                                                                .coerceIn(
-                                                                    0,
-                                                                    viewModel.canvasNotes.size - 1
+                                                val fromDisplayIndex = draggedDisplayIndex
+                                                if (fromDisplayIndex != null) {
+                                                    val draggedItem = displayItems[fromDisplayIndex] as? DisplayItem.NoteItem
+                                                    if (draggedItem != null) {
+                                                        val itemBounds = groupBounds[draggedItem.groupId]
+                                                        if (itemBounds != null) {
+                                                            // Lock target position between group boundaries
+                                                            val rawTargetIdx = (fromDisplayIndex + (dragOffset / itemHeightPx).roundToInt())
+                                                            val targetDisplayIdx = rawTargetIdx.coerceIn(itemBounds.first, itemBounds.second)
+
+                                                            if (targetDisplayIdx != fromDisplayIndex) {
+                                                                val targetItem = displayItems[targetDisplayIdx] as DisplayItem.NoteItem
+                                                                viewModel.reorderCanvasNotes(
+                                                                    draggedItem.originalIndex,
+                                                                    targetItem.originalIndex
                                                                 )
-                                                        if (target != fromIndex) {
-                                                            viewModel.reorderCanvasNotes(
-                                                                fromIndex,
-                                                                target
-                                                            )
+                                                            }
                                                         }
                                                     }
                                                 }
-                                                draggedIndex = null
+                                                draggedDisplayIndex = null
                                                 dragOffset = 0f
                                             },
                                             onDragCancel = {
-                                                draggedIndex = null
+                                                draggedDisplayIndex = null
                                                 dragOffset = 0f
                                             },
                                             onEdit = { onEditNote(note) },
@@ -246,7 +258,6 @@ fun CanvasElementsPanel(
                                             onDuplicate = { onDuplicate(note) },
                                             onDelete = { onDelete(note) },
                                             themeColors = themeColors,
-                                            density = density,
                                             modifier = itemModifier
                                         )
                                     }

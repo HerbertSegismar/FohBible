@@ -7,13 +7,8 @@ import android.graphics.pdf.PdfDocument
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
-import android.provider.MediaStore.MediaColumns.DISPLAY_NAME
-import android.provider.MediaStore.MediaColumns.MIME_TYPE
-import android.provider.MediaStore.MediaColumns.RELATIVE_PATH
 import android.util.Base64
-import android.widget.Toast.LENGTH_LONG
-import android.widget.Toast.LENGTH_SHORT
-import android.widget.Toast.makeText
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -32,6 +27,7 @@ import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
+import kotlin.math.roundToInt
 import kotlin.random.Random
 
 fun buildPassageText(
@@ -84,9 +80,9 @@ suspend fun saveCanvasAsImage(
         val resolver = context.contentResolver
 
         val contentValues = ContentValues().apply {
-            put(DISPLAY_NAME, fileName)
-            put(MIME_TYPE, if (format == "JPG") "image/jpeg" else "image/png")
-            put(RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/FOHBible")
+            put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+            put(MediaStore.MediaColumns.MIME_TYPE, if (format == "JPG") "image/jpeg" else "image/png")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/FOHBible")
         }
 
         val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
@@ -101,14 +97,14 @@ suspend fun saveCanvasAsImage(
                 }
             }
             withContext(Dispatchers.Main) {
-                makeText(context, "Saved to Pictures/FOHBible", LENGTH_LONG).show()
+                Toast.makeText(context, "Saved to Pictures/FOHBible", Toast.LENGTH_LONG).show()
             }
         } else {
             throw Exception("Failed to create MediaStore entry.")
         }
     } catch (_: Exception) {
         withContext(Dispatchers.Main) {
-            makeText(context, "Failed to save image", LENGTH_SHORT).show()
+            Toast.makeText(context, "Failed to save image", Toast.LENGTH_SHORT).show()
         }
     }
 }
@@ -137,9 +133,9 @@ suspend fun saveCanvasAsPDF(
         val resolver = context.contentResolver
 
         val contentValues = ContentValues().apply {
-            put(DISPLAY_NAME, fileName)
-            put(MIME_TYPE, "application/pdf")
-            put(RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/FOHBible")
+            put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+            put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/FOHBible")
         }
 
         val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
@@ -149,7 +145,7 @@ suspend fun saveCanvasAsPDF(
                 resolver.openOutputStream(uri).use { pdfDocument.writeTo(it) }
             }
             withContext(Dispatchers.Main) {
-                makeText(context, "PDF saved to Downloads/FOHBible", LENGTH_LONG).show()
+                Toast.makeText(context, "PDF saved to Downloads/FOHBible", Toast.LENGTH_LONG).show()
             }
         } else {
             throw Exception("Failed to create MediaStore entry.")
@@ -158,7 +154,7 @@ suspend fun saveCanvasAsPDF(
         pdfDocument.close()
     } catch (_: Exception) {
         withContext(Dispatchers.Main) {
-            makeText(context, "Failed to save PDF", LENGTH_SHORT).show()
+            Toast.makeText(context, "Failed to save PDF", Toast.LENGTH_SHORT).show()
         }
     }
 }
@@ -171,20 +167,26 @@ suspend fun saveCanvasAsSVG(
 ) {
     try {
         val bitmap = graphicsLayer.toImageBitmap().asAndroidBitmap()
-        val width = bitmap.width
-        val height = bitmap.height
+        val bitmapWidth = bitmap.width
+        val bitmapHeight = bitmap.height
+        val density = context.resources.displayMetrics.density
+        val canvasDpWidth = bitmapWidth / density
+        val canvasDpHeight = bitmapHeight / density
+        val scaleDownFactor = 1f / density
 
         val allShapes = canvasNotes != null && canvasNotes.all { it.content.startsWith("Shape:") }
 
         val svgContent = if (allShapes) {
-            buildVectorSvg(width, height, canvasNotes)
+            buildVectorSvg(canvasNotes, canvasDpWidth, canvasDpHeight, scaleDownFactor)
         } else {
             val outputStream = ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
             val base64String = Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
             """
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $width $height" width="$width" height="$height">
-                    <image width="$width" height="$height" href="data:image/png;base64,$base64String" />
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $canvasDpWidth $canvasDpHeight" width="$canvasDpWidth" height="$canvasDpHeight">
+                    <g transform="scale($scaleDownFactor)">
+                        <image width="$bitmapWidth" height="$bitmapHeight" href="data:image/png;base64,$base64String" />
+                    </g>
                 </svg>
             """.trimIndent()
         }
@@ -192,9 +194,9 @@ suspend fun saveCanvasAsSVG(
         val fileName = "foh_canvas_${System.currentTimeMillis()}.svg"
         val resolver = context.contentResolver
         val contentValues = ContentValues().apply {
-            put(DISPLAY_NAME, fileName)
-            put(MIME_TYPE, "image/svg+xml")
-            put(RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/FOHBible")
+            put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+            put(MediaStore.MediaColumns.MIME_TYPE, "image/svg+xml")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/FOHBible")
         }
         val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
         if (uri != null) {
@@ -204,35 +206,44 @@ suspend fun saveCanvasAsSVG(
                 }
             }
             withContext(Dispatchers.Main) {
-                makeText(context, "SVG saved to Downloads/FOHBible", LENGTH_LONG).show()
+                Toast.makeText(context, "SVG saved to Downloads/FOHBible", Toast.LENGTH_LONG).show()
             }
         } else {
             throw Exception("Failed to create MediaStore entry.")
         }
     } catch (_: Exception) {
         withContext(Dispatchers.Main) {
-            makeText(context, "Failed to save SVG", LENGTH_SHORT).show()
+            Toast.makeText(context, "Failed to save SVG", Toast.LENGTH_SHORT).show()
         }
     }
 }
 
-private fun buildVectorSvg(canvasWidth: Int, canvasHeight: Int, notes: List<CanvasNote>): String {
+private fun buildVectorSvg(
+    notes: List<CanvasNote>,
+    canvasWidth: Float,
+    canvasHeight: Float,
+    scale: Float
+): String {
     val sb = StringBuilder()
-    sb.append("""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $canvasWidth $canvasHeight" width="$canvasWidth" height="$canvasHeight">""")
+    sb.append(
+        """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $canvasWidth $canvasHeight" width="$canvasWidth" height="$canvasHeight">"""
+    )
     sb.append("\n  <rect width=\"100%\" height=\"100%\" fill=\"white\" />\n")
-    val g = StringBuilder("  <g>\n")
+
+    // Global scaling maps the internal layout pixels directly into the simplified layout DP canvas bounds
+    val g = StringBuilder("  <g transform=\"scale($scale)\">\n")
 
     for (note in notes) {
         if (!note.isVisible) continue
-        val x = note.offset.x
-        val y = note.offset.y
+        val adjustedX = note.offset.x
+        val adjustedY = note.offset.y
         val w = note.width
         val h = note.height
         val color = colorToHex(note.backgroundColor)
         val rotation = note.rotation
 
         val transform = buildString {
-            append("translate($x, $y)")
+            append("translate($adjustedX, $adjustedY)")
             if (rotation != 0f) {
                 append(" rotate($rotation, ${w / 2}, ${h / 2})")
             }
@@ -251,16 +262,18 @@ private fun buildVectorSvg(canvasWidth: Int, canvasHeight: Int, notes: List<Canv
 
 private fun buildShapeSvg(note: CanvasNote, w: Float, h: Float, hexColor: String): String {
     val content = note.content.trim()
+    val alpha = note.backgroundColor.alpha
+
     return when {
         content.startsWith("Shape: Square") -> {
-            """<rect x="0" y="0" width="$w" height="$h" fill="$hexColor" />"""
+            """<rect x="0" y="0" width="$w" height="$h" fill="$hexColor" fill-opacity="$alpha" />"""
         }
         content.startsWith("Shape: Circle") -> {
-            """<ellipse cx="${w / 2}" cy="${h / 2}" rx="${w / 2}" ry="${h / 2}" fill="$hexColor" />"""
+            """<ellipse cx="${w / 2}" cy="${h / 2}" rx="${w / 2}" ry="${h / 2}" fill="$hexColor" fill-opacity="$alpha" />"""
         }
         content.startsWith("Shape: Triangle") -> {
-            val points = "${w / 2},0  $w,$h  0,$h"
-            """<polygon points="$points" fill="$hexColor" />"""
+            val points = "${w / 2},0 $w,$h 0,$h"
+            """<polygon points="$points" fill="$hexColor" fill-opacity="$alpha" />"""
         }
         content.startsWith("Shape: Pentagon") -> {
             val raw = getSerializedPointsForShape("Pentagon")
@@ -269,7 +282,7 @@ private fun buildShapeSvg(note: CanvasNote, w: Float, h: Float, hexColor: String
                 val (px, py) = pt.split(",").map { it.toFloat() }
                 "${px * w},${py * h}"
             }
-            """<polygon points="$pointsStr" fill="$hexColor" />"""
+            """<polygon points="$pointsStr" fill="$hexColor" fill-opacity="$alpha" />"""
         }
         content.startsWith("Shape: Line") || content.startsWith("Shape:CustomLine:") -> {
             val pointsData = if (content.startsWith("Shape: Line")) {
@@ -280,7 +293,7 @@ private fun buildShapeSvg(note: CanvasNote, w: Float, h: Float, hexColor: String
             val segments = pointsData.split(";").filter { it.isNotEmpty() }
             if (segments.size >= 2) {
                 val d = buildPathD(segments, w, h, close = false)
-                """<path d="$d" fill="none" stroke="$hexColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />"""
+                """<path d="$d" fill="none" stroke="$hexColor" stroke-opacity="$alpha" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />"""
             } else ""
         }
         content.startsWith("Shape:CustomPolygon:") -> {
@@ -288,7 +301,7 @@ private fun buildShapeSvg(note: CanvasNote, w: Float, h: Float, hexColor: String
             val segments = serialized.split(";").filter { it.isNotEmpty() }
             if (segments.size >= 2) {
                 val d = buildPathD(segments, w, h, close = true)
-                """<path d="$d" fill="$hexColor" stroke="$hexColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />"""
+                """<path d="$d" fill="$hexColor" fill-opacity="$alpha" stroke="$hexColor" stroke-opacity="$alpha" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />"""
             } else ""
         }
         else -> ""
@@ -326,19 +339,18 @@ private fun buildPathD(segments: List<String>, w: Float, h: Float, close: Boolea
     }
 
     val d = StringBuilder()
-    d.append("M ${parsed[0].anchor.x} ${parsed[0].anchor.y} ")
+    d.append("M ${parsed[0].anchor.x},${parsed[0].anchor.y} ")
 
     for (i in 1 until parsed.size) {
         val prev = parsed[i - 1]
         val curr = parsed[i]
 
         if (prev.handleOut != null && curr.handleIn != null) {
-            d.append("C ${prev.handleOut.x} ${prev.handleOut.y}, ${curr.handleIn.x} ${curr.handleIn.y}, ${curr.anchor.x} ${curr.anchor.y} ")
+            d.append("C ${prev.handleOut.x},${prev.handleOut.y} ${curr.handleIn.x},${curr.handleIn.y} ${curr.anchor.x},${curr.anchor.y} ")
         } else if (curr.handleIn != null) {
-            d.append("Q ${curr.handleIn.x} ${curr.handleIn.y}, ${curr.anchor.x} ${curr.anchor.y} ")
+            d.append("Q ${curr.handleIn.x},${curr.handleIn.y} ${curr.anchor.x},${curr.anchor.y} ")
         } else {
-            // Line to
-            d.append("L ${curr.anchor.x} ${curr.anchor.y} ")
+            d.append("L ${curr.anchor.x},${curr.anchor.y} ")
         }
     }
 
@@ -364,9 +376,9 @@ fun getGroupBoundingBox(notes: List<CanvasNote>): BoundingBox? {
 }
 
 private fun colorToHex(color: Color): String {
-    val red = (color.red * 255).toInt()
-    val green = (color.green * 255).toInt()
-    val blue = (color.blue * 255).toInt()
+    val red = (color.red * 255).roundToInt().coerceIn(0, 255)
+    val green = (color.green * 255).roundToInt().coerceIn(0, 255)
+    val blue = (color.blue * 255).roundToInt().coerceIn(0, 255)
     return String.format("#%02X%02X%02X", red, green, blue)
 }
 
@@ -401,18 +413,14 @@ fun getElementDisplayName(
 
     val category = when {
         note.content.startsWith("Image:") -> "Image"
-
         note.content.startsWith("Shape: Square") -> "Square"
         note.content.startsWith("Shape: Circle") -> "Circle"
         note.content.startsWith("Shape: Triangle") -> "Triangle"
         note.content.startsWith("Shape: Pentagon") -> "Pentagon"
-
         note.content.startsWith("Shape: Line") -> "Line"
         note.content.startsWith("Shape:CustomPolygon:") -> "Custom Polygon"
         note.content.startsWith("Shape:CustomLine:") -> "Custom Line"
-
         note.content.startsWith("Shape:") -> "Shape"
-
         else -> "Text"
     }
 

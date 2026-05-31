@@ -59,7 +59,7 @@ fun CanvasArea(
             .clipToBounds()
             .background(if (isDark) Color(0xFF1E2937) else themeColors.primary.copy(0.1f), shape = MaterialTheme.shapes.medium)
             .pointerInput(Unit) {
-                detectTapGestures(onTap = {onClearSelection()})
+                detectTapGestures(onTap = { onClearSelection() })
             }
     ) {
         Box(

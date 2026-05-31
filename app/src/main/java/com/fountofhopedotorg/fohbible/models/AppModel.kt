@@ -326,15 +326,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         if (noteIds.size < 2) return
 
         val groupId = "group_${UUID.randomUUID().toString().take(8)}"
-        for (i in canvasNotes.indices) {
-            if (noteIds.contains(canvasNotes[i].id)) {
-                val note = canvasNotes[i]
-                canvasNotes[i] = note.copy(
-                    groupId = groupId,
-                    customName = note.customName ?: getElementDisplayName(note, i, canvasNotes)
-                )
-            }
+        val groupedNotes = canvasNotes.filter { it.id in noteIds }.map { note ->
+            val originalIndex = canvasNotes.indexOf(note)
+            note.copy(
+                groupId = groupId,
+                customName = note.customName ?: getElementDisplayName(note, originalIndex, canvasNotes)
+            )
         }
+        canvasNotes.removeAll { it.id in noteIds }
+        canvasNotes.addAll(0, groupedNotes)
     }
 
     fun ungroupNotes(noteIds: Set<String>) {
