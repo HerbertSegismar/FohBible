@@ -5,66 +5,61 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowRight
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.fountofhopedotorg.fohbible.composables.*
-import com.fountofhopedotorg.fohbible.data.*
-import com.fountofhopedotorg.fohbible.functions.*
+import com.fountofhopedotorg.fohbible.composables.ColorWheelDialog
+import com.fountofhopedotorg.fohbible.composables.CustomPolygonDialog
+import com.fountofhopedotorg.fohbible.data.CanvasNote
+import com.fountofhopedotorg.fohbible.data.DatabaseHelper
+import com.fountofhopedotorg.fohbible.data.ReferenceResult
+import com.fountofhopedotorg.fohbible.data.ThemeColors
+import com.fountofhopedotorg.fohbible.data.fetchByReference
+import com.fountofhopedotorg.fohbible.functions.buildReferenceString
+import com.fountofhopedotorg.fohbible.functions.getElementDisplayName
+import com.fountofhopedotorg.fohbible.functions.getRandomColor
+import com.fountofhopedotorg.fohbible.functions.getSerializedPointsForShape
+import com.fountofhopedotorg.fohbible.functions.saveCanvasAsImage
+import com.fountofhopedotorg.fohbible.functions.saveCanvasAsPDF
+import com.fountofhopedotorg.fohbible.functions.saveCanvasAsSVG
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
-@OptIn(ExperimentalMaterial3Api::class)
+
 @RequiresApi(Build.VERSION_CODES.Q)
 @Composable
 fun GraphicalNotesScreen() {
@@ -86,7 +81,6 @@ fun GraphicalNotesScreen() {
     var editRotation by rememberSaveable { mutableStateOf("") }
     var editPropertiesNoteId by rememberSaveable { mutableStateOf<String?>(null) }
     var editColorForDialog by remember { mutableStateOf(Color.White) }
-    var showEditColorPicker by remember { mutableStateOf(false) }
 
     var showCustomPolygonDialog by rememberSaveable { mutableStateOf(false) }
     var selectedNoteId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -116,7 +110,6 @@ fun GraphicalNotesScreen() {
     val dbHelper = remember(viewModel.currentDbName) {
         DatabaseHelper(context, viewModel.currentDbName)
     }
-
     DisposableEffect(dbHelper) {
         onDispose { dbHelper.close() }
     }
@@ -124,7 +117,6 @@ fun GraphicalNotesScreen() {
     val verseProcessor = remember { VerseTextProcessor() }
     val theme = LocalAppTheme.current
     val isDark = theme.darkTheme
-
     val themeColors = remember(isDark, theme.primaryColor, viewModel.wordsOfJesus) {
         ThemeColors(
             textColor = if (isDark) Color.White else Color.Black,
@@ -148,6 +140,7 @@ fun GraphicalNotesScreen() {
             .map { it.groupId!! }
             .toSet()
     }
+
     fun toggleGroupSelection(note: CanvasNote) {
         val groupId = note.groupId
         if (groupId != null) {
@@ -178,6 +171,11 @@ fun GraphicalNotesScreen() {
         }
     }
 
+    fun onSingleSelect(note: CanvasNote) {
+        selectedNoteId = note.id
+        selectedNoteIds = emptySet()
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -185,845 +183,201 @@ fun GraphicalNotesScreen() {
             .verticalScroll(mainScrollState)
     ) {
         Spacer(Modifier.height(16.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val modes = listOf(
-                Triple("Add Text", Icons.Default.TextFields, "Add Text"),
-                Triple("Fetch Verse", Icons.Default.Book, "Fetch Verse"),
-                Triple("Add SVG", Icons.Default.FormatShapes, "Add SVG"),
-                Triple("Add Image", Icons.Default.Image, "Add Image")
-            )
 
-            modes.forEach { (mode, icon, desc) ->
-                val isSelected = selectedInputMode == mode
-                IconButton(
-                    onClick = { selectedInputMode = mode },
-                    modifier = Modifier
-                        .padding(horizontal = 8.dp)
-                        .background(
-                            color = if (isSelected) themeColors.primary.copy(alpha = 0.2f) else Color.Transparent,
-                            shape = CircleShape
-                        )
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = desc,
-                        tint = if (isSelected) themeColors.primary else themeColors.textColor.copy(alpha = 0.6f)
-                    )
-                }
-            }
-        }
+        InputModeSelector(
+            selectedInputMode = selectedInputMode,
+            onModeSelected = { selectedInputMode = it },
+            themeColors = themeColors
+        )
 
         Spacer(Modifier.height(16.dp))
 
         when (selectedInputMode) {
-            "Add Text" -> {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = themeColors.primary.copy(alpha = 0.05f))
-                ) {
-                    Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                            OutlinedTextField(
-                                value = currentText,
-                                onValueChange = { currentText = it },
-                                label = { Text("Enter text") },
-                                modifier = Modifier.weight(1f),
-                                singleLine = true
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Button(onClick = {
-                                if (currentText.isNotBlank()) {
-                                    viewModel.addToCanvas(CanvasNote(content = currentText))
-                                    currentText = ""
-                                }
-                            }) { Text("Add", color = Color.White) }
+            "Add Text" -> AddTextSection(
+                currentText = currentText,
+                onTextChange = { currentText = it },
+                onAdd = {
+                    if (currentText.isNotBlank()) {
+                        viewModel.addToCanvas(CanvasNote(content = currentText))
+                        currentText = ""
+                    }
+                },
+                themeColors = themeColors
+            )
+            "Fetch Verse" -> FetchVerseSection(
+                referenceInput = referenceInput,
+                onReferenceChange = { referenceInput = it },
+                fetchError = fetchError,
+                onFetch = {
+                    fetchError = null
+                    when (val result = fetchByReference(referenceInput, dbHelper)) {
+                        is ReferenceResult.Single -> {
+                            viewModel.fetchedVerses = listOf(result.verse)
+                            viewModel.currentReference = buildReferenceString(result.bookName, result.verse.chapter, result.verse.verseNumber, null)
+                        }
+                        is ReferenceResult.Range -> {
+                            viewModel.fetchedVerses = result.verses
+                            val first = result.verses.first()
+                            val last = result.verses.last()
+                            viewModel.currentReference = buildReferenceString(result.bookName, first.chapter, first.verseNumber, last.verseNumber)
+                        }
+                        is ReferenceResult.Chapter -> {
+                            viewModel.fetchedVerses = result.verses
+                            val first = result.verses.first()
+                            viewModel.currentReference = buildReferenceString(result.bookName, first.chapter, null, null)
+                        }
+                        ReferenceResult.Invalid -> {
+                            viewModel.fetchedVerses = emptyList()
+                            viewModel.currentReference = ""
+                            fetchError = "Invalid reference or verse not found"
                         }
                     }
-                    }
-            }
-
-            "Fetch Verse" -> {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = themeColors.primary.copy(alpha = 0.05f))
-                ) {
-                    Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                            OutlinedTextField(
-                                value = referenceInput,
-                                onValueChange = { referenceInput = it },
-                                label = { Text("Reference (e.g., John 3:16)") },
-                                modifier = Modifier.weight(1f),
-                                singleLine = true,
-                                isError = fetchError != null
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Button(onClick = {
-                                fetchError = null
-                                when (val result = fetchByReference(referenceInput, dbHelper)) {
-                                    is ReferenceResult.Single -> {
-                                        viewModel.fetchedVerses = listOf(result.verse)
-                                        viewModel.currentReference = buildReferenceString(result.bookName, result.verse.chapter, result.verse.verseNumber, null)
-                                    }
-                                    is ReferenceResult.Range -> {
-                                        viewModel.fetchedVerses = result.verses
-                                        val first = result.verses.first()
-                                        val last = result.verses.last()
-                                        viewModel.currentReference = buildReferenceString(result.bookName, first.chapter, first.verseNumber, last.verseNumber)
-                                    }
-                                    is ReferenceResult.Chapter -> {
-                                        viewModel.fetchedVerses = result.verses
-                                        val first = result.verses.first()
-                                        viewModel.currentReference = buildReferenceString(result.bookName, first.chapter, null, null)
-                                    }
-                                    ReferenceResult.Invalid -> {
-                                        viewModel.fetchedVerses = emptyList()
-                                        viewModel.currentReference = ""
-                                        fetchError = "Invalid reference or verse not found"
-                                    }
-                                }
-                            }) { Text("Fetch", color = Color.White) }
-                        }
-
-                        if (fetchError != null) {
-                            Text(fetchError!!, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 4.dp))
-                        }
-
-                        if (viewModel.fetchedVerses.isNotEmpty()) {
-                            Spacer(Modifier.height(12.dp))
-                            Text("Fetched Verses:", style = MaterialTheme.typography.titleSmall)
-
-                            Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                                Column {
-                                    Box(modifier = Modifier.fillMaxWidth().background(themeColors.primary.copy(alpha = 0.15f)).padding(12.dp)) {
-                                        Text(viewModel.currentReference, style = MaterialTheme.typography.titleMedium, color = themeColors.primary, fontWeight = FontWeight.Bold)
-                                    }
-
-                                    Column(modifier = Modifier.fillMaxWidth().heightIn(max = 280.dp).verticalScroll(rememberScrollState()).padding(12.dp)) {
-                                        viewModel.fetchedVerses.forEach { verse ->
-                                            val processed = verseProcessor.processVerse(
-                                                verseText = verse.text,
-                                                baseFontSize = 16.sp,
-                                                themeColors = themeColors,
-                                                isOldTestament = viewModel.isOldTestament,
-                                                options = ProcessingOptions(showHeaders = false)
-                                            )
-                                            Text(
-                                                buildAnnotatedString {
-                                                    withStyle(SpanStyle(color = themeColors.verseNumber)) { append("${verse.verseNumber} ") }
-                                                    append(processed.body)
-                                                },
-                                                modifier = Modifier.padding(vertical = 4.dp)
-                                            )
-                                        }
-                                    }
-
-                                    Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.Center) {
-                                        val passage = remember(viewModel.currentReference, viewModel.fetchedVerses, themeColors) {
-                                            buildPassageText(viewModel.currentReference, viewModel.fetchedVerses, verseProcessor, themeColors, viewModel)
-                                        }
-                                        Button(onClick = {
-                                            if (passage.isNotBlank()) viewModel.addToCanvas(CanvasNote(content = passage))
-                                        }, modifier = Modifier.weight(1f)) {
-                                            Text("Add to Canvas")
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            "Add SVG" -> {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = themeColors.primary.copy(alpha = 0.05f))
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Tap a shape to add to canvas:",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = themeColors.textColor
-                        )
-                        Spacer(Modifier.height(12.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            val pentagonPoints = listOf(
-                                Offset(0.5f, 0f),
-                                Offset(1f, 0.4f),
-                                Offset(0.8f, 0.9f),
-                                Offset(0.2f, 0.9f),
-                                Offset(0f, 0.4f)
-                            )
-                            ShapeSelectionCard(
-                                modifier = Modifier.weight(1f),
-                                onClick = { viewModel.addToCanvas(CanvasNote(content = "Shape: Square", backgroundColor = getRandomColor())) }
-                            ) {
-                                SquareShape(modifier = Modifier.size(25.dp))
-                            }
-                            ShapeSelectionCard(
-                                modifier = Modifier.weight(1f),
-                                onClick = { viewModel.addToCanvas(CanvasNote(content = "Shape: Circle", backgroundColor = getRandomColor())) }
-                            ) {
-                                CircleShape(modifier = Modifier.size(25.dp))
-                            }
-                            ShapeSelectionCard(
-                                modifier = Modifier.weight(1f),
-                                onClick = { viewModel.addToCanvas(CanvasNote(content = "Shape: Triangle", backgroundColor = getRandomColor())) }
-                            ) {
-                                TriangleShape(modifier = Modifier.size(25.dp))
-                            }
-                            ShapeSelectionCard(
-                                modifier = Modifier.weight(1f),
-                                onClick = { viewModel.addToCanvas(CanvasNote(content = "Shape: Pentagon", backgroundColor = getRandomColor())) }
-                            ) {
-                                PolygonShape(
-                                    points = pentagonPoints,
-                                    modifier = Modifier.size(26.dp)
-                                )
-                            }
-                            ShapeSelectionCard(
-                                modifier = Modifier.weight(1f),
-                                onClick = { viewModel.addToCanvas(CanvasNote(content = "Shape: Line", backgroundColor = getRandomColor())) }
-                            ) {
-                                LineShape(modifier = Modifier.size(18.dp).padding(top = 6.dp))
-                            }
-                            ShapeSelectionCard(
-                                modifier = Modifier.weight(1f),
-                                onClick = {
-                                    polygonNoteToEditId = null
-                                    initialPolygonString = ""
-                                    initialIsLineMode = false
-                                    showCustomPolygonDialog = true
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.ShapeLine,
-                                    contentDescription = "Custom Polygon",
-                                    modifier = Modifier.size(25.dp),
-                                    tint = getRandomColor().copy(0.8f)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            "Add Image" -> {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = themeColors.primary.copy(alpha = 0.05f))
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp).fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "Load an image from your device:",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = themeColors.textColor
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        Button(onClick = { imagePickerLauncher.launch("image/*") }) {
-                            Icon(Icons.Default.PhotoLibrary, contentDescription = "Gallery", tint = Color.White)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Choose from Gallery", color = Color.White)
-                        }
-                    }
-                }
-            }
-        }
-
-        Spacer(Modifier.height(20.dp))
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { showCanvasElementsTree = !showCanvasElementsTree }
-                .padding(vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text("Canvas Elements", style = MaterialTheme.typography.titleMedium)
-            Icon(
-                imageVector = if (showCanvasElementsTree) Icons.Default.ArrowDropDown else Icons.AutoMirrored.Filled.ArrowRight,
-                contentDescription = if (showCanvasElementsTree) "Collapse" else "Expand",
-                tint = themeColors.textColor
+                },
+                fetchedVerses = viewModel.fetchedVerses,
+                currentReference = viewModel.currentReference,
+                themeColors = themeColors,
+                viewModel = viewModel,
+                verseProcessor = verseProcessor
+            )
+            "Add SVG" -> AddSvgSection(
+                onAddShape = { shape ->
+                    val color = getRandomColor()
+                    viewModel.addToCanvas(CanvasNote(content = "Shape: $shape", backgroundColor = color))
+                },
+                onCustomPolygon = {
+                    polygonNoteToEditId = null
+                    initialPolygonString = ""
+                    initialIsLineMode = false
+                    showCustomPolygonDialog = true
+                },
+                themeColors = themeColors
+            )
+            "Add Image" -> AddImageSection(
+                onChooseFromGallery = { imagePickerLauncher.launch("image/*") },
+                themeColors = themeColors
             )
         }
 
-        AnimatedVisibility(visible = showCanvasElementsTree) {
-            Column {
-                if (viewModel.canvasNotes.isEmpty()) {
-                    Text(
-                        "No elements on canvas yet.",
-                        modifier = Modifier.padding(vertical = 8.dp),
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                    )
-                } else {
-                    var draggedIndex by remember { mutableStateOf<Int?>(null) }
-                    var dragOffset by remember { mutableFloatStateOf(0f) }
-                    val density = LocalDensity.current
-                    val itemHeightPx = remember(density) { with(density) { 56.dp.toPx() } }
+        Spacer(Modifier.height(20.dp))
 
-                    val listState = rememberLazyListState()
-
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.heightIn(max = 500.dp)
-                    ) {
-                        itemsIndexed(
-                            viewModel.canvasNotes,
-                            key = { _, note -> note.id }
-                        ) { index, note ->
-                            val isSelected = selectedNoteId == note.id
-                            val density = LocalDensity.current
-                            val maxDragRangeDp = 28.dp
-                            val maxDragRangePx = with(density) { maxDragRangeDp.toPx() }
-                            val triggerThresholdPx = maxDragRangePx * 0.8f
-
-                            val uniqueKey = viewModel.canvasNotes.getOrNull(index)?.hashCode() ?: index
-                            val offsetY = remember(uniqueKey) { Animatable(0f) }
-                            val isUpEnabled = index > 0
-                            val isDownEnabled = index < viewModel.canvasNotes.size - 1
-
-                            val currentApplyIndex by rememberUpdatedState(index)
-                            val currentIsUpEnabled by rememberUpdatedState(isUpEnabled)
-                            val currentIsDownEnabled by rememberUpdatedState(isDownEnabled)
-
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp)
-                                    .animateItem()
-                                    .graphicsLayer {
-                                        if (draggedIndex == index) {
-                                            translationY = dragOffset
-                                        }
-                                    }
-                                    .pointerInput(note.id) {
-                                        detectTapGestures {
-                                            selectedNoteId = note.id
-                                            selectedNoteIds = setOf(note.id)
-                                        }
-                                    }
-                                    .pointerInput(note.id) {
-                                        detectDragGesturesAfterLongPress(
-                                            onDragStart = { offset ->
-                                                val currentIndex = viewModel.canvasNotes.indexOfFirst { it.id == note.id }
-                                                if (currentIndex == -1) return@detectDragGesturesAfterLongPress
-                                                draggedIndex = currentIndex
-                                                dragOffset = offset.y
-                                            },
-                                            onDrag = { change, dragAmount ->
-                                                change.consume()
-                                                dragOffset += dragAmount.y
-                                            },
-                                            onDragEnd = {
-                                                val fromIndex = draggedIndex ?: return@detectDragGesturesAfterLongPress
-                                                val currentIndex = viewModel.canvasNotes.indexOfFirst { it.id == note.id }
-                                                if (currentIndex == -1 || fromIndex != currentIndex) {
-                                                    draggedIndex = null
-                                                    dragOffset = 0f
-                                                    return@detectDragGesturesAfterLongPress
-                                                }
-                                                val target = (fromIndex + (dragOffset / itemHeightPx).roundToInt())
-                                                    .coerceIn(0, viewModel.canvasNotes.size - 1)
-                                                if (target != fromIndex) {
-                                                    viewModel.reorderCanvasNotes(fromIndex, target)
-                                                }
-                                                draggedIndex = null
-                                                dragOffset = 0f
-                                            },
-                                            onDragCancel = {
-                                                draggedIndex = null
-                                                dragOffset = 0f
-                                            }
-                                        )
-                                    },
-                                colors = CardDefaults.cardColors(
-                                    containerColor = if (isSelected)
-                                        themeColors.primary.copy(alpha = 0.15f)
-                                    else
-                                        MaterialTheme.colorScheme.surface
-                                )
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(32.dp)
-                                            .clickable(
-                                                interactionSource = remember { MutableInteractionSource() },
-                                                indication = null
-                                            ) {
-                                                toggleGroupSelection(note)
-                                            }.then(
-                                                if (selectedNoteIds.contains(note.id)) {
-                                                    Modifier.border(
-                                                        width = 2.dp,
-                                                        color = themeColors.primary,
-                                                        shape = RoundedCornerShape(6.dp)
-                                                    )
-                                                } else {
-                                                    Modifier
-                                                }
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        when {
-                                            note.content.startsWith("Shape:") -> {
-                                                val shapeContent = note.content.removePrefix("Shape:").removePrefix(" ").trim()
-                                                val shapeColor = note.backgroundColor
-
-                                                when {
-                                                    shapeContent.startsWith("Square") -> SquareShape(modifier = Modifier.size(18.dp), color = shapeColor)
-                                                    shapeContent.startsWith("Circle") -> CircleShape(modifier = Modifier.size(18.dp), color = shapeColor)
-                                                    shapeContent.startsWith("Triangle") -> TriangleShape(modifier = Modifier.size(18.dp), color = shapeColor)
-                                                    shapeContent.startsWith("Pentagon") -> PolygonShape(
-                                                        points = listOf(
-                                                            Offset(0.5f, 0f), Offset(1f, 0.4f), Offset(0.8f, 0.9f),
-                                                            Offset(0.2f, 0.9f), Offset(0f, 0.4f)
-                                                        ),
-                                                        modifier = Modifier.size(18.dp),
-                                                        color = shapeColor
-                                                    )
-                                                    shapeContent.startsWith("Line") -> LineShape(modifier = Modifier.size(18.dp), color = shapeColor)
-
-                                                    shapeContent.startsWith("CustomLine:") -> {
-                                                        val pointsData = shapeContent.removePrefix("CustomLine:")
-                                                        CustomPathPreview(
-                                                            pointsData = pointsData,
-                                                            isClosed = false,
-                                                            color = shapeColor,
-                                                            modifier = Modifier.size(18.dp)
-                                                        )
-                                                    }
-                                                    shapeContent.startsWith("CustomPolygon:") -> {
-                                                        val pointsData = shapeContent.removePrefix("CustomPolygon:")
-                                                        CustomPathPreview(
-                                                            pointsData = pointsData,
-                                                            isClosed = true,
-                                                            color = shapeColor,
-                                                            modifier = Modifier.size(18.dp)
-                                                        )
-                                                    }
-                                                    else -> Icon(Icons.Default.ShapeLine, null, modifier = Modifier.size(18.dp), tint = shapeColor)
-                                                }
-                                            }
-                                            note.content.startsWith("Image:") -> Icon(Icons.Default.Image, null, modifier = Modifier.size(18.dp), tint = themeColors.primary)
-                                            else -> Icon(Icons.Default.TextFields, null, modifier = Modifier.size(18.dp), tint = themeColors.primary)
-                                        }
-                                    }
-
-                                    Spacer(Modifier.width(8.dp))
-
-                                    Text(
-                                        text = getElementDisplayName(note, index, viewModel.canvasNotes),
-                                        modifier = Modifier.weight(1f),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                    Box(
-                                        modifier = Modifier
-                                            .padding(horizontal = 8.dp)
-                                            .width(20.dp)
-                                            .height(36.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .width(4.dp)
-                                                .fillMaxHeight()
-                                                .background(
-                                                    color = themeColors.primary.copy(alpha = 0.2f),
-                                                    shape = CircleShape
-                                                )
-                                        )
-                                        Box(
-                                            modifier = Modifier
-                                                .offset { IntOffset(0, offsetY.value.roundToInt()) }
-                                                .size(20.dp)
-                                                .background(
-                                                    color = themeColors.primary.copy(alpha = 0.7f),
-                                                    shape = CircleShape
-                                                )
-                                                .pointerInput(uniqueKey) {
-                                                    detectDragGestures(
-                                                        onDrag = { change, dragAmount ->
-                                                            change.consume()
-                                                            coroutineScope.launch {
-                                                                val targetValue = offsetY.value + dragAmount.y
-                                                                val clampedValue = targetValue.coerceIn(-maxDragRangePx, maxDragRangePx)
-                                                                offsetY.snapTo(clampedValue)
-                                                            }
-                                                        },
-                                                        onDragEnd = {
-                                                            if (offsetY.value <= -triggerThresholdPx && currentIsUpEnabled) {
-                                                                viewModel.reorderCanvasNotes(currentApplyIndex, currentApplyIndex - 1)
-                                                            } else if (offsetY.value >= triggerThresholdPx && currentIsDownEnabled) {
-                                                                viewModel.reorderCanvasNotes(currentApplyIndex, currentApplyIndex + 1)
-                                                            }
-                                                            coroutineScope.launch {
-                                                                offsetY.animateTo(
-                                                                    targetValue = 0f,
-                                                                    animationSpec = spring(
-                                                                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                                                                        stiffness = Spring.StiffnessMedium
-                                                                    )
-                                                                )
-                                                            }
-                                                        },
-                                                        onDragCancel = {
-                                                            coroutineScope.launch {
-                                                                offsetY.animateTo(0f, spring())
-                                                            }
-                                                        }
-                                                    )
-                                                },
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(6.dp)
-                                                    .background(Color.White, CircleShape)
-                                            )
-                                        }
-                                    }
-                                    IconButton(
-                                        onClick = { viewModel.toggleVisibility(note.id) },
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = if (note.isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                            contentDescription = if (note.isVisible) "Hide Element" else "Show Element",
-                                            tint = if (note.isVisible) themeColors.primary else Color.Gray,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                    IconButton(
-                                        onClick = { viewModel.toggleLock(note.id) },
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = if (note.isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
-                                            contentDescription = if (note.isLocked) "Unlock Element" else "Lock Element",
-                                            tint = if (note.isLocked) Color.Gray else themeColors.primary,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                    IconButton(
-                                        onClick = {
-                                            if (note.content.startsWith("Shape:")) {
-                                                val content = note.content.trim()
-
-                                                when {
-                                                    content.startsWith("Shape:CustomPolygon:") -> {
-                                                        polygonNoteToEditId = note.id
-                                                        initialPolygonString = content.removePrefix("Shape:CustomPolygon:")
-                                                        initialIsLineMode = false
-                                                        showCustomPolygonDialog = true
-                                                    }
-
-                                                    content.startsWith("Shape:CustomLine:") -> {
-                                                        polygonNoteToEditId = note.id
-                                                        initialPolygonString = content.removePrefix("Shape:CustomLine:")
-                                                        initialIsLineMode = true
-                                                        showCustomPolygonDialog = true
-                                                    }
-
-                                                    content.startsWith("Shape: Line") || content == "Shape: Line" -> {
-                                                        polygonNoteToEditId = note.id
-                                                        initialPolygonString = getSerializedPointsForShape("Line")
-                                                        initialIsLineMode = true
-                                                        showCustomPolygonDialog = true
-                                                    }
-
-                                                    else -> {
-                                                        val shapeType = content.removePrefix("Shape:").trim()
-                                                        val prefilledPoints = getSerializedPointsForShape(shapeType)
-
-                                                        if (prefilledPoints.isNotEmpty()) {
-                                                            polygonNoteToEditId = note.id
-                                                            initialPolygonString = prefilledPoints
-                                                            initialIsLineMode = false
-                                                            showCustomPolygonDialog = true
-                                                        } else {
-                                                            noteToEdit = note.id
-                                                            editedNoteText = content
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            else {
-                                                noteToEdit = note.id
-                                                editedNoteText = note.content
-                                            }
-                                        },
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Edit,
-                                            contentDescription = "Edit",
-                                            tint = themeColors.primary,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                    IconButton(
-                                        onClick = { viewModel.addToCanvas(CanvasNote(content = note.content)) },
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.ContentCopy,
-                                            contentDescription = "Duplicate",
-                                            tint = themeColors.primary,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                    IconButton(
-                                        onClick = {
-                                            val idx = viewModel.canvasNotes.indexOf(note)
-                                            if (idx != -1) viewModel.removeFromCanvas(idx)
-                                            if (selectedNoteId == note.id) selectedNoteId = null
-                                        },
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Delete,
-                                            contentDescription = "Delete",
-                                            tint = MaterialTheme.colorScheme.error,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
+        CanvasElementsPanel(
+            viewModel = viewModel,
+            selectedNoteIds = selectedNoteIds,
+            selectedNoteId = selectedNoteId,
+            showTree = showCanvasElementsTree,
+            onToggleTree = { showCanvasElementsTree = !showCanvasElementsTree },
+            onSingleSelect = { onSingleSelect(it) },
+            onNoteTap = { onCanvasNoteTap(it) },
+            onToggleGroupSelection = { toggleGroupSelection(it) },
+            onEditNote = { note ->
+                noteToEdit = note.id
+                editedNoteText = note.content
+            },
+            onCustomPolygonEdit = { note ->
+                val content = note.content.trim()
+                when {
+                    content.startsWith("Shape:CustomPolygon:") -> {
+                        polygonNoteToEditId = note.id
+                        initialPolygonString = content.removePrefix("Shape:CustomPolygon:")
+                        initialIsLineMode = false
+                        showCustomPolygonDialog = true
                     }
-                    AnimatedVisibility(visible = selectedNoteIds.isNotEmpty()) {
-                        val hasGroupSelection = viewModel.canvasNotes.any {
-                            it.groupId != null && it.id in selectedNoteIds
-                        }
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceEvenly,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconButton(
-                                onClick = {
-                                    if (selectedNoteIds.size > 1) {
-                                        groupName = "Group ${selectedNoteIds.size}"
-                                        showGroupDialog = true
-                                    }
-                                },
-                                enabled = selectedNoteIds.size > 1
-                            ) {
-                                Icon(Icons.Default.Group, contentDescription = "Group")
-                            }
-                            IconButton(
-                                onClick = {
-                                    viewModel.ungroupNotes(selectedNoteIds)
-                                    selectedNoteIds = emptySet()
-                                },
-                                enabled = hasGroupSelection
-                            ) {
-                                Icon(Icons.Default.GroupRemove, contentDescription = "Ungroup")
-                            }
-
-                            IconButton(
-                                onClick = {
-                                    if (selectedNoteIds.size == 1) {
-                                        val targetId = selectedNoteIds.first()
-                                        val note = viewModel.canvasNotes.find { it.id == targetId }
-                                        if (note != null) {
-                                            noteToRenameId = targetId
-                                            renameText = getElementDisplayName(note, viewModel.canvasNotes.indexOf(note), viewModel.canvasNotes)
-                                        }
-                                    }
-                                },
-                                enabled = selectedNoteIds.size == 1
-                            ) {
-                                Icon(Icons.Default.DriveFileRenameOutline, contentDescription = "Rename")
-                            }
-
-                            IconButton(
-                                onClick = {
-                                    if (selectedNoteIds.size == 1) {
-                                        val targetId = selectedNoteIds.first()
-                                        val note = viewModel.canvasNotes.find { it.id == targetId }
-                                        if (note != null) {
-                                            editPropertiesNoteId = targetId
-                                            editX = note.offset.x.toString()
-                                            editY = note.offset.y.toString()
-                                            editWidth = note.width.toString()
-                                            editHeight = note.height.toString()
-                                            editRotation = note.rotation.toString()
-                                            editColorForDialog = note.backgroundColor
-                                            showEditPropertiesDialog = true
-                                        }
-                                    }
-                                },
-                                enabled = selectedNoteIds.size == 1
-                            ) {
-                                Icon(Icons.Default.Transform, contentDescription = "Edit Properties")
-                            }
-
-                            IconButton(onClick = { selectedNoteIds = emptySet() }) {
-                                Icon(Icons.Default.Close, contentDescription = "Close")
-                            }
+                    content.startsWith("Shape:CustomLine:") -> {
+                        polygonNoteToEditId = note.id
+                        initialPolygonString = content.removePrefix("Shape:CustomLine:")
+                        initialIsLineMode = true
+                        showCustomPolygonDialog = true
+                    }
+                    content.startsWith("Shape: Line") || content == "Shape: Line" -> {
+                        polygonNoteToEditId = note.id
+                        initialPolygonString = getSerializedPointsForShape("Line")
+                        initialIsLineMode = true
+                        showCustomPolygonDialog = true
+                    }
+                    else -> {
+                        val shapeType = content.removePrefix("Shape:").trim()
+                        val prefilledPoints = getSerializedPointsForShape(shapeType)
+                        if (prefilledPoints.isNotEmpty()) {
+                            polygonNoteToEditId = note.id
+                            initialPolygonString = prefilledPoints
+                            initialIsLineMode = false
+                            showCustomPolygonDialog = true
+                        } else {
+                            noteToEdit = note.id
+                            editedNoteText = content
                         }
                     }
                 }
-            }
-        }
+            },
+            onRename = { note ->
+                noteToRenameId = note.id
+                renameText = getElementDisplayName(note, viewModel.canvasNotes.indexOf(note), viewModel.canvasNotes)
+            },
+            onEditProperties = { note ->
+                editPropertiesNoteId = note.id
+                editX = note.offset.x.toString()
+                editY = note.offset.y.toString()
+                editWidth = note.width.toString()
+                editHeight = note.height.toString()
+                editRotation = note.rotation.toString()
+                editColorForDialog = note.backgroundColor
+                showEditPropertiesDialog = true
+            },
+            onToggleVisibility = { viewModel.toggleVisibility(it) },
+            onToggleLock = { viewModel.toggleLock(it) },
+            onDuplicate = { viewModel.addToCanvas(CanvasNote(content = it.content)) },
+            onDelete = {
+                val idx = viewModel.canvasNotes.indexOf(it)
+                if (idx != -1) viewModel.removeFromCanvas(idx)
+                if (selectedNoteId == it.id) selectedNoteId = null
+            },
+            onUngroup = { ids ->
+                viewModel.ungroupNotes(ids)
+                selectedNoteIds = emptySet()
+            },
+            onGroup = { name, ids ->
+                if (name.isNotBlank() && ids.isNotEmpty()) {
+                    viewModel.createGroup(ids, name)
+                    selectedNoteIds = emptySet()
+                    showGroupDialog = false
+                    groupName = ""
+                }
+            },
+            onClearSelection = { selectedNoteIds = emptySet() },
+            themeColors = themeColors,
+            density = LocalDensity.current
+        )
 
         Spacer(Modifier.height(16.dp))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(700.dp)
-                .clipToBounds()
-                .background(if (isDark) Color(0xFF1E2937) else themeColors.primary.copy(0.1f), shape = MaterialTheme.shapes.medium)
-                .pointerInput(Unit) {
-                    detectTapGestures(onTap = {
-                        selectedNoteId = null
-                        selectedNoteIds = emptySet()
-                        dragGroupDelta = Offset.Zero
-                    })
-                }
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .drawWithContent {
-                        graphicsLayer.record { this@drawWithContent.drawContent() }
-                        drawContent()
-                    }
-            ) {
-                viewModel.canvasNotes.forEach { note ->
-                    if (!note.isVisible) return@forEach
 
-                    key(note.id) {
-                        val isInSelectedGroup = note.groupId in selectedGroups
-                        Box(
-                            modifier = if (isInSelectedGroup) {
-                                Modifier.offset { IntOffset(dragGroupDelta.x.roundToInt(), dragGroupDelta.y.roundToInt()) }
-                            } else {
-                                Modifier
-                            }
-                        ) {
-                            when {
-                                note.content.startsWith("Shape:") -> CanvasSvgItem(
-                                    note = note,
-                                    isSelected = selectedNoteIds.contains(note.id),
-                                    isLocked = note.isLocked,
-                                    onSelect = { if (!note.isLocked) onCanvasNoteTap(note) },
-                                    onUpdatePosition = { offset, w, h ->
-                                        if (isInSelectedGroup) {
-                                            val newDelta = offset - note.offset
-                                            dragGroupDelta = newDelta
-                                        } else {
-                                            viewModel.updateNotePosition(note.id, offset, w, h)
-                                        }
-                                    },
-                                    onColorPickerRequested = {
-                                        if (!note.isLocked) {
-                                            noteToColorEditId = note.id
-                                            showColorPicker = true
-                                        }
-                                    },
-                                    onDeleteRequested = {
-                                        val idx = viewModel.canvasNotes.indexOfFirst { it.id == note.id }
-                                        if (idx != -1) viewModel.removeFromCanvas(idx)
-                                    }
-                                )
-                                note.content.startsWith("Image:") -> CanvasImageItem(
-                                    note = note,
-                                    isSelected = selectedNoteIds.contains(note.id),
-                                    isLocked = note.isLocked,
-                                    onSelect = { if (!note.isLocked) onCanvasNoteTap(note) },
-                                    onUpdatePosition = { offset, w, h ->
-                                        if (isInSelectedGroup) {
-                                            dragGroupDelta = offset - note.offset
-                                        } else {
-                                            viewModel.updateNotePosition(note.id, offset, w, h)
-                                        }
-                                    },
-                                    onDeleteRequested = {
-                                        val idx = viewModel.canvasNotes.indexOfFirst { it.id == note.id }
-                                        if (idx != -1) viewModel.removeFromCanvas(idx)
-                                    }
-                                )
-                                else -> CanvasTextItem(
-                                    note = note,
-                                    isSelected = selectedNoteIds.contains(note.id),
-                                    isLocked = note.isLocked,
-                                    onSelect = { if (!note.isLocked) onCanvasNoteTap(note) },
-                                    onUpdatePosition = { offset, w, h ->
-                                        if (isInSelectedGroup) {
-                                            dragGroupDelta = offset - note.offset
-                                        } else {
-                                            viewModel.updateNotePosition(note.id, offset, w, h)
-                                        }
-                                    },
-                                    onColorPickerRequested = {
-                                        if (!note.isLocked) {
-                                            noteToColorEditId = note.id
-                                            showColorPicker = true
-                                        }
-                                    },
-                                    onDeleteRequested = {
-                                        val idx = viewModel.canvasNotes.indexOfFirst { it.id == note.id }
-                                        if (idx != -1) viewModel.removeFromCanvas(idx)
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    selectedGroups.forEach { groupId ->
-                        val groupNotes = notesGrouped[groupId] ?: return@forEach
-                        val bbox = getGroupBoundingBox(groupNotes) ?: return@forEach
-                        val left = bbox.minX + dragGroupDelta.x
-                        val top = bbox.minY + dragGroupDelta.y
-                        val right = bbox.maxX + dragGroupDelta.x
-                        val bottom = bbox.maxY + dragGroupDelta.y
-                        val rect = Rect(left, top, right, bottom)
-
-                        drawRect(
-                            color = themeColors.primary.copy(alpha = 0.8f),
-                            topLeft = Offset(rect.left, rect.top),
-                            size = Size(rect.width, rect.height),
-                            style = Stroke(
-                                width = 2.dp.toPx(),
-                                pathEffect = PathEffect.dashPathEffect(
-                                    floatArrayOf(10f, 10f), 0f
-                                )
-                            )
-                        )
-                        val handleRadius = 6.dp.toPx()
-                        drawCircle(themeColors.primary, handleRadius, Offset(rect.left, rect.top))
-                        drawCircle(themeColors.primary, handleRadius, Offset(rect.right, rect.top))
-                        drawCircle(themeColors.primary, handleRadius, Offset(rect.left, rect.bottom))
-                        drawCircle(themeColors.primary, handleRadius, Offset(rect.right, rect.bottom))
-                    }
-                }
-            }
-        }
+        CanvasArea(
+            viewModel = viewModel,
+            selectedNoteIds = selectedNoteIds,
+            selectedNoteId = selectedNoteId,
+            selectedGroups = selectedGroups,
+            dragGroupDelta = dragGroupDelta,
+            onGroupDragDeltaChange = { dragGroupDelta = it },
+            onCanvasNoteTap = { onCanvasNoteTap(it) },
+            onNoteUpdatePosition = { note, offset, w, h ->
+                viewModel.updateNotePosition(note.id, offset, w, h)
+            },
+            onColorPickerRequested = {
+                noteToColorEditId = it
+                showColorPicker = true
+            },
+            onDeleteRequested = {
+                val idx = viewModel.canvasNotes.indexOfFirst { note -> note.id == it }
+                if (idx != -1) viewModel.removeFromCanvas(idx)
+            },
+            onClearSelection = {
+                selectedNoteIds = emptySet()
+                selectedNoteId = null
+            },
+            themeColors = themeColors,
+            isDark = isDark,
+            notesGrouped = notesGrouped,
+            graphicsLayer = graphicsLayer
+        )
 
         Spacer(Modifier.height(8.dp))
         Row(
@@ -1039,145 +393,68 @@ fun GraphicalNotesScreen() {
                     Spacer(Modifier.width(4.dp))
                     Icon(Icons.Default.ArrowDropDown, contentDescription = "Expand", tint = Color.White)
                 }
-
-                DropdownMenu(
+                SaveAsMenu(
                     expanded = showSaveMenu,
-                    onDismissRequest = { showSaveMenu = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("PNG") },
-                        onClick = {
-                            showSaveMenu = false
-                            coroutineScope.launch { saveCanvasAsImage(graphicsLayer, context, "PNG") }
+                    onDismiss = { showSaveMenu = false },
+                    onSavePng = { coroutineScope.launch { saveCanvasAsImage(graphicsLayer, context, "PNG") } },
+                    onSaveJpg = { coroutineScope.launch { saveCanvasAsImage(graphicsLayer, context, "JPG") } },
+                    onSavePdf = { coroutineScope.launch { saveCanvasAsPDF(graphicsLayer, context) } },
+                    onSaveSvg = {
+                        coroutineScope.launch {
+                            saveCanvasAsSVG(graphicsLayer, context, viewModel.canvasNotes)
                         }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("JPG") },
-                        onClick = {
-                            showSaveMenu = false
-                            coroutineScope.launch { saveCanvasAsImage(graphicsLayer, context, "JPG") }
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("PDF") },
-                        onClick = {
-                            showSaveMenu = false
-                            coroutineScope.launch { saveCanvasAsPDF(graphicsLayer, context) }
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("SVG") },
-                        onClick = {
-                            showSaveMenu = false
-                            coroutineScope.launch {
-                                saveCanvasAsSVG(
-                                    graphicsLayer = graphicsLayer,
-                                    context = context,
-                                    canvasNotes = viewModel.canvasNotes
-                                )
-                            }
-                        }
-                    )
-                }
+                    }
+                )
             }
         }
         Spacer(Modifier.height(16.dp))
     }
-    if (noteToEdit != null) {
-        AlertDialog(
-            onDismissRequest = { noteToEdit = null },
-            title = { Text("Edit Canvas Note") },
-            text = {
-                OutlinedTextField(
-                    value = editedNoteText,
-                    onValueChange = { editedNoteText = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 1
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val noteId = noteToEdit!!
-                        val index = viewModel.canvasNotes.indexOfFirst { it.id == noteId }
-                        if (index != -1) {
-                            val old = viewModel.canvasNotes[index]
-                            val updated = old.copy(content = editedNoteText)
-                            viewModel.removeFromCanvas(index)
-                            viewModel.addToCanvas(updated)
-                        }
-                        noteToEdit = null
-                    }
-                ) { Text("Save") }
-            },
-            dismissButton = {
-                TextButton(onClick = { noteToEdit = null }) { Text("Cancel") }
+
+    EditNoteDialog(
+        noteId = noteToEdit,
+        initialContent = editedNoteText,
+        onDismiss = { noteToEdit = null },
+        onSave = { id, newContent ->
+            val index = viewModel.canvasNotes.indexOfFirst { it.id == id }
+            if (index != -1) {
+                val old = viewModel.canvasNotes[index]
+                val updated = old.copy(content = newContent)
+                viewModel.removeFromCanvas(index)
+                viewModel.addToCanvas(updated)
             }
-        )
-    }
-    if (noteToRenameId != null) {
-        AlertDialog(
-            onDismissRequest = {
-                noteToRenameId = null
-                renameText = ""
-            },
-            title = { Text("Rename Element") },
-            text = {
-                OutlinedTextField(
-                    value = renameText,
-                    onValueChange = { renameText = it },
-                    label = { Text("New name") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (renameText.isNotBlank()) {
-                            viewModel.renameCanvasNote(noteToRenameId!!, renameText)
-                        }
-                        noteToRenameId = null
-                        renameText = ""
-                    }
-                ) { Text("Save") }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    noteToRenameId = null
-                    renameText = ""
-                }) { Text("Cancel") }
+            noteToEdit = null
+        }
+    )
+
+    RenameDialog(
+        noteId = noteToRenameId,
+        currentName = renameText,
+        onDismiss = {
+            noteToRenameId = null
+            renameText = ""
+        },
+        onConfirm = { id, newName ->
+            if (newName.isNotBlank()) {
+                viewModel.renameCanvasNote(id, newName)
             }
-        )
-    }
-    if (showGroupDialog) {
-        AlertDialog(
-            onDismissRequest = { showGroupDialog = false },
-            title = { Text("Group Selected Elements") },
-            text = {
-                OutlinedTextField(
-                    value = groupName,
-                    onValueChange = { groupName = it },
-                    label = { Text("Group Name") },
-                    singleLine = true
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (groupName.isNotBlank() && selectedNoteIds.isNotEmpty()) {
-                            viewModel.createGroup(selectedNoteIds.toList(), groupName)
-                            selectedNoteIds = emptySet()
-                            showGroupDialog = false
-                            groupName = ""
-                        }
-                    }
-                ) { Text("Create Group") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showGroupDialog = false }) { Text("Cancel") }
+            noteToRenameId = null
+            renameText = ""
+        }
+    )
+
+    GroupDialog(
+        show = showGroupDialog,
+        initialName = groupName,
+        onDismiss = { showGroupDialog = false },
+        onConfirm = { name ->
+            if (name.isNotBlank() && selectedNoteIds.isNotEmpty()) {
+                viewModel.createGroup(selectedNoteIds.toList(), name)
+                selectedNoteIds = emptySet()
+                showGroupDialog = false
+                groupName = ""
             }
-        )
-    }
+        }
+    )
 
     if (showColorPicker && noteToColorEditId != null) {
         val targetNote = viewModel.canvasNotes.find { it.id == noteToColorEditId }
@@ -1186,8 +463,8 @@ fun GraphicalNotesScreen() {
                 showColorPicker = false
                 noteToColorEditId = null
             },
-            onColorSelected = { selectedColor ->
-                viewModel.updateNoteColor(noteToColorEditId!!, selectedColor)
+            onColorSelected = { color ->
+                viewModel.updateNoteColor(noteToColorEditId!!, color)
                 showColorPicker = false
                 noteToColorEditId = null
             },
@@ -1209,17 +486,14 @@ fun GraphicalNotesScreen() {
                 val serialized = points.joinToString(";") { node ->
                     "${node.anchor.x},${node.anchor.y}:${node.handleIn.x},${node.handleIn.y}:${node.handleOut.x},${node.handleOut.y}"
                 }
-
                 val shapeType = if (isLine) "CustomLine" else "CustomPolygon"
                 val contentString = "Shape:$shapeType:$serialized"
-
                 if (polygonNoteToEditId != null) {
                     viewModel.updateNoteContent(polygonNoteToEditId!!, contentString)
                     selectedNoteId = polygonNoteToEditId
                 } else {
                     viewModel.addToCanvas(CanvasNote(content = contentString, backgroundColor = getRandomColor()))
                 }
-
                 showCustomPolygonDialog = false
                 polygonNoteToEditId = null
                 initialPolygonString = ""
@@ -1228,112 +502,31 @@ fun GraphicalNotesScreen() {
         )
     }
 
-    if (showEditPropertiesDialog && editPropertiesNoteId != null) {
-        AlertDialog(
-            onDismissRequest = {
-                showEditPropertiesDialog = false
-                editPropertiesNoteId = null
-            },
-            title = { Text("Edit Element Properties") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = editX,
-                        onValueChange = { editX = it },
-                        label = { Text("X Position") },
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = editY,
-                        onValueChange = { editY = it },
-                        label = { Text("Y Position") },
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = editWidth,
-                        onValueChange = { editWidth = it },
-                        label = { Text("Width") },
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = editHeight,
-                        onValueChange = { editHeight = it },
-                        label = { Text("Height") },
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = editRotation,
-                        onValueChange = { editRotation = it },
-                        label = { Text("Rotation Angle (degrees)") },
-                        singleLine = true
-                    )
-
-                    OutlinedTextField(
-                        value = " ",
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Color") },
-                        modifier = Modifier.fillMaxWidth(),
-                        textStyle = LocalTextStyle.current.copy(
-                            color = Color.Transparent
-                        ),
-                        leadingIcon = {
-                            Box(
-                                modifier = Modifier
-                                    .padding(start = 12.dp)
-                                    .size(32.dp)
-                                    .background(
-                                        editColorForDialog,
-                                        RoundedCornerShape(6.dp)
-                                    )
-                                    .border(
-                                        1.dp,
-                                        MaterialTheme.colorScheme.outline,
-                                        RoundedCornerShape(6.dp)
-                                    )
-                                    .clickable {
-                                        showEditColorPicker = true
-                                    }
-                            )
-                        }
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val noteId = editPropertiesNoteId!!
-                        val x = editX.toFloatOrNull()
-                        val y = editY.toFloatOrNull()
-                        val w = editWidth.toFloatOrNull()
-                        val h = editHeight.toFloatOrNull()
-                        val rot = editRotation.toFloatOrNull()
-                        if (x != null && y != null && w != null && h != null && rot != null) {
-                            viewModel.updateNoteProperties(noteId, x, y, w, h, rot)
-                            viewModel.updateNoteColor(noteId, editColorForDialog)
-                        }
-                        showEditPropertiesDialog = false
-                        editPropertiesNoteId = null
-                    }
-                ) { Text("Apply") }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showEditPropertiesDialog = false
-                    editPropertiesNoteId = null
-                }) { Text("Cancel") }
+    EditPropertiesDialog(
+        show = showEditPropertiesDialog,
+        noteId = editPropertiesNoteId,
+        initialX = editX,
+        initialY = editY,
+        initialWidth = editWidth,
+        initialHeight = editHeight,
+        initialRotation = editRotation,
+        initialColor = editColorForDialog,
+        onDismiss = {
+            showEditPropertiesDialog = false
+            editPropertiesNoteId = null
+        },
+        onApply = { id, x, y, w, h, rot, color ->
+            val xFloat = x.toFloatOrNull()
+            val yFloat = y.toFloatOrNull()
+            val wFloat = w.toFloatOrNull()
+            val hFloat = h.toFloatOrNull()
+            val rotFloat = rot.toFloatOrNull()
+            if (xFloat != null && yFloat != null && wFloat != null && hFloat != null && rotFloat != null) {
+                viewModel.updateNoteProperties(id, xFloat, yFloat, wFloat, hFloat, rotFloat)
+                viewModel.updateNoteColor(id, color)
             }
-        )
-    }
-
-    if (showEditColorPicker) {
-        ColorWheelDialog(
-            onDismissRequest = { showEditColorPicker = false },
-            onColorSelected = { selectedColor ->
-                editColorForDialog = selectedColor
-                showEditColorPicker = false
-            },
-            initialColor = editColorForDialog
-        )
-    }
+            showEditPropertiesDialog = false
+            editPropertiesNoteId = null
+        }
+    )
 }

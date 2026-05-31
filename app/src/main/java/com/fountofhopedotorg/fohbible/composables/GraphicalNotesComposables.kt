@@ -271,7 +271,7 @@ fun CanvasSvgItem(
         modifier = Modifier
             .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
             .wrapContentSize(unbounded = true)
-            .alpha(if (isLocked) 0.5f else 1f)
+            .alpha(if (isLocked) 0.2f else 1f)
     ) {
         Box(
             modifier = Modifier
@@ -348,21 +348,6 @@ fun CanvasSvgItem(
                         )
                     }
                 }
-            }
-        }
-        if (isLocked) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Lock,
-                    contentDescription = "Locked",
-                    tint = Color.White.copy(alpha = 0.7f),
-                    modifier = Modifier
-                        .size(48.dp)
-                        .align(Alignment.Center)
-                )
             }
         }
         if (isSelected && baseSize != IntSize.Zero && !isLocked) {
@@ -503,7 +488,7 @@ fun CanvasImageItem(
         modifier = Modifier
             .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
             .wrapContentSize(unbounded = true)
-            .alpha(if (isLocked) 0.5f else 1f)
+            .alpha(if (isLocked) 0.2f else 1f)
     ) {
         Box(
             modifier = Modifier
@@ -557,21 +542,6 @@ fun CanvasImageItem(
                     contentDescription = "Canvas Image",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Fit
-                )
-            }
-        }
-        if (isLocked) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Lock,
-                    contentDescription = "Locked",
-                    tint = Color.White.copy(alpha = 0.7f),
-                    modifier = Modifier
-                        .size(48.dp)
-                        .align(Alignment.Center)
                 )
             }
         }
@@ -703,7 +673,7 @@ fun CanvasTextItem(
         modifier = Modifier
             .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
             .wrapContentSize(unbounded = true)
-            .alpha(if (isLocked) 0.5f else 1f)
+            .alpha(if (isLocked) 0.2f else 1f)
     ) {
         Box(
             modifier = Modifier
@@ -759,21 +729,6 @@ fun CanvasTextItem(
                     modifier = Modifier
                         .padding(8.dp)
                         .widthIn(max = 250.dp)
-                )
-            }
-        }
-        if (isLocked) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Lock,
-                    contentDescription = "Locked",
-                    tint = Color.White.copy(alpha = 0.7f),
-                    modifier = Modifier
-                        .size(48.dp)
-                        .align(Alignment.Center)
                 )
             }
         }

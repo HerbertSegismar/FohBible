@@ -3,9 +3,6 @@ package com.fountofhopedotorg.fohbible.composables
 import android.content.res.Configuration
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,23 +14,16 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
@@ -43,12 +33,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -59,21 +47,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.fountofhopedotorg.fohbible.data.BezierNode
-import kotlinx.coroutines.delay
-import kotlin.math.roundToInt
+import com.fountofhopedotorg.fohbible.graphicals.BezierModeSelector
+import com.fountofhopedotorg.fohbible.graphicals.HybridJoystick
 
 enum class ActiveControl { ANCHOR, HANDLE_IN, HANDLE_OUT }
 
@@ -614,238 +597,5 @@ fun CustomPolygonDialog(
                 }
             }
         }
-    }
-}
-
-@Composable
-fun HybridJoystick(
-    modifier: Modifier = Modifier,
-    size: Dp = 150.dp,
-    thumbSize: Dp = 60.dp,
-    nudgeAmount: Float,
-    enabled: Boolean = true,
-    onNudgeAmountClick: () -> Unit,
-    onDirectionClick: (dx: Float, dy: Float) -> Unit
-) {
-    val density = LocalDensity.current
-    val sizePx = with(density) { size.toPx() }
-    val thumbSizePx = with(density) { thumbSize.toPx() }
-
-    val maxDisplacementPx = (sizePx - thumbSizePx) / 2f
-    val allowedDisplacementPx = maxDisplacementPx * 1.3f
-
-    var thumbOffset by remember { mutableStateOf(Offset.Zero) }
-    var isDragging by remember { mutableStateOf(false) }
-
-    val currentOffset by rememberUpdatedState(thumbOffset)
-    val currentNudgeAmount by rememberUpdatedState(nudgeAmount)
-    val currentOnDirectionClick by rememberUpdatedState(onDirectionClick)
-
-    LaunchedEffect(isDragging, enabled) {
-        if (!enabled) {
-            isDragging = false
-            thumbOffset = Offset.Zero
-        }
-
-        while (isDragging && enabled) {
-            if (currentOffset != Offset.Zero) {
-                val normalizedX = currentOffset.x / maxDisplacementPx
-                val normalizedY = currentOffset.y / maxDisplacementPx
-                val frameSpeedFactor = 0.05f
-
-                currentOnDirectionClick(
-                    normalizedX * currentNudgeAmount * frameSpeedFactor,
-                    normalizedY * currentNudgeAmount * frameSpeedFactor
-                )
-            }
-            delay(16)
-        }
-    }
-
-    Box(
-        modifier = modifier
-            .size(size)
-            .graphicsLayer { alpha = if (enabled) 1f else 0.4f }
-            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), CircleShape)
-            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f), CircleShape)
-            .pointerInput(enabled) {
-                if (enabled) {
-                    detectDragGestures(
-                        onDragStart = { isDragging = true },
-                        onDrag = { change, dragAmount ->
-                            change.consume()
-                            val newOffset = thumbOffset + dragAmount
-                            val currentDisplacement = newOffset.getDistance()
-                            thumbOffset = if (currentDisplacement <= allowedDisplacementPx) {
-                                newOffset
-                            } else {
-                                newOffset.times(allowedDisplacementPx / currentDisplacement)
-                            }
-                        },
-                        onDragEnd = {
-                            isDragging = false
-                            thumbOffset = Offset.Zero
-                        },
-                        onDragCancel = {
-                            isDragging = false
-                            thumbOffset = Offset.Zero
-                        }
-                    )
-                }
-            },
-        contentAlignment = Alignment.Center
-    ) {
-        IconButton(
-            onClick = { onDirectionClick(0f, -nudgeAmount) },
-            modifier = Modifier.align(Alignment.TopCenter).size(36.dp),
-            enabled = enabled
-        ) {
-            Icon(
-                Icons.Default.KeyboardArrowUp,
-                contentDescription = "Up",
-                tint = MaterialTheme.colorScheme.primary.copy(if (enabled) 0.5f else 0.2f)
-            )
-        }
-        IconButton(
-            onClick = { onDirectionClick(0f, nudgeAmount) },
-            modifier = Modifier.align(Alignment.BottomCenter).size(36.dp),
-            enabled = enabled
-        ) {
-            Icon(
-                Icons.Default.KeyboardArrowDown,
-                contentDescription = "Down",
-                tint = MaterialTheme.colorScheme.primary.copy(if (enabled) 0.5f else 0.2f)
-            )
-        }
-        IconButton(
-            onClick = { onDirectionClick(-nudgeAmount, 0f) },
-            modifier = Modifier.align(Alignment.CenterStart).size(36.dp),
-            enabled = enabled
-        ) {
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                contentDescription = "Left",
-                tint = MaterialTheme.colorScheme.primary.copy(if (enabled) 0.5f else 0.2f)
-            )
-        }
-        IconButton(
-            onClick = { onDirectionClick(nudgeAmount, 0f) },
-            modifier = Modifier.align(Alignment.CenterEnd).size(36.dp),
-            enabled = enabled
-        ) {
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "Right",
-                tint = MaterialTheme.colorScheme.primary.copy(if (enabled) 0.5f else 0.2f)
-            )
-        }
-
-        Box(
-            modifier = Modifier
-                .offset { IntOffset(thumbOffset.x.roundToInt(), thumbOffset.y.roundToInt()) }
-                .size(thumbSize)
-                .background(
-                    MaterialTheme.colorScheme.primary.copy(if (enabled) 1f else 0.5f),
-                    CircleShape
-                )
-                .clickable(enabled = enabled) { onNudgeAmountClick() },
-            contentAlignment = Alignment.Center
-        ) {
-            val amountText = when (nudgeAmount) {
-                0.01f -> "1%"
-                0.05f -> "5%"
-                0.1f -> "10%"
-                else -> "${(nudgeAmount * 100).toInt()}%"
-            }
-            Text(
-                text = amountText,
-                color = Color.White.copy(if (enabled) 1f else 0.5f),
-                style = androidx.compose.ui.text.TextStyle(fontSize = 12.sp)
-            )
-        }
-    }
-}
-
-@Composable
-fun BezierModeSelector(
-    activeControl: ActiveControl,
-    onControlSelected: (ActiveControl) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Canvas(
-        modifier = modifier
-            .size(180.dp, 40.dp)
-            .pointerInput(Unit) {
-                detectTapGestures { tapOffset ->
-                    val w = size.width
-                    val h = size.height
-
-                    val anchorPos = Offset(w * 0.5f, h * 0.5f)
-                    val handleInPos = Offset(w * 0.1f, h * 0.5f)
-                    val handleOutPos = Offset(w * 0.9f, h * 0.5f)
-
-                    val distAnchor = (tapOffset - anchorPos).getDistance()
-                    val distIn = (tapOffset - handleInPos).getDistance()
-                    val distOut = (tapOffset - handleOutPos).getDistance()
-
-                    val threshold = 36f
-
-                    when {
-                        distIn < threshold -> onControlSelected(ActiveControl.HANDLE_IN)
-                        distOut < threshold -> onControlSelected(ActiveControl.HANDLE_OUT)
-                        distAnchor < threshold -> onControlSelected(ActiveControl.ANCHOR)
-                    }
-                }
-            }
-    ) {
-        val w = size.width
-        val h = size.height
-
-        val anchor = Offset(w * 0.5f, h * 0.5f)
-        val handleIn = Offset(w * 0.1f, h * 0.5f)
-        val handleOut = Offset(w * 0.9f, h * 0.5f)
-
-        val path = Path().apply {
-            moveTo(handleIn.x, handleIn.y)
-
-            cubicTo(
-                w * 0.2f, h * 0.1f,
-                w * 0.4f, h * 0.1f,
-                anchor.x, anchor.y
-            )
-
-            cubicTo(
-                w * 0.6f, h * 0.9f,
-                w * 0.8f, h * 0.9f,
-                handleOut.x, handleOut.y
-            )
-        }
-
-        drawPath(
-            path = path,
-            color = Color(0xFF00BCD4),
-            style = Stroke(width = 5.5f)
-        )
-        val isAnchorSelected = activeControl == ActiveControl.ANCHOR
-        val isInSelected = activeControl == ActiveControl.HANDLE_IN
-        val isOutSelected = activeControl == ActiveControl.HANDLE_OUT
-
-        drawCircle(
-            color = if (isAnchorSelected) Color.Blue else Color.Gray,
-            radius = if (isAnchorSelected) 30f else 20f,
-            center = anchor
-        )
-
-        drawCircle(
-            color = if (isInSelected) Color.Green else Color.Gray,
-            radius = if (isInSelected) 20f else 15f,
-            center = handleIn
-        )
-
-        drawCircle(
-            color = if (isOutSelected) Color.Magenta else Color.Gray,
-            radius = if (isOutSelected) 20f else 15f,
-            center = handleOut
-        )
     }
 }
