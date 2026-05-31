@@ -139,7 +139,7 @@ fun FetchVerseSection(
                                 },
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text("Add to Canvas")
+                                Text("Add to Canvas", color = Color.White)
                             }
                         }
                     }
