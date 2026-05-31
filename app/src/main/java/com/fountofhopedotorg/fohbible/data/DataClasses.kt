@@ -334,3 +334,19 @@ data class SelectedWord(
         return result
     }
 }
+
+sealed class DisplayItem {
+    data class GroupHeader(
+        val groupId: String,
+        val groupName: String,
+        val memberCount: Int,
+        val isExpanded: Boolean
+    ) : DisplayItem()
+
+    data class NoteItem(
+        val note: CanvasNote,
+        val originalIndex: Int,
+        val isGrouped: Boolean,
+        val groupId: String? = null
+    ) : DisplayItem()
+}

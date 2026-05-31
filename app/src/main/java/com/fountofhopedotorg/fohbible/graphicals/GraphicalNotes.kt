@@ -70,6 +70,9 @@ fun GraphicalNotesScreen() {
 
     var noteToRenameId by rememberSaveable { mutableStateOf<String?>(null) }
     var renameText by rememberSaveable { mutableStateOf("") }
+    var groupToRenameId by rememberSaveable { mutableStateOf<String?>(null) }
+    var groupRenameText by rememberSaveable { mutableStateOf("") }
+
     var selectedNoteIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var showGroupDialog by rememberSaveable { mutableStateOf(false) }
     var groupName by rememberSaveable { mutableStateOf("") }
@@ -260,6 +263,12 @@ fun GraphicalNotesScreen() {
 
         Spacer(Modifier.height(20.dp))
 
+        fun onGroupHeaderTap(groupId: String) {
+            val members = viewModel.canvasNotes.filter { it.groupId == groupId }
+            selectedNoteIds = members.map { it.id }.toSet()
+            selectedNoteId = members.firstOrNull()?.id
+        }
+
         CanvasElementsPanel(
             viewModel = viewModel,
             selectedNoteIds = selectedNoteIds,
@@ -267,8 +276,8 @@ fun GraphicalNotesScreen() {
             showTree = showCanvasElementsTree,
             onToggleTree = { showCanvasElementsTree = !showCanvasElementsTree },
             onSingleSelect = { onSingleSelect(it) },
-            onNoteTap = { onCanvasNoteTap(it) },
             onToggleGroupSelection = { toggleGroupSelection(it) },
+            onGroupHeaderTap = { onGroupHeaderTap(it) },
             onEditNote = { note ->
                 noteToEdit = note.id
                 editedNoteText = note.content
@@ -337,7 +346,7 @@ fun GraphicalNotesScreen() {
             },
             onGroup = { name, ids ->
                 if (name.isNotBlank() && ids.isNotEmpty()) {
-                    viewModel.createGroup(ids, name)
+                    viewModel.createGroup(ids)
                     selectedNoteIds = emptySet()
                     showGroupDialog = false
                     groupName = ""
@@ -345,7 +354,12 @@ fun GraphicalNotesScreen() {
             },
             onClearSelection = { selectedNoteIds = emptySet() },
             themeColors = themeColors,
-            density = LocalDensity.current
+            density = LocalDensity.current,
+            groupNames = viewModel.groupNames,
+            onRenameGroup = { groupId, currentName ->
+                groupToRenameId = groupId
+                groupRenameText = currentName
+            }
         )
 
         Spacer(Modifier.height(16.dp))
@@ -442,13 +456,32 @@ fun GraphicalNotesScreen() {
         }
     )
 
+    if (groupToRenameId != null) {
+        RenameDialog(
+            noteId = groupToRenameId,
+            currentName = groupRenameText,
+            title = "Rename Group",
+            onDismiss = {
+                groupToRenameId = null
+                groupRenameText = ""
+            },
+            onConfirm = { id, newName ->
+                if (newName.isNotBlank()) {
+                    viewModel.renameGroup(id, newName)
+                }
+                groupToRenameId = null
+                groupRenameText = ""
+            }
+        )
+    }
+
     GroupDialog(
         show = showGroupDialog,
         initialName = groupName,
         onDismiss = { showGroupDialog = false },
         onConfirm = { name ->
             if (name.isNotBlank() && selectedNoteIds.isNotEmpty()) {
-                viewModel.createGroup(selectedNoteIds.toList(), name)
+                viewModel.createGroup(selectedNoteIds.toList())
                 selectedNoteIds = emptySet()
                 showGroupDialog = false
                 groupName = ""

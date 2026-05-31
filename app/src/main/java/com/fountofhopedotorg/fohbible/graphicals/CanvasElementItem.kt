@@ -29,8 +29,6 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -60,13 +58,14 @@ import kotlin.math.roundToInt
 fun CanvasElementItem(
     viewModel: AppViewModel,
     note: CanvasNote,
-    index: Int,
+    originalIndex: Int,
     isSelected: Boolean,
     isDragTarget: Boolean,
     isUpEnabled: Boolean,
     isDownEnabled: Boolean,
     dragOffset: Float,
     selectedNoteIds: Set<String>,
+    isGrouped: Boolean,
     onRowTap: () -> Unit,
     onToggleGroupSelection: () -> Unit,
     onDragStart: (Offset) -> Unit,
@@ -88,27 +87,30 @@ fun CanvasElementItem(
     val maxDragRangePx = with(density) { maxDragRangeDp.toPx() }
     val triggerThresholdPx = maxDragRangePx * 0.8f
     val uniqueKey = note.hashCode()
-    val offsetY = remember(uniqueKey) { Animatable(0f) }
+    val offsetY = remember(uniqueKey, originalIndex) { Animatable(0f) }
 
-    Card(
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
-            .graphicsLayer {
-                if (isDragTarget) translationY = dragOffset
-            }
-            .pointerInput(note.id, index) {
-                detectDragGesturesAfterLongPress(
-                    onDragStart = { offset -> onDragStart(offset) },
-                    onDrag = { change, dragAmount -> onDrag(change, dragAmount) },
-                    onDragEnd = onDragEnd,
-                    onDragCancel = onDragCancel
-                )
-            },
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) themeColors.primary.copy(alpha = 0.15f)
-            else MaterialTheme.colorScheme.surface
-        )
+            .graphicsLayer { if (isDragTarget) translationY = dragOffset }
+            .then(
+                if (!isGrouped) {
+                    Modifier.pointerInput(note.id, originalIndex) {
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = { offset -> onDragStart(offset) },
+                            onDrag = { change, dragAmount -> onDrag(change, dragAmount) },
+                            onDragEnd = onDragEnd,
+                            onDragCancel = onDragCancel
+                        )
+                    }
+                } else Modifier
+            )
+            .background(
+                color = if (isSelected) themeColors.primary.copy(alpha = 0.15f)
+                else MaterialTheme.colorScheme.surface,
+                shape = RoundedCornerShape(12.dp)
+            )
     ) {
         Row(
             modifier = Modifier
@@ -138,7 +140,7 @@ fun CanvasElementItem(
             Spacer(Modifier.width(8.dp))
 
             Text(
-                text = getElementDisplayName(note, index, viewModel.canvasNotes),
+                text = getElementDisplayName(note, originalIndex, viewModel.canvasNotes),
                 modifier = Modifier
                     .weight(1f)
                     .clickable(
@@ -149,65 +151,67 @@ fun CanvasElementItem(
                 overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodyMedium
             )
-            Box(
-                modifier = Modifier
-                    .padding(horizontal = 8.dp)
-                    .width(20.dp)
-                    .height(36.dp)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) {},
-                contentAlignment = Alignment.Center
-            ) {
+            if (!isGrouped) {
                 Box(
                     modifier = Modifier
-                        .width(4.dp)
-                        .fillMaxHeight()
-                        .background(themeColors.primary.copy(alpha = 0.2f), CircleShape)
-                )
-                Box(
-                    modifier = Modifier
-                        .offset { IntOffset(0, offsetY.value.roundToInt()) }
-                        .size(20.dp)
-                        .background(themeColors.primary.copy(alpha = 0.7f), CircleShape)
-                        .pointerInput(uniqueKey, index) {
-                            detectDragGestures(
-                                onDrag = { change, dragAmount ->
-                                    change.consume()
-                                    coroutineScope.launch {
-                                        val targetValue = offsetY.value + dragAmount.y
-                                        val clamped = targetValue.coerceIn(-maxDragRangePx, maxDragRangePx)
-                                        offsetY.snapTo(clamped)
-                                    }
-                                },
-                                onDragEnd = {
-                                    if (offsetY.value <= -triggerThresholdPx && isUpEnabled) {
-                                        viewModel.reorderCanvasNotes(index, index - 1)
-                                    } else if (offsetY.value >= triggerThresholdPx && isDownEnabled) {
-                                        viewModel.reorderCanvasNotes(index, index + 1)
-                                    }
-                                    coroutineScope.launch {
-                                        offsetY.animateTo(0f, spring(
-                                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                                            stiffness = Spring.StiffnessMedium
-                                        ))
-                                    }
-                                },
-                                onDragCancel = {
-                                    coroutineScope.launch {
-                                        offsetY.animateTo(0f, spring())
-                                    }
-                                }
-                            )
-                        },
+                        .padding(horizontal = 8.dp)
+                        .width(20.dp)
+                        .height(36.dp)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {},
                     contentAlignment = Alignment.Center
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(6.dp)
-                            .background(Color.White, CircleShape)
+                            .width(4.dp)
+                            .fillMaxHeight()
+                            .background(themeColors.primary.copy(alpha = 0.2f), CircleShape)
                     )
+                    Box(
+                        modifier = Modifier
+                            .offset { IntOffset(0, offsetY.value.roundToInt()) }
+                            .size(20.dp)
+                            .background(themeColors.primary.copy(alpha = 0.7f), CircleShape)
+                            .pointerInput(uniqueKey, originalIndex) {
+                                detectDragGestures(
+                                    onDrag = { change, dragAmount ->
+                                        change.consume()
+                                        coroutineScope.launch {
+                                            val targetValue = offsetY.value + dragAmount.y
+                                            val clamped = targetValue.coerceIn(-maxDragRangePx, maxDragRangePx)
+                                            offsetY.snapTo(clamped)
+                                        }
+                                    },
+                                    onDragEnd = {
+                                        if (offsetY.value <= -triggerThresholdPx && isUpEnabled) {
+                                            viewModel.reorderCanvasNotes(originalIndex, originalIndex - 1)
+                                        } else if (offsetY.value >= triggerThresholdPx && isDownEnabled) {
+                                            viewModel.reorderCanvasNotes(originalIndex, originalIndex + 1)
+                                        }
+                                        coroutineScope.launch {
+                                            offsetY.animateTo(0f, spring(
+                                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                stiffness = Spring.StiffnessMedium
+                                            ))
+                                        }
+                                    },
+                                    onDragCancel = {
+                                        coroutineScope.launch {
+                                            offsetY.animateTo(0f, spring())
+                                        }
+                                    }
+                                )
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .background(Color.White, CircleShape)
+                        )
+                    }
                 }
             }
             IconButton(onClick = onVisibilityToggle, modifier = Modifier.size(32.dp)) {

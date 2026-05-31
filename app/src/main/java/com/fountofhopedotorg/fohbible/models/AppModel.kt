@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
@@ -321,7 +322,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun createGroup(noteIds: List<String>, groupName: String) {
+    fun createGroup(noteIds: List<String>) {
         if (noteIds.size < 2) return
 
         val groupId = "group_${UUID.randomUUID().toString().take(8)}"
@@ -334,17 +335,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
         }
-
-        val groupHeader = CanvasNote(
-            content = "Group: $groupName",
-            customName = groupName,
-            groupId = groupId,
-            backgroundColor = Color(0xFF4CAF50).copy(alpha = 0.25f),
-            width = 320f,
-            height = 48f,
-            position = Offset(100f, 100f)
-        )
-        addToCanvas(groupHeader)
     }
 
     fun ungroupNotes(noteIds: Set<String>) {
@@ -365,5 +355,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 rotation = rotation
             )
         }
+    }
+
+    val groupNames = mutableStateMapOf<String, String>()
+
+    fun renameGroup(groupId: String, newName: String) {
+        groupNames[groupId] = newName
     }
 }

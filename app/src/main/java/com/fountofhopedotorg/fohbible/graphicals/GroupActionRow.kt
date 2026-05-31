@@ -36,7 +36,7 @@ fun GroupActionRow(
     ) {
         IconButton(
             onClick = onGroup,
-            enabled = selectedCount > 1
+            enabled = selectedCount > 1 && !hasGroup
         ) {
             Icon(Icons.Default.Group, contentDescription = "Group")
         }
@@ -46,12 +46,14 @@ fun GroupActionRow(
         ) {
             Icon(Icons.Default.GroupRemove, contentDescription = "Ungroup")
         }
+
         IconButton(
             onClick = onRename,
-            enabled = selectedCount == 1
+            enabled = selectedCount == 1 || hasGroup
         ) {
             Icon(Icons.Default.DriveFileRenameOutline, contentDescription = "Rename")
         }
+
         IconButton(
             onClick = onEditProperties,
             enabled = selectedCount == 1

@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 fun RenameDialog(
     noteId: String?,
     currentName: String,
+    title: String = "Rename Element",
     onDismiss: () -> Unit,
     onConfirm: (String, String) -> Unit
 ) {
@@ -23,7 +24,7 @@ fun RenameDialog(
         var renameText by remember { mutableStateOf(currentName) }
         AlertDialog(
             onDismissRequest = onDismiss,
-            title = { Text("Rename Element") },
+            title = { Text(title) },
             text = {
                 OutlinedTextField(
                     value = renameText,
