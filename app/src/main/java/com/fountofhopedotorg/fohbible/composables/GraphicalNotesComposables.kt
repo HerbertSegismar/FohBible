@@ -131,12 +131,13 @@ fun PolygonShape(
         if (points.isEmpty()) return@Canvas
 
         val path = Path().apply {
-            moveTo(points[0].x * size.width, points[0].y * size.height)
-            for (i in 1 until points.size) {
-                lineTo(points[i].x * size.width, points[i].y * size.height)
+            moveTo(points.first().x * size.width, points.first().y * size.height)
+            points.drop(1).forEach { point ->
+                lineTo(point.x * size.width, point.y * size.height)
             }
             close()
         }
+
         drawPath(path = path, color = color)
     }
 }
@@ -264,8 +265,8 @@ fun CanvasSvgItem(
         } else null
     }
 
-    val baseWidthDp = if (parsedData != null) (parsedData.second * 200f).dp else 200.dp
-    val baseHeightDp = if (parsedData != null) (parsedData.third * 200f).dp else 200.dp
+    val baseWidthDp = if (parsedData != null) (parsedData.second * 280f).dp else 280.dp
+    val baseHeightDp = if (parsedData != null) (parsedData.third * 280f).dp else 280.dp
 
     Box(
         modifier = Modifier

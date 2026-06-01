@@ -52,12 +52,13 @@ fun AddSvgSection(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 val pentagonPoints = listOf(
-                    Offset(0.5f, 0f),
-                    Offset(1f, 0.4f),
-                    Offset(0.8f, 0.9f),
-                    Offset(0.2f, 0.9f),
-                    Offset(0f, 0.4f)
+                    Offset(0.5000f, 0.0000f),
+                    Offset(0.9755f, 0.3455f),
+                    Offset(0.7939f, 0.9045f),
+                    Offset(0.2061f, 0.9045f),
+                    Offset(0.0245f, 0.3455f)
                 )
+
                 ShapeSelectionCard(
                     modifier = Modifier.weight(1f),
                     onClick = { onAddShape("Square") }

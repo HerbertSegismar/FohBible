@@ -132,6 +132,29 @@ fun CustomPolygonDialog(
         if (isEditing) "Edit Polygon Points" else "Tap to Add Polygon Points"
     }
 
+    // --- Normalization action (new) ---
+    // Maps the drawn points to a 0..1 bounding box so they fit perfectly inside the final shape.
+    val onConfirmAction = {
+        if (points.size >= minPointsRequired) {
+            val minX = points.minOf { minOf(it.anchor.x, it.handleIn.x, it.handleOut.x) }
+            val maxX = points.maxOf { maxOf(it.anchor.x, it.handleIn.x, it.handleOut.x) }
+            val minY = points.minOf { minOf(it.anchor.y, it.handleIn.y, it.handleOut.y) }
+            val maxY = points.maxOf { maxOf(it.anchor.y, it.handleIn.y, it.handleOut.y) }
+
+            val boundsWidth = (maxX - minX).takeIf { it > 0f } ?: 1f
+            val boundsHeight = (maxY - minY).takeIf { it > 0f } ?: 1f
+
+            val normalizedPoints = points.map { p ->
+                BezierNode(
+                    anchor = Offset((p.anchor.x - minX) / boundsWidth, (p.anchor.y - minY) / boundsHeight),
+                    handleIn = Offset((p.handleIn.x - minX) / boundsWidth, (p.handleIn.y - minY) / boundsHeight),
+                    handleOut = Offset((p.handleOut.x - minX) / boundsWidth, (p.handleOut.y - minY) / boundsHeight)
+                )
+            }
+            onConfirm(normalizedPoints, !isCloseState)
+        }
+    }
+
     val nudgePoint = { dx: Float, dy: Float ->
         if (selectedIndex in points.indices) {
             val p = points[selectedIndex]
@@ -390,7 +413,7 @@ fun CustomPolygonDialog(
             BezierModeSelector(
                 activeControl = activeControl,
                 onControlSelected = { activeControl = it },
-                modifier = Modifier.padding(vertical = 4.dp)
+                modifier = Modifier.padding(vertical = 4.dp),
             )
 
             Spacer(Modifier.height(8.dp))
@@ -509,11 +532,7 @@ fun CustomPolygonDialog(
                                     }
 
                                     TextButton(
-                                        onClick = {
-                                            if (points.size >= minPointsRequired) {
-                                                onConfirm(points, !isCloseState)
-                                            }
-                                        },
+                                        onClick = onConfirmAction,   // <-- uses normalization
                                         enabled = points.size >= minPointsRequired
                                     ) {
                                         Text(if (isEditing) "Save Changes" else "Add to Canvas")
@@ -583,11 +602,7 @@ fun CustomPolygonDialog(
                             }
 
                             TextButton(
-                                onClick = {
-                                    if (points.size >= minPointsRequired) {
-                                        onConfirm(points, !isCloseState)
-                                    }
-                                },
+                                onClick = onConfirmAction,   // <-- uses normalization here too
                                 enabled = points.size >= minPointsRequired
                             ) {
                                 Text(if (isEditing) "Save Changes" else "Add to Canvas")

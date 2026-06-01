@@ -255,8 +255,8 @@ data class CanvasNote(
     val id: String = UUID.randomUUID().toString(),
     val content: String,
     val offset: Offset = Offset.Zero,
-    val width: Float = 280f,
-    val height: Float = 200f,
+    val width: Float = 900f,
+    val height: Float = 900f,
     val rotation: Float = 0f,
     val backgroundColor: Color = Color.White,
     val position: Offset = Offset.Zero,
@@ -280,12 +280,6 @@ data class QuickAction(
     val color: Color,
     val onClick: () -> Unit,
     val backgroundImage: Any
-)
-
-data class ParsedSegment(
-    val anchor: Offset,
-    val handleIn: Offset?,
-    val handleOut: Offset?
 )
 
 data class BezierNodeData(

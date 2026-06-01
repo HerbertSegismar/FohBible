@@ -12,14 +12,16 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.fountofhopedotorg.fohbible.composables.ActiveControl
+import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
 
 
 @Composable
 fun BezierModeSelector(
     activeControl: ActiveControl,
     onControlSelected: (ActiveControl) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
+    val theme = LocalAppTheme.current
     Canvas(
         modifier = modifier
             .size(180.dp, 40.dp)
@@ -79,13 +81,13 @@ fun BezierModeSelector(
         val isOutSelected = activeControl == ActiveControl.HANDLE_OUT
 
         drawCircle(
-            color = if (isAnchorSelected) Color.Blue else Color.Gray,
+            color = if (isAnchorSelected) theme.primaryColor else Color.Gray,
             radius = if (isAnchorSelected) 30f else 20f,
             center = anchor
         )
 
         drawCircle(
-            color = if (isInSelected) Color.Green else Color.Gray,
+            color = if (isInSelected) Color.Yellow else Color.Gray,
             radius = if (isInSelected) 20f else 15f,
             center = handleIn
         )

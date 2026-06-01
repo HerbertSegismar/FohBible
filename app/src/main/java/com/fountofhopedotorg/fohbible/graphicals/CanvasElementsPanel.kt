@@ -230,7 +230,6 @@ fun CanvasElementsPanel(
                                                     if (draggedItem != null) {
                                                         val itemBounds = groupBounds[draggedItem.groupId]
                                                         if (itemBounds != null) {
-                                                            // Lock target position between group boundaries
                                                             val rawTargetIdx = (fromDisplayIndex + (dragOffset / itemHeightPx).roundToInt())
                                                             val targetDisplayIdx = rawTargetIdx.coerceIn(itemBounds.first, itemBounds.second)
 

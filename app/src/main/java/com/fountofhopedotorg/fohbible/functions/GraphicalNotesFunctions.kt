@@ -18,7 +18,6 @@ import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.unit.sp
 import com.fountofhopedotorg.fohbible.data.BoundingBox
 import com.fountofhopedotorg.fohbible.data.CanvasNote
-import com.fountofhopedotorg.fohbible.data.ParsedSegment
 import com.fountofhopedotorg.fohbible.data.ProcessingOptions
 import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.data.Verse
@@ -229,8 +228,6 @@ private fun buildVectorSvg(
         """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $canvasWidth $canvasHeight" width="$canvasWidth" height="$canvasHeight">"""
     )
     sb.append("\n  <rect width=\"100%\" height=\"100%\" fill=\"white\" />\n")
-
-    // Global scaling maps the internal layout pixels directly into the simplified layout DP canvas bounds
     val g = StringBuilder("  <g transform=\"scale($scale)\">\n")
 
     for (note in notes) {
@@ -314,47 +311,47 @@ private fun buildPathD(segments: List<String>, w: Float, h: Float, close: Boolea
     val parsed = segments.map { seg ->
         val parts = seg.split(":")
         val anchorCoords = parts[0].split(",")
-        val anchor = Offset(
-            (anchorCoords[0].toFloatOrNull() ?: 0f) * w,
-            (anchorCoords[1].toFloatOrNull() ?: 0f) * h
-        )
+
+        val ax = (anchorCoords[0].toFloatOrNull() ?: 0f) * w
+        val ay = (anchorCoords[1].toFloatOrNull() ?: 0f) * h
+        val anchor = Offset(ax, ay)
 
         val handleIn = if (parts.size > 1) {
             val hi = parts[1].split(",")
             if (hi.size == 2) Offset(
                 (hi[0].toFloatOrNull() ?: 0f) * w,
                 (hi[1].toFloatOrNull() ?: 0f) * h
-            ) else null
-        } else null
+            ) else anchor
+        } else anchor
 
         val handleOut = if (parts.size > 2) {
             val ho = parts[2].split(",")
             if (ho.size == 2) Offset(
                 (ho[0].toFloatOrNull() ?: 0f) * w,
                 (ho[1].toFloatOrNull() ?: 0f) * h
-            ) else null
-        } else null
+            ) else anchor
+        } else anchor
 
-        ParsedSegment(anchor, handleIn, handleOut)
+        Triple(anchor, handleIn, handleOut)
     }
 
     val d = StringBuilder()
-    d.append("M ${parsed[0].anchor.x},${parsed[0].anchor.y} ")
 
-    for (i in 1 until parsed.size) {
-        val prev = parsed[i - 1]
-        val curr = parsed[i]
-
-        if (prev.handleOut != null && curr.handleIn != null) {
-            d.append("C ${prev.handleOut.x},${prev.handleOut.y} ${curr.handleIn.x},${curr.handleIn.y} ${curr.anchor.x},${curr.anchor.y} ")
-        } else if (curr.handleIn != null) {
-            d.append("Q ${curr.handleIn.x},${curr.handleIn.y} ${curr.anchor.x},${curr.anchor.y} ")
+    parsed.forEachIndexed { index, (anchor, handleIn) ->
+        if (index == 0) {
+            d.append("M ${anchor.x},${anchor.y} ")
         } else {
-            d.append("L ${curr.anchor.x},${curr.anchor.y} ")
+            val prevHandleOut = parsed[index - 1].third
+            d.append("C ${prevHandleOut.x},${prevHandleOut.y} ${handleIn.x},${handleIn.y} ${anchor.x},${anchor.y} ")
         }
     }
 
-    if (close) d.append("Z")
+    if (close && parsed.size > 1) {
+        val first = parsed.first()
+        val last = parsed.last()
+        d.append("C ${last.third.x},${last.third.y} ${first.second.x},${first.second.y} ${first.first.x},${first.first.y} Z")
+    }
+
     return d.toString().trim()
 }
 
