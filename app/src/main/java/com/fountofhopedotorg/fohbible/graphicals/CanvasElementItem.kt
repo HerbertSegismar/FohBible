@@ -72,7 +72,7 @@ fun CanvasElementItem(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp)
+            .padding(vertical = 2.dp)
             .graphicsLayer { if (isDragTarget) translationY = dragOffset }
             .then(
                 if (!isGrouped) {
@@ -89,7 +89,7 @@ fun CanvasElementItem(
             .background(
                 color = if (isSelected) themeColors.primary.copy(alpha = 0.15f)
                 else MaterialTheme.colorScheme.surface,
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(6.dp)
             )
     ) {
         Row(

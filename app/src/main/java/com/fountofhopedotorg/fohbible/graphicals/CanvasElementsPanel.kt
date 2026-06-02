@@ -5,22 +5,27 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowRight
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -168,9 +173,17 @@ fun CanvasElementsPanel(
                         ) { displayIndex ->
                             when (val displayItem = displayItems[displayIndex]) {
                                 is DisplayItem.GroupHeader -> {
+                                    val isGroupSelected = selectedNoteId == displayItem.groupId ||
+                                            selectedNoteIds.contains(displayItem.groupId) ||
+                                            viewModel.canvasNotes.any {
+                                                it.groupId == displayItem.groupId &&
+                                                        (it.id == selectedNoteId || selectedNoteIds.contains(it.id))
+                                            }
+
                                     GroupHeaderRow(
                                         groupName = displayItem.groupName,
                                         isExpanded = displayItem.isExpanded,
+                                        isSelected = isGroupSelected,
                                         onToggleExpand = {
                                             expandedGroups[displayItem.groupId] =
                                                 !(expandedGroups[displayItem.groupId] ?: false)
@@ -308,6 +321,7 @@ fun CanvasElementsPanel(
 private fun GroupHeaderRow(
     groupName: String,
     isExpanded: Boolean,
+    isSelected: Boolean,
     onToggleExpand: () -> Unit,
     onTap: () -> Unit,
     themeColors: ThemeColors
@@ -315,18 +329,26 @@ private fun GroupHeaderRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .height(40.dp)
             .clickable { onTap() }
-            .padding(vertical = 6.dp, horizontal = 8.dp),
+            .padding(vertical = 2.dp)
+            .background(
+                color = if (isSelected) themeColors.primary.copy(alpha = 0.15f)
+                else MaterialTheme.colorScheme.surface,
+                shape = RoundedCornerShape(6.dp)
+            ),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.padding(4.dp),
+            verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                imageVector = if (isExpanded) Icons.Default.ArrowDropDown else Icons.AutoMirrored.Filled.ArrowRight,
+                imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                 contentDescription = "Toggle group",
                 modifier = Modifier
                     .clickable { onToggleExpand() }
-                    .size(20.dp),
+                    .size(30.dp),
                 tint = themeColors.primary
             )
             Spacer(Modifier.width(4.dp))

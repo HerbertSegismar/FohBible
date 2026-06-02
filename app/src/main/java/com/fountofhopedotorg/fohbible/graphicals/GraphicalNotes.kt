@@ -372,8 +372,15 @@ fun GraphicalNotesScreen() {
             dragGroupDelta = dragGroupDelta,
             onGroupDragDeltaChange = { dragGroupDelta = it },
             onCanvasNoteTap = { onCanvasNoteTap(it) },
-            onNoteUpdatePosition = { note, offset, w, h ->
-                viewModel.updateNotePosition(note.id, offset, w, h)
+            onNoteUpdatePosition = { note, offset, w, h, rotation ->
+                viewModel.updateNoteProperties(
+                    id = note.id,
+                    x = offset.x,
+                    y = offset.y,
+                    width = w,
+                    height = h,
+                    rotation = rotation
+                )
             },
             onColorPickerRequested = {
                 noteToColorEditId = it
@@ -390,7 +397,8 @@ fun GraphicalNotesScreen() {
             themeColors = themeColors,
             isDark = isDark,
             notesGrouped = notesGrouped,
-            graphicsLayer = graphicsLayer
+            graphicsLayer = graphicsLayer,
+            onNoteScaleChange = { id, sx, sy -> viewModel.updateNoteScale(id, sx, sy) }
         )
 
         Spacer(Modifier.height(8.dp))

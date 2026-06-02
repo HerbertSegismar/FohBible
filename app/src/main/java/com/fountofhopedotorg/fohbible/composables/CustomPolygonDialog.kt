@@ -602,7 +602,7 @@ fun CustomPolygonDialog(
                             }
 
                             TextButton(
-                                onClick = onConfirmAction,   // <-- uses normalization here too
+                                onClick = onConfirmAction,
                                 enabled = points.size >= minPointsRequired
                             ) {
                                 Text(if (isEditing) "Save Changes" else "Add to Canvas")

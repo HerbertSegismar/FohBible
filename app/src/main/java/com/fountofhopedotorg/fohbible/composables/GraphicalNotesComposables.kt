@@ -187,7 +187,8 @@ fun CanvasSvgItem(
     isSelected: Boolean,
     isLocked: Boolean,
     onSelect: () -> Unit,
-    onUpdatePosition: (Offset, Float, Float) -> Unit,
+    onUpdatePosition: (Offset, Float, Float, Float) -> Unit,
+    onScaleChanged: (Float, Float) -> Unit,
     onColorPickerRequested: () -> Unit,
     onDeleteRequested: () -> Unit
 ) {
@@ -297,7 +298,8 @@ fun CanvasSvgItem(
                         scaleY = (scaleY * zoom).coerceIn(0.2f, 5f)
                         rotation += rot
 
-                        onUpdatePosition(offset, note.width, note.height)
+                        onScaleChanged(scaleX, scaleY)
+                        onUpdatePosition(offset, note.width, note.height, rotation)
                     }
                 }
                 .pointerInput(Unit) {
@@ -449,6 +451,8 @@ fun CanvasSvgItem(
 
                             if (dx != 0f) scaleX = (newScaledDx / dx).toFloat().coerceIn(0.2f, 5f)
                             if (dy != 0f) scaleY = (newScaledDy / dy).toFloat().coerceIn(0.2f, 5f)
+
+                            onScaleChanged(scaleX, scaleY)
                         }
                     }
                     .background(Color.White, CircleShape)
@@ -467,7 +471,8 @@ fun CanvasImageItem(
     isSelected: Boolean,
     isLocked: Boolean,
     onSelect: () -> Unit,
-    onUpdatePosition: (Offset, Float, Float) -> Unit,
+    onUpdatePosition: (Offset, Float, Float, Float) -> Unit,
+    onScaleChanged: (Float, Float) -> Unit,
     onDeleteRequested: () -> Unit
 ) {
     var offset by remember(note.offset) { mutableStateOf(note.offset) }
@@ -514,7 +519,8 @@ fun CanvasImageItem(
                         scaleY = (scaleY * zoom).coerceIn(0.2f, 5f)
                         rotation += rot
 
-                        onUpdatePosition(offset, note.width, note.height)
+                        onScaleChanged(scaleX, scaleY)
+                        onUpdatePosition(offset, note.width, note.height, rotation)
                     }
                 }
                 .pointerInput(Unit) {
@@ -547,7 +553,7 @@ fun CanvasImageItem(
             }
         }
 
-        if (isSelected && baseSize != IntSize.Zero && !isLocked){
+        if (isSelected && baseSize != IntSize.Zero && !isLocked) {
             val cx = baseSize.width / 2f
             val cy = baseSize.height / 2f
 
@@ -636,6 +642,8 @@ fun CanvasImageItem(
 
                             if (dx != 0f) scaleX = (newScaledDx / dx).toFloat().coerceIn(0.2f, 5f)
                             if (dy != 0f) scaleY = (newScaledDy / dy).toFloat().coerceIn(0.2f, 5f)
+
+                            onScaleChanged(scaleX, scaleY)
                         }
                     }
                     .background(Color.White, CircleShape)
@@ -654,7 +662,8 @@ fun CanvasTextItem(
     isSelected: Boolean,
     isLocked: Boolean,
     onSelect: () -> Unit,
-    onUpdatePosition: (Offset, Float, Float) -> Unit,
+    onUpdatePosition: (Offset, Float, Float, Float) -> Unit,
+    onScaleChanged: (Float, Float) -> Unit,
     onColorPickerRequested: () -> Unit,
     onDeleteRequested: () -> Unit
 ) {
@@ -699,7 +708,8 @@ fun CanvasTextItem(
                         scaleY = (scaleY * zoom).coerceIn(0.2f, 5f)
                         rotation += rot
 
-                        onUpdatePosition(offset, note.width, note.height)
+                        onScaleChanged(scaleX, scaleY)
+                        onUpdatePosition(offset, note.width, note.height, rotation)
                     }
                 }
                 .pointerInput(Unit) {
@@ -835,6 +845,8 @@ fun CanvasTextItem(
 
                             if (dx != 0f) scaleX = (newScaledDx / dx).toFloat().coerceIn(0.2f, 5f)
                             if (dy != 0f) scaleY = (newScaledDy / dy).toFloat().coerceIn(0.2f, 5f)
+
+                            onScaleChanged(scaleX, scaleY)
                         }
                     }
                     .background(Color.White, CircleShape)

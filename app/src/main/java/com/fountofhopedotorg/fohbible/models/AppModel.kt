@@ -44,17 +44,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun updateNotePosition(id: String, offset: Offset, width: Float, height: Float) {
-        val index = canvasNotes.indexOfFirst { it.id == id }
-        if (index != -1) {
-            canvasNotes[index] = canvasNotes[index].copy(
-                offset = offset,
-                width = width,
-                height = height
-            )
-        }
-    }
-
     fun updateNoteColor(id: String, color: Color) {
         val index = canvasNotes.indexOfFirst { it.id == id }
         if (index != -1) {
@@ -287,19 +276,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun updateNoteContent(id: String, newContent: String) {
-        val index = canvasNotes.indexOfFirst { it.id == id }
-        if (index != -1) {
-            canvasNotes[index] = canvasNotes[index].copy(content = newContent)
-        }
-    }
-
-    fun reorderCanvasNotes(from: Int, to: Int) {
-        if (from == to || from !in canvasNotes.indices || to !in canvasNotes.indices) return
-        val item = canvasNotes.removeAt(from)
-        canvasNotes.add(to, item)
-    }
-
     fun toggleVisibility(noteId: String) {
         val index = canvasNotes.indexOfFirst { it.id == noteId }
         if (index != -1) {
@@ -355,6 +331,26 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 rotation = rotation
             )
         }
+    }
+
+    fun updateNoteScale(id: String, scaleX: Float, scaleY: Float) {
+        val index = canvasNotes.indexOfFirst { it.id == id }
+        if (index != -1) {
+            canvasNotes[index] = canvasNotes[index].copy(scaleX = scaleX, scaleY = scaleY)
+        }
+    }
+
+    fun updateNoteContent(id: String, newContent: String) {
+        val index = canvasNotes.indexOfFirst { it.id == id }
+        if (index != -1) {
+            canvasNotes[index] = canvasNotes[index].copy(content = newContent)
+        }
+    }
+
+    fun reorderCanvasNotes(from: Int, to: Int) {
+        if (from == to || from !in canvasNotes.indices || to !in canvasNotes.indices) return
+        val item = canvasNotes.removeAt(from)
+        canvasNotes.add(to, item)
     }
 
     val groupNames = mutableStateMapOf<String, String>()

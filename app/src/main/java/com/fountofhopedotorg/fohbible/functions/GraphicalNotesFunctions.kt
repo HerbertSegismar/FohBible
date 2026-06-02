@@ -238,13 +238,17 @@ private fun buildVectorSvg(
         val h = note.height
         val color = colorToHex(note.backgroundColor)
         val rotation = note.rotation
-
+        val scaleX = note.scaleX
+        val scaleY = note.scaleY
         val transform = buildString {
-            append("translate($adjustedX, $adjustedY)")
+            append("translate($adjustedX, $adjustedY) ")
             if (rotation != 0f) {
-                append(" rotate($rotation, ${w / 2}, ${h / 2})")
+                append("rotate($rotation) ")
             }
-        }
+            if (scaleX != 1f || scaleY != 1f) {
+                append("translate(${w / 2}, ${h / 2}) scale($scaleX, $scaleY) translate(${-w / 2}, ${-h / 2})")
+            }
+        }.trim()
 
         val shapeElement = buildShapeSvg(note, w, h, color)
         g.append("""    <g transform="$transform">""")

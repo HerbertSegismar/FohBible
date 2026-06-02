@@ -43,7 +43,8 @@ fun CanvasArea(
     dragGroupDelta: Offset,
     onGroupDragDeltaChange: (Offset) -> Unit,
     onCanvasNoteTap: (CanvasNote) -> Unit,
-    onNoteUpdatePosition: (CanvasNote, Offset, Float, Float) -> Unit,
+    onNoteUpdatePosition: (CanvasNote, Offset, Float, Float, Float) -> Unit,
+    onNoteScaleChange: (String, Float, Float) -> Unit,
     onColorPickerRequested: (String) -> Unit,
     onDeleteRequested: (String) -> Unit,
     onClearSelection: () -> Unit,
@@ -90,48 +91,51 @@ fun CanvasArea(
                                 isSelected = isItemSelected,
                                 isLocked = note.isLocked,
                                 onSelect = { if (!note.isLocked) onCanvasNoteTap(note) },
-                                onUpdatePosition = { offset, w, h ->
+                                onUpdatePosition = { offset, w, h, rot ->
                                     if (isInSelectedGroup) {
                                         onGroupDragDeltaChange(offset - note.offset)
                                     } else {
-                                        onNoteUpdatePosition(note, offset, w, h)
+                                        onNoteUpdatePosition(note, offset, w, h, rot)
                                     }
                                 },
                                 onColorPickerRequested = {
                                     if (!note.isLocked) onColorPickerRequested(note.id)
                                 },
-                                onDeleteRequested = { onDeleteRequested(note.id) }
+                                onDeleteRequested = { onDeleteRequested(note.id) },
+                                onScaleChanged = { sx, sy -> onNoteScaleChange(note.id, sx, sy) }
                             )
                             note.content.startsWith("Image:") -> CanvasImageItem(
                                 note = note,
                                 isSelected = isItemSelected,
                                 isLocked = note.isLocked,
                                 onSelect = { if (!note.isLocked) onCanvasNoteTap(note) },
-                                onUpdatePosition = { offset, w, h ->
+                                onUpdatePosition = { offset, w, h, rot ->
                                     if (isInSelectedGroup) {
                                         onGroupDragDeltaChange(offset - note.offset)
                                     } else {
-                                        onNoteUpdatePosition(note, offset, w, h)
+                                        onNoteUpdatePosition(note, offset, w, h, rot)
                                     }
                                 },
-                                onDeleteRequested = { onDeleteRequested(note.id) }
+                                onDeleteRequested = { onDeleteRequested(note.id) },
+                                onScaleChanged = { sx, sy -> onNoteScaleChange(note.id, sx, sy) }
                             )
                             else -> CanvasTextItem(
                                 note = note,
                                 isSelected = isItemSelected,
                                 isLocked = note.isLocked,
                                 onSelect = { if (!note.isLocked) onCanvasNoteTap(note) },
-                                onUpdatePosition = { offset, w, h ->
+                                onUpdatePosition = { offset, w, h, rot ->
                                     if (isInSelectedGroup) {
                                         onGroupDragDeltaChange(offset - note.offset)
                                     } else {
-                                        onNoteUpdatePosition(note, offset, w, h)
+                                        onNoteUpdatePosition(note, offset, w, h, rot)
                                     }
                                 },
                                 onColorPickerRequested = {
                                     if (!note.isLocked) onColorPickerRequested(note.id)
                                 },
-                                onDeleteRequested = { onDeleteRequested(note.id) }
+                                onDeleteRequested = { onDeleteRequested(note.id) },
+                                onScaleChanged = { sx, sy -> onNoteScaleChange(note.id, sx, sy) }
                             )
                         }
                     }
