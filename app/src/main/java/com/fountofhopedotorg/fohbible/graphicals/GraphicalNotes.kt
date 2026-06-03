@@ -92,7 +92,7 @@ fun GraphicalNotesScreen() {
     var fetchError by rememberSaveable { mutableStateOf<String?>(null) }
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
     var noteToColorEditId by rememberSaveable { mutableStateOf<String?>(null) }
-    var selectedInputMode by rememberSaveable { mutableStateOf("Add Text") }
+    var selectedInputMode by rememberSaveable { mutableStateOf("Add SVG") }
     var noteToEdit by rememberSaveable { mutableStateOf<String?>(null) }
     var editedNoteText by rememberSaveable { mutableStateOf("") }
     var showCanvasElementsTree by rememberSaveable { mutableStateOf(true) }

@@ -1,7 +1,11 @@
 package com.fountofhopedotorg.fohbible.composables
 
 import android.content.res.Configuration
+import android.graphics.BitmapFactory
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +19,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -24,32 +30,44 @@ import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Opacity
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -57,6 +75,10 @@ import androidx.compose.ui.window.DialogProperties
 import com.fountofhopedotorg.fohbible.data.BezierNode
 import com.fountofhopedotorg.fohbible.graphicals.BezierModeSelector
 import com.fountofhopedotorg.fohbible.graphicals.HybridJoystick
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 enum class ActiveControl { ANCHOR, HANDLE_IN, HANDLE_OUT }
 
@@ -116,6 +138,48 @@ fun CustomPolygonDialog(
     var selectedIndex by rememberSaveable { mutableIntStateOf(if (points.isNotEmpty()) 0 else -1) }
     var nudgeAmountIndex by rememberSaveable { mutableIntStateOf(0) }
     var activeControl by rememberSaveable { mutableStateOf(ActiveControl.ANCHOR) }
+
+    // ---- New: reference image state ----
+    var referenceImageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+    var referenceImageOpacity by remember { mutableFloatStateOf(1f) }
+    var showOpacitySlider by remember { mutableStateOf(false) }
+
+    // Auto‑hide the opacity slider after 3 seconds of inactivity
+    LaunchedEffect(referenceImageBitmap, referenceImageOpacity) {
+        if (referenceImageBitmap != null) {
+            showOpacitySlider = true
+            delay(3000)
+            showOpacitySlider = false
+        } else {
+            showOpacitySlider = false
+        }
+    }
+
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            scope.launch(Dispatchers.IO) {
+                try {
+                    val bitmap = context.contentResolver.openInputStream(it)?.use { stream ->
+                        BitmapFactory.decodeStream(stream)?.asImageBitmap()
+                    }
+                    withContext(Dispatchers.Main) {
+                        referenceImageBitmap = bitmap
+                        if (bitmap != null) {
+                            referenceImageOpacity = 1f
+                            showOpacitySlider = true
+                        }
+                    }
+                } catch (_: Exception) {
+                    // Handle error silently; image not loaded
+                }
+            }
+        }
+    }
 
     var drawingAreaSize by remember { mutableStateOf(IntSize.Zero) }
     val nudgeAmounts = listOf(0.01f, 0.05f, 0.1f)
@@ -216,6 +280,17 @@ fun CustomPolygonDialog(
                     }
                 }
         ) {
+            // ---- Reference image behind the canvas (with adjustable opacity) ----
+            if (referenceImageBitmap != null) {
+                Image(
+                    bitmap = referenceImageBitmap!!,
+                    contentDescription = "Reference image",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit,
+                    alpha = referenceImageOpacity
+                )
+            }
+
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val canvasSize = this.size
 
@@ -417,17 +492,70 @@ fun CustomPolygonDialog(
             )
 
             Spacer(Modifier.height(8.dp))
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                HybridJoystick(
+                    nudgeAmount = currentNudgeAmount,
+                    enabled = points.isNotEmpty(),
+                    onNudgeAmountClick = {
+                        nudgeAmountIndex = (nudgeAmountIndex + 1) % nudgeAmounts.size
+                    },
+                    onDirectionClick = { dx, dy ->
+                        nudgePoint(dx, dy)
+                    }
+                )
 
-            HybridJoystick(
-                nudgeAmount = currentNudgeAmount,
-                enabled = points.isNotEmpty(),
-                onNudgeAmountClick = {
-                    nudgeAmountIndex = (nudgeAmountIndex + 1) % nudgeAmounts.size
-                },
-                onDirectionClick = { dx, dy ->
-                    nudgePoint(dx, dy)
+                if (referenceImageBitmap != null) {
+                    Box(
+                        modifier = Modifier.align(Alignment.CenterEnd)
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(start = 8.dp)
+                        ) {
+                            if (showOpacitySlider) {
+                                Box(
+                                    modifier = Modifier.size(width = 120.dp, height = 24.dp).padding(top = 70.dp)
+                                ) {
+                                    Slider(
+                                        value = referenceImageOpacity,
+                                        onValueChange = { referenceImageOpacity = it },
+                                        valueRange = 0f..1f,
+                                        modifier = Modifier
+                                            .width(120.dp)
+                                            .height(24.dp)
+                                            .rotate(-90f),
+                                        colors = SliderDefaults.colors(
+                                            thumbColor = MaterialTheme.colorScheme.primary,
+                                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                                            inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                                        )
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(110.dp))
+                                Text(
+                                    text = "Opacity",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            else {
+                                IconButton(
+                                    onClick = { showOpacitySlider = true }
+                                ) {
+                                    Icon(
+                                        Icons.Default.Opacity,
+                                        contentDescription = "Show opacity slider",
+                                        tint = MaterialTheme.colorScheme.secondary
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
-            )
+            }
         }
     }
 
@@ -470,7 +598,7 @@ fun CustomPolygonDialog(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(
@@ -516,6 +644,17 @@ fun CustomPolygonDialog(
                                                 checkmarkColor = Color.White
                                             )
                                         )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        IconButton(
+                                            onClick = { imagePickerLauncher.launch("image/*") }
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Image,
+                                                modifier = Modifier.size(26.dp),
+                                                contentDescription = "Load Reference Image",
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
                                     }
 
                                     TextButton(onClick = onDismiss) { Text("Cancel") }
@@ -532,7 +671,7 @@ fun CustomPolygonDialog(
                                     }
 
                                     TextButton(
-                                        onClick = onConfirmAction,   // <-- uses normalization
+                                        onClick = onConfirmAction,
                                         enabled = points.size >= minPointsRequired
                                     ) {
                                         Text(if (isEditing) "Save Changes" else "Add to Canvas")
@@ -586,6 +725,17 @@ fun CustomPolygonDialog(
                                         checkmarkColor = Color.White
                                     )
                                 )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                IconButton(
+                                    onClick = { imagePickerLauncher.launch("image/*") }
+                                ) {
+                                    Icon(
+                                        Icons.Default.Image,
+                                        modifier = Modifier.size(26.dp),
+                                        contentDescription = "Load Reference Image",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                             }
 
                             TextButton(onClick = onDismiss) { Text("Cancel") }

@@ -32,9 +32,9 @@ fun InputModeSelector(
         verticalAlignment = Alignment.CenterVertically
     ) {
         val modes = listOf(
+            Triple("Add SVG", Icons.Default.FormatShapes, "Add SVG"),
             Triple("Add Text", Icons.Default.TextFields, "Add Text"),
             Triple("Fetch Verse", Icons.Default.Book, "Fetch Verse"),
-            Triple("Add SVG", Icons.Default.FormatShapes, "Add SVG"),
             Triple("Add Image", Icons.Default.Image, "Add Image")
         )
 

@@ -60,6 +60,7 @@ import kotlin.math.sin
 import androidx.core.net.toUri
 import com.fountofhopedotorg.fohbible.data.BezierNodeData
 import com.fountofhopedotorg.fohbible.functions.getRandomColor
+import kotlin.math.abs
 
 @Composable
 fun ShapeSelectionCard(
@@ -869,23 +870,52 @@ fun CustomPathPreview(
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
-        val segments = pointsData.split(";").filter { it.isNotEmpty() }
+
+        val segments = pointsData.split(";")
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
 
         if (segments.size >= 2) {
             val path = Path()
+            var firstX = 0f
+            var firstY = 0f
+            var lastX = 0f
+            var lastY = 0f
+            var firstHandles = emptyList<String>()
+
             for (i in segments.indices) {
                 val segment = segments[i]
                 val parts = segment.split(":")
+
                 val mainCoords = parts[0].split(",")
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+
                 if (mainCoords.size < 2) continue
 
                 val px = (mainCoords[0].toFloatOrNull() ?: 0f) * w
                 val py = (mainCoords[1].toFloatOrNull() ?: 0f) * h
 
                 if (i == 0) {
+                    firstX = px
+                    firstY = py
+                    firstHandles = if (parts.size > 1) {
+                        parts[1].split(",")
+                            .map { it.trim() }
+                            .filter { it.isNotEmpty() }
+                    } else {
+                        emptyList()
+                    }
                     path.moveTo(px, py)
                 } else {
-                    val handles = if (parts.size > 1) parts[1].split(",") else emptyList()
+                    val handles = if (parts.size > 1) {
+                        parts[1].split(",")
+                            .map { it.trim() }
+                            .filter { it.isNotEmpty() }
+                    } else {
+                        emptyList()
+                    }
+
                     when (handles.size) {
                         4 -> {
                             val cp1x = (handles[0].toFloatOrNull() ?: 0f) * w
@@ -904,9 +934,34 @@ fun CustomPathPreview(
                         }
                     }
                 }
+                lastX = px
+                lastY = py
             }
+
             if (isClosed) {
+                val isAlreadyAtStart = abs(lastX - firstX) < 0.5f && abs(lastY - firstY) < 0.5f
+
+                if (!isAlreadyAtStart) {
+                    when (firstHandles.size) {
+                        4 -> {
+                            val cp1x = (firstHandles[0].toFloatOrNull() ?: 0f) * w
+                            val cp1y = (firstHandles[1].toFloatOrNull() ?: 0f) * h
+                            val cp2x = (firstHandles[2].toFloatOrNull() ?: 0f) * w
+                            val cp2y = (firstHandles[3].toFloatOrNull() ?: 0f) * h
+                            path.cubicTo(cp1x, cp1y, cp2x, cp2y, firstX, firstY)
+                        }
+                        2 -> {
+                            val cpx = (firstHandles[0].toFloatOrNull() ?: 0f) * w
+                            val cpy = (firstHandles[1].toFloatOrNull() ?: 0f) * h
+                            path.quadraticTo(cpx, cpy, firstX, firstY)
+                        }
+                        else -> {
+                        }
+                    }
+                }
+
                 path.close()
+
                 drawPath(path = path, color = color, style = Fill)
                 drawPath(
                     path = path,
