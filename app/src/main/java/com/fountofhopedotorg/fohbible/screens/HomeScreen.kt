@@ -267,7 +267,7 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
             ) {
-                Text("Create Graphical Notes", color = Color.White)
+                Text("Create Sermon Materials", color = Color.White)
             }
         }
 

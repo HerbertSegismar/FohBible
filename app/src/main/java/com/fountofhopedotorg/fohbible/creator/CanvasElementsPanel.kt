@@ -1,4 +1,4 @@
-package com.fountofhopedotorg.fohbible.graphicals
+package com.fountofhopedotorg.fohbible.creator
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically

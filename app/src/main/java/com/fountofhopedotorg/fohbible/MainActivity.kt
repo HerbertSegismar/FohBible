@@ -82,7 +82,7 @@ import com.fountofhopedotorg.fohbible.modals.VersionSelectionModal
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.data.BibleVersionInfo
 import com.fountofhopedotorg.fohbible.data.BibleVersionInfoRepository
-import com.fountofhopedotorg.fohbible.graphicals.GraphicalNotesScreen
+import com.fountofhopedotorg.fohbible.creator.CreatorScreen
 import com.fountofhopedotorg.fohbible.screens.BookmarksScreen
 import com.fountofhopedotorg.fohbible.screens.HomeScreen
 import com.fountofhopedotorg.fohbible.screens.NotesScreen
@@ -399,7 +399,8 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                 modifier = Modifier.fillMaxSize(),
                 contentWindowInsets = WindowInsets(hInset, vInset, hInset, vInset),
                 topBar = {
-                    if (currentScreen !is Screen.Reader || !viewModel.isReaderFullScreen) {
+                    if ((currentScreen !is Screen.Reader || !viewModel.isReaderFullScreen) &&
+                        (currentScreen !is Screen.Creator || !viewModel.isGraphicalFullScreen)) {
                         Surface(
                             modifier = Modifier.padding(horizontal = hInset),
                             color = Color.Transparent
@@ -471,7 +472,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 }
                             },
                             databaseHelper = dbHelper,
-                            onAddEditableTextClick = { viewModel.navigateTo(Screen.GraphicalNotes) }
+                            onAddEditableTextClick = { viewModel.navigateTo(Screen.Creator) }
                         )
                         is Screen.Reader -> {
                             val passage = currentScreen.passage ?: viewModel.primaryPassage
@@ -520,7 +521,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 viewModel.currentVersionAbbr = BibleVersionUtils.versionMap[newVersionKey] ?: "Bible"
                             }
                         )
-                        Screen.GraphicalNotes -> GraphicalNotesScreen()
+                        Screen.Creator -> CreatorScreen()
                     }
                     if (viewModel.showNavigationModal) {
                         NavigationModal(
@@ -778,7 +779,7 @@ sealed class Screen {
     object Notes : Screen()
     object Settings : Screen()
     object Search : Screen()
-    object GraphicalNotes : Screen()
+    object Creator : Screen()
 }
 
 private fun copyUriToInternalStorage(context: Context, sourceUri: Uri): String? {

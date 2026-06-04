@@ -128,41 +128,6 @@ fun SettingsScreen() {
                         )
                     )
                 }
-                if (viewModel.renderOrbs) {
-                    SettingsItem(
-                        title = "Orbs Count ($MIN_ORB_COUNT - $MAX_ORB_COUNT)",
-                        subtitle = "Adjust the number of orbs rendered",
-                        onClick = { showOrbsCountModal = true }
-                    ) {
-                        Card(
-                            shape = RoundedCornerShape(20.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = primary.copy(alpha = 0.1f)
-                            )
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(
-                                    onClick = { viewModel.orbsCount = maxOf(MIN_ORB_COUNT, viewModel.orbsCount - 1) },
-                                    modifier = Modifier.size(40.dp)
-                                ) {
-                                    Text("-", fontWeight = FontWeight.Bold)
-                                }
-                                Text(
-                                    "${viewModel.orbsCount}",
-                                    modifier = Modifier.padding(horizontal = 8.dp),
-                                    color = primary,
-                                    fontSize = 18.sp
-                                )
-                                IconButton(
-                                    onClick = { viewModel.orbsCount = minOf(MAX_ORB_COUNT, viewModel.orbsCount + 1) },
-                                    modifier = Modifier.size(40.dp)
-                                ) {
-                                    Text("+", fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                    }
-                }
                 Column {
                     Text("Color Scheme", style = MaterialTheme.typography.labelLarge)
                     Spacer(Modifier.height(8.dp))
@@ -192,7 +157,6 @@ fun SettingsScreen() {
         }
         item {
             SettingsSection(title = "Reader Settings", subtitle = "Customize your Bible reading experience") {
-                // Primary version
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -393,7 +357,41 @@ fun SettingsScreen() {
                         }
                     }
                 }
-                Spacer(Modifier.height(8.dp))
+                if (viewModel.renderOrbs) {
+                    SettingsItem(
+                        title = "Orbs Count ($MIN_ORB_COUNT - $MAX_ORB_COUNT)",
+                        subtitle = "Adjust the number of orbs rendered",
+                        onClick = { showOrbsCountModal = true }
+                    ) {
+                        Card(
+                            shape = RoundedCornerShape(20.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = primary.copy(alpha = 0.1f)
+                            )
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(
+                                    onClick = { viewModel.orbsCount = maxOf(MIN_ORB_COUNT, viewModel.orbsCount - 1) },
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Text("-", fontWeight = FontWeight.Bold)
+                                }
+                                Text(
+                                    "${viewModel.orbsCount}",
+                                    modifier = Modifier.padding(horizontal = 8.dp),
+                                    color = primary,
+                                    fontSize = 18.sp
+                                )
+                                IconButton(
+                                    onClick = { viewModel.orbsCount = minOf(MAX_ORB_COUNT, viewModel.orbsCount + 1) },
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Text("+", fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
                 Column {
                     Text("Font Family", style = MaterialTheme.typography.labelLarge)
                     Spacer(Modifier.height(8.dp))

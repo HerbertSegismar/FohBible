@@ -1,4 +1,4 @@
-package com.fountofhopedotorg.fohbible.graphicals
+package com.fountofhopedotorg.fohbible.creator
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring

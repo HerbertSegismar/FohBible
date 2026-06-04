@@ -1,4 +1,4 @@
-package com.fountofhopedotorg.fohbible.graphicals
+package com.fountofhopedotorg.fohbible.creator
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,7 +29,7 @@ fun AddTextSection(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = themeColors.primary.copy(alpha = 0.05f))
     ) {
-        Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
+        Column(modifier = Modifier.padding( vertical = 2.dp, horizontal = 16.dp).fillMaxWidth()) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
                     value = currentText,

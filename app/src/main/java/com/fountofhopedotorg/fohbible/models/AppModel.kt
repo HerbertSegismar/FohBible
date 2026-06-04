@@ -86,6 +86,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         "om1.jpg", "om2.jpg", "om3.jpg", "om4.jpg", "om5.jpg"
     )
 
+    var isGraphicalFullScreen by mutableStateOf(false)
     var fetchedVerses by mutableStateOf<List<Verse>>(emptyList())
     var currentReference by mutableStateOf("")
     var disabledVersions by mutableStateOf<Set<String>>(emptySet())

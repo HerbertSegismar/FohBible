@@ -1,4 +1,4 @@
-package com.fountofhopedotorg.fohbible.graphicals
+package com.fountofhopedotorg.fohbible.creator
 
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons

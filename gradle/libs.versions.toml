@@ -22,6 +22,7 @@ pagingCommon = "3.5.0"
 remoteCreationCore = "1.0.0-alpha010"
 material3Lint = "1.4.0"
 uiUnit = "1.11.2"
+foundationLayoutVersion = "1.11.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -53,6 +54,7 @@ androidx-paging-common = { group = "androidx.paging", name = "paging-common", ve
 androidx-compose-remote-creation-core = { group = "androidx.compose.remote", name = "remote-creation-core", version.ref = "remoteCreationCore" }
 androidx-compose-material3-lint = { group = "androidx.compose.material3", name = "material3-lint", version.ref = "material3Lint" }
 androidx-compose-ui-unit = { group = "androidx.compose.ui", name = "ui-unit", version.ref = "uiUnit" }
+androidx-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout", version.ref = "foundationLayoutVersion" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

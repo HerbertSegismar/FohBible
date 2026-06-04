@@ -1,7 +1,7 @@
-package com.fountofhopedotorg.fohbible.graphicals
+package com.fountofhopedotorg.fohbible.creator
 
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -10,29 +10,31 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 
 @Composable
-fun GroupDialog(
-    show: Boolean,
-    initialName: String,
+fun RenameDialog(
+    noteId: String?,
+    currentName: String,
+    title: String = "Rename Element",
     onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit
+    onConfirm: (String, String) -> Unit
 ) {
-    if (show) {
-        var groupName by remember { mutableStateOf(initialName) }
+    if (noteId != null) {
+        var renameText by remember { mutableStateOf(currentName) }
         AlertDialog(
             onDismissRequest = onDismiss,
-            title = { Text("Group Selected Elements") },
+            title = { Text(title) },
             text = {
                 OutlinedTextField(
-                    value = groupName,
-                    onValueChange = { groupName = it },
-                    label = { Text("Group Name") },
-                    singleLine = true
+                    value = renameText,
+                    onValueChange = { renameText = it },
+                    label = { Text("New name") },
+                    modifier = Modifier.fillMaxWidth()
                 )
             },
             confirmButton = {
-                Button(onClick = { onConfirm(groupName) }) { Text("Create Group") }
+                TextButton(onClick = { onConfirm(noteId, renameText) }) { Text("Save") }
             },
             dismissButton = {
                 TextButton(onClick = onDismiss) { Text("Cancel") }

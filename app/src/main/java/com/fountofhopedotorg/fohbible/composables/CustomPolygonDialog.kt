@@ -73,8 +73,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.fountofhopedotorg.fohbible.data.BezierNode
-import com.fountofhopedotorg.fohbible.graphicals.BezierModeSelector
-import com.fountofhopedotorg.fohbible.graphicals.HybridJoystick
+import com.fountofhopedotorg.fohbible.creator.BezierModeSelector
+import com.fountofhopedotorg.fohbible.creator.HybridJoystick
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
