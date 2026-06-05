@@ -5,7 +5,6 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,17 +16,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -42,27 +35,25 @@ import com.fountofhopedotorg.fohbible.composables.ColorWheelDialog
 import com.fountofhopedotorg.fohbible.composables.CustomPolygonDialog
 import com.fountofhopedotorg.fohbible.data.CanvasNote
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
-import com.fountofhopedotorg.fohbible.data.ReferenceResult
 import com.fountofhopedotorg.fohbible.data.ThemeColors
-import com.fountofhopedotorg.fohbible.data.fetchByReference
-import com.fountofhopedotorg.fohbible.functions.buildReferenceString
 import com.fountofhopedotorg.fohbible.functions.getElementDisplayName
 import com.fountofhopedotorg.fohbible.functions.getRandomColor
 import com.fountofhopedotorg.fohbible.functions.getSerializedPointsForShape
-import com.fountofhopedotorg.fohbible.functions.saveCanvasAsImage
-import com.fountofhopedotorg.fohbible.functions.saveCanvasAsPDF
-import com.fountofhopedotorg.fohbible.functions.saveCanvasAsSVG
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
-import kotlinx.coroutines.launch
+
+sealed class ContentDialogType {
+    data class Edit(val noteId: String, val initialContent: String) : ContentDialogType()
+    object AddText : ContentDialogType()
+    object FetchVerse : ContentDialogType()
+}
 
 @RequiresApi(Build.VERSION_CODES.Q)
 @Composable
 fun CreatorScreen() {
     val context = LocalContext.current
     val viewModel: AppViewModel = viewModel()
-    val coroutineScope = rememberCoroutineScope()
     val graphicsLayer = rememberGraphicsLayer()
 
     var noteToRenameId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -84,16 +75,11 @@ fun CreatorScreen() {
 
     var showCustomPolygonDialog by rememberSaveable { mutableStateOf(false) }
     var selectedNoteId by rememberSaveable { mutableStateOf<String?>(null) }
-    var currentText by rememberSaveable { mutableStateOf("") }
-    var referenceInput by rememberSaveable { mutableStateOf("") }
-    var fetchError by rememberSaveable { mutableStateOf<String?>(null) }
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
     var noteToColorEditId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedInputMode by rememberSaveable { mutableStateOf("Add SVG") }
-    var noteToEdit by rememberSaveable { mutableStateOf<String?>(null) }
-    var editedNoteText by rememberSaveable { mutableStateOf("") }
+    var contentDialogType by remember { mutableStateOf<ContentDialogType?>(null) }
     var showCanvasElementsTree by rememberSaveable { mutableStateOf(true) }
-    var showSaveMenu by rememberSaveable { mutableStateOf(false) }
     var polygonNoteToEditId by rememberSaveable { mutableStateOf<String?>(null) }
     var initialPolygonString by rememberSaveable { mutableStateOf("") }
     var initialIsLineMode by rememberSaveable { mutableStateOf(false) }
@@ -175,6 +161,7 @@ fun CreatorScreen() {
         selectedNoteId = note.id
         selectedNoteIds = emptySet()
     }
+
     Row(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -193,8 +180,7 @@ fun CreatorScreen() {
                     initialPolygonString = ""
                     initialIsLineMode = false
                     showCustomPolygonDialog = true
-                },
-                themeColors = themeColors
+                }
             )
         }
         Column(
@@ -209,112 +195,28 @@ fun CreatorScreen() {
             ) {
                 InputModeSelector(
                     selectedInputMode = selectedInputMode,
-                    onModeSelected = {
-                        selectedInputMode = if (it != "Add SVG") it else "Add Text"
+                    onModeSelected = { mode ->
+                        when (mode) {
+                            "Add SVG" -> selectedInputMode = "Add SVG"
+                            "Add Text" -> {
+                                selectedInputMode = "Add Text"
+                                contentDialogType = ContentDialogType.AddText
+                            }
+                            "Fetch Verse" -> {
+                                selectedInputMode = "Fetch Verse"
+                                contentDialogType = ContentDialogType.FetchVerse
+                            }
+                            else -> selectedInputMode = "Add SVG"
+                        }
                     },
                     themeColors = themeColors,
                     isFullScreen = viewModel.isGraphicalFullScreen,
                     onToggleFullScreen = {
                         viewModel.isGraphicalFullScreen = !viewModel.isGraphicalFullScreen
                     },
-                    trailingContent = {
-                        Box {
-                            IconButton(
-                                onClick = { showSaveMenu = true },
-                                modifier = Modifier.padding(horizontal = 8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Save,
-                                    contentDescription = "Save As",
-                                    tint = MaterialTheme.colorScheme.primary.copy(0.6f)
-                                )
-                            }
-                            SaveAsMenu(
-                                expanded = showSaveMenu,
-                                onDismiss = { showSaveMenu = false },
-                                onSavePng = {
-                                    coroutineScope.launch { saveCanvasAsImage(graphicsLayer, context, "PNG") }
-                                },
-                                onSaveJpg = {
-                                    coroutineScope.launch { saveCanvasAsImage(graphicsLayer, context, "JPG") }
-                                },
-                                onSavePdf = { coroutineScope.launch { saveCanvasAsPDF(graphicsLayer, context) } },
-                                onSaveSvg = {
-                                    coroutineScope.launch {
-                                        saveCanvasAsSVG(graphicsLayer, context, viewModel.canvasNotes)
-                                    }
-                                }
-                            )
-                        }
-                    }
+                    onChooseFromGallery = { imagePickerLauncher.launch("image/*") },
+                    graphicsLayer = graphicsLayer
                 )
-                when (selectedInputMode) {
-                    "Add Text" -> AddTextSection(
-                        currentText = currentText,
-                        onTextChange = { currentText = it },
-                        onAdd = {
-                            if (currentText.isNotBlank()) {
-                                viewModel.addToCanvas(CanvasNote(content = currentText))
-                                currentText = ""
-                            }
-                        },
-                        themeColors = themeColors
-                    )
-                    "Fetch Verse" -> FetchVerseSection(
-                        referenceInput = referenceInput,
-                        onReferenceChange = { referenceInput = it },
-                        fetchError = fetchError,
-                        onFetch = {
-                            fetchError = null
-                            when (val result = fetchByReference(referenceInput, dbHelper)) {
-                                is ReferenceResult.Single -> {
-                                    viewModel.fetchedVerses = listOf(result.verse)
-                                    viewModel.currentReference = buildReferenceString(
-                                        result.bookName,
-                                        result.verse.chapter,
-                                        result.verse.verseNumber,
-                                        null
-                                    )
-                                }
-                                is ReferenceResult.Range -> {
-                                    viewModel.fetchedVerses = result.verses
-                                    val first = result.verses.first()
-                                    val last = result.verses.last()
-                                    viewModel.currentReference = buildReferenceString(
-                                        result.bookName,
-                                        first.chapter,
-                                        first.verseNumber,
-                                        last.verseNumber
-                                    )
-                                }
-                                is ReferenceResult.Chapter -> {
-                                    viewModel.fetchedVerses = result.verses
-                                    val first = result.verses.first()
-                                    viewModel.currentReference = buildReferenceString(
-                                        result.bookName,
-                                        first.chapter,
-                                        null,
-                                        null
-                                    )
-                                }
-                                ReferenceResult.Invalid -> {
-                                    viewModel.fetchedVerses = emptyList()
-                                    viewModel.currentReference = ""
-                                    fetchError = "Invalid reference or verse not found"
-                                }
-                            }
-                        },
-                        fetchedVerses = viewModel.fetchedVerses,
-                        currentReference = viewModel.currentReference,
-                        themeColors = themeColors,
-                        viewModel = viewModel,
-                        verseProcessor = verseProcessor
-                    )
-                    "Add Image" -> AddImageSection(
-                        onChooseFromGallery = { imagePickerLauncher.launch("image/*") },
-                        themeColors = themeColors
-                    )
-                }
             }
 
             Spacer(Modifier.height(4.dp))
@@ -322,7 +224,6 @@ fun CreatorScreen() {
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .padding(horizontal = 4.dp)
                     .verticalScroll(mainScrollState)
             ) {
                 CanvasArea(
@@ -380,8 +281,7 @@ fun CreatorScreen() {
                     onToggleGroupSelection = { toggleGroupSelection(it) },
                     onGroupHeaderTap = { onGroupHeaderTap(it) },
                     onEditNote = { note ->
-                        noteToEdit = note.id
-                        editedNoteText = note.content
+                        contentDialogType = ContentDialogType.Edit(note.id, note.content)
                     },
                     onCustomPolygonEdit = { note ->
                         val content = note.content.trim()
@@ -413,8 +313,7 @@ fun CreatorScreen() {
                                     initialIsLineMode = false
                                     showCustomPolygonDialog = true
                                 } else {
-                                    noteToEdit = note.id
-                                    editedNoteText = content
+                                    contentDialogType = ContentDialogType.Edit(note.id, content)
                                 }
                             }
                         }
@@ -471,21 +370,69 @@ fun CreatorScreen() {
         }
     }
 
-    EditNoteDialog(
-        noteId = noteToEdit,
-        initialContent = editedNoteText,
-        onDismiss = { noteToEdit = null },
-        onSave = { id, newContent ->
-            val index = viewModel.canvasNotes.indexOfFirst { it.id == id }
-            if (index != -1) {
-                val old = viewModel.canvasNotes[index]
-                val updated = old.copy(content = newContent)
-                viewModel.removeFromCanvas(index)
-                viewModel.addToCanvas(updated)
-            }
-            noteToEdit = null
+    when (val dialog = contentDialogType) {
+        is ContentDialogType.Edit -> {
+            EditNoteDialog(
+                noteId = dialog.noteId,
+                initialContent = dialog.initialContent,
+                onDismiss = { contentDialogType = null },
+                onSave = { id, newContent ->
+                    val index = viewModel.canvasNotes.indexOfFirst { it.id == id }
+                    if (index != -1) {
+                        val old = viewModel.canvasNotes[index]
+                        val updated = old.copy(content = newContent)
+                        viewModel.removeFromCanvas(index)
+                        viewModel.addToCanvas(updated)
+                    }
+                    contentDialogType = null
+                }
+            )
         }
-    )
+        ContentDialogType.AddText -> {
+            EditNoteDialog(
+                noteId = null,
+                initialContent = "",
+                isNew = true,
+                onDismiss = { contentDialogType = null },
+                onSave = { _, newContent ->
+                    if (newContent.isNotBlank()) {
+                        viewModel.addToCanvas(
+                            CanvasNote(
+                                content = newContent,
+                                textColor = getRandomColor()
+                            )
+                        )
+                    }
+                    contentDialogType = null
+                }
+            )
+        }
+        ContentDialogType.FetchVerse -> {
+            EditNoteDialog(
+                noteId = null,
+                initialContent = "",
+                isNew = true,
+                fetchMode = true,
+                dbHelper = dbHelper,
+                viewModel = viewModel,
+                verseProcessor = verseProcessor,
+                themeColors = themeColors,
+                onDismiss = { contentDialogType = null },
+                onSave = { _, newContent ->
+                    if (newContent.isNotBlank()) {
+                        viewModel.addToCanvas(
+                            CanvasNote(
+                                content = newContent,
+                                textColor = getRandomColor()
+                            )
+                        )
+                    }
+                    contentDialogType = null
+                }
+            )
+        }
+        null -> {}
+    }
 
     RenameDialog(
         noteId = noteToRenameId,

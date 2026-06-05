@@ -29,28 +29,6 @@ import java.io.ByteArrayOutputStream
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
-fun buildPassageText(
-    reference: String,
-    verses: List<Verse>,
-    processor: VerseTextProcessor,
-    themeColors: ThemeColors,
-    viewModel: AppViewModel
-): String {
-    if (verses.isEmpty()) return ""
-    val sb = StringBuilder().append(reference).append("\n\n")
-    verses.forEach { verse ->
-        sb.append("${verse.verseNumber} ")
-        val processed = processor.processVerse(
-            verseText = verse.text,
-            baseFontSize = 16.sp,
-            themeColors = themeColors,
-            isOldTestament = viewModel.isOldTestament,
-            options = ProcessingOptions(showHeaders = false)
-        )
-        sb.append(processed.body).append("\n")
-    }
-    return sb.toString().trim()
-}
 
 fun buildReferenceString(
     bookName: String,
@@ -442,4 +420,23 @@ fun getElementDisplayName(
     }
 
     return "$category $count"
+}
+fun buildProcessedContent(
+    reference: String,
+    verses: List<Verse>,
+    verseProcessor: VerseTextProcessor,
+    themeColors: ThemeColors,
+    viewModel: AppViewModel
+): String {
+    val processedLines = verses.map { verse ->
+        val processed = verseProcessor.processVerse(
+            verseText = verse.text,
+            baseFontSize = 16.sp,
+            themeColors = themeColors,
+            isOldTestament = viewModel.isOldTestament,
+            options = ProcessingOptions(showHeaders = false)
+        )
+        "${verse.verseNumber} ${processed.body}"
+    }
+    return "$reference\n\n${processedLines.joinToString("\n")}"
 }

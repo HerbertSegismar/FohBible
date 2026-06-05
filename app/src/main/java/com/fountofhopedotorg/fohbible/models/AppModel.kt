@@ -20,7 +20,6 @@ import com.fountofhopedotorg.fohbible.data.CanvasNote
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.data.Testament
-import com.fountofhopedotorg.fohbible.data.Verse
 import com.fountofhopedotorg.fohbible.functions.getElementDisplayName
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
 import com.fountofhopedotorg.fohbible.utils.InteractiveModalUtils
@@ -86,9 +85,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         "om1.jpg", "om2.jpg", "om3.jpg", "om4.jpg", "om5.jpg"
     )
 
+
+    var showSaveMenu by mutableStateOf(false)
     var isGraphicalFullScreen by mutableStateOf(false)
-    var fetchedVerses by mutableStateOf<List<Verse>>(emptyList())
-    var currentReference by mutableStateOf("")
     var disabledVersions by mutableStateOf<Set<String>>(emptySet())
     var versionInfoForDialog by mutableStateOf("")
     var showVersionInfoDialog by mutableStateOf(false)

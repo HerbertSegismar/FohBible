@@ -160,11 +160,6 @@ fun CanvasArea(
                             pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
                         )
                     )
-                    val handleRadius = 6.dp.toPx()
-                    drawCircle(themeColors.primary, handleRadius, Offset(rect.left, rect.top))
-                    drawCircle(themeColors.primary, handleRadius, Offset(rect.right, rect.top))
-                    drawCircle(themeColors.primary, handleRadius, Offset(rect.left, rect.bottom))
-                    drawCircle(themeColors.primary, handleRadius, Offset(rect.right, rect.bottom))
                 }
             }
         }

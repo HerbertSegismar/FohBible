@@ -265,7 +265,8 @@ data class CanvasNote(
     val customName: String? = null,
     val groupId: String? = null,
     val scaleX: Float = 1f,
-    val scaleY: Float = 1f
+    val scaleY: Float = 1f,
+    val textColor: Color? = null
 )
 
 data class BezierNode(

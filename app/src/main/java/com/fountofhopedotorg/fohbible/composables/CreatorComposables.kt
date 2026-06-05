@@ -733,7 +733,7 @@ fun CanvasTextItem(
 
                 Text(
                     text = note.content,
-                    color = note.backgroundColor,
+                    color = note.textColor ?: Color.Black,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Medium,
                     textAlign = TextAlign.Center,
@@ -977,3 +977,4 @@ fun CustomPathPreview(
         }
     }
 }
+
