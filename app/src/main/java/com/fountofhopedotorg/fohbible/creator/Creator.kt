@@ -685,7 +685,12 @@ fun CreatorScreen() {
                 noteToColorEditId = null
             },
             onColorSelected = { color ->
-                viewModel.updateNoteColor(noteToColorEditId!!, color)
+                val note = viewModel.canvasNotes.find { it.id == noteToColorEditId }
+                if (note != null && !note.content.startsWith("Shape:") && !note.content.startsWith("Image:")) {
+                    viewModel.updateNoteTextColor(noteToColorEditId!!, color)
+                } else {
+                    viewModel.updateNoteColor(noteToColorEditId!!, color)
+                }
                 showColorPicker = false
                 noteToColorEditId = null
             },

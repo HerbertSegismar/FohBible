@@ -50,6 +50,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun updateNoteTextColor(noteId: String, color: Color) {
+        val index = canvasNotes.indexOfFirst { it.id == noteId }
+        if (index != -1) {
+            canvasNotes[index] = canvasNotes[index].copy(textColor = color)
+        }
+    }
+
     val predefinedHighlightColors = mutableStateListOf<Color>().apply {
         addAll(
             listOf(
