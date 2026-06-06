@@ -5,8 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -36,6 +34,7 @@ import kotlin.math.roundToInt
 
 @Composable
 fun CanvasArea(
+    modifier: Modifier = Modifier,
     viewModel: AppViewModel,
     selectedNoteIds: Set<String>,
     selectedNoteId: String?,
@@ -54,9 +53,7 @@ fun CanvasArea(
     graphicsLayer: GraphicsLayer
 ) {
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(700.dp)
+        modifier = modifier
             .clipToBounds()
             .background(if (isDark) Color(0xFF1E2937) else themeColors.primary.copy(0.1f), shape = MaterialTheme.shapes.medium)
             .pointerInput(Unit) {

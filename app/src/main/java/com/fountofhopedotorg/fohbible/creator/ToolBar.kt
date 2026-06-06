@@ -1,0 +1,206 @@
+package com.fountofhopedotorg.fohbible.creator
+
+import android.os.Build
+import androidx.annotation.RequiresApi
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.FullscreenExit
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.ShapeLine
+import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.layer.GraphicsLayer
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.fountofhopedotorg.fohbible.composables.CircleShape
+import com.fountofhopedotorg.fohbible.composables.LineShape
+import com.fountofhopedotorg.fohbible.composables.PolygonShape
+import com.fountofhopedotorg.fohbible.composables.ShapeSelectionCard
+import com.fountofhopedotorg.fohbible.composables.SquareShape
+import com.fountofhopedotorg.fohbible.composables.TriangleShape
+import com.fountofhopedotorg.fohbible.data.ThemeColors
+import com.fountofhopedotorg.fohbible.functions.getRandomColor
+import com.fountofhopedotorg.fohbible.functions.saveCanvasAsImage
+import com.fountofhopedotorg.fohbible.functions.saveCanvasAsPDF
+import com.fountofhopedotorg.fohbible.functions.saveCanvasAsSVG
+import com.fountofhopedotorg.fohbible.models.AppViewModel
+import kotlinx.coroutines.launch
+
+@RequiresApi(Build.VERSION_CODES.Q)
+@Composable
+fun CombinedToolbarSection(
+    onAddShape: (shape: String) -> Unit,
+    onCustomPolygon: () -> Unit,
+    selectedInputMode: String,
+    onModeSelected: (String) -> Unit,
+    themeColors: ThemeColors,
+    isFullScreen: Boolean,
+    onToggleFullScreen: () -> Unit,
+    onChooseFromGallery: () -> Unit,
+    graphicsLayer: GraphicsLayer,
+    isLandscape: Boolean = false
+) {
+    val viewModel: AppViewModel = viewModel()
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    val textIconColor = remember { getRandomColor().copy(alpha = 0.8f) }
+    val bookIconColor = remember { getRandomColor().copy(alpha = 0.8f) }
+    val imageIconColor = remember { getRandomColor().copy(alpha = 0.8f) }
+    val fullscreenIconColor = remember { getRandomColor().copy(alpha = 0.8f) }
+    val saveIconColor = remember { getRandomColor().copy(alpha = 0.8f) }
+
+    val modes = listOf(
+        Triple("Add Text", Icons.Default.TextFields, textIconColor),
+        Triple("Fetch Verse", Icons.Default.Book, bookIconColor),
+        Triple("Add Image", Icons.Default.Image, imageIconColor)
+    )
+
+    val pentagonPoints = listOf(
+        Offset(0.5000f, 0.0000f),
+        Offset(0.9755f, 0.3455f),
+        Offset(0.7939f, 0.9045f),
+        Offset(0.2061f, 0.9045f),
+        Offset(0.0245f, 0.3455f)
+    )
+    val toolbarContent: @Composable () -> Unit = {
+        ShapeSelectionCard(
+            modifier = Modifier.size(40.dp),
+            onClick = { onAddShape("Square") }
+        ) {
+            SquareShape(modifier = Modifier.size(30.dp))
+        }
+        ShapeSelectionCard(
+            modifier = Modifier.size(40.dp),
+            onClick = { onAddShape("Circle") }
+        ) {
+            CircleShape(modifier = Modifier.size(30.dp))
+        }
+        ShapeSelectionCard(
+            modifier = Modifier.size(40.dp),
+            onClick = { onAddShape("Triangle") }
+        ) {
+            TriangleShape(modifier = Modifier.size(30.dp))
+        }
+        ShapeSelectionCard(
+            modifier = Modifier.size(40.dp),
+            onClick = { onAddShape("Pentagon") }
+        ) {
+            PolygonShape(
+                points = pentagonPoints,
+                modifier = Modifier.size(30.dp)
+            )
+        }
+        ShapeSelectionCard(
+            modifier = Modifier.size(40.dp),
+            onClick = { onAddShape("Line") }
+        ) {
+            LineShape(modifier = Modifier.size(18.dp).padding(top = 6.dp))
+        }
+        ShapeSelectionCard(
+            modifier = Modifier.size(40.dp),
+            onClick = onCustomPolygon
+        ) {
+            Icon(
+                imageVector = Icons.Default.ShapeLine,
+                contentDescription = "Custom Polygon",
+                modifier = Modifier.size(30.dp),
+                tint = getRandomColor().copy(0.8f)
+            )
+        }
+        modes.forEach { (mode, icon, color) ->
+            val isSelected = selectedInputMode == mode
+            IconButton(
+                onClick = {
+                    if (mode == "Add Image") {
+                        onChooseFromGallery()
+                    }
+                    onModeSelected(mode)
+                }
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = mode,
+                    tint = if (isSelected) themeColors.primary else color,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+        IconButton(onClick = onToggleFullScreen) {
+            Icon(
+                modifier = Modifier.size(26.dp),
+                imageVector = if (isFullScreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
+                contentDescription = if (isFullScreen) "Exit Fullscreen" else "Enter Fullscreen",
+                tint = fullscreenIconColor
+            )
+        }
+
+        Box {
+            IconButton(
+                onClick = { viewModel.showSaveMenu = true }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Save,
+                    contentDescription = "Save As",
+                    tint = saveIconColor,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            SaveAsMenu(
+                expanded = viewModel.showSaveMenu,
+                onDismiss = { viewModel.showSaveMenu = false },
+                onSavePng = {
+                    coroutineScope.launch { saveCanvasAsImage(graphicsLayer, context, "PNG") }
+                },
+                onSaveJpg = {
+                    coroutineScope.launch { saveCanvasAsImage(graphicsLayer, context, "JPG") }
+                },
+                onSavePdf = {
+                    coroutineScope.launch {
+                        saveCanvasAsPDF(
+                            graphicsLayer,
+                            context
+                        )
+                    }
+                },
+                onSaveSvg = {
+                    coroutineScope.launch {
+                        saveCanvasAsSVG(graphicsLayer, context, viewModel.canvasNotes)
+                    }
+                }
+            )
+        }
+    }
+    if (isLandscape) {
+        Row(
+            modifier = Modifier.fillMaxWidth().height(40.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            toolbarContent()
+        }
+    } else {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            toolbarContent()
+        }
+    }
+}

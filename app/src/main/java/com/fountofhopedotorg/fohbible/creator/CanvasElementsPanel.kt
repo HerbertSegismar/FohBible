@@ -131,8 +131,8 @@ fun CanvasElementsPanel(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { onToggleTree() }
-                .padding(vertical = 4.dp),
+                .padding(bottom = 5.dp)
+                .clickable { onToggleTree() },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {

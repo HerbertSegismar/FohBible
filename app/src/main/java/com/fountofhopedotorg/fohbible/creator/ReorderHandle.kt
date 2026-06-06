@@ -39,7 +39,7 @@ fun ReorderHandle(
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
-    val maxDragRangePx = with(density) { 28.dp.toPx() }
+    val maxDragRangePx = with(density) { 20.dp.toPx() }
     val triggerThresholdPx = maxDragRangePx * 0.8f
     val coroutineScope = rememberCoroutineScope()
     val offsetY = remember(originalIndex) { Animatable(0f) }
@@ -48,7 +48,7 @@ fun ReorderHandle(
         modifier = modifier
             .padding(horizontal = 8.dp)
             .width(20.dp)
-            .height(36.dp)
+            .height(30.dp)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -64,7 +64,7 @@ fun ReorderHandle(
         Box(
             modifier = Modifier
                 .offset { IntOffset(0, offsetY.value.roundToInt()) }
-                .size(20.dp)
+                .size(17.dp)
                 .background(primaryColor.copy(alpha = 0.7f), CircleShape)
                 .pointerInput(originalIndex) {
                     detectDragGestures(

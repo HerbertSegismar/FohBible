@@ -72,7 +72,7 @@ fun CanvasElementItem(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 2.dp)
+            .padding(vertical = 1.dp)
             .graphicsLayer { if (isDragTarget) translationY = dragOffset }
             .then(
                 if (!isGrouped) {
@@ -95,12 +95,12 @@ fun CanvasElementItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp),
+                .padding(horizontal = 4.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(28.dp)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null
@@ -138,7 +138,7 @@ fun CanvasElementItem(
                 onReorder = { from, to -> viewModel.reorderCanvasNotes(from, to) },
                 primaryColor = themeColors.primary
             )
-            IconButton(onClick = onVisibilityToggle, modifier = Modifier.size(32.dp)) {
+            IconButton(onClick = onVisibilityToggle, modifier = Modifier.size(28.dp)) {
                 Icon(
                     imageVector = if (note.isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                     contentDescription = if (note.isVisible) "Hide Element" else "Show Element",
@@ -146,7 +146,7 @@ fun CanvasElementItem(
                     modifier = Modifier.size(20.dp)
                 )
             }
-            IconButton(onClick = onLockToggle, modifier = Modifier.size(32.dp)) {
+            IconButton(onClick = onLockToggle, modifier = Modifier.size(28.dp)) {
                 Icon(
                     imageVector = if (note.isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
                     contentDescription = if (note.isLocked) "Unlock Element" else "Lock Element",
@@ -168,7 +168,7 @@ fun CanvasElementItem(
                     modifier = Modifier.size(18.dp)
                 )
             }
-            IconButton(onClick = onDuplicate, modifier = Modifier.size(32.dp)) {
+            IconButton(onClick = onDuplicate, modifier = Modifier.size(28.dp)) {
                 Icon(
                     imageVector = Icons.Default.ContentCopy,
                     contentDescription = "Duplicate",
@@ -176,7 +176,7 @@ fun CanvasElementItem(
                     modifier = Modifier.size(18.dp)
                 )
             }
-            IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+            IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = "Delete",
