@@ -78,7 +78,8 @@ import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
 val POPULAR_SEARCH_TERMS = listOf(
-    "faith", "love", "hope", "grace", "peace", "joy", "forgiveness", "salvation"
+    "faith", "love", "hope", "grace", "peace", "joy", "forgiveness", "salvation", "redemption", "righteousness",
+    "sanctification", "holiness", "sin", "creation", "God", "Jesus", "Christ", "Savior", "Holy Spirit", "sacrifice"
 )
 
 fun getScopeForBookNumber(bookNumber: Int): String? {
@@ -257,9 +258,9 @@ fun SearchScreen(
             "Search ${scopeConfig.label}$mode"
         } else if (results.isEmpty()) {
             val desc = when {
-                inverseSearch && exactPhrase -> "without the exact phrase \"$query\""
+                inverseSearch && exactPhrase -> "without exact term \"$query\""
                 inverseSearch -> "without \"$query\""
-                exactPhrase -> "for the exact phrase \"$query\""
+                exactPhrase -> "with exact term \"$query\""
                 else -> "for \"$query\""
             }
             "No results found $desc in ${scopeConfig.label}"
@@ -267,9 +268,9 @@ fun SearchScreen(
             val bookCount = results.map { it.bookNumber }.toSet().size
             val foundStr = "Found ${results.size} result${if (results.size != 1) "s" else ""}"
             val termStr = when {
-                inverseSearch && exactPhrase -> " without the exact phrase \"$query\""
+                inverseSearch && exactPhrase -> " without exact term \"$query\""
                 inverseSearch -> " without \"$query\""
-                exactPhrase -> " for the exact phrase \"$query\""
+                exactPhrase -> " with exact term \"$query\""
                 else -> " for \"$query\""
             }
             val scopeStr = if (isBookScope(scope)) {

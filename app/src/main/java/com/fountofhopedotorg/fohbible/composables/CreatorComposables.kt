@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -86,8 +87,8 @@ fun LineShape(
     Canvas(modifier = modifier) {
         drawLine(
             color = color,
-            start = Offset(0f, size.height/2),
-            end = Offset(size.width, size.height/2),
+            start = Offset(0f, size.height / 2),
+            end = Offset(size.width, size.height / 2),
             strokeWidth = strokeWidth,
             cap = StrokeCap.Round
         )
@@ -193,16 +194,20 @@ fun CanvasSvgItem(
     onDeleteRequested: () -> Unit
 ) {
     var offset by remember(note.offset) { mutableStateOf(note.offset) }
-    var rotation by remember(note.id, note.rotation) {
-        mutableFloatStateOf(note.rotation)
-    }
-    var scaleX by remember { mutableFloatStateOf(1f) }
-    var scaleY by remember { mutableFloatStateOf(1f) }
-
     var baseSize by remember { mutableStateOf(IntSize.Zero) }
+    val currentRotation by rememberUpdatedState(note.rotation)
+    val currentScaleX by rememberUpdatedState(note.scaleX)
+    val currentScaleY by rememberUpdatedState(note.scaleY)
+
+    val currentWidth by rememberUpdatedState(note.width)
+    val currentHeight by rememberUpdatedState(note.height)
 
     val handleSize = 24.dp
     val handleRadiusPx = with(LocalDensity.current) { handleSize.toPx() / 2f }
+
+    val contentWidthDp = note.width.dp
+    val contentHeightDp = note.height.dp
+
     val isCustomPolygon = note.content.startsWith("Shape:CustomPolygon:")
     val isCustomLine = note.content.startsWith("Shape:CustomLine:")
     val isAnyCustomBezier = isCustomPolygon || isCustomLine
@@ -213,12 +218,10 @@ fun CanvasSvgItem(
             val serializedPoints = note.content.removePrefix(prefix)
             val rawNodes = serializedPoints.split(";").mapNotNull { nodeStr ->
                 val parts = nodeStr.split(":")
-
                 if (parts.size == 3) {
                     val a = parts[0].split(",")
                     val hi = parts[1].split(",")
                     val ho = parts[2].split(",")
-
                     if (a.size == 2 && hi.size == 2 && ho.size == 2) {
                         BezierNodeData(
                             anchor = Offset(a[0].toFloatOrNull() ?: 0f, a[1].toFloatOrNull() ?: 0f),
@@ -241,7 +244,6 @@ fun CanvasSvgItem(
                 val maxX = allPoints.maxOf { it.x }
                 val minY = allPoints.minOf { it.y }
                 val maxY = allPoints.maxOf { it.y }
-
                 val polyWidth = maxX - minX
                 val polyHeight = maxY - minY
 
@@ -266,40 +268,37 @@ fun CanvasSvgItem(
         } else null
     }
 
-    val baseWidthDp = if (parsedData != null) (parsedData.second * 280f).dp else 280.dp
-    val baseHeightDp = if (parsedData != null) (parsedData.third * 280f).dp else 280.dp
-
     Box(
         modifier = Modifier
-            .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
+            .offset { IntOffset((offset.x * density).roundToInt(), (offset.y * density).roundToInt()) }
             .wrapContentSize(unbounded = true)
             .alpha(if (isLocked) 0.2f else 1f)
     ) {
         Box(
             modifier = Modifier
                 .graphicsLayer {
-                    this.scaleX = scaleX
-                    this.scaleY = scaleY
-                    rotationZ = rotation
+                    this.scaleX = currentScaleX
+                    this.scaleY = currentScaleY
+                    rotationZ = currentRotation
                 }
                 .onSizeChanged { baseSize = it }
                 .pointerInput(isLocked) {
                     if (isLocked) return@pointerInput
                     detectTransformGestures { _, pan, zoom, rot ->
-                        val angleRad = rotation * (Math.PI / 180.0)
-                        val localPanX = pan.x * scaleX
-                        val localPanY = pan.y * scaleY
+                        val angleRad = currentRotation * (Math.PI / 180.0)
+                        val localPanX = pan.x * currentScaleX
+                        val localPanY = pan.y * currentScaleY
 
                         val screenPanX = localPanX * cos(angleRad) - localPanY * sin(angleRad)
                         val screenPanY = localPanX * sin(angleRad) + localPanY * cos(angleRad)
-                        offset += Offset(screenPanX.toFloat(), screenPanY.toFloat())
+                        offset += Offset(screenPanX.toFloat() / density, screenPanY.toFloat() / density)
 
-                        scaleX = (scaleX * zoom).coerceIn(0.2f, 5f)
-                        scaleY = (scaleY * zoom).coerceIn(0.2f, 5f)
-                        rotation += rot
+                        val newScaleX = (currentScaleX * zoom).coerceIn(0.2f, 5f)
+                        val newScaleY = (currentScaleY * zoom).coerceIn(0.2f, 5f)
+                        val newRotation = currentRotation + rot
 
-                        onScaleChanged(scaleX, scaleY)
-                        onUpdatePosition(offset, note.width, note.height, rotation)
+                        onScaleChanged(newScaleX, newScaleY)
+                        onUpdatePosition(offset, currentWidth, currentHeight, newRotation)
                     }
                 }
                 .pointerInput(Unit) {
@@ -310,8 +309,8 @@ fun CanvasSvgItem(
         ) {
             Box(
                 modifier = Modifier
-                    .width(baseWidthDp)
-                    .height(baseHeightDp)
+                    .width(contentWidthDp)
+                    .height(contentHeightDp)
                     .padding(handleSize / 2),
                 contentAlignment = Alignment.Center
             ) {
@@ -324,10 +323,22 @@ fun CanvasSvgItem(
                 }
 
                 when {
-                    note.content == "Shape: Square" -> SquareShape(modifier = Modifier.fillMaxSize(), color = note.backgroundColor)
-                    note.content == "Shape: Circle" -> CircleShape(modifier = Modifier.fillMaxSize(), color = note.backgroundColor)
-                    note.content == "Shape: Triangle" -> TriangleShape(modifier = Modifier.fillMaxSize(), color = note.backgroundColor)
-                    note.content == "Shape: Line" -> LineShape(modifier = Modifier.fillMaxSize(), color = note.backgroundColor)
+                    note.content == "Shape: Square" -> SquareShape(
+                        modifier = Modifier.fillMaxSize(),
+                        color = note.backgroundColor
+                    )
+                    note.content == "Shape: Circle" -> CircleShape(
+                        modifier = Modifier.fillMaxSize(),
+                        color = note.backgroundColor
+                    )
+                    note.content == "Shape: Triangle" -> TriangleShape(
+                        modifier = Modifier.fillMaxSize(),
+                        color = note.backgroundColor
+                    )
+                    note.content == "Shape: Line" -> LineShape(
+                        modifier = Modifier.fillMaxSize(),
+                        color = note.backgroundColor
+                    )
                     note.content == "Shape: Pentagon" -> {
                         val pentagonPoints = listOf(
                             Offset(0.5f, 0f),
@@ -353,6 +364,7 @@ fun CanvasSvgItem(
                 }
             }
         }
+
         if (isSelected && baseSize != IntSize.Zero && !isLocked) {
             val cx = baseSize.width / 2f
             val cy = baseSize.height / 2f
@@ -360,9 +372,9 @@ fun CanvasSvgItem(
             fun getTargetHandleOffset(localX: Float, localY: Float): IntOffset {
                 val dx = localX - cx
                 val dy = localY - cy
-                val scaledDx = dx * scaleX
-                val scaledDy = dy * scaleY
-                val rad = rotation * (Math.PI / 180.0)
+                val scaledDx = dx * currentScaleX
+                val scaledDy = dy * currentScaleY
+                val rad = currentRotation * (Math.PI / 180.0)
                 val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
                 val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
                 return IntOffset(
@@ -370,6 +382,7 @@ fun CanvasSvgItem(
                     (cy + ry - handleRadiusPx).roundToInt()
                 )
             }
+
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(0f, 0f) }
@@ -381,6 +394,7 @@ fun CanvasSvgItem(
             ) {
                 Icon(Icons.Default.Close, contentDescription = "Delete", tint = Color.Red, modifier = Modifier.size(14.dp))
             }
+
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(0f, baseSize.height.toFloat()) }
@@ -392,32 +406,47 @@ fun CanvasSvgItem(
             ) {
                 Icon(Icons.Default.Palette, contentDescription = "Change Color", tint = Color.Blue, modifier = Modifier.size(14.dp))
             }
+
+            // Rotation handle
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(baseSize.width.toFloat(), 0f) }
                     .size(handleSize)
                     .pointerInput(baseSize) {
-                        detectDragGestures { change, dragAmount ->
-                            change.consume()
+                        var startRotation = 0f
+                        var accumulatedAngle = 0f
+                        var currentVector = Offset.Zero
 
-                            val rad = rotation * (Math.PI / 180.0)
-                            val dx = baseSize.width.toFloat() - cx
-                            val dy = 0f - cy
+                        detectDragGestures(
+                            onDragStart = {
+                                startRotation = currentRotation
+                                accumulatedAngle = 0f
 
-                            val scaledDx = dx * scaleX
-                            val scaledDy = dy * scaleY
-                            val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
-                            val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
+                                val rad = startRotation * (Math.PI / 180.0)
+                                val dx = baseSize.width.toFloat() - cx
+                                val dy = 0f - cy
+                                val scaledDx = dx * currentScaleX
+                                val scaledDy = dy * currentScaleY
+                                val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
+                                val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
 
-                            val currentAngle = atan2(ry, rx)
-                            val newAngle = atan2(ry + dragAmount.y, rx + dragAmount.x)
+                                currentVector = Offset(rx.toFloat(), ry.toFloat())
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                val previousAngle = atan2(currentVector.y, currentVector.x)
+                                currentVector += dragAmount
+                                val newAngle = atan2(currentVector.y, currentVector.x)
+                                var deltaAngle = Math.toDegrees((newAngle - previousAngle).toDouble()).toFloat()
 
-                            var deltaAngle = Math.toDegrees(newAngle - currentAngle).toFloat()
-                            if (deltaAngle > 180f) deltaAngle -= 360f
-                            else if (deltaAngle < -180f) deltaAngle += 360f
+                                if (deltaAngle > 180f) deltaAngle -= 360f
+                                else if (deltaAngle < -180f) deltaAngle += 360f
+                                accumulatedAngle += deltaAngle
+                                val newRotation = startRotation + accumulatedAngle
 
-                            rotation += deltaAngle
-                        }
+                                onUpdatePosition(offset, currentWidth, currentHeight, newRotation)
+                            }
+                        )
                     }
                     .background(Color.White, CircleShape)
                     .border(1.dp, Color.Gray.copy(alpha = 0.5f), CircleShape),
@@ -425,35 +454,52 @@ fun CanvasSvgItem(
             ) {
                 Icon(Icons.Default.Refresh, contentDescription = "Rotate", tint = Color.DarkGray, modifier = Modifier.size(14.dp))
             }
+
+            // Scale handle
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(baseSize.width.toFloat(), baseSize.height.toFloat()) }
                     .size(handleSize)
                     .pointerInput(baseSize) {
-                        detectDragGestures { change, dragAmount ->
-                            change.consume()
+                        var startScaleX = 1f
+                        var startScaleY = 1f
+                        var fixedRotation = 0f
+                        var currentVector = Offset.Zero
 
-                            val rad = rotation * (Math.PI / 180.0)
-                            val dx = baseSize.width.toFloat() - cx
-                            val dy = baseSize.height.toFloat() - cy
+                        detectDragGestures(
+                            onDragStart = {
+                                startScaleX = currentScaleX
+                                startScaleY = currentScaleY
+                                fixedRotation = currentRotation
 
-                            val scaledDx = dx * scaleX
-                            val scaledDy = dy * scaleY
-                            val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
-                            val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
+                                val rad = fixedRotation * (Math.PI / 180.0)
+                                val dx = baseSize.width.toFloat() - cx
+                                val dy = baseSize.height.toFloat() - cy
+                                val scaledDx = dx * startScaleX
+                                val scaledDy = dy * startScaleY
+                                val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
+                                val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
 
-                            val newRx = rx + dragAmount.x
-                            val newRy = ry + dragAmount.y
+                                currentVector = Offset(rx.toFloat(), ry.toFloat())
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                currentVector += dragAmount
 
-                            val unrotatedRad = -rad
-                            val newScaledDx = newRx * cos(unrotatedRad) - newRy * sin(unrotatedRad)
-                            val newScaledDy = newRx * sin(unrotatedRad) + newRy * cos(unrotatedRad)
+                                val rad = fixedRotation * (Math.PI / 180.0)
+                                val unrotatedRad = -rad
+                                val newScaledDx = currentVector.x * cos(unrotatedRad) - currentVector.y * sin(unrotatedRad)
+                                val newScaledDy = currentVector.x * sin(unrotatedRad) + currentVector.y * cos(unrotatedRad)
 
-                            if (dx != 0f) scaleX = (newScaledDx / dx).toFloat().coerceIn(0.2f, 5f)
-                            if (dy != 0f) scaleY = (newScaledDy / dy).toFloat().coerceIn(0.2f, 5f)
+                                val dx = baseSize.width.toFloat() - cx
+                                val dy = baseSize.height.toFloat() - cy
 
-                            onScaleChanged(scaleX, scaleY)
-                        }
+                                val newScaleX = if (dx != 0f) (newScaledDx / dx).toFloat().coerceIn(0.2f, 5f) else startScaleX
+                                val newScaleY = if (dy != 0f) (newScaledDy / dy).toFloat().coerceIn(0.2f, 5f) else startScaleY
+
+                                onScaleChanged(newScaleX, newScaleY)
+                            }
+                        )
                     }
                     .background(Color.White, CircleShape)
                     .border(1.dp, Color.Gray.copy(alpha = 0.5f), CircleShape),
@@ -582,32 +628,47 @@ fun CanvasImageItem(
             ) {
                 Icon(Icons.Default.Close, contentDescription = "Delete", tint = Color.Red, modifier = Modifier.size(14.dp))
             }
+
+            // Rotation Handle
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(baseSize.width.toFloat(), 0f) }
                     .size(handleSize)
                     .pointerInput(baseSize) {
-                        detectDragGestures { change, dragAmount ->
-                            change.consume()
+                        var startRotation = 0f
+                        var accumulatedAngle = 0f
+                        var currentVector = Offset.Zero
 
-                            val rad = rotation * (Math.PI / 180.0)
-                            val dx = baseSize.width.toFloat() - cx
-                            val dy = 0f - cy
+                        detectDragGestures(
+                            onDragStart = {
+                                startRotation = rotation
+                                accumulatedAngle = 0f
 
-                            val scaledDx = dx * scaleX
-                            val scaledDy = dy * scaleY
-                            val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
-                            val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
+                                val rad = startRotation * (Math.PI / 180.0)
+                                val dx = baseSize.width.toFloat() - cx
+                                val dy = 0f - cy
+                                val scaledDx = dx * scaleX
+                                val scaledDy = dy * scaleY
+                                val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
+                                val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
 
-                            val currentAngle = atan2(ry, rx)
-                            val newAngle = atan2(ry + dragAmount.y, rx + dragAmount.x)
+                                currentVector = Offset(rx.toFloat(), ry.toFloat())
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                val previousAngle = atan2(currentVector.y, currentVector.x)
+                                currentVector += dragAmount
+                                val newAngle = atan2(currentVector.y, currentVector.x)
+                                var deltaAngle = Math.toDegrees((newAngle - previousAngle).toDouble()).toFloat()
 
-                            var deltaAngle = Math.toDegrees(newAngle - currentAngle).toFloat()
-                            if (deltaAngle > 180f) deltaAngle -= 360f
-                            else if (deltaAngle < -180f) deltaAngle += 360f
+                                if (deltaAngle > 180f) deltaAngle -= 360f
+                                else if (deltaAngle < -180f) deltaAngle += 360f
+                                accumulatedAngle += deltaAngle
+                                rotation = startRotation + accumulatedAngle
 
-                            rotation += deltaAngle
-                        }
+                                onUpdatePosition(offset, note.width, note.height, rotation)
+                            }
+                        )
                     }
                     .background(Color.White, CircleShape)
                     .border(1.dp, Color.Gray.copy(alpha = 0.5f), CircleShape),
@@ -616,35 +677,51 @@ fun CanvasImageItem(
                 Icon(Icons.Default.Refresh, contentDescription = "Rotate", tint = Color.DarkGray, modifier = Modifier.size(14.dp))
             }
 
+            // Scale Handle
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(baseSize.width.toFloat(), baseSize.height.toFloat()) }
                     .size(handleSize)
                     .pointerInput(baseSize) {
-                        detectDragGestures { change, dragAmount ->
-                            change.consume()
+                        var startScaleX = 1f
+                        var startScaleY = 1f
+                        var fixedRotation = 0f
+                        var currentVector = Offset.Zero
 
-                            val rad = rotation * (Math.PI / 180.0)
-                            val dx = baseSize.width.toFloat() - cx
-                            val dy = baseSize.height.toFloat() - cy
+                        detectDragGestures(
+                            onDragStart = {
+                                startScaleX = scaleX
+                                startScaleY = scaleY
+                                fixedRotation = rotation
 
-                            val scaledDx = dx * scaleX
-                            val scaledDy = dy * scaleY
-                            val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
-                            val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
+                                val rad = fixedRotation * (Math.PI / 180.0)
+                                val dx = baseSize.width.toFloat() - cx
+                                val dy = baseSize.height.toFloat() - cy
+                                val scaledDx = dx * startScaleX
+                                val scaledDy = dy * startScaleY
+                                val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
+                                val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
 
-                            val newRx = rx + dragAmount.x
-                            val newRy = ry + dragAmount.y
+                                currentVector = Offset(rx.toFloat(), ry.toFloat())
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                currentVector += dragAmount
 
-                            val unrotatedRad = -rad
-                            val newScaledDx = newRx * cos(unrotatedRad) - newRy * sin(unrotatedRad)
-                            val newScaledDy = newRx * sin(unrotatedRad) + newRy * cos(unrotatedRad)
+                                val rad = fixedRotation * (Math.PI / 180.0)
+                                val unrotatedRad = -rad
+                                val newScaledDx = currentVector.x * cos(unrotatedRad) - currentVector.y * sin(unrotatedRad)
+                                val newScaledDy = currentVector.x * sin(unrotatedRad) + currentVector.y * cos(unrotatedRad)
 
-                            if (dx != 0f) scaleX = (newScaledDx / dx).toFloat().coerceIn(0.2f, 5f)
-                            if (dy != 0f) scaleY = (newScaledDy / dy).toFloat().coerceIn(0.2f, 5f)
+                                val dx = baseSize.width.toFloat() - cx
+                                val dy = baseSize.height.toFloat() - cy
 
-                            onScaleChanged(scaleX, scaleY)
-                        }
+                                scaleX = if (dx != 0f) (newScaledDx / dx).toFloat().coerceIn(0.2f, 5f) else startScaleX
+                                scaleY = if (dy != 0f) (newScaledDy / dy).toFloat().coerceIn(0.2f, 5f) else startScaleY
+
+                                onScaleChanged(scaleX, scaleY)
+                            }
+                        )
                     }
                     .background(Color.White, CircleShape)
                     .border(1.dp, Color.Gray.copy(alpha = 0.5f), CircleShape),
@@ -743,6 +820,7 @@ fun CanvasTextItem(
                 )
             }
         }
+
         if (isSelected && baseSize != IntSize.Zero && !isLocked) {
             val cx = baseSize.width / 2f
             val cy = baseSize.height / 2f
@@ -785,32 +863,46 @@ fun CanvasTextItem(
                 Icon(Icons.Default.Palette, contentDescription = "Change Color", tint = Color.Blue, modifier = Modifier.size(14.dp))
             }
 
+            // Rotation Handle
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(baseSize.width.toFloat(), 0f) }
                     .size(handleSize)
                     .pointerInput(baseSize) {
-                        detectDragGestures { change, dragAmount ->
-                            change.consume()
+                        var startRotation = 0f
+                        var accumulatedAngle = 0f
+                        var currentVector = Offset.Zero
 
-                            val rad = rotation * (Math.PI / 180.0)
-                            val dx = baseSize.width.toFloat() - cx
-                            val dy = 0f - cy
+                        detectDragGestures(
+                            onDragStart = {
+                                startRotation = rotation
+                                accumulatedAngle = 0f
 
-                            val scaledDx = dx * scaleX
-                            val scaledDy = dy * scaleY
-                            val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
-                            val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
+                                val rad = startRotation * (Math.PI / 180.0)
+                                val dx = baseSize.width.toFloat() - cx
+                                val dy = 0f - cy
+                                val scaledDx = dx * scaleX
+                                val scaledDy = dy * scaleY
+                                val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
+                                val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
 
-                            val currentAngle = atan2(ry, rx)
-                            val newAngle = atan2(ry + dragAmount.y, rx + dragAmount.x)
+                                currentVector = Offset(rx.toFloat(), ry.toFloat())
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                val previousAngle = atan2(currentVector.y, currentVector.x)
+                                currentVector += dragAmount
+                                val newAngle = atan2(currentVector.y, currentVector.x)
+                                var deltaAngle = Math.toDegrees((newAngle - previousAngle).toDouble()).toFloat()
 
-                            var deltaAngle = Math.toDegrees(newAngle - currentAngle).toFloat()
-                            if (deltaAngle > 180f) deltaAngle -= 360f
-                            else if (deltaAngle < -180f) deltaAngle += 360f
+                                if (deltaAngle > 180f) deltaAngle -= 360f
+                                else if (deltaAngle < -180f) deltaAngle += 360f
+                                accumulatedAngle += deltaAngle
+                                rotation = startRotation + accumulatedAngle
 
-                            rotation += deltaAngle
-                        }
+                                onUpdatePosition(offset, note.width, note.height, rotation)
+                            }
+                        )
                     }
                     .background(Color.White, CircleShape)
                     .border(1.dp, Color.Gray.copy(alpha = 0.5f), CircleShape),
@@ -819,35 +911,51 @@ fun CanvasTextItem(
                 Icon(Icons.Default.Refresh, contentDescription = "Rotate", tint = Color.DarkGray, modifier = Modifier.size(14.dp))
             }
 
+            // Scale Handle
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(baseSize.width.toFloat(), baseSize.height.toFloat()) }
                     .size(handleSize)
                     .pointerInput(baseSize) {
-                        detectDragGestures { change, dragAmount ->
-                            change.consume()
+                        var startScaleX = 1f
+                        var startScaleY = 1f
+                        var fixedRotation = 0f
+                        var currentVector = Offset.Zero
 
-                            val rad = rotation * (Math.PI / 180.0)
-                            val dx = baseSize.width.toFloat() - cx
-                            val dy = baseSize.height.toFloat() - cy
+                        detectDragGestures(
+                            onDragStart = {
+                                startScaleX = scaleX
+                                startScaleY = scaleY
+                                fixedRotation = rotation
 
-                            val scaledDx = dx * scaleX
-                            val scaledDy = dy * scaleY
-                            val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
-                            val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
+                                val rad = fixedRotation * (Math.PI / 180.0)
+                                val dx = baseSize.width.toFloat() - cx
+                                val dy = baseSize.height.toFloat() - cy
+                                val scaledDx = dx * startScaleX
+                                val scaledDy = dy * startScaleY
+                                val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
+                                val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
 
-                            val newRx = rx + dragAmount.x
-                            val newRy = ry + dragAmount.y
+                                currentVector = Offset(rx.toFloat(), ry.toFloat())
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                currentVector += dragAmount
 
-                            val unrotatedRad = -rad
-                            val newScaledDx = newRx * cos(unrotatedRad) - newRy * sin(unrotatedRad)
-                            val newScaledDy = newRx * sin(unrotatedRad) + newRy * cos(unrotatedRad)
+                                val rad = fixedRotation * (Math.PI / 180.0)
+                                val unrotatedRad = -rad
+                                val newScaledDx = currentVector.x * cos(unrotatedRad) - currentVector.y * sin(unrotatedRad)
+                                val newScaledDy = currentVector.x * sin(unrotatedRad) + currentVector.y * cos(unrotatedRad)
 
-                            if (dx != 0f) scaleX = (newScaledDx / dx).toFloat().coerceIn(0.2f, 5f)
-                            if (dy != 0f) scaleY = (newScaledDy / dy).toFloat().coerceIn(0.2f, 5f)
+                                val dx = baseSize.width.toFloat() - cx
+                                val dy = baseSize.height.toFloat() - cy
 
-                            onScaleChanged(scaleX, scaleY)
-                        }
+                                scaleX = if (dx != 0f) (newScaledDx / dx).toFloat().coerceIn(0.2f, 5f) else startScaleX
+                                scaleY = if (dy != 0f) (newScaledDy / dy).toFloat().coerceIn(0.2f, 5f) else startScaleY
+
+                                onScaleChanged(scaleX, scaleY)
+                            }
+                        )
                     }
                     .background(Color.White, CircleShape)
                     .border(1.dp, Color.Gray.copy(alpha = 0.5f), CircleShape),
@@ -977,4 +1085,3 @@ fun CustomPathPreview(
         }
     }
 }
-

@@ -185,7 +185,7 @@ fun CreatorScreen() {
                     onAddShape = { shape ->
                         val color = getRandomColor()
                         viewModel.addToCanvas(
-                            CanvasNote(content = "Shape: $shape", backgroundColor = color)
+                            CanvasNote(content = "Shape: $shape", backgroundColor = color, width = 100f, height = 100f)
                         )
                     },
                     onCustomPolygon = {
@@ -323,10 +323,10 @@ fun CreatorScreen() {
                     },
                     onEditProperties = { note ->
                         editPropertiesNoteId = note.id
-                        editX = note.offset.x.toString()
-                        editY = note.offset.y.toString()
-                        editWidth = note.width.toString()
-                        editHeight = note.height.toString()
+                        editX = (note.offset.x).toString()
+                        editY = (note.offset.y).toString()
+                        editWidth = (note.width * note.scaleX).toString()
+                        editHeight = (note.height * note.scaleY).toString()
                         editRotation = note.rotation.toString()
                         editColorForDialog = note.backgroundColor
                         showEditPropertiesDialog = true
@@ -374,7 +374,7 @@ fun CreatorScreen() {
                     onAddShape = { shape ->
                         val color = getRandomColor()
                         viewModel.addToCanvas(
-                            CanvasNote(content = "Shape: $shape", backgroundColor = color)
+                            CanvasNote(content = "Shape: $shape", backgroundColor = color, width = 100f, height = 100f)
                         )
                     },
                     onCustomPolygon = {
@@ -521,10 +521,10 @@ fun CreatorScreen() {
                         },
                         onEditProperties = { note ->
                             editPropertiesNoteId = note.id
-                            editX = note.offset.x.toString()
-                            editY = note.offset.y.toString()
-                            editWidth = note.width.toString()
-                            editHeight = note.height.toString()
+                            editX = (note.offset.x).toString()
+                            editY = (note.offset.y).toString()
+                            editWidth = (note.width * note.scaleX).toString()
+                            editHeight = (note.height * note.scaleY).toString()
                             editRotation = note.rotation.toString()
                             editColorForDialog = note.backgroundColor
                             showEditPropertiesDialog = true
@@ -721,7 +721,9 @@ fun CreatorScreen() {
                     viewModel.addToCanvas(
                         CanvasNote(
                             content = contentString,
-                            backgroundColor = getRandomColor()
+                            backgroundColor = getRandomColor(),
+                            width = 100f,
+                            height = 100f
                         )
                     )
                 }
@@ -746,16 +748,17 @@ fun CreatorScreen() {
             showEditPropertiesDialog = false
             editPropertiesNoteId = null
         },
-        onApply = { id, x, y, w, h, rot, color ->
-            val xFloat = x.toFloatOrNull()
-            val yFloat = y.toFloatOrNull()
-            val wFloat = w.toFloatOrNull()
-            val hFloat = h.toFloatOrNull()
-            val rotFloat = rot.toFloatOrNull()
-            if (xFloat != null && yFloat != null && wFloat != null && hFloat != null && rotFloat != null) {
-                viewModel.updateNoteProperties(id, xFloat, yFloat, wFloat, hFloat, rotFloat)
-                viewModel.updateNoteColor(id, color)
-            }
+        onApply = onApply@{ id, x, y, w, h, rot, color ->
+            val xFloat = x.toFloatOrNull() ?: return@onApply
+            val yFloat = y.toFloatOrNull() ?: return@onApply
+            val wFloat = w.toFloatOrNull() ?: return@onApply
+            val hFloat = h.toFloatOrNull() ?: return@onApply
+            val rotFloat = rot.toFloatOrNull() ?: return@onApply
+
+            viewModel.updateNoteProperties(id, xFloat, yFloat, wFloat, hFloat, rotFloat)
+            viewModel.updateNoteScale(id, 1f, 1f)
+            viewModel.updateNoteColor(id, color)
+
             showEditPropertiesDialog = false
             editPropertiesNoteId = null
         }

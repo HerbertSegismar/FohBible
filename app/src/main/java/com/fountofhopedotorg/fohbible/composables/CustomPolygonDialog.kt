@@ -138,13 +138,10 @@ fun CustomPolygonDialog(
     var selectedIndex by rememberSaveable { mutableIntStateOf(if (points.isNotEmpty()) 0 else -1) }
     var nudgeAmountIndex by rememberSaveable { mutableIntStateOf(0) }
     var activeControl by rememberSaveable { mutableStateOf(ActiveControl.ANCHOR) }
-
-    // ---- New: reference image state ----
     var referenceImageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
     var referenceImageOpacity by remember { mutableFloatStateOf(1f) }
     var showOpacitySlider by remember { mutableStateOf(false) }
 
-    // Auto‑hide the opacity slider after 3 seconds of inactivity
     LaunchedEffect(referenceImageBitmap, referenceImageOpacity) {
         if (referenceImageBitmap != null) {
             showOpacitySlider = true
@@ -175,7 +172,6 @@ fun CustomPolygonDialog(
                         }
                     }
                 } catch (_: Exception) {
-                    // Handle error silently; image not loaded
                 }
             }
         }
@@ -196,8 +192,6 @@ fun CustomPolygonDialog(
         if (isEditing) "Edit Polygon Points" else "Tap to Add Polygon Points"
     }
 
-    // --- Normalization action (new) ---
-    // Maps the drawn points to a 0..1 bounding box so they fit perfectly inside the final shape.
     val onConfirmAction = {
         if (points.size >= minPointsRequired) {
             val minX = points.minOf { minOf(it.anchor.x, it.handleIn.x, it.handleOut.x) }
@@ -280,7 +274,6 @@ fun CustomPolygonDialog(
                     }
                 }
         ) {
-            // ---- Reference image behind the canvas (with adjustable opacity) ----
             if (referenceImageBitmap != null) {
                 Image(
                     bitmap = referenceImageBitmap!!,

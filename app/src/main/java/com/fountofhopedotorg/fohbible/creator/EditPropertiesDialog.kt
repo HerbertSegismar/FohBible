@@ -41,8 +41,6 @@ fun EditPropertiesDialog(
     onApply: (String, String, String, String, String, String, Color) -> Unit
 ) {
     if (show && noteId != null) {
-        // 🔑 KEY FIX: Use noteId as key so all remembered state is reset
-        // when a different element is selected for editing.
         key(noteId) {
             var editX by remember { mutableStateOf(initialX) }
             var editY by remember { mutableStateOf(initialY) }

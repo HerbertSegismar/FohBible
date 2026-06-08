@@ -154,7 +154,7 @@ suspend fun saveCanvasAsSVG(
         val allShapes = canvasNotes != null && canvasNotes.all { it.content.startsWith("Shape:") }
 
         val svgContent = if (allShapes) {
-            buildVectorSvg(canvasNotes, canvasDpWidth, canvasDpHeight, scaleDownFactor)
+            buildVectorSvg(canvasNotes, canvasDpWidth, canvasDpHeight)
         } else {
             val outputStream = ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
@@ -197,44 +197,34 @@ suspend fun saveCanvasAsSVG(
 
 private fun buildVectorSvg(
     notes: List<CanvasNote>,
-    canvasWidth: Float,
-    canvasHeight: Float,
-    scale: Float
+    canvasWidth: Float,   // dp
+    canvasHeight: Float   // dp
 ): String {
     val sb = StringBuilder()
-    sb.append(
-        """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $canvasWidth $canvasHeight" width="$canvasWidth" height="$canvasHeight">"""
-    )
+    sb.append("""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $canvasWidth $canvasHeight" width="$canvasWidth" height="$canvasHeight">""")
     sb.append("\n  <rect width=\"100%\" height=\"100%\" fill=\"white\" />\n")
-    val g = StringBuilder("  <g transform=\"scale($scale)\">\n")
 
     for (note in notes) {
         if (!note.isVisible) continue
-        val adjustedX = note.offset.x
-        val adjustedY = note.offset.y
-        val w = note.width
-        val h = note.height
+        val x = note.offset.x            // already dp
+        val y = note.offset.y
+        val w = note.width * note.scaleX   // visual width (dp)
+        val h = note.height * note.scaleY
         val color = colorToHex(note.backgroundColor)
-        val rotation = note.rotation
-        val scaleX = note.scaleX
-        val scaleY = note.scaleY
-        val transform = buildString {
-            append("translate($adjustedX, $adjustedY) ")
-            if (rotation != 0f) {
-                append("rotate($rotation) ")
-            }
-            if (scaleX != 1f || scaleY != 1f) {
-                append("translate(${w / 2}, ${h / 2}) scale($scaleX, $scaleY) translate(${-w / 2}, ${-h / 2})")
-            }
-        }.trim()
+        val rot = note.rotation
 
-        val shapeElement = buildShapeSvg(note, w, h, color)
-        g.append("""    <g transform="$transform">""")
-            .append(shapeElement)
-            .append("</g>\n")
+        val cx = w / 2f
+        val cy = h / 2f
+        val transform = buildString {
+            append("translate($x, $y)")
+            if (rot != 0f) append(" rotate($rot, $cx, $cy)")
+        }
+
+        val shape = buildShapeSvg(note, w, h, color)
+        if (shape.isNotEmpty()) {
+            sb.append("  <g transform=\"$transform\">$shape</g>\n")
+        }
     }
-    g.append("  </g>\n")
-    sb.append(g)
     sb.append("</svg>")
     return sb.toString()
 }
@@ -255,10 +245,14 @@ private fun buildShapeSvg(note: CanvasNote, w: Float, h: Float, hexColor: String
             """<polygon points="$points" fill="$hexColor" fill-opacity="$alpha" />"""
         }
         content.startsWith("Shape: Pentagon") -> {
-            val raw = getSerializedPointsForShape("Pentagon")
-            val pts = raw.split(";").map { it.split(":")[0] }
-            val pointsStr = pts.joinToString(" ") { pt ->
-                val (px, py) = pt.split(",").map { it.toFloat() }
+            val pts = listOf(
+                0.5f to 0f,
+                1f to 0.4f,
+                0.8f to 1f,
+                0.2f to 1f,
+                0f to 0.4f
+            )
+            val pointsStr = pts.joinToString(" ") { (px, py) ->
                 "${px * w},${py * h}"
             }
             """<polygon points="$pointsStr" fill="$hexColor" fill-opacity="$alpha" />"""
