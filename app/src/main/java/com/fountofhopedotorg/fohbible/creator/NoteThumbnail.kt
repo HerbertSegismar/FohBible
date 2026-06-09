@@ -10,12 +10,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.dp
-import com.fountofhopedotorg.fohbible.composables.CircleShape
-import com.fountofhopedotorg.fohbible.composables.CustomPathPreview
-import com.fountofhopedotorg.fohbible.composables.LineShape
-import com.fountofhopedotorg.fohbible.composables.PolygonShape
-import com.fountofhopedotorg.fohbible.composables.SquareShape
-import com.fountofhopedotorg.fohbible.composables.TriangleShape
 import com.fountofhopedotorg.fohbible.data.CanvasNote
 import com.fountofhopedotorg.fohbible.data.ThemeColors
 
@@ -38,6 +32,12 @@ fun NoteThumbnail(note: CanvasNote, themeColors: ThemeColors) {
                     color = shapeColor
                 )
                 shapeContent.startsWith("Line") -> LineShape(modifier = Modifier.size(18.dp), color = shapeColor)
+                shapeContent.startsWith("Hexagon") -> HexagonShape(modifier = Modifier.size(18.dp), color = shapeColor)
+                shapeContent.startsWith("Star") -> StarShape(modifier = Modifier.size(18.dp), color = shapeColor)
+                shapeContent.startsWith("Diamond") -> DiamondShape(modifier = Modifier.size(18.dp), color = shapeColor)
+                shapeContent.startsWith("Heart") -> HeartShape(modifier = Modifier.size(18.dp), color = shapeColor)
+                shapeContent.startsWith("ArrowRight") -> ArrowRightShape(modifier = Modifier.size(18.dp), color = shapeColor)
+                shapeContent.startsWith("Octagon") -> OctagonShape(modifier = Modifier.size(18.dp), color = shapeColor)
                 shapeContent.startsWith("CustomLine:") -> {
                     val pointsData = shapeContent.removePrefix("CustomLine:")
                     CustomPathPreview(

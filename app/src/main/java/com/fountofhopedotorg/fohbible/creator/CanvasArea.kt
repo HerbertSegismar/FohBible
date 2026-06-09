@@ -22,12 +22,8 @@ import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import com.fountofhopedotorg.fohbible.composables.CanvasImageItem
-import com.fountofhopedotorg.fohbible.composables.CanvasSvgItem
-import com.fountofhopedotorg.fohbible.composables.CanvasTextItem
 import com.fountofhopedotorg.fohbible.data.CanvasNote
 import com.fountofhopedotorg.fohbible.data.ThemeColors
-import com.fountofhopedotorg.fohbible.functions.getGroupBoundingBox
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import kotlin.collections.contains
 import kotlin.math.roundToInt

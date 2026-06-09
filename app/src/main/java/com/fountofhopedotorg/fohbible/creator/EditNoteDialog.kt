@@ -5,9 +5,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import com.fountofhopedotorg.fohbible.data.*
-import com.fountofhopedotorg.fohbible.functions.buildProcessedContent
-import com.fountofhopedotorg.fohbible.functions.buildReferenceString
-import com.fountofhopedotorg.fohbible.functions.getRandomColor
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 

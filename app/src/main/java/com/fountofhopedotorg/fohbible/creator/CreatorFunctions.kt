@@ -1,4 +1,4 @@
-package com.fountofhopedotorg.fohbible.functions
+package com.fountofhopedotorg.fohbible.creator
 
 import android.content.ContentValues
 import android.content.Context
@@ -206,9 +206,9 @@ private fun buildVectorSvg(
 
     for (note in notes) {
         if (!note.isVisible) continue
-        val x = note.offset.x            // already dp
+        val x = note.offset.x
         val y = note.offset.y
-        val w = note.width * note.scaleX   // visual width (dp)
+        val w = note.width * note.scaleX
         val h = note.height * note.scaleY
         val color = colorToHex(note.backgroundColor)
         val rot = note.rotation
@@ -391,6 +391,12 @@ fun getElementDisplayName(
         note.content.startsWith("Shape: Triangle") -> "Triangle"
         note.content.startsWith("Shape: Pentagon") -> "Pentagon"
         note.content.startsWith("Shape: Line") -> "Line"
+        note.content.startsWith("Shape: Hexagon") -> "Hexagon"
+        note.content.startsWith("Shape: Star") -> "Star"
+        note.content.startsWith("Shape: Diamond") -> "Diamond"
+        note.content.startsWith("Shape: Heart") -> "Heart"
+        note.content.startsWith("Shape: ArrowRight") -> "Arrow"
+        note.content.startsWith("Shape: Octagon") -> "Octagon"
         note.content.startsWith("Shape:CustomPolygon:") -> "Custom Polygon"
         note.content.startsWith("Shape:CustomLine:") -> "Custom Line"
         note.content.startsWith("Shape:") -> "Shape"
@@ -405,6 +411,12 @@ fun getElementDisplayName(
             other.content.startsWith("Shape: Triangle") -> "Triangle"
             other.content.startsWith("Shape: Pentagon") -> "Pentagon"
             other.content.startsWith("Shape: Line") -> "Line"
+            other.content.startsWith("Shape: Hexagon") -> "Hexagon"
+            other.content.startsWith("Shape: Star") -> "Star"
+            other.content.startsWith("Shape: Diamond") -> "Diamond"
+            other.content.startsWith("Shape: Heart") -> "Heart"
+            other.content.startsWith("Shape: ArrowRight") -> "Arrow"
+            other.content.startsWith("Shape: Octagon") -> "Octagon"
             other.content.startsWith("Shape:CustomPolygon:") -> "Custom Polygon"
             other.content.startsWith("Shape:CustomLine:") -> "Custom Line"
             other.content.startsWith("Shape:") -> "Shape"
@@ -415,6 +427,7 @@ fun getElementDisplayName(
 
     return "$category $count"
 }
+
 fun buildProcessedContent(
     reference: String,
     verses: List<Verse>,

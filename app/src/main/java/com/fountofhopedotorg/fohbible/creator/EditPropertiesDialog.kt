@@ -42,11 +42,17 @@ fun EditPropertiesDialog(
 ) {
     if (show && noteId != null) {
         key(noteId) {
+            val normalizedInitialRotation = remember(initialRotation) {
+                val degrees = initialRotation.toDoubleOrNull() ?: 0.0
+                val normalized = ((degrees % 360) + 360) % 360
+                normalized.toString()
+            }
+
             var editX by remember { mutableStateOf(initialX) }
             var editY by remember { mutableStateOf(initialY) }
             var editWidth by remember { mutableStateOf(initialWidth) }
             var editHeight by remember { mutableStateOf(initialHeight) }
-            var editRotation by remember { mutableStateOf(initialRotation) }
+            var editRotation by remember { mutableStateOf(normalizedInitialRotation) }
             var editColor by remember { mutableStateOf(initialColor) }
             var showEditColorPicker by remember { mutableStateOf(false) }
 
@@ -111,7 +117,22 @@ fun EditPropertiesDialog(
                 },
                 confirmButton = {
                     TextButton(onClick = {
-                        onApply(noteId, editX, editY, editWidth, editHeight, editRotation, editColor)
+                        val normalizedRotation = try {
+                            val input = editRotation.toDouble()
+                            ((input % 360) + 360) % 360
+                        } catch (_: NumberFormatException) {
+                            0.0
+                        }
+                        val rotationToApply = normalizedRotation.toString()
+                        onApply(
+                            noteId,
+                            editX,
+                            editY,
+                            editWidth,
+                            editHeight,
+                            rotationToApply,
+                            editColor
+                        )
                     }) { Text("Apply") }
                 },
                 dismissButton = {

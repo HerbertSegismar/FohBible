@@ -76,7 +76,7 @@ import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.data.PopularDevotional
 import com.fountofhopedotorg.fohbible.data.QuickAction
 import com.fountofhopedotorg.fohbible.data.Verse
-import com.fountofhopedotorg.fohbible.functions.getRandomColor
+import com.fountofhopedotorg.fohbible.creator.getRandomColor
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
 import com.fountofhopedotorg.fohbible.utils.getFontFamily

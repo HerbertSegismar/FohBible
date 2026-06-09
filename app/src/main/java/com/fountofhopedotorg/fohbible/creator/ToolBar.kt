@@ -2,26 +2,36 @@ package com.fountofhopedotorg.fohbible.creator
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.ShapeLine
 import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -29,17 +39,7 @@ import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.fountofhopedotorg.fohbible.composables.CircleShape
-import com.fountofhopedotorg.fohbible.composables.LineShape
-import com.fountofhopedotorg.fohbible.composables.PolygonShape
-import com.fountofhopedotorg.fohbible.composables.ShapeSelectionCard
-import com.fountofhopedotorg.fohbible.composables.SquareShape
-import com.fountofhopedotorg.fohbible.composables.TriangleShape
 import com.fountofhopedotorg.fohbible.data.ThemeColors
-import com.fountofhopedotorg.fohbible.functions.getRandomColor
-import com.fountofhopedotorg.fohbible.functions.saveCanvasAsImage
-import com.fountofhopedotorg.fohbible.functions.saveCanvasAsPDF
-import com.fountofhopedotorg.fohbible.functions.saveCanvasAsSVG
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import kotlinx.coroutines.launch
 
@@ -57,6 +57,8 @@ fun CombinedToolbarSection(
     graphicsLayer: GraphicsLayer,
     isLandscape: Boolean = false
 ) {
+
+    var showMoreShapes by remember { mutableStateOf(false) }
     val viewModel: AppViewModel = viewModel()
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -125,6 +127,61 @@ fun CombinedToolbarSection(
                 tint = getRandomColor().copy(0.8f)
             )
         }
+        Box {
+            ShapeSelectionCard(
+                modifier = Modifier.size(40.dp),
+                onClick = { showMoreShapes = true }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MoreHoriz,
+                    contentDescription = "More Shapes",
+                    modifier = Modifier.size(40.dp),
+                    tint = getRandomColor()
+                )
+            }
+            DropdownMenu(
+                expanded = showMoreShapes,
+                onDismissRequest = { showMoreShapes = false },
+                modifier = Modifier.width(40.dp).background(MaterialTheme.colorScheme.primary.copy(0.05f))
+            ) {
+                val newShapes = listOf(
+                    "Hexagon" to @Composable {
+                        HexagonShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f))
+                    },
+                    "Star" to @Composable {
+                        StarShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f))
+                    },
+                    "Diamond" to @Composable {
+                        DiamondShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f))
+                    },
+                    "Heart" to @Composable {
+                        HeartShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f))
+                    },
+                    "Octagon" to @Composable {
+                        OctagonShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f))
+                    },
+                    "ArrowRight" to @Composable {
+                        ArrowRightShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f))
+                    }
+                )
+
+                newShapes.forEach { (name, preview) ->
+                    DropdownMenuItem(
+                        text = {},
+                        onClick = {
+                            showMoreShapes = false
+                            onAddShape(name)
+                        },
+                        leadingIcon = {
+                            Box(Modifier.size(18.dp)) {
+                                preview()
+                            }
+                        }
+                    )
+                }
+            }
+        }
+
         modes.forEach { (mode, icon, color) ->
             val isSelected = selectedInputMode == mode
             IconButton(

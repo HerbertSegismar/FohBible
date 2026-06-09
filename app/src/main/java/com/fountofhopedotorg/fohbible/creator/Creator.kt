@@ -39,9 +39,6 @@ import com.fountofhopedotorg.fohbible.composables.CustomPolygonDialog
 import com.fountofhopedotorg.fohbible.data.CanvasNote
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.ThemeColors
-import com.fountofhopedotorg.fohbible.functions.getElementDisplayName
-import com.fountofhopedotorg.fohbible.functions.getRandomColor
-import com.fountofhopedotorg.fohbible.functions.getSerializedPointsForShape
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
@@ -328,7 +325,10 @@ fun CreatorScreen() {
                         editWidth = (note.width * note.scaleX).toString()
                         editHeight = (note.height * note.scaleY).toString()
                         editRotation = note.rotation.toString()
-                        editColorForDialog = note.backgroundColor
+                        editColorForDialog = if (!note.content.startsWith("Shape:") && !note.content.startsWith("Image:"))
+                            note.textColor ?: Color.Black
+                        else
+                            note.backgroundColor
                         showEditPropertiesDialog = true
                     },
                     onToggleVisibility = { viewModel.toggleVisibility(it) },
@@ -526,7 +526,10 @@ fun CreatorScreen() {
                             editWidth = (note.width * note.scaleX).toString()
                             editHeight = (note.height * note.scaleY).toString()
                             editRotation = note.rotation.toString()
-                            editColorForDialog = note.backgroundColor
+                            editColorForDialog = if (!note.content.startsWith("Shape:") && !note.content.startsWith("Image:"))
+                                note.textColor ?: Color.Black
+                            else
+                                note.backgroundColor
                             showEditPropertiesDialog = true
                         },
                         onToggleVisibility = { viewModel.toggleVisibility(it) },
@@ -679,6 +682,12 @@ fun CreatorScreen() {
 
     if (showColorPicker && noteToColorEditId != null) {
         val targetNote = viewModel.canvasNotes.find { it.id == noteToColorEditId }
+        val initialColor = when {
+            targetNote == null -> Color.White
+            targetNote.content.startsWith("Shape:") || targetNote.content.startsWith("Image:") ->
+                targetNote.backgroundColor
+            else -> targetNote.textColor ?: Color.Black
+        }
         ColorWheelDialog(
             onDismissRequest = {
                 showColorPicker = false
@@ -694,7 +703,7 @@ fun CreatorScreen() {
                 showColorPicker = false
                 noteToColorEditId = null
             },
-            initialColor = targetNote?.backgroundColor ?: Color.White
+            initialColor = initialColor
         )
     }
 
@@ -757,7 +766,13 @@ fun CreatorScreen() {
 
             viewModel.updateNoteProperties(id, xFloat, yFloat, wFloat, hFloat, rotFloat)
             viewModel.updateNoteScale(id, 1f, 1f)
-            viewModel.updateNoteColor(id, color)
+
+            val note = viewModel.canvasNotes.find { it.id == id }
+            if (note != null && !note.content.startsWith("Shape:") && !note.content.startsWith("Image:")) {
+                viewModel.updateNoteTextColor(id, color)
+            } else {
+                viewModel.updateNoteColor(id, color)
+            }
 
             showEditPropertiesDialog = false
             editPropertiesNoteId = null

@@ -15,12 +15,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.fountofhopedotorg.fohbible.Screen
+import com.fountofhopedotorg.fohbible.creator.getElementDisplayName
 import com.fountofhopedotorg.fohbible.data.BibleData
 import com.fountofhopedotorg.fohbible.data.CanvasNote
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.data.Testament
-import com.fountofhopedotorg.fohbible.functions.getElementDisplayName
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
 import com.fountofhopedotorg.fohbible.utils.InteractiveModalUtils
 import kotlinx.coroutines.Dispatchers

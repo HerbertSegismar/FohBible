@@ -1,4 +1,4 @@
-package com.fountofhopedotorg.fohbible.composables
+package com.fountofhopedotorg.fohbible.creator
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -59,7 +59,6 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 import androidx.core.net.toUri
 import com.fountofhopedotorg.fohbible.data.BezierNodeData
-import com.fountofhopedotorg.fohbible.functions.getRandomColor
 import kotlin.math.abs
 
 @Composable
@@ -75,6 +74,145 @@ fun ShapeSelectionCard(
         contentAlignment = Alignment.Center
     ) {
         shapePreview()
+    }
+}
+
+@Composable
+fun HexagonShape(modifier: Modifier = Modifier, color: Color = getRandomColor().copy(0.4f)) {
+    Canvas(modifier = modifier) {
+        val path = Path()
+        val sides = 6
+        val angleOffset = -Math.PI / 2
+        val centerX = size.width / 2f
+        val centerY = size.height / 2f
+        val radius = minOf(centerX, centerY)
+
+        for (i in 0 until sides) {
+            val angle = angleOffset + 2.0 * Math.PI * i / sides
+            val x = centerX + radius * cos(angle).toFloat()
+            val y = centerY + radius * sin(angle).toFloat()
+            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        path.close()
+        drawPath(path = path, color = color)
+    }
+}
+
+@Composable
+fun OctagonShape(modifier: Modifier = Modifier, color: Color = getRandomColor().copy(0.4f)) {
+    Canvas(modifier = modifier) {
+        val path = Path()
+        val sides = 8
+        val angleOffset = -Math.PI / 2
+        val centerX = size.width / 2f
+        val centerY = size.height / 2f
+        val radius = minOf(centerX, centerY)
+
+        for (i in 0 until sides) {
+            val angle = angleOffset + 2.0 * Math.PI * i / sides
+            val x = centerX + radius * cos(angle).toFloat()
+            val y = centerY + radius * sin(angle).toFloat()
+            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        path.close()
+        drawPath(path = path, color = color)
+    }
+}
+
+@Composable
+fun StarShape(modifier: Modifier = Modifier, color: Color = getRandomColor().copy(0.4f)) {
+    Canvas(modifier = modifier) {
+        val path = Path()
+        val points = 5
+        val outerRadius = minOf(size.width, size.height) / 2f
+        val innerRadius = outerRadius * 0.4f
+        val angleOffset = -Math.PI / 2
+        val centerX = size.width / 2f
+        val centerY = size.height / 2f
+
+        for (i in 0 until points * 2) {
+            val radius = if (i % 2 == 0) outerRadius else innerRadius
+            val angle = angleOffset + Math.PI * i / points
+            val x = centerX + radius * cos(angle).toFloat()
+            val y = centerY + radius * sin(angle).toFloat()
+            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        path.close()
+        drawPath(path = path, color = color)
+    }
+}
+
+@Composable
+fun DiamondShape(modifier: Modifier = Modifier, color: Color = getRandomColor().copy(0.4f)) {
+    Canvas(modifier = modifier) {
+        val path = Path()
+        val w = size.width
+        val h = size.height
+        path.moveTo(w / 2f, 0f)
+        path.lineTo(w, h / 2f)
+        path.lineTo(w / 2f, h)
+        path.lineTo(0f, h / 2f)
+        path.close()
+        drawPath(path = path, color = color)
+    }
+}
+
+@Composable
+fun HeartShape(modifier: Modifier = Modifier, color: Color = getRandomColor().copy(0.4f)) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+
+        val path = Path().apply {
+            moveTo(w * 0.5f, h * 0.32f)
+
+            cubicTo(
+                w * 0.32f, h * 0.08f,
+                w * 0.06f, h * 0.16f,
+                w * 0.06f, h * 0.44f
+            )
+
+            cubicTo(
+                w * 0.06f, h * 0.64f,
+                w * 0.36f, h * 0.80f,
+                w * 0.5f, h * 0.96f
+            )
+
+            cubicTo(
+                w * 0.64f, h * 0.80f,
+                w * 0.94f, h * 0.64f,
+                w * 0.94f, h * 0.44f
+            )
+
+            cubicTo(
+                w * 0.94f, h * 0.16f,
+                w * 0.68f, h * 0.08f,
+                w * 0.5f, h * 0.32f
+            )
+
+            close()
+        }
+
+        drawPath(path = path, color = color)
+    }
+}
+
+@Composable
+fun ArrowRightShape(modifier: Modifier = Modifier, color: Color = getRandomColor().copy(0.4f)) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val path = Path()
+        val headWidth = w * 0.4f
+        path.moveTo(0f, h * 0.3f)
+        path.lineTo(w - headWidth, h * 0.3f)
+        path.lineTo(w - headWidth, 0f)
+        path.lineTo(w, h / 2f)
+        path.lineTo(w - headWidth, h)
+        path.lineTo(w - headWidth, h * 0.7f)
+        path.lineTo(0f, h * 0.7f)
+        path.close()
+        drawPath(path = path, color = color)
     }
 }
 
@@ -293,8 +431,8 @@ fun CanvasSvgItem(
                         val screenPanY = localPanX * sin(angleRad) + localPanY * cos(angleRad)
                         offset += Offset(screenPanX.toFloat() / density, screenPanY.toFloat() / density)
 
-                        val newScaleX = (currentScaleX * zoom).coerceIn(0.2f, 5f)
-                        val newScaleY = (currentScaleY * zoom).coerceIn(0.2f, 5f)
+                        val newScaleX = (currentScaleX * zoom).coerceIn(0.1f, 10f)
+                        val newScaleY = (currentScaleY * zoom).coerceIn(0.1f, 10f)
                         val newRotation = currentRotation + rot
 
                         onScaleChanged(newScaleX, newScaleY)
@@ -353,6 +491,30 @@ fun CanvasSvgItem(
                             color = note.backgroundColor
                         )
                     }
+                    note.content == "Shape: Hexagon" -> HexagonShape(
+                        modifier = Modifier.fillMaxSize(),
+                        color = note.backgroundColor
+                    )
+                    note.content == "Shape: Star" -> StarShape(
+                        modifier = Modifier.fillMaxSize(),
+                        color = note.backgroundColor
+                    )
+                    note.content == "Shape: Diamond" -> DiamondShape(
+                        modifier = Modifier.fillMaxSize(),
+                        color = note.backgroundColor
+                    )
+                    note.content == "Shape: Heart" -> HeartShape(
+                        modifier = Modifier.fillMaxSize(),
+                        color = note.backgroundColor
+                    )
+                    note.content == "Shape: ArrowRight" -> ArrowRightShape(
+                        modifier = Modifier.fillMaxSize(),
+                        color = note.backgroundColor
+                    )
+                    note.content == "Shape: Octagon" -> OctagonShape(
+                        modifier = Modifier.fillMaxSize(),
+                        color = note.backgroundColor
+                    )
                     parsedData != null -> {
                         BezierPolygonShape(
                             nodes = parsedData.first,
@@ -494,8 +656,243 @@ fun CanvasSvgItem(
                                 val dx = baseSize.width.toFloat() - cx
                                 val dy = baseSize.height.toFloat() - cy
 
-                                val newScaleX = if (dx != 0f) (newScaledDx / dx).toFloat().coerceIn(0.2f, 5f) else startScaleX
-                                val newScaleY = if (dy != 0f) (newScaledDy / dy).toFloat().coerceIn(0.2f, 5f) else startScaleY
+                                val newScaleX = if (dx != 0f) (newScaledDx / dx).toFloat().coerceIn(0.1f, 10f) else startScaleX
+                                val newScaleY = if (dy != 0f) (newScaledDy / dy).toFloat().coerceIn(0.1f, 10f) else startScaleY
+
+                                onScaleChanged(newScaleX, newScaleY)
+                            }
+                        )
+                    }
+                    .background(Color.White, CircleShape)
+                    .border(1.dp, Color.Gray.copy(alpha = 0.5f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(modifier = Modifier.size(10.dp).background(Color.DarkGray, CircleShape))
+            }
+        }
+    }
+}
+
+@Composable
+fun CanvasTextItem(
+    note: CanvasNote,
+    isSelected: Boolean,
+    isLocked: Boolean,
+    onSelect: () -> Unit,
+    onUpdatePosition: (Offset, Float, Float, Float) -> Unit,
+    onScaleChanged: (Float, Float) -> Unit,
+    onColorPickerRequested: () -> Unit,
+    onDeleteRequested: () -> Unit
+) {
+    val density = LocalDensity.current.density
+    var offset by remember(note.offset) { mutableStateOf(note.offset) }
+    var baseSize by remember { mutableStateOf(IntSize.Zero) }
+    val currentRotation by rememberUpdatedState(note.rotation)
+    val currentScaleX by rememberUpdatedState(note.scaleX)
+    val currentScaleY by rememberUpdatedState(note.scaleY)
+    val currentWidth by rememberUpdatedState(note.width)
+    val currentHeight by rememberUpdatedState(note.height)
+
+    val handleSize = 24.dp
+    val handleRadiusPx = with(LocalDensity.current) { handleSize.toPx() / 2f }
+
+    Box(
+        modifier = Modifier
+            .offset {
+                IntOffset(
+                    (offset.x * density).roundToInt(),
+                    (offset.y * density).roundToInt()
+                )
+            }
+            .wrapContentSize(unbounded = true)
+            .alpha(if (isLocked) 0.2f else 1f)
+    ) {
+        Box(
+            modifier = Modifier
+                .graphicsLayer {
+                    this.scaleX = currentScaleX
+                    this.scaleY = currentScaleY
+                    rotationZ = currentRotation
+                }
+                .onSizeChanged { baseSize = it }
+                .pointerInput(isLocked) {
+                    if (isLocked) return@pointerInput
+                    detectTransformGestures { _, pan, zoom, rot ->
+                        val angleRad = currentRotation * (Math.PI / 180.0)
+                        val localPanX = pan.x * currentScaleX
+                        val localPanY = pan.y * currentScaleY
+
+                        val screenPanX = localPanX * cos(angleRad) - localPanY * sin(angleRad)
+                        val screenPanY = localPanX * sin(angleRad) + localPanY * cos(angleRad)
+                        offset += Offset(
+                            screenPanX.toFloat() / density,
+                            screenPanY.toFloat() / density
+                        )
+
+                        val newScaleX = (currentScaleX * zoom).coerceIn(0.1f, 10f)
+                        val newScaleY = (currentScaleY * zoom).coerceIn(0.1f, 10f)
+                        val newRotation = currentRotation + rot
+
+                        onScaleChanged(newScaleX, newScaleY)
+                        onUpdatePosition(offset, currentWidth, currentHeight, newRotation)
+                    }
+                }
+                .pointerInput(Unit) {
+                    detectTapGestures {
+                        onSelect()
+                    }
+                }
+        ) {
+            Box(
+                modifier = Modifier
+                    .padding(handleSize / 2),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isSelected) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .border(1.dp, Color.Gray.copy(alpha = 0.5f))
+                    )
+                }
+
+                Text(
+                    text = note.content,
+                    color = note.textColor ?: Color.Black,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .widthIn(max = 250.dp)
+                )
+            }
+        }
+
+        if (isSelected && baseSize != IntSize.Zero && !isLocked) {
+            val cx = baseSize.width / 2f
+            val cy = baseSize.height / 2f
+
+            fun getTargetHandleOffset(localX: Float, localY: Float): IntOffset {
+                val dx = localX - cx
+                val dy = localY - cy
+                val scaledDx = dx * currentScaleX
+                val scaledDy = dy * currentScaleY
+                val rad = currentRotation * (Math.PI / 180.0)
+                val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
+                val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
+                return IntOffset(
+                    (cx + rx - handleRadiusPx).roundToInt(),
+                    (cy + ry - handleRadiusPx).roundToInt()
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .offset { getTargetHandleOffset(0f, 0f) }
+                    .size(handleSize)
+                    .background(Color.White, CircleShape)
+                    .border(1.dp, Color.Gray.copy(alpha = 0.5f), CircleShape)
+                    .clickable { onDeleteRequested() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Close, contentDescription = "Delete", tint = Color.Red, modifier = Modifier.size(14.dp))
+            }
+
+            Box(
+                modifier = Modifier
+                    .offset { getTargetHandleOffset(0f, baseSize.height.toFloat()) }
+                    .size(handleSize)
+                    .background(Color.White, CircleShape)
+                    .border(1.dp, Color.Gray.copy(alpha = 0.5f), CircleShape)
+                    .clickable { onColorPickerRequested() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Palette, contentDescription = "Change Color", tint = Color.Blue, modifier = Modifier.size(14.dp))
+            }
+
+            Box(
+                modifier = Modifier
+                    .offset { getTargetHandleOffset(baseSize.width.toFloat(), 0f) }
+                    .size(handleSize)
+                    .pointerInput(baseSize) {
+                        var startRotation = 0f
+                        var accumulatedAngle = 0f
+                        var currentVector = Offset.Zero
+
+                        detectDragGestures(
+                            onDragStart = {
+                                startRotation = currentRotation
+                                accumulatedAngle = 0f
+                                val rad = startRotation * (Math.PI / 180.0)
+                                val dx = baseSize.width.toFloat() - cx
+                                val dy = 0f - cy
+                                val scaledDx = dx * currentScaleX
+                                val scaledDy = dy * currentScaleY
+                                val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
+                                val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
+                                currentVector = Offset(rx.toFloat(), ry.toFloat())
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                val previousAngle = atan2(currentVector.y, currentVector.x)
+                                currentVector += dragAmount
+                                val newAngle = atan2(currentVector.y, currentVector.x)
+                                var deltaAngle = Math.toDegrees((newAngle - previousAngle).toDouble()).toFloat()
+                                if (deltaAngle > 180f) deltaAngle -= 360f
+                                else if (deltaAngle < -180f) deltaAngle += 360f
+                                accumulatedAngle += deltaAngle
+                                val newRotation = startRotation + accumulatedAngle
+                                onUpdatePosition(offset, currentWidth, currentHeight, newRotation)
+                            }
+                        )
+                    }
+                    .background(Color.White, CircleShape)
+                    .border(1.dp, Color.Gray.copy(alpha = 0.5f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Refresh, contentDescription = "Rotate", tint = Color.DarkGray, modifier = Modifier.size(14.dp))
+            }
+
+            Box(
+                modifier = Modifier
+                    .offset { getTargetHandleOffset(baseSize.width.toFloat(), baseSize.height.toFloat()) }
+                    .size(handleSize)
+                    .pointerInput(baseSize) {
+                        var startScaleX = 1f
+                        var startScaleY = 1f
+                        var fixedRotation = 0f
+                        var currentVector = Offset.Zero
+
+                        detectDragGestures(
+                            onDragStart = {
+                                startScaleX = currentScaleX
+                                startScaleY = currentScaleY
+                                fixedRotation = currentRotation
+
+                                val rad = fixedRotation * (Math.PI / 180.0)
+                                val dx = baseSize.width.toFloat() - cx
+                                val dy = baseSize.height.toFloat() - cy
+                                val scaledDx = dx * startScaleX
+                                val scaledDy = dy * startScaleY
+                                val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
+                                val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
+                                currentVector = Offset(rx.toFloat(), ry.toFloat())
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                currentVector += dragAmount
+
+                                val rad = fixedRotation * (Math.PI / 180.0)
+                                val unrotatedRad = -rad
+                                val newScaledDx = currentVector.x * cos(unrotatedRad) - currentVector.y * sin(unrotatedRad)
+                                val newScaledDy = currentVector.x * sin(unrotatedRad) + currentVector.y * cos(unrotatedRad)
+
+                                val dx = baseSize.width.toFloat() - cx
+                                val dy = baseSize.height.toFloat() - cy
+
+                                val newScaleX = if (dx != 0f) (newScaledDx / dx).toFloat().coerceIn(0.1f, 10f) else startScaleX
+                                val newScaleY = if (dy != 0f) (newScaledDy / dy).toFloat().coerceIn(0.1f, 10f) else startScaleY
 
                                 onScaleChanged(newScaleX, newScaleY)
                             }
@@ -561,8 +958,8 @@ fun CanvasImageItem(
                         val screenPanY = localPanX * sin(angleRad) + localPanY * cos(angleRad)
                         offset += Offset(screenPanX.toFloat(), screenPanY.toFloat())
 
-                        scaleX = (scaleX * zoom).coerceIn(0.2f, 5f)
-                        scaleY = (scaleY * zoom).coerceIn(0.2f, 5f)
+                        scaleX = (scaleX * zoom).coerceIn(0.1f, 10f)
+                        scaleY = (scaleY * zoom).coerceIn(0.1f, 10f)
                         rotation += rot
 
                         onScaleChanged(scaleX, scaleY)
@@ -716,242 +1113,8 @@ fun CanvasImageItem(
                                 val dx = baseSize.width.toFloat() - cx
                                 val dy = baseSize.height.toFloat() - cy
 
-                                scaleX = if (dx != 0f) (newScaledDx / dx).toFloat().coerceIn(0.2f, 5f) else startScaleX
-                                scaleY = if (dy != 0f) (newScaledDy / dy).toFloat().coerceIn(0.2f, 5f) else startScaleY
-
-                                onScaleChanged(scaleX, scaleY)
-                            }
-                        )
-                    }
-                    .background(Color.White, CircleShape)
-                    .border(1.dp, Color.Gray.copy(alpha = 0.5f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(modifier = Modifier.size(10.dp).background(Color.DarkGray, CircleShape))
-            }
-        }
-    }
-}
-
-@Composable
-fun CanvasTextItem(
-    note: CanvasNote,
-    isSelected: Boolean,
-    isLocked: Boolean,
-    onSelect: () -> Unit,
-    onUpdatePosition: (Offset, Float, Float, Float) -> Unit,
-    onScaleChanged: (Float, Float) -> Unit,
-    onColorPickerRequested: () -> Unit,
-    onDeleteRequested: () -> Unit
-) {
-    var offset by remember(note.offset) { mutableStateOf(note.offset) }
-    var rotation by remember(note.id, note.rotation) {
-        mutableFloatStateOf(note.rotation)
-    }
-    var scaleX by remember { mutableFloatStateOf(1f) }
-    var scaleY by remember { mutableFloatStateOf(1f) }
-
-    var baseSize by remember { mutableStateOf(IntSize.Zero) }
-
-    val handleSize = 24.dp
-    val handleRadiusPx = with(LocalDensity.current) { handleSize.toPx() / 2f }
-
-    Box(
-        modifier = Modifier
-            .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
-            .wrapContentSize(unbounded = true)
-            .alpha(if (isLocked) 0.2f else 1f)
-    ) {
-        Box(
-            modifier = Modifier
-                .graphicsLayer {
-                    this.scaleX = scaleX
-                    this.scaleY = scaleY
-                    rotationZ = rotation
-                }
-                .onSizeChanged { baseSize = it }
-                .pointerInput(isLocked) {
-                    if (isLocked) return@pointerInput
-                    detectTransformGestures { _, pan, zoom, rot ->
-                        val angleRad = rotation * (Math.PI / 180.0)
-                        val localPanX = pan.x * scaleX
-                        val localPanY = pan.y * scaleY
-
-                        val screenPanX = localPanX * cos(angleRad) - localPanY * sin(angleRad)
-                        val screenPanY = localPanX * sin(angleRad) + localPanY * cos(angleRad)
-                        offset += Offset(screenPanX.toFloat(), screenPanY.toFloat())
-
-                        scaleX = (scaleX * zoom).coerceIn(0.2f, 5f)
-                        scaleY = (scaleY * zoom).coerceIn(0.2f, 5f)
-                        rotation += rot
-
-                        onScaleChanged(scaleX, scaleY)
-                        onUpdatePosition(offset, note.width, note.height, rotation)
-                    }
-                }
-                .pointerInput(Unit) {
-                    detectTapGestures {
-                        onSelect()
-                    }
-                }
-        ) {
-            Box(
-                modifier = Modifier
-                    .padding(handleSize / 2),
-                contentAlignment = Alignment.Center
-            ) {
-                if (isSelected) {
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .border(1.dp, Color.Gray.copy(alpha = 0.5f))
-                    )
-                }
-
-                Text(
-                    text = note.content,
-                    color = note.textColor ?: Color.Black,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .padding(8.dp)
-                        .widthIn(max = 250.dp)
-                )
-            }
-        }
-
-        if (isSelected && baseSize != IntSize.Zero && !isLocked) {
-            val cx = baseSize.width / 2f
-            val cy = baseSize.height / 2f
-
-            fun getTargetHandleOffset(localX: Float, localY: Float): IntOffset {
-                val dx = localX - cx
-                val dy = localY - cy
-                val scaledDx = dx * scaleX
-                val scaledDy = dy * scaleY
-                val rad = rotation * (Math.PI / 180.0)
-                val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
-                val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
-                return IntOffset(
-                    (cx + rx - handleRadiusPx).roundToInt(),
-                    (cy + ry - handleRadiusPx).roundToInt()
-                )
-            }
-
-            Box(
-                modifier = Modifier
-                    .offset { getTargetHandleOffset(0f, 0f) }
-                    .size(handleSize)
-                    .background(Color.White, CircleShape)
-                    .border(1.dp, Color.Gray.copy(alpha = 0.5f), CircleShape)
-                    .clickable { onDeleteRequested() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.Close, contentDescription = "Delete", tint = Color.Red, modifier = Modifier.size(14.dp))
-            }
-
-            Box(
-                modifier = Modifier
-                    .offset { getTargetHandleOffset(0f, baseSize.height.toFloat()) }
-                    .size(handleSize)
-                    .background(Color.White, CircleShape)
-                    .border(1.dp, Color.Gray.copy(alpha = 0.5f), CircleShape)
-                    .clickable { onColorPickerRequested() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.Palette, contentDescription = "Change Color", tint = Color.Blue, modifier = Modifier.size(14.dp))
-            }
-
-            // Rotation Handle
-            Box(
-                modifier = Modifier
-                    .offset { getTargetHandleOffset(baseSize.width.toFloat(), 0f) }
-                    .size(handleSize)
-                    .pointerInput(baseSize) {
-                        var startRotation = 0f
-                        var accumulatedAngle = 0f
-                        var currentVector = Offset.Zero
-
-                        detectDragGestures(
-                            onDragStart = {
-                                startRotation = rotation
-                                accumulatedAngle = 0f
-
-                                val rad = startRotation * (Math.PI / 180.0)
-                                val dx = baseSize.width.toFloat() - cx
-                                val dy = 0f - cy
-                                val scaledDx = dx * scaleX
-                                val scaledDy = dy * scaleY
-                                val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
-                                val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
-
-                                currentVector = Offset(rx.toFloat(), ry.toFloat())
-                            },
-                            onDrag = { change, dragAmount ->
-                                change.consume()
-                                val previousAngle = atan2(currentVector.y, currentVector.x)
-                                currentVector += dragAmount
-                                val newAngle = atan2(currentVector.y, currentVector.x)
-                                var deltaAngle = Math.toDegrees((newAngle - previousAngle).toDouble()).toFloat()
-
-                                if (deltaAngle > 180f) deltaAngle -= 360f
-                                else if (deltaAngle < -180f) deltaAngle += 360f
-                                accumulatedAngle += deltaAngle
-                                rotation = startRotation + accumulatedAngle
-
-                                onUpdatePosition(offset, note.width, note.height, rotation)
-                            }
-                        )
-                    }
-                    .background(Color.White, CircleShape)
-                    .border(1.dp, Color.Gray.copy(alpha = 0.5f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.Refresh, contentDescription = "Rotate", tint = Color.DarkGray, modifier = Modifier.size(14.dp))
-            }
-
-            // Scale Handle
-            Box(
-                modifier = Modifier
-                    .offset { getTargetHandleOffset(baseSize.width.toFloat(), baseSize.height.toFloat()) }
-                    .size(handleSize)
-                    .pointerInput(baseSize) {
-                        var startScaleX = 1f
-                        var startScaleY = 1f
-                        var fixedRotation = 0f
-                        var currentVector = Offset.Zero
-
-                        detectDragGestures(
-                            onDragStart = {
-                                startScaleX = scaleX
-                                startScaleY = scaleY
-                                fixedRotation = rotation
-
-                                val rad = fixedRotation * (Math.PI / 180.0)
-                                val dx = baseSize.width.toFloat() - cx
-                                val dy = baseSize.height.toFloat() - cy
-                                val scaledDx = dx * startScaleX
-                                val scaledDy = dy * startScaleY
-                                val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
-                                val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
-
-                                currentVector = Offset(rx.toFloat(), ry.toFloat())
-                            },
-                            onDrag = { change, dragAmount ->
-                                change.consume()
-                                currentVector += dragAmount
-
-                                val rad = fixedRotation * (Math.PI / 180.0)
-                                val unrotatedRad = -rad
-                                val newScaledDx = currentVector.x * cos(unrotatedRad) - currentVector.y * sin(unrotatedRad)
-                                val newScaledDy = currentVector.x * sin(unrotatedRad) + currentVector.y * cos(unrotatedRad)
-
-                                val dx = baseSize.width.toFloat() - cx
-                                val dy = baseSize.height.toFloat() - cy
-
-                                scaleX = if (dx != 0f) (newScaledDx / dx).toFloat().coerceIn(0.2f, 5f) else startScaleX
-                                scaleY = if (dy != 0f) (newScaledDy / dy).toFloat().coerceIn(0.2f, 5f) else startScaleY
+                                scaleX = if (dx != 0f) (newScaledDx / dx).toFloat().coerceIn(0.1f, 10f) else startScaleX
+                                scaleY = if (dy != 0f) (newScaledDy / dy).toFloat().coerceIn(0.1f, 10f) else startScaleY
 
                                 onScaleChanged(scaleX, scaleY)
                             }
