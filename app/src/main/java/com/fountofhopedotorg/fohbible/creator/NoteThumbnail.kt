@@ -38,6 +38,10 @@ fun NoteThumbnail(note: CanvasNote, themeColors: ThemeColors) {
                 shapeContent.startsWith("Heart") -> HeartShape(modifier = Modifier.size(18.dp), color = shapeColor)
                 shapeContent.startsWith("ArrowRight") -> ArrowRightShape(modifier = Modifier.size(18.dp), color = shapeColor)
                 shapeContent.startsWith("Octagon") -> OctagonShape(modifier = Modifier.size(18.dp), color = shapeColor)
+                shapeContent.startsWith("Cross") -> CrossShape(modifier = Modifier.size(18.dp), color = shapeColor)
+                shapeContent.startsWith("Moon") -> MoonShape(modifier = Modifier.size(18.dp), color = shapeColor)
+                shapeContent.startsWith("DavidStar") -> DavidStarShape(modifier = Modifier.size(18.dp), color = shapeColor)
+                shapeContent.startsWith("Gear") -> GearShape(modifier = Modifier.size(18.dp), color = shapeColor)
                 shapeContent.startsWith("CustomLine:") -> {
                     val pointsData = shapeContent.removePrefix("CustomLine:")
                     CustomPathPreview(

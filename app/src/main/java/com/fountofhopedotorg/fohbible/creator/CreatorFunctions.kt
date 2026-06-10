@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.unit.sp
+import com.fountofhopedotorg.fohbible.data.BezierNode
 import com.fountofhopedotorg.fohbible.data.BoundingBox
 import com.fountofhopedotorg.fohbible.data.CanvasNote
 import com.fountofhopedotorg.fohbible.data.ProcessingOptions
@@ -26,7 +27,9 @@ import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
+import kotlin.math.cos
 import kotlin.math.roundToInt
+import kotlin.math.sin
 import kotlin.random.Random
 
 
@@ -355,17 +358,6 @@ private fun colorToHex(color: Color): String {
     return String.format("#%02X%02X%02X", red, green, blue)
 }
 
-fun getSerializedPointsForShape(shapeName: String): String {
-    return when (shapeName) {
-        "Square" -> "0.0,0.0:0.0,0.0:0.0,0.0;1.0,0.0:1.0,0.0:1.0,0.0;1.0,1.0:1.0,1.0:1.0,1.0;0.0,1.0:0.0,1.0:0.0,1.0"
-        "Triangle" -> "0.5,0.0:0.5,0.0:0.5,0.0;1.0,1.0:1.0,1.0:1.0,1.0;0.0,1.0:0.0,1.0:0.0,1.0"
-        "Pentagon" -> "0.5,0.0:0.5,0.0:0.5,0.0;1.0,0.4:1.0,0.4:1.0,0.4;0.8,0.9:0.8,0.9:0.8,0.9;0.2,0.9:0.2,0.9:0.2,0.9;0.0,0.4:0.0,0.4:0.0,0.4"
-        "Circle" -> "0.5,0.0:0.224,0.0:0.776,0.0;1.0,0.5:1.0,0.224:1.0,0.776;0.5,1.0:0.776,1.0:0.224,1.0;0.0,0.5:0.0,0.776:0.0,0.224"
-        "Line" -> "0.1,0.5:0.1,0.5:0.1,0.5;0.9,0.5:0.9,0.5:0.9,0.5"
-        else -> ""
-    }
-}
-
 fun getRandomColor(): Color {
     return Color(
         red = Random.nextFloat(),
@@ -446,4 +438,256 @@ fun buildProcessedContent(
         "${verse.verseNumber} ${processed.body}"
     }
     return "$reference\n\n${processedLines.joinToString("\n")}"
+}
+
+fun getSerializedPointsForShape(shapeType: String): String {
+    return when (shapeType.lowercase()) {
+        "line" -> {
+            "0,0.5:0,0.5:0,0.5;1,0.5:1,0.5:1,0.5"
+        }
+        "square" -> {
+            listOf(
+                "0,0:0,0:0,0",
+                "1,0:1,0:1,0",
+                "1,1:1,1:1,1",
+                "0,1:0,1:0,1"
+            ).joinToString(";")
+        }
+        "triangle" -> {
+            listOf(
+                "0.5,0:0.5,0:0.5,0",
+                "1,1:1,1:1,1",
+                "0,1:0,1:0,1"
+            ).joinToString(";")
+        }
+        "circle" -> {
+            val c = 0.5522848f
+            val points = listOf(
+                BezierNode(Offset(0.5f, 0f), Offset(0.5f - c / 2, 0f), Offset(0.5f + c / 2, 0f)),
+                BezierNode(Offset(1f, 0.5f), Offset(1f, 0.5f - c/2), Offset(1f, 0.5f + c/2)),
+                BezierNode(Offset(0.5f, 1f), Offset(0.5f + c/2, 1f), Offset(0.5f - c/2, 1f)),
+                BezierNode(Offset(0f, 0.5f), Offset(0f, 0.5f + c/2), Offset(0f, 0.5f - c/2))
+            )
+            points.joinToString(";") {
+                "${it.anchor.x},${it.anchor.y}:${it.handleIn.x},${it.handleIn.y}:${it.handleOut.x},${it.handleOut.y}"
+            }
+        }
+        "heart" -> {
+            listOf(
+                BezierNode(Offset(0.5f, 0.32f),
+                    handleIn = Offset(0.68f, 0.08f),
+                    handleOut = Offset(0.32f, 0.08f)),
+                BezierNode(Offset(0.06f, 0.44f),
+                    handleIn = Offset(0.06f, 0.16f),
+                    handleOut = Offset(0.06f, 0.64f)),
+                BezierNode(Offset(0.5f, 0.96f),
+                    handleIn = Offset(0.36f, 0.80f),
+                    handleOut = Offset(0.64f, 0.80f)),
+                BezierNode(Offset(0.94f, 0.44f),
+                    handleIn = Offset(0.94f, 0.64f),
+                    handleOut = Offset(0.94f, 0.16f))
+            ).joinToString(";") {
+                "${it.anchor.x},${it.anchor.y}:${it.handleIn.x},${it.handleIn.y}:${it.handleOut.x},${it.handleOut.y}"
+            }
+        }
+        "cross" -> {
+            listOf(
+                BezierNode(Offset(0.38f, 0.02f), handleIn = Offset(0.40f, 0.21f), handleOut = Offset(0.50f, 0f)),
+                BezierNode(Offset(0.62f, 0.02f), handleIn = Offset(0.50f, 0f), handleOut = Offset(0.60f, 0.21f)),
+                BezierNode(Offset(0.60f, 0.21f), handleIn = Offset(0.60f, 0.21f), handleOut = Offset(0.60f, 0.28f)),
+                BezierNode(Offset(0.68f, 0.28f), handleIn = Offset(0.60f, 0.28f), handleOut = Offset(0.68f, 0.28f)),
+                BezierNode(Offset(0.98f, 0.24f), handleIn = Offset(0.68f, 0.28f), handleOut = Offset(1f, 0.35f)),
+                BezierNode(Offset(0.98f, 0.46f), handleIn = Offset(1f, 0.35f), handleOut = Offset(0.68f, 0.42f)),
+                BezierNode(Offset(0.68f, 0.42f), handleIn = Offset(0.68f, 0.42f), handleOut = Offset(0.60f, 0.42f)),
+                BezierNode(Offset(0.60f, 0.52f), handleIn = Offset(0.60f, 0.42f), handleOut = Offset(0.62f, 0.98f)),
+                BezierNode(Offset(0.62f, 0.98f), handleIn = Offset(0.62f, 0.98f), handleOut = Offset(0.50f, 1f)),
+                BezierNode(Offset(0.38f, 0.98f), handleIn = Offset(0.50f, 1f), handleOut = Offset(0.40f, 0.52f)),
+                BezierNode(Offset(0.40f, 0.52f), handleIn = Offset(0.40f, 0.52f), handleOut = Offset(0.40f, 0.42f)),
+                BezierNode(Offset(0.32f, 0.42f), handleIn = Offset(0.40f, 0.42f), handleOut = Offset(0.02f, 0.46f)),
+                BezierNode(Offset(0.02f, 0.46f), handleIn = Offset(0.02f, 0.46f), handleOut = Offset(0f, 0.35f)),
+                BezierNode(Offset(0.02f, 0.24f), handleIn = Offset(0f, 0.35f), handleOut = Offset(0.32f, 0.28f)),
+                BezierNode(Offset(0.32f, 0.28f), handleIn = Offset(0.32f, 0.28f), handleOut = Offset(0.40f, 0.28f)),
+                BezierNode(Offset(0.40f, 0.21f), handleIn = Offset(0.40f, 0.28f), handleOut = Offset(0.40f, 0.21f))
+            ).joinToString(";") {
+                "${it.anchor.x},${it.anchor.y}:${it.handleIn.x},${it.handleIn.y}:${it.handleOut.x},${it.handleOut.y}"
+            }
+        }
+        "diamond" -> {
+            listOf(
+                BezierNode(Offset(0.5f, 0f), handleIn = Offset(0.32f, 0.32f), handleOut = Offset(0.68f, 0.32f)),
+                BezierNode(Offset(1f, 0.5f), handleIn = Offset(0.68f, 0.32f), handleOut = Offset(0.68f, 0.68f)),
+                BezierNode(Offset(0.5f, 1f), handleIn = Offset(0.68f, 0.68f), handleOut = Offset(0.32f, 0.68f)),
+                BezierNode(Offset(0f, 0.5f), handleIn = Offset(0.32f, 0.68f), handleOut = Offset(0.32f, 0.32f))
+            ).joinToString(";") {
+                "${it.anchor.x},${it.anchor.y}:${it.handleIn.x},${it.handleIn.y}:${it.handleOut.x},${it.handleOut.y}"
+            }
+        }
+        "star" -> {
+            val outerR = 1f
+            val innerR = 0.4f
+            val center = 0.5f
+            val angleOffset = -Math.PI / 2
+            (0 until 10).map { i ->
+                val radius = if (i % 2 == 0) outerR/2 else innerR/2
+                val angle = angleOffset + Math.PI * i / 5
+                val x = (center + radius * cos(angle)).toFloat()
+                val y = (center + radius * sin(angle)).toFloat()
+                BezierNode(Offset(x, y), Offset(x, y), Offset(x, y))
+            }.joinToString(";") {
+                "${it.anchor.x},${it.anchor.y}:${it.handleIn.x},${it.handleIn.y}:${it.handleOut.x},${it.handleOut.y}"
+            }
+        }
+        "hexagon" -> {
+            (0 until 6).map { i ->
+                val angle = -Math.PI / 2 + 2 * Math.PI * i / 6
+                val x = (0.5f + 0.5f * cos(angle)).toFloat()
+                val y = (0.5f + 0.5f * sin(angle)).toFloat()
+                BezierNode(Offset(x, y), Offset(x, y), Offset(x, y))
+            }.joinToString(";") {
+                "${it.anchor.x},${it.anchor.y}:${it.handleIn.x},${it.handleIn.y}:${it.handleOut.x},${it.handleOut.y}"
+            }
+        }
+        "octagon" -> {
+            (0 until 8).map { i ->
+                val angle = -Math.PI / 2 + 2 * Math.PI * i / 8
+                val x = (0.5f + 0.5f * cos(angle)).toFloat()
+                val y = (0.5f + 0.5f * sin(angle)).toFloat()
+                BezierNode(Offset(x, y), Offset(x, y), Offset(x, y))
+            }.joinToString(";") {
+                "${it.anchor.x},${it.anchor.y}:${it.handleIn.x},${it.handleIn.y}:${it.handleOut.x},${it.handleOut.y}"
+            }
+        }
+        "arrowright" -> {
+            listOf(
+                Offset(0f, 0.3f), Offset(0.6f, 0.3f), Offset(0.6f, 0f),
+                Offset(1f, 0.5f), Offset(0.6f, 1f), Offset(0.6f, 0.7f), Offset(0f, 0.7f)
+            ).map { BezierNode(it, it, it) }.joinToString(";") {
+                "${it.anchor.x},${it.anchor.y}:${it.handleIn.x},${it.handleIn.y}:${it.handleOut.x},${it.handleOut.y}"
+            }
+        }
+        "davidstar" -> {
+            val cx = 0.5f
+            val cy = 0.5f
+            val rOut = 0.5f
+            val rIn = rOut / kotlin.math.sqrt(3f)
+            val curveFactor = 0.85f
+            val vertices = (0 until 12).map { i ->
+                val angleRad = (-90f + (i * 30f)) * Math.PI.toFloat() / 180f
+                val radius = if (i % 2 == 0) rOut else rIn
+                Offset(cx + radius * cos(angleRad), cy + radius * sin(angleRad))
+            }
+
+            val controls = vertices.mapIndexed { i, start ->
+                val end = vertices[(i + 1) % 12]
+                val midX = (start.x + end.x) / 2f
+                val midY = (start.y + end.y) / 2f
+                Offset(
+                    x = cx + (midX - cx) * curveFactor,
+                    y = cy + (midY - cy) * curveFactor
+                )
+            }
+
+            vertices.mapIndexed { i, anchor ->
+                val prevIdx = (i - 1 + 12) % 12
+                val cPrev = controls[prevIdx]
+                val cNext = controls[i]
+                val handleInX = anchor.x + (cPrev.x - anchor.x) * (2f / 3f)
+                val handleInY = anchor.y + (cPrev.y - anchor.y) * (2f / 3f)
+
+                val handleOutX = anchor.x + (cNext.x - anchor.x) * (2f / 3f)
+                val handleOutY = anchor.y + (cNext.y - anchor.y) * (2f / 3f)
+
+                BezierNode(
+                    anchor = anchor,
+                    handleIn = Offset(handleInX, handleInY),
+                    handleOut = Offset(handleOutX, handleOutY)
+                )
+            }.joinToString(";") {
+                "${it.anchor.x},${it.anchor.y}:${it.handleIn.x},${it.handleIn.y}:${it.handleOut.x},${it.handleOut.y}"
+            }
+        }
+        "moon" -> {
+            // Magic number for a standard circle bezier approximation
+            val c = 0.27614f
+
+            listOf(
+                BezierNode(
+                    anchor = Offset(0.5f, 0f),
+                    handleIn = Offset(0.4f, 0.15f),
+                    handleOut = Offset(0.5f - c, 0f)
+                ),
+                BezierNode(
+                    anchor = Offset(0f, 0.5f),
+                    handleIn = Offset(0f, 0.5f - c),
+                    handleOut = Offset(0f, 0.5f + c)
+                ),
+                BezierNode(
+                    anchor = Offset(0.5f, 1f),
+                    handleIn = Offset(0.5f - c, 1f),
+                    handleOut = Offset(0.4f, 0.85f)
+                ),
+                BezierNode(
+                    anchor = Offset(0.35f, 0.5f),
+                    handleIn = Offset(0.35f, 0.75f),
+                    handleOut = Offset(0.35f, 0.25f)
+                )
+            ).joinToString(";") {
+                "${it.anchor.x},${it.anchor.y}:${it.handleIn.x},${it.handleIn.y}:${it.handleOut.x},${it.handleOut.y}"
+            }
+        }
+        "gear" -> {
+            val cx = 0.5f
+            val cy = 0.5f
+            val rOut = 0.5f
+            val rIn = 0.35f
+            val teeth = 8
+
+            val nodes = mutableListOf<BezierNode>()
+            val step = 2.0 * Math.PI / teeth
+            val offsetAngle = -Math.PI / 2
+            for (i in 0 until teeth) {
+                val a1 = offsetAngle + step * (i + 0.1)
+                val a2 = offsetAngle + step * (i + 0.3)
+                val a3 = offsetAngle + step * (i + 0.7)
+                val a4 = offsetAngle + step * (i + 0.9)
+
+                val p1 = Offset((cx + rIn * cos(a1)).toFloat(), (cy + rIn * sin(a1)).toFloat())
+                val p2 = Offset((cx + rOut * cos(a2)).toFloat(), (cy + rOut * sin(a2)).toFloat())
+                val p3 = Offset((cx + rOut * cos(a3)).toFloat(), (cy + rOut * sin(a3)).toFloat())
+                val p4 = Offset((cx + rIn * cos(a4)).toFloat(), (cy + rIn * sin(a4)).toFloat())
+
+                nodes.add(BezierNode(p1, p1, p1))
+                nodes.add(BezierNode(p2, p2, p2))
+                nodes.add(BezierNode(p3, p3, p3))
+                nodes.add(BezierNode(p4, p4, p4))
+            }
+
+            val firstPerimeterPoint = nodes.first().anchor
+            val lastPerimeterPoint = nodes.last().anchor
+            val midPerimeterPoint = Offset(
+                x = (firstPerimeterPoint.x + lastPerimeterPoint.x) / 2f,
+                y = (firstPerimeterPoint.y + lastPerimeterPoint.y) / 2f
+            )
+
+            nodes.add(BezierNode(midPerimeterPoint, midPerimeterPoint, midPerimeterPoint))
+
+            val rHole = 0.15f
+            val c = 0.5522848f * rHole
+            val hTop = Offset(0.5f, 0.5f - rHole)
+            val hLeft = Offset(0.5f - rHole, 0.5f)
+            val hBottom = Offset(0.5f, 0.5f + rHole)
+            val hRight = Offset(0.5f + rHole, 0.5f)
+
+            nodes.add(BezierNode(anchor = hTop, handleIn = hTop, handleOut = Offset(0.5f - c, 0.5f - rHole)))
+            nodes.add(BezierNode(anchor = hLeft, handleIn = Offset(0.5f - rHole, 0.5f - c), handleOut = Offset(0.5f - rHole, 0.5f + c)))
+            nodes.add(BezierNode(anchor = hBottom, handleIn = Offset(0.5f - c, 0.5f + rHole), handleOut = Offset(0.5f + c, 0.5f + rHole)))
+            nodes.add(BezierNode(anchor = hRight, handleIn = Offset(0.5f + rHole, 0.5f + c), handleOut = Offset(0.5f + rHole, 0.5f - c)))
+            nodes.add(BezierNode(anchor = hTop, handleIn = Offset(0.5f + c, 0.5f - rHole), handleOut = hTop))
+            nodes.add(BezierNode(anchor = midPerimeterPoint, handleIn = midPerimeterPoint, handleOut = midPerimeterPoint))
+            nodes.joinToString(";") {
+                "${it.anchor.x},${it.anchor.y}:${it.handleIn.x},${it.handleIn.y}:${it.handleOut.x},${it.handleOut.y}"
+            }
+        }
+        else -> ""
+    }
 }

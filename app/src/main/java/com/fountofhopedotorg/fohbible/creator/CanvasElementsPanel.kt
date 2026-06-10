@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -75,17 +76,14 @@ fun CanvasElementsPanel(
 ) {
     val groupedNotes = viewModel.canvasNotes.groupBy { it.groupId }
     val expandedGroups = remember { mutableStateMapOf<String, Boolean>() }
-    val displayItems = buildList {
+
+    // Build the base list of group headers and notes
+    val baseItems = buildList {
         for ((groupId, notes) in groupedNotes) {
             if (groupId == null) continue
             val expanded = expandedGroups[groupId] ?: false
-
-            val actualChildren = notes.filter { note ->
-                note.id != groupId
-            }
-
+            val actualChildren = notes.filter { note -> note.id != groupId }
             val groupName = groupNames[groupId] ?: "Group of ${actualChildren.size}"
-
             add(
                 DisplayItem.GroupHeader(
                     groupId = groupId,
@@ -112,6 +110,28 @@ fun CanvasElementsPanel(
             add(DisplayItem.NoteItem(note, originalIndex, isGrouped = false))
         }
     }
+
+    // Insert the action row after the last visible selected note (if any)
+    val displayItems = remember(baseItems, expandedGroups, selectedNoteIds) {
+        val mutableList = baseItems.toMutableList()
+        var insertionIndex = -1
+        for (i in mutableList.indices.reversed()) {
+            val item = mutableList[i]
+            if (item is DisplayItem.NoteItem &&
+                selectedNoteIds.contains(item.note.id) &&
+                (item.groupId == null || expandedGroups[item.groupId] == true)
+            ) {
+                insertionIndex = i + 1
+                break
+            }
+        }
+        if (insertionIndex >= 0) {
+            mutableList.add(insertionIndex, DisplayItem.ActionRow)
+        }
+        mutableList
+    }
+
+    // Group bounds for reordering (unchanged)
     val groupBounds = remember(displayItems) {
         val bounds = mutableMapOf<String?, Pair<Int, Int>>()
         displayItems.forEachIndexed { index, item ->
@@ -168,6 +188,7 @@ fun CanvasElementsPanel(
                                 when (val item = displayItems[index]) {
                                     is DisplayItem.GroupHeader -> "header-${item.groupId}"
                                     is DisplayItem.NoteItem -> item.note.id
+                                    is DisplayItem.ActionRow -> "action-row"
                                 }
                             }
                         ) { displayIndex ->
@@ -239,15 +260,21 @@ fun CanvasElementsPanel(
                                             onDragEnd = {
                                                 val fromDisplayIndex = draggedDisplayIndex
                                                 if (fromDisplayIndex != null) {
-                                                    val draggedItem = displayItems[fromDisplayIndex] as? DisplayItem.NoteItem
+                                                    val draggedItem =
+                                                        displayItems[fromDisplayIndex] as? DisplayItem.NoteItem
                                                     if (draggedItem != null) {
                                                         val itemBounds = groupBounds[draggedItem.groupId]
                                                         if (itemBounds != null) {
-                                                            val rawTargetIdx = (fromDisplayIndex + (dragOffset / itemHeightPx).roundToInt())
-                                                            val targetDisplayIdx = rawTargetIdx.coerceIn(itemBounds.first, itemBounds.second)
+                                                            val rawTargetIdx =
+                                                                (fromDisplayIndex + (dragOffset / itemHeightPx).roundToInt())
+                                                            val targetDisplayIdx = rawTargetIdx.coerceIn(
+                                                                itemBounds.first,
+                                                                itemBounds.second
+                                                            )
 
                                                             if (targetDisplayIdx != fromDisplayIndex) {
-                                                                val targetItem = displayItems[targetDisplayIdx] as DisplayItem.NoteItem
+                                                                val targetItem =
+                                                                    displayItems[targetDisplayIdx] as DisplayItem.NoteItem
                                                                 viewModel.reorderCanvasNotes(
                                                                     draggedItem.originalIndex,
                                                                     targetItem.originalIndex
@@ -274,42 +301,45 @@ fun CanvasElementsPanel(
                                         )
                                     }
                                 }
+
+                                is DisplayItem.ActionRow -> {
+                                    val hasGroup = viewModel.canvasNotes.any {
+                                        it.groupId != null && it.id in selectedNoteIds
+                                    }
+                                    GroupActionRow(
+                                        selectedCount = selectedNoteIds.size,
+                                        hasGroup = hasGroup,
+                                        onGroup = {
+                                            onGroup("Group ${selectedNoteIds.size}", selectedNoteIds.toList())
+                                        },
+                                        onUngroup = { onUngroup(selectedNoteIds) },
+                                        onRename = {
+                                            val selectedNotes =
+                                                viewModel.canvasNotes.filter { it.id in selectedNoteIds }
+                                            val uniqueGroupIds = selectedNotes.mapNotNull { it.groupId }.distinct()
+                                            if (hasGroup && uniqueGroupIds.isNotEmpty()) {
+                                                onRenameGroup?.invoke(
+                                                    uniqueGroupIds.first(),
+                                                    groupNames[uniqueGroupIds.first()] ?: "Group"
+                                                )
+                                            } else if (selectedNoteIds.size == 1) {
+                                                val note = selectedNotes.firstOrNull()
+                                                if (note != null) onRename(note)
+                                            }
+                                        },
+                                        onEditProperties = {
+                                            if (selectedNoteIds.size == 1) {
+                                                val note =
+                                                    viewModel.canvasNotes.find { it.id == selectedNoteIds.first() }
+                                                if (note != null) onEditProperties(note)
+                                            }
+                                        },
+                                        onClearSelection = onClearSelection,
+                                        modifier = Modifier.animateItem()
+                                    )
+                                }
                             }
                         }
-                    }
-
-                    AnimatedVisibility(visible = selectedNoteIds.isNotEmpty()) {
-                        val hasGroup = viewModel.canvasNotes.any { it.groupId != null && it.id in selectedNoteIds }
-                        GroupActionRow(
-                            selectedCount = selectedNoteIds.size,
-                            hasGroup = hasGroup,
-                            onGroup = {
-                                onGroup("Group ${selectedNoteIds.size}", selectedNoteIds.toList())
-                            },
-                            onUngroup = { onUngroup(selectedNoteIds) },
-                            onRename = {
-                                val selectedNotes = viewModel.canvasNotes.filter { it.id in selectedNoteIds }
-                                val uniqueGroupIds = selectedNotes.mapNotNull { it.groupId }.distinct()
-
-                                if (hasGroup && uniqueGroupIds.isNotEmpty()) {
-                                    if (onRenameGroup != null) {
-                                        val groupId = uniqueGroupIds.first()
-                                        val currentName = groupNames[groupId] ?: "Group"
-                                        onRenameGroup(groupId, currentName)
-                                    }
-                                } else if (selectedNoteIds.size == 1) {
-                                    val note = selectedNotes.firstOrNull()
-                                    if (note != null) onRename(note)
-                                }
-                            },
-                            onEditProperties = {
-                                if (selectedNoteIds.size == 1) {
-                                    val note = viewModel.canvasNotes.find { it.id == selectedNoteIds.first() }
-                                    if (note != null) onEditProperties(note)
-                                }
-                            },
-                            onClearSelection = onClearSelection
-                        )
                     }
                 }
             }
@@ -342,7 +372,8 @@ private fun GroupHeaderRow(
     ) {
         Row(
             modifier = Modifier.padding(4.dp),
-            verticalAlignment = Alignment.CenterVertically) {
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Icon(
                 imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                 contentDescription = "Toggle group",
@@ -364,6 +395,65 @@ private fun GroupHeaderRow(
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = themeColors.primary
+            )
+        }
+    }
+}
+
+@Composable
+private fun GroupActionRow(
+    selectedCount: Int,
+    hasGroup: Boolean,
+    onGroup: () -> Unit,
+    onUngroup: () -> Unit,
+    onRename: () -> Unit,
+    onEditProperties: () -> Unit,
+    onClearSelection: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(40.dp)
+            .padding(vertical = 2.dp)
+            .background(
+                MaterialTheme.colorScheme.inversePrimary.copy(0.2f),
+                RoundedCornerShape(8.dp)
+            )
+            .padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            text = "$selectedCount selected",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f)
+        )
+        if (!hasGroup && selectedCount > 1) {
+            TextButton(onClick = onGroup) {
+                Text("Group")
+            }
+        }
+        if (hasGroup) {
+            TextButton(onClick = onUngroup) {
+                Text("Ungroup")
+            }
+            TextButton(onClick = onRename) {
+                Text("Rename")
+            }
+        } else if (selectedCount == 1) {
+            TextButton(onClick = onRename) {
+                Text("Rename")
+            }
+            TextButton(onClick = onEditProperties) {
+                Text("Properties")
+            }
+        }
+        TextButton(onClick = onClearSelection) {
+            Text(
+                "Clear",
+                color = MaterialTheme.colorScheme.error
             )
         }
     }

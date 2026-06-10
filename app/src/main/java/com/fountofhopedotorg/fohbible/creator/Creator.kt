@@ -35,7 +35,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.composables.ColorWheelDialog
-import com.fountofhopedotorg.fohbible.composables.CustomPolygonDialog
 import com.fountofhopedotorg.fohbible.data.CanvasNote
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.ThemeColors

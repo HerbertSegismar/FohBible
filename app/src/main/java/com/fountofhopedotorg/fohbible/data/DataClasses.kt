@@ -346,4 +346,6 @@ sealed class DisplayItem {
         val isGrouped: Boolean,
         val groupId: String? = null
     ) : DisplayItem()
+
+    object ActionRow : DisplayItem()
 }

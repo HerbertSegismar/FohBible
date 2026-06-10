@@ -160,6 +160,18 @@ fun CombinedToolbarSection(
                     "Octagon" to @Composable {
                         OctagonShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f))
                     },
+                    "Cross" to @Composable {
+                        CrossShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f))
+                    },
+                    "Moon" to @Composable {
+                        MoonShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f))
+                    },
+                    "DavidStar" to @Composable {
+                        DavidStarShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f))
+                    },
+                    "Gear" to @Composable {
+                        GearShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f))
+                    },
                     "ArrowRight" to @Composable {
                         ArrowRightShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f))
                     }

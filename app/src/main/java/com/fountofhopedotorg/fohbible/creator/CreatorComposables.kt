@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Fill
@@ -60,6 +61,9 @@ import kotlin.math.sin
 import androidx.core.net.toUri
 import com.fountofhopedotorg.fohbible.data.BezierNodeData
 import kotlin.math.abs
+import androidx.compose.ui.geometry.Rect
+import kotlin.math.PI
+import kotlin.math.sqrt
 
 @Composable
 fun ShapeSelectionCard(
@@ -143,15 +147,180 @@ fun StarShape(modifier: Modifier = Modifier, color: Color = getRandomColor().cop
 }
 
 @Composable
-fun DiamondShape(modifier: Modifier = Modifier, color: Color = getRandomColor().copy(0.4f)) {
+fun DiamondShape(
+    modifier: Modifier = Modifier,
+    color: Color = getRandomColor().copy(0.4f)
+) {
     Canvas(modifier = modifier) {
         val path = Path()
         val w = size.width
         val h = size.height
+
         path.moveTo(w / 2f, 0f)
-        path.lineTo(w, h / 2f)
-        path.lineTo(w / 2f, h)
-        path.lineTo(0f, h / 2f)
+        path.quadraticTo(w * 0.68f, h * 0.32f, w, h / 2f)
+        path.quadraticTo(w * 0.68f, h * 0.68f, w / 2f, h)
+        path.quadraticTo(w * 0.32f, h * 0.68f, 0f, h / 2f)
+        path.quadraticTo(w * 0.32f, h * 0.32f, w / 2f, 0f)
+
+        path.close()
+        drawPath(path = path, color = color)
+    }
+}
+
+@Composable
+fun MoonShape(
+    modifier: Modifier = Modifier,
+    color: Color = getRandomColor().copy(0.4f)
+) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val moonPath = Path().apply {
+            addOval(Rect(0f, 0f, w, h))
+        }
+
+        val cutterPath = Path().apply {
+            addOval(Rect(w * 0.35f, -h * 0.05f, w * 1.35f, h * 1.05f))
+        }
+        val crescentPath = Path.combine(
+            operation = PathOperation.Difference,
+            path1 = moonPath,
+            path2 = cutterPath
+        )
+
+        drawPath(path = crescentPath, color = color)
+    }
+}
+
+@Composable
+fun CrossShape(
+    modifier: Modifier = Modifier,
+    color: Color = getRandomColor().copy(0.4f)
+) {
+    Canvas(modifier = modifier) {
+        val path = Path()
+        val w = size.width
+        val h = size.height
+
+        path.moveTo(w * 0.38f, h * 0.02f)
+        path.quadraticTo(w * 0.50f, 0f, w * 0.62f, h * 0.02f)
+        path.lineTo(w * 0.60f, h * 0.21f)
+        path.quadraticTo(w * 0.60f, h * 0.28f, w * 0.68f, h * 0.28f)
+        path.lineTo(w * 0.98f, h * 0.24f)
+        path.quadraticTo(w, h * 0.35f, w * 0.98f, h * 0.46f)
+        path.lineTo(w * 0.68f, h * 0.42f)
+        path.quadraticTo(w * 0.60f, h * 0.42f, w * 0.60f, h * 0.52f)
+        path.lineTo(w * 0.62f, h * 0.98f)
+        path.quadraticTo(w * 0.50f, h, w * 0.38f, h * 0.98f)
+        path.lineTo(w * 0.40f, h * 0.52f)
+        path.quadraticTo(w * 0.40f, h * 0.42f, w * 0.32f, h * 0.42f)
+        path.lineTo(w * 0.02f, h * 0.46f)
+        path.quadraticTo(0f, h * 0.35f, w * 0.02f, h * 0.24f)
+        path.lineTo(w * 0.32f, h * 0.28f)
+        path.quadraticTo(w * 0.40f, h * 0.28f, w * 0.40f, h * 0.21f)
+
+        path.close()
+        drawPath(path = path, color = color)
+    }
+}
+
+@Composable
+fun GearShape(
+    modifier: Modifier = Modifier,
+    color: Color = getRandomColor().copy(0.4f),
+    teethCount: Int = 8
+) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val cx = w / 2f
+        val cy = h / 2f
+
+        val rOuter = minOf(w, h) / 2f
+        val rInner = rOuter * 0.7f
+        val rHole = rOuter * 0.25f
+        val gearPath = Path().apply {
+            val step = 2.0 * Math.PI / teethCount
+            val offsetAngle = -Math.PI / 2
+
+            for (i in 0 until teethCount) {
+                val a1 = offsetAngle + step * (i + 0.1)
+                val a2 = offsetAngle + step * (i + 0.3)
+                val a3 = offsetAngle + step * (i + 0.7)
+                val a4 = offsetAngle + step * (i + 0.9)
+
+                val p1x = (cx + rInner * cos(a1)).toFloat()
+                val p1y = (cy + rInner * sin(a1)).toFloat()
+                val p2x = (cx + rOuter * cos(a2)).toFloat()
+                val p2y = (cy + rOuter * sin(a2)).toFloat()
+                val p3x = (cx + rOuter * cos(a3)).toFloat()
+                val p3y = (cy + rOuter * sin(a3)).toFloat()
+                val p4x = (cx + rInner * cos(a4)).toFloat()
+                val p4y = (cy + rInner * sin(a4)).toFloat()
+
+                if (i == 0) moveTo(p1x, p1y) else lineTo(p1x, p1y)
+                lineTo(p2x, p2y)
+                lineTo(p3x, p3y)
+                lineTo(p4x, p4y)
+            }
+            close()
+        }
+
+        val holePath = Path().apply {
+            addOval(Rect(cx - rHole, cy - rHole, cx + rHole, cy + rHole))
+        }
+
+        val finalPath = Path.combine(
+            operation = PathOperation.Difference,
+            path1 = gearPath,
+            path2 = holePath
+        )
+
+        drawPath(path = finalPath, color = color)
+    }
+}
+
+@Composable
+fun DavidStarShape(
+    modifier: Modifier = Modifier,
+    color: Color = getRandomColor().copy(0.4f),
+    curveFactor: Float = 0.85f
+) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val cx = w / 2f
+        val cy = h / 2f
+        val rOuter = minOf(w, h) / 2f
+        val rInner = rOuter / sqrt(3f)
+        val path = Path()
+        val vertices = List(12) { i ->
+            val angleDeg = -90f + (i * 30f)
+            val angleRad = (angleDeg * PI / 180f).toFloat()
+            val radius = if (i % 2 == 0) rOuter else rInner
+
+            Offset(
+                x = cx + radius * cos(angleRad),
+                y = cy + radius * sin(angleRad)
+            )
+        }
+
+        path.moveTo(vertices[0].x, vertices[0].y)
+
+        for (i in 0 until 12) {
+            val startPoint = vertices[i]
+            val endPoint = vertices[(i + 1) % 12]
+            val midX = (startPoint.x + endPoint.x) / 2f
+            val midY = (startPoint.y + endPoint.y) / 2f
+            val controlX = cx + (midX - cx) * curveFactor
+            val controlY = cy + (midY - cy) * curveFactor
+
+            path.quadraticTo(
+                x1 = controlX, y1 = controlY,
+                x2 = endPoint.x, y2 = endPoint.y
+            )
+        }
+
         path.close()
         drawPath(path = path, color = color)
     }
@@ -512,6 +681,22 @@ fun CanvasSvgItem(
                         color = note.backgroundColor
                     )
                     note.content == "Shape: Octagon" -> OctagonShape(
+                        modifier = Modifier.fillMaxSize(),
+                        color = note.backgroundColor
+                    )
+                    note.content == "Shape: Cross" -> CrossShape(
+                        modifier = Modifier.fillMaxSize(),
+                        color = note.backgroundColor
+                    )
+                    note.content == "Shape: Moon" -> MoonShape(
+                        modifier = Modifier.fillMaxSize(),
+                        color = note.backgroundColor
+                    )
+                    note.content == "Shape: DavidStar" -> DavidStarShape(
+                        modifier = Modifier.fillMaxSize(),
+                        color = note.backgroundColor
+                    )
+                    note.content == "Shape: Gear" -> GearShape(
                         modifier = Modifier.fillMaxSize(),
                         color = note.backgroundColor
                     )

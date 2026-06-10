@@ -1,4 +1,4 @@
-package com.fountofhopedotorg.fohbible.composables
+package com.fountofhopedotorg.fohbible.creator
 
 import android.content.res.Configuration
 import android.graphics.BitmapFactory
@@ -73,12 +73,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.fountofhopedotorg.fohbible.data.BezierNode
-import com.fountofhopedotorg.fohbible.creator.BezierModeSelector
-import com.fountofhopedotorg.fohbible.creator.HybridJoystick
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.time.Duration.Companion.milliseconds
 
 enum class ActiveControl { ANCHOR, HANDLE_IN, HANDLE_OUT }
 
@@ -145,7 +144,7 @@ fun CustomPolygonDialog(
     LaunchedEffect(referenceImageBitmap, referenceImageOpacity) {
         if (referenceImageBitmap != null) {
             showOpacitySlider = true
-            delay(3000)
+            delay(3000.milliseconds)
             showOpacitySlider = false
         } else {
             showOpacitySlider = false
