@@ -11,14 +11,17 @@ import android.util.Base64
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.unit.sp
 import com.fountofhopedotorg.fohbible.data.BezierNode
 import com.fountofhopedotorg.fohbible.data.BoundingBox
 import com.fountofhopedotorg.fohbible.data.CanvasNote
+import com.fountofhopedotorg.fohbible.data.CrownStructure
 import com.fountofhopedotorg.fohbible.data.ProcessingOptions
 import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.data.Verse
@@ -27,7 +30,9 @@ import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
+import kotlin.math.PI
 import kotlin.math.cos
+import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.random.Random
@@ -688,6 +693,155 @@ fun getSerializedPointsForShape(shapeType: String): String {
                 "${it.anchor.x},${it.anchor.y}:${it.handleIn.x},${it.handleIn.y}:${it.handleOut.x},${it.handleOut.y}"
             }
         }
+        "thorncrown" -> {
+            val random = java.util.Random(42L)
+            val nodes = mutableListOf<BezierNode>()
+
+            val cx = 0.5f
+            val cy = 0.5f
+            val baseRadius = 0.35f
+            val numVines = 3
+            val steps = 60
+
+            repeat(numVines) {
+                val twists = 4 + random.nextInt(5)
+                val phase = random.nextFloat() * 2f * PI.toFloat()
+                val amplitude = random.nextFloat() * 0.03f + 0.015f
+
+                for (i in 0 until steps) {
+                    val angle = (i.toFloat() / steps) * 2f * PI.toFloat()
+                    val wave = sin(twists * angle + phase)
+                    val noise = (random.nextFloat() - 0.5f) * 0.012f
+                    val r = baseRadius + (wave * amplitude) + noise
+
+                    val x = cx + r * cos(angle)
+                    val y = cy + r * sin(angle)
+
+                    val pt = Offset(x, y)
+                    nodes.add(BezierNode(pt, pt, pt))
+                }
+            }
+
+            val numThorns = 45
+
+            repeat(numThorns) {
+                val angle = random.nextFloat() * 2f * PI.toFloat()
+                val rBase = baseRadius + (random.nextFloat() - 0.5f) * 0.05f
+
+                val isOutward = random.nextFloat() > 0.15f
+                val direction = if (isOutward) 1f else -1f
+                val length = 0.03f + random.nextFloat() * 0.06f
+
+                val twistOffset = (random.nextFloat() * 0.5f) - 0.25f
+                val tipAngle = angle + twistOffset
+
+                val tipX = cx + (rBase + (length * direction)) * cos(tipAngle)
+                val tipY = cy + (rBase + (length * direction)) * sin(tipAngle)
+                val tip = Offset(tipX, tipY)
+
+                val baseWidthAngle = 0.02f + random.nextFloat() * 0.02f
+                val p1 = Offset(cx + rBase * cos(angle - baseWidthAngle), cy + rBase * sin(angle - baseWidthAngle))
+                val p2 = Offset(cx + rBase * cos(angle + baseWidthAngle), cy + rBase * sin(angle + baseWidthAngle))
+                val curveIntensity = 0.03f
+                val curveDirX = (random.nextFloat() - 0.5f) * curveIntensity
+                val curveDirY = (random.nextFloat() - 0.5f) * curveIntensity
+                val qControl1X = (p1.x + tip.x) / 2f + curveDirX
+                val qControl1Y = (p1.y + tip.y) / 2f + curveDirY
+                val p1HandleOut = Offset(p1.x + (qControl1X - p1.x) * (2f / 3f), p1.y + (qControl1Y - p1.y) * (2f / 3f))
+                val tipHandleIn = Offset(tip.x + (qControl1X - tip.x) * (2f / 3f), tip.y + (qControl1Y - tip.y) * (2f / 3f))
+                val qControl2X = (p2.x + tip.x) / 2f + curveDirX
+                val qControl2Y = (p2.y + tip.y) / 2f + curveDirY
+                val tipHandleOut = Offset(tip.x + (qControl2X - tip.x) * (2f / 3f), tip.y + (qControl2Y - tip.y) * (2f / 3f))
+                val p2HandleIn = Offset(p2.x + (qControl2X - p2.x) * (2f / 3f), p2.y + (qControl2Y - p2.y) * (2f / 3f))
+                nodes.add(BezierNode(p1, p1, p1HandleOut))
+                nodes.add(BezierNode(tip, tipHandleIn, tipHandleOut))
+                nodes.add(BezierNode(p2, p2HandleIn, p2))
+            }
+
+            nodes.joinToString(";") {
+                "${it.anchor.x},${it.anchor.y}:${it.handleIn.x},${it.handleIn.y}:${it.handleOut.x},${it.handleOut.y}"
+            }
+        }
         else -> ""
     }
+}
+
+fun generateThornCrownPaths(seed: Long, size: Size): CrownStructure {
+    val random = java.util.Random(seed)
+    val vinePath = Path()
+    val thornsPath = Path()
+
+    val centerX = size.width / 2f
+    val centerY = size.height / 2f
+    val minDimension = min(size.width, size.height)
+    val scaleFactor = minDimension / 1000f
+
+    val baseRadius = 350f * scaleFactor
+    val numVines = 8
+    val steps = 90
+
+    repeat(numVines) {
+        val twists = 4 + random.nextInt(5)
+        val phase = random.nextFloat() * 2f * PI.toFloat()
+        val amplitude = (random.nextFloat() * 30f + 15f) * scaleFactor
+
+        for (i in 0..steps) {
+            val angle = (i.toFloat() / steps) * 2f * PI.toFloat()
+            val wave = sin(twists * angle + phase)
+            val noise = (random.nextFloat() - 0.5f) * 12f * scaleFactor
+            val r = baseRadius + (wave * amplitude) + noise
+
+            val x = centerX + r * cos(angle)
+            val y = centerY + r * sin(angle)
+
+            if (i == 0) {
+                vinePath.moveTo(x, y)
+            } else {
+                vinePath.lineTo(x, y)
+            }
+        }
+        vinePath.close()
+    }
+
+    val numThorns = 120 + random.nextInt(40)
+
+    repeat(numThorns) {
+        val angle = random.nextFloat() * 2f * PI.toFloat()
+        val rBase = baseRadius + (random.nextFloat() - 0.5f) * 50f * scaleFactor
+
+        val isOutward = random.nextFloat() > 0.15f
+        val direction = if (isOutward) 1f else -1f
+        val length = (30f + random.nextFloat() * 60f) * scaleFactor
+
+        val twistOffset = (random.nextFloat() * 0.5f) - 0.25f
+        val tipAngle = angle + twistOffset
+
+        val tipX = centerX + (rBase + (length * direction)) * cos(tipAngle)
+        val tipY = centerY + (rBase + (length * direction)) * sin(tipAngle)
+
+        val baseWidthAngle = 0.02f + random.nextFloat() * 0.02f
+        val p1X = centerX + rBase * cos(angle - baseWidthAngle)
+        val p1Y = centerY + rBase * sin(angle - baseWidthAngle)
+
+        val p2X = centerX + rBase * cos(angle + baseWidthAngle)
+        val p2Y = centerY + rBase * sin(angle + baseWidthAngle)
+
+        thornsPath.moveTo(p1X, p1Y)
+
+        val curveIntensity = 30f * scaleFactor
+        val curveDirX = (random.nextFloat() - 0.5f) * curveIntensity
+        val curveDirY = (random.nextFloat() - 0.5f) * curveIntensity
+
+        val controlTipX = (p1X + tipX) / 2f + curveDirX
+        val controlTipY = (p1Y + tipY) / 2f + curveDirY
+        thornsPath.quadraticTo(controlTipX, controlTipY, tipX, tipY)
+
+        val controlBaseX = (p2X + tipX) / 2f + curveDirX
+        val controlBaseY = (p2Y + tipY) / 2f + curveDirY
+        thornsPath.quadraticTo(controlBaseX, controlBaseY, p2X, p2Y)
+
+        thornsPath.close()
+    }
+
+    return CrownStructure(vinePath, thornsPath)
 }

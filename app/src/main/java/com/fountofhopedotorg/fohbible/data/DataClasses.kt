@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.animation.core.Animatable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.BaselineShift
@@ -331,6 +332,9 @@ data class SelectedWord(
         return result
     }
 }
+
+
+data class CrownStructure(val vinePath: Path, val thornsPath: Path)
 
 sealed class DisplayItem {
     data class GroupHeader(

@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -55,12 +57,15 @@ fun EditPropertiesDialog(
             var editRotation by remember { mutableStateOf(normalizedInitialRotation) }
             var editColor by remember { mutableStateOf(initialColor) }
             var showEditColorPicker by remember { mutableStateOf(false) }
+            val scrollState = rememberScrollState()
 
             AlertDialog(
                 onDismissRequest = onDismiss,
                 title = { Text("Edit Element Properties") },
                 text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(
+                        modifier = Modifier.verticalScroll(scrollState),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
                             value = editX,
                             onValueChange = { editX = it },

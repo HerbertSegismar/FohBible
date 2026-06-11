@@ -3,6 +3,7 @@ package com.fountofhopedotorg.fohbible.creator
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -139,57 +140,68 @@ fun CombinedToolbarSection(
                     tint = getRandomColor()
                 )
             }
+
+            // --- UPDATED DROPDOWN MENU GRID LOGIC ---
             DropdownMenu(
                 expanded = showMoreShapes,
                 onDismissRequest = { showMoreShapes = false },
-                modifier = Modifier.width(40.dp).background(MaterialTheme.colorScheme.primary.copy(0.05f))
+                // Doubles width to 80.dp in landscape to fit two columns
+                modifier = Modifier
+                    .width(if (isLandscape) 80.dp else 40.dp)
+                    .background(MaterialTheme.colorScheme.primary.copy(0.05f))
             ) {
                 val newShapes = listOf(
-                    "Hexagon" to @Composable {
-                        HexagonShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f))
-                    },
-                    "Star" to @Composable {
-                        StarShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f))
-                    },
-                    "Diamond" to @Composable {
-                        DiamondShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f))
-                    },
-                    "Heart" to @Composable {
-                        HeartShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f))
-                    },
-                    "Octagon" to @Composable {
-                        OctagonShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f))
-                    },
-                    "Cross" to @Composable {
-                        CrossShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f))
-                    },
-                    "Moon" to @Composable {
-                        MoonShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f))
-                    },
-                    "DavidStar" to @Composable {
-                        DavidStarShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f))
-                    },
-                    "Gear" to @Composable {
-                        GearShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f))
-                    },
-                    "ArrowRight" to @Composable {
-                        ArrowRightShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f))
-                    }
+                    "Hexagon" to @Composable { HexagonShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f)) },
+                    "Star" to @Composable { StarShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f)) },
+                    "Diamond" to @Composable { DiamondShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f)) },
+                    "Heart" to @Composable { HeartShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f)) },
+                    "Octagon" to @Composable { OctagonShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f)) },
+                    "Cross" to @Composable { CrossShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f)) },
+                    "ThornCrown" to @Composable { ThornCrownShape(modifier = Modifier.fillMaxSize(), thornColor = getRandomColor().copy(0.8f)) },
+                    "Moon" to @Composable { MoonShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f)) },
+                    "DavidStar" to @Composable { DavidStarShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f)) },
+                    "Gear" to @Composable { GearShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f)) },
+                    "ArrowRight" to @Composable { ArrowRightShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f)) }
                 )
 
-                newShapes.forEach { (name, preview) ->
-                    DropdownMenuItem(
-                        text = {},
-                        onClick = {
-                            showMoreShapes = false
-                            onAddShape(name)
-                        },
-                        leadingIcon = {
-                            Box(Modifier.size(18.dp)) {
-                                preview()
+                if (isLandscape) {
+                    // Group elements into sub-lists of 2 for the row structure
+                    val chunkedShapes = newShapes.chunked(2)
+                    chunkedShapes.forEach { rowItems ->
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            rowItems.forEach { (name, preview) ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clickable {
+                                            showMoreShapes = false
+                                            onAddShape(name)
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Box(Modifier.size(18.dp)) {
+                                        preview()
+                                    }
+                                }
                             }
                         }
-                    )
+                    }
+                } else {
+                    // Default Single Column Portrait Layout
+                    newShapes.forEach { (name, preview) ->
+                        DropdownMenuItem(
+                            text = {},
+                            onClick = {
+                                showMoreShapes = false
+                                onAddShape(name)
+                            },
+                            leadingIcon = {
+                                Box(Modifier.size(18.dp)) {
+                                    preview()
+                                }
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -258,6 +270,7 @@ fun CombinedToolbarSection(
             )
         }
     }
+
     if (isLandscape) {
         Row(
             modifier = Modifier.fillMaxWidth().height(40.dp),

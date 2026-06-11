@@ -8,6 +8,7 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -33,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -202,20 +204,39 @@ fun CrossShape(
         val w = size.width
         val h = size.height
 
-        path.moveTo(w * 0.38f, h * 0.02f)
-        path.quadraticTo(w * 0.50f, 0f, w * 0.62f, h * 0.02f)
+        // Top wing (pointed)
+        path.moveTo(w * 0.38f, h * 0.05f)
+        path.lineTo(w * 0.50f, 0f) // Top point
+        path.lineTo(w * 0.62f, h * 0.05f)
+
+        // Inner corner top-right
         path.lineTo(w * 0.60f, h * 0.21f)
         path.quadraticTo(w * 0.60f, h * 0.28f, w * 0.68f, h * 0.28f)
-        path.lineTo(w * 0.98f, h * 0.24f)
-        path.quadraticTo(w, h * 0.35f, w * 0.98f, h * 0.46f)
+
+        // Right wing (pointed)
+        path.lineTo(w * 0.9f, h * 0.24f)
+        path.lineTo(w * 0.98f, h * 0.35f) // Right point
+        path.lineTo(w * 0.9f, h * 0.46f)
+
+        // Inner corner bottom-right
         path.lineTo(w * 0.68f, h * 0.42f)
         path.quadraticTo(w * 0.60f, h * 0.42f, w * 0.60f, h * 0.52f)
-        path.lineTo(w * 0.62f, h * 0.98f)
-        path.quadraticTo(w * 0.50f, h, w * 0.38f, h * 0.98f)
+
+        // Bottom wing (pointed)
+        path.lineTo(w * 0.62f, h * 0.95f)
+        path.lineTo(w * 0.50f, h) // Bottom point
+        path.lineTo(w * 0.38f, h * 0.95f)
+
+        // Inner corner bottom-left
         path.lineTo(w * 0.40f, h * 0.52f)
         path.quadraticTo(w * 0.40f, h * 0.42f, w * 0.32f, h * 0.42f)
-        path.lineTo(w * 0.02f, h * 0.46f)
-        path.quadraticTo(0f, h * 0.35f, w * 0.02f, h * 0.24f)
+
+        // Left wing (pointed)
+        path.lineTo(w * 0.1f, h * 0.46f)
+        path.lineTo(w * 0.02f, h * 0.35f) // Left point
+        path.lineTo(w * 0.1f, h * 0.24f)
+
+        // Inner corner top-left
         path.lineTo(w * 0.32f, h * 0.28f)
         path.quadraticTo(w * 0.40f, h * 0.28f, w * 0.40f, h * 0.21f)
 
@@ -429,6 +450,37 @@ fun TriangleShape(modifier: Modifier = Modifier, color: Color = getRandomColor()
     }
 }
 
+@Composable
+fun ThornCrownShape(
+    modifier: Modifier = Modifier,
+    thornColor: Color = getRandomColor().copy(0.4f),
+    seed: Long = 42
+) {
+    Spacer(
+        modifier = modifier.drawWithCache {
+            val crownPaths = generateThornCrownPaths(seed, size)
+
+            onDrawBehind {
+                // Draw the tangled vines
+                drawPath(
+                    path = crownPaths.vinePath,
+                    color = thornColor,
+                    style = Stroke(
+                        width = 8f * (size.minDimension / 1000f), // Scale stroke width too
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round
+                    )
+                )
+                // Draw the dense thorns
+                drawPath(
+                    path = crownPaths.thornsPath,
+                    color = thornColor,
+                    style = Fill
+                )
+            }
+        }
+    )
+}
 @Composable
 fun PolygonShape(
     points: List<Offset>,
@@ -687,6 +739,10 @@ fun CanvasSvgItem(
                     note.content == "Shape: Cross" -> CrossShape(
                         modifier = Modifier.fillMaxSize(),
                         color = note.backgroundColor
+                    )
+                    note.content == "Shape: ThornCrown" -> ThornCrownShape(
+                        modifier = Modifier.fillMaxSize(),
+                        thornColor = note.backgroundColor
                     )
                     note.content == "Shape: Moon" -> MoonShape(
                         modifier = Modifier.fillMaxSize(),
