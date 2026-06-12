@@ -46,7 +46,9 @@ fun CanvasArea(
     themeColors: ThemeColors,
     isDark: Boolean,
     notesGrouped: Map<String?, List<CanvasNote>>,
-    graphicsLayer: GraphicsLayer
+    graphicsLayer: GraphicsLayer,
+    proportionalEditing: Boolean,
+    onProportionalToggle: () -> Unit,
 ) {
     Box(
         modifier = modifier
@@ -95,7 +97,9 @@ fun CanvasArea(
                                     if (!note.isLocked) onColorPickerRequested(note.id)
                                 },
                                 onDeleteRequested = { onDeleteRequested(note.id) },
-                                onScaleChanged = { sx, sy -> onNoteScaleChange(note.id, sx, sy) }
+                                onScaleChanged = { sx, sy -> onNoteScaleChange(note.id, sx, sy) },
+                                proportionalEditing = proportionalEditing,
+                                onProportionalToggle = onProportionalToggle
                             )
                             note.content.startsWith("Image:") -> CanvasImageItem(
                                 note = note,
@@ -109,8 +113,11 @@ fun CanvasArea(
                                         onNoteUpdatePosition(note, offset, w, h, rot)
                                     }
                                 },
+                                onColorPickerRequested = { onColorPickerRequested(note.id) },
                                 onDeleteRequested = { onDeleteRequested(note.id) },
-                                onScaleChanged = { sx, sy -> onNoteScaleChange(note.id, sx, sy) }
+                                onScaleChanged = { sx, sy -> onNoteScaleChange(note.id, sx, sy) },
+                                proportionalEditing = proportionalEditing,
+                                onProportionalToggle = onProportionalToggle
                             )
                             else -> CanvasTextItem(
                                 note = note,
@@ -128,7 +135,9 @@ fun CanvasArea(
                                     if (!note.isLocked) onColorPickerRequested(note.id)
                                 },
                                 onDeleteRequested = { onDeleteRequested(note.id) },
-                                onScaleChanged = { sx, sy -> onNoteScaleChange(note.id, sx, sy) }
+                                onScaleChanged = { sx, sy -> onNoteScaleChange(note.id, sx, sy) },
+                                proportionalEditing = proportionalEditing,
+                                onProportionalToggle = onProportionalToggle
                             )
                         }
                     }

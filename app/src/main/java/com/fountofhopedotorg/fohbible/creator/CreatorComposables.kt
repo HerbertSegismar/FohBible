@@ -20,9 +20,12 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -461,17 +464,15 @@ fun ThornCrownShape(
             val crownPaths = generateThornCrownPaths(seed, size)
 
             onDrawBehind {
-                // Draw the tangled vines
                 drawPath(
                     path = crownPaths.vinePath,
                     color = thornColor,
                     style = Stroke(
-                        width = 8f * (size.minDimension / 1000f), // Scale stroke width too
+                        width = 8f * (size.minDimension / 1000f),
                         cap = StrokeCap.Round,
                         join = StrokeJoin.Round
                     )
                 )
-                // Draw the dense thorns
                 drawPath(
                     path = crownPaths.thornsPath,
                     color = thornColor,
@@ -550,8 +551,11 @@ fun CanvasSvgItem(
     onUpdatePosition: (Offset, Float, Float, Float) -> Unit,
     onScaleChanged: (Float, Float) -> Unit,
     onColorPickerRequested: () -> Unit,
-    onDeleteRequested: () -> Unit
+    onDeleteRequested: () -> Unit,
+    proportionalEditing: Boolean,
+    onProportionalToggle: () -> Unit
 ) {
+    val latestProportional by rememberUpdatedState(proportionalEditing)
     var offset by remember(note.offset) { mutableStateOf(note.offset) }
     var baseSize by remember { mutableStateOf(IntSize.Zero) }
     val currentRotation by rememberUpdatedState(note.rotation)
@@ -563,9 +567,6 @@ fun CanvasSvgItem(
 
     val handleSize = 24.dp
     val handleRadiusPx = with(LocalDensity.current) { handleSize.toPx() / 2f }
-
-    val contentWidthDp = note.width.dp
-    val contentHeightDp = note.height.dp
 
     val isCustomPolygon = note.content.startsWith("Shape:CustomPolygon:")
     val isCustomLine = note.content.startsWith("Shape:CustomLine:")
@@ -668,17 +669,13 @@ fun CanvasSvgItem(
         ) {
             Box(
                 modifier = Modifier
-                    .width(contentWidthDp)
-                    .height(contentHeightDp)
+                    .width(currentWidth.dp)
+                    .height(currentHeight.dp)
                     .padding(handleSize / 2),
                 contentAlignment = Alignment.Center
             ) {
                 if (isSelected) {
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .border(1.dp, Color.Gray.copy(alpha = 0.5f))
-                    )
+                    Box(Modifier.matchParentSize().border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.33f)))
                 }
 
                 when {
@@ -788,51 +785,49 @@ fun CanvasSvgItem(
 
             Box(
                 modifier = Modifier
-                    .offset { getTargetHandleOffset(0f, 0f) }
+                    .offset { getTargetHandleOffset(handleRadiusPx, handleRadiusPx) }
                     .size(handleSize)
                     .background(Color.White, CircleShape)
-                    .border(1.dp, Color.Gray.copy(alpha = 0.5f), CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape)
                     .clickable { onDeleteRequested() },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Close, contentDescription = "Delete", tint = Color.Red, modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.Close, "Delete", tint = Color.Red, modifier = Modifier.size(14.dp))
             }
 
+            // Color handle – bottom‑left shape corner
             Box(
                 modifier = Modifier
-                    .offset { getTargetHandleOffset(0f, baseSize.height.toFloat()) }
+                    .offset { getTargetHandleOffset(handleRadiusPx, baseSize.height - handleRadiusPx) }
                     .size(handleSize)
                     .background(Color.White, CircleShape)
-                    .border(1.dp, Color.Gray.copy(alpha = 0.5f), CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape)
                     .clickable { onColorPickerRequested() },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Palette, contentDescription = "Change Color", tint = Color.Blue, modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.Palette, "Change Color", tint = Color.Blue, modifier = Modifier.size(14.dp))
             }
 
-            // Rotation handle
+            // Rotation handle – top‑right shape corner
             Box(
                 modifier = Modifier
-                    .offset { getTargetHandleOffset(baseSize.width.toFloat(), 0f) }
+                    .offset { getTargetHandleOffset(baseSize.width - handleRadiusPx, handleRadiusPx) }
                     .size(handleSize)
                     .pointerInput(baseSize) {
                         var startRotation = 0f
                         var accumulatedAngle = 0f
                         var currentVector = Offset.Zero
-
                         detectDragGestures(
                             onDragStart = {
                                 startRotation = currentRotation
                                 accumulatedAngle = 0f
-
                                 val rad = startRotation * (Math.PI / 180.0)
-                                val dx = baseSize.width.toFloat() - cx
-                                val dy = 0f - cy
+                                val dx = (baseSize.width - handleRadiusPx) - cx
+                                val dy = handleRadiusPx - cy
                                 val scaledDx = dx * currentScaleX
                                 val scaledDy = dy * currentScaleY
                                 val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
                                 val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
-
                                 currentVector = Offset(rx.toFloat(), ry.toFloat())
                             },
                             onDrag = { change, dragAmount ->
@@ -841,79 +836,94 @@ fun CanvasSvgItem(
                                 currentVector += dragAmount
                                 val newAngle = atan2(currentVector.y, currentVector.x)
                                 var deltaAngle = Math.toDegrees((newAngle - previousAngle).toDouble()).toFloat()
-
                                 if (deltaAngle > 180f) deltaAngle -= 360f
                                 else if (deltaAngle < -180f) deltaAngle += 360f
                                 accumulatedAngle += deltaAngle
                                 val newRotation = startRotation + accumulatedAngle
-
                                 onUpdatePosition(offset, currentWidth, currentHeight, newRotation)
                             }
                         )
                     }
                     .background(Color.White, CircleShape)
-                    .border(1.dp, Color.Gray.copy(alpha = 0.5f), CircleShape),
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Refresh, contentDescription = "Rotate", tint = Color.DarkGray, modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.Refresh, "Rotate", tint = Color.DarkGray, modifier = Modifier.size(14.dp))
             }
 
-            // Scale handle
+            // Scale handle – bottom‑right shape corner
             Box(
                 modifier = Modifier
-                    .offset { getTargetHandleOffset(baseSize.width.toFloat(), baseSize.height.toFloat()) }
+                    .offset { getTargetHandleOffset(baseSize.width - handleRadiusPx, baseSize.height - handleRadiusPx) }
                     .size(handleSize)
                     .pointerInput(baseSize) {
                         var startScaleX = 1f
                         var startScaleY = 1f
                         var fixedRotation = 0f
                         var currentVector = Offset.Zero
-
                         detectDragGestures(
                             onDragStart = {
                                 startScaleX = currentScaleX
                                 startScaleY = currentScaleY
                                 fixedRotation = currentRotation
-
                                 val rad = fixedRotation * (Math.PI / 180.0)
-                                val dx = baseSize.width.toFloat() - cx
-                                val dy = baseSize.height.toFloat() - cy
+                                val dx = (baseSize.width - handleRadiusPx) - cx
+                                val dy = (baseSize.height - handleRadiusPx) - cy
                                 val scaledDx = dx * startScaleX
                                 val scaledDy = dy * startScaleY
                                 val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
                                 val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
-
                                 currentVector = Offset(rx.toFloat(), ry.toFloat())
                             },
                             onDrag = { change, dragAmount ->
                                 change.consume()
                                 currentVector += dragAmount
-
                                 val rad = fixedRotation * (Math.PI / 180.0)
                                 val unrotatedRad = -rad
                                 val newScaledDx = currentVector.x * cos(unrotatedRad) - currentVector.y * sin(unrotatedRad)
                                 val newScaledDy = currentVector.x * sin(unrotatedRad) + currentVector.y * cos(unrotatedRad)
-
-                                val dx = baseSize.width.toFloat() - cx
-                                val dy = baseSize.height.toFloat() - cy
-
-                                val newScaleX = if (dx != 0f) (newScaledDx / dx).toFloat().coerceIn(0.1f, 10f) else startScaleX
-                                val newScaleY = if (dy != 0f) (newScaledDy / dy).toFloat().coerceIn(0.1f, 10f) else startScaleY
-
-                                onScaleChanged(newScaleX, newScaleY)
+                                val dx = (baseSize.width - handleRadiusPx) - cx
+                                val dy = (baseSize.height - handleRadiusPx) - cy
+                                if (latestProportional) {
+                                    val originalDist = sqrt(dx * dx + dy * dy)
+                                    val newDist = sqrt(newScaledDx * newScaledDx + newScaledDy * newScaledDy)
+                                    val uniformScale = if (originalDist > 0f) (newDist / originalDist).toFloat().coerceIn(0.1f, 10f) else 1f
+                                    onScaleChanged(uniformScale, uniformScale)
+                                } else {
+                                    val newScaleX = if (dx != 0f) (newScaledDx / dx).toFloat().coerceIn(0.1f, 10f) else startScaleX
+                                    val newScaleY = if (dy != 0f) (newScaledDy / dy).toFloat().coerceIn(0.1f, 10f) else startScaleY
+                                    onScaleChanged(newScaleX, newScaleY)
+                                }
                             }
                         )
                     }
                     .background(Color.White, CircleShape)
-                    .border(1.dp, Color.Gray.copy(alpha = 0.5f), CircleShape),
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Box(modifier = Modifier.size(10.dp).background(Color.DarkGray, CircleShape))
             }
+
+            // Proportional toggle handle – top‑center
+            Box(
+                modifier = Modifier
+                    .offset { getTargetHandleOffset(baseSize.width / 2f, handleRadiusPx) }
+                    .size(handleSize)
+                    .background(Color.White, CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape)
+                    .clickable { onProportionalToggle() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (proportionalEditing) Icons.Default.Link else Icons.Default.LinkOff,
+                    contentDescription = if (proportionalEditing) "Disable proportional" else "Enable proportional",
+                    tint = if (proportionalEditing) Color(0xFF1976D2) else Color.Gray,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
         }
     }
 }
-
 @Composable
 fun CanvasTextItem(
     note: CanvasNote,
@@ -923,7 +933,9 @@ fun CanvasTextItem(
     onUpdatePosition: (Offset, Float, Float, Float) -> Unit,
     onScaleChanged: (Float, Float) -> Unit,
     onColorPickerRequested: () -> Unit,
-    onDeleteRequested: () -> Unit
+    onDeleteRequested: () -> Unit,
+    proportionalEditing: Boolean,
+    onProportionalToggle: () -> Unit
 ) {
     val density = LocalDensity.current.density
     var offset by remember(note.offset) { mutableStateOf(note.offset) }
@@ -936,6 +948,8 @@ fun CanvasTextItem(
 
     val handleSize = 24.dp
     val handleRadiusPx = with(LocalDensity.current) { handleSize.toPx() / 2f }
+
+    val latestProportional by rememberUpdatedState(proportionalEditing)
 
     Box(
         modifier = Modifier
@@ -979,21 +993,18 @@ fun CanvasTextItem(
                     }
                 }
                 .pointerInput(Unit) {
-                    detectTapGestures {
-                        onSelect()
-                    }
+                    detectTapGestures { onSelect() }
                 }
         ) {
             Box(
-                modifier = Modifier
-                    .padding(handleSize / 2),
+                modifier = Modifier.padding(handleSize / 2),
                 contentAlignment = Alignment.Center
             ) {
                 if (isSelected) {
                     Box(
                         modifier = Modifier
                             .matchParentSize()
-                            .border(1.dp, Color.Gray.copy(alpha = 0.5f))
+                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.33f))
                     )
                 }
 
@@ -1028,33 +1039,36 @@ fun CanvasTextItem(
                 )
             }
 
+            // Delete handle – top‑left
             Box(
                 modifier = Modifier
-                    .offset { getTargetHandleOffset(0f, 0f) }
+                    .offset { getTargetHandleOffset(handleRadiusPx, handleRadiusPx) }
                     .size(handleSize)
                     .background(Color.White, CircleShape)
-                    .border(1.dp, Color.Gray.copy(alpha = 0.5f), CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape)
                     .clickable { onDeleteRequested() },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Close, contentDescription = "Delete", tint = Color.Red, modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.Close, "Delete", tint = Color.Red, modifier = Modifier.size(14.dp))
             }
 
+            // Color handle – bottom‑left
             Box(
                 modifier = Modifier
-                    .offset { getTargetHandleOffset(0f, baseSize.height.toFloat()) }
+                    .offset { getTargetHandleOffset(handleRadiusPx, baseSize.height - handleRadiusPx) }
                     .size(handleSize)
                     .background(Color.White, CircleShape)
-                    .border(1.dp, Color.Gray.copy(alpha = 0.5f), CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape)
                     .clickable { onColorPickerRequested() },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Palette, contentDescription = "Change Color", tint = Color.Blue, modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.Palette, "Change Color", tint = Color.Blue, modifier = Modifier.size(14.dp))
             }
 
+            // Rotation handle – top‑right
             Box(
                 modifier = Modifier
-                    .offset { getTargetHandleOffset(baseSize.width.toFloat(), 0f) }
+                    .offset { getTargetHandleOffset(baseSize.width - handleRadiusPx, handleRadiusPx) }
                     .size(handleSize)
                     .pointerInput(baseSize) {
                         var startRotation = 0f
@@ -1066,8 +1080,8 @@ fun CanvasTextItem(
                                 startRotation = currentRotation
                                 accumulatedAngle = 0f
                                 val rad = startRotation * (Math.PI / 180.0)
-                                val dx = baseSize.width.toFloat() - cx
-                                val dy = 0f - cy
+                                val dx = (baseSize.width - handleRadiusPx) - cx
+                                val dy = handleRadiusPx - cy
                                 val scaledDx = dx * currentScaleX
                                 val scaledDy = dy * currentScaleY
                                 val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
@@ -1089,15 +1103,16 @@ fun CanvasTextItem(
                         )
                     }
                     .background(Color.White, CircleShape)
-                    .border(1.dp, Color.Gray.copy(alpha = 0.5f), CircleShape),
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Refresh, contentDescription = "Rotate", tint = Color.DarkGray, modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.Refresh, "Rotate", tint = Color.DarkGray, modifier = Modifier.size(14.dp))
             }
 
+            // Scale handle – bottom‑right
             Box(
                 modifier = Modifier
-                    .offset { getTargetHandleOffset(baseSize.width.toFloat(), baseSize.height.toFloat()) }
+                    .offset { getTargetHandleOffset(baseSize.width - handleRadiusPx, baseSize.height - handleRadiusPx) }
                     .size(handleSize)
                     .pointerInput(baseSize) {
                         var startScaleX = 1f
@@ -1112,8 +1127,8 @@ fun CanvasTextItem(
                                 fixedRotation = currentRotation
 
                                 val rad = fixedRotation * (Math.PI / 180.0)
-                                val dx = baseSize.width.toFloat() - cx
-                                val dy = baseSize.height.toFloat() - cy
+                                val dx = (baseSize.width - handleRadiusPx) - cx
+                                val dy = (baseSize.height - handleRadiusPx) - cy
                                 val scaledDx = dx * startScaleX
                                 val scaledDy = dy * startScaleY
                                 val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
@@ -1129,21 +1144,45 @@ fun CanvasTextItem(
                                 val newScaledDx = currentVector.x * cos(unrotatedRad) - currentVector.y * sin(unrotatedRad)
                                 val newScaledDy = currentVector.x * sin(unrotatedRad) + currentVector.y * cos(unrotatedRad)
 
-                                val dx = baseSize.width.toFloat() - cx
-                                val dy = baseSize.height.toFloat() - cy
+                                val dx = (baseSize.width - handleRadiusPx) - cx
+                                val dy = (baseSize.height - handleRadiusPx) - cy
 
-                                val newScaleX = if (dx != 0f) (newScaledDx / dx).toFloat().coerceIn(0.1f, 10f) else startScaleX
-                                val newScaleY = if (dy != 0f) (newScaledDy / dy).toFloat().coerceIn(0.1f, 10f) else startScaleY
-
-                                onScaleChanged(newScaleX, newScaleY)
+                                if (latestProportional) {
+                                    val originalDist = sqrt(dx * dx + dy * dy)
+                                    val newDist = sqrt(newScaledDx * newScaledDx + newScaledDy * newScaledDy)
+                                    val uniformScale = if (originalDist > 0f) (newDist / originalDist).toFloat().coerceIn(0.1f, 10f) else 1f
+                                    onScaleChanged(uniformScale, uniformScale)
+                                } else {
+                                    val newScaleX = if (dx != 0f) (newScaledDx / dx).toFloat().coerceIn(0.1f, 10f) else startScaleX
+                                    val newScaleY = if (dy != 0f) (newScaledDy / dy).toFloat().coerceIn(0.1f, 10f) else startScaleY
+                                    onScaleChanged(newScaleX, newScaleY)
+                                }
                             }
                         )
                     }
                     .background(Color.White, CircleShape)
-                    .border(1.dp, Color.Gray.copy(alpha = 0.5f), CircleShape),
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Box(modifier = Modifier.size(10.dp).background(Color.DarkGray, CircleShape))
+            }
+
+            // Proportional toggle handle – top‑center
+            Box(
+                modifier = Modifier
+                    .offset { getTargetHandleOffset(baseSize.width / 2f, handleRadiusPx) }
+                    .size(handleSize)
+                    .background(Color.White, CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape)
+                    .clickable { onProportionalToggle() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (proportionalEditing) Icons.Default.Link else Icons.Default.LinkOff,
+                    contentDescription = if (proportionalEditing) "Disable proportional" else "Enable proportional",
+                    tint = if (proportionalEditing) Color(0xFF1976D2) else Color.Gray,
+                    modifier = Modifier.size(14.dp)
+                )
             }
         }
     }
@@ -1157,26 +1196,35 @@ fun CanvasImageItem(
     onSelect: () -> Unit,
     onUpdatePosition: (Offset, Float, Float, Float) -> Unit,
     onScaleChanged: (Float, Float) -> Unit,
-    onDeleteRequested: () -> Unit
+    onColorPickerRequested: () -> Unit,          // NEW
+    onDeleteRequested: () -> Unit,
+    proportionalEditing: Boolean,
+    onProportionalToggle: () -> Unit
 ) {
     var offset by remember(note.offset) { mutableStateOf(note.offset) }
-    var rotation by remember(note.id, note.rotation) {
-        mutableFloatStateOf(note.rotation)
-    }
-    var scaleX by remember { mutableFloatStateOf(1f) }
-    var scaleY by remember { mutableFloatStateOf(1f) }
+    var rotation by remember(note.id, note.rotation) { mutableFloatStateOf(note.rotation) }
+    val scaleX by rememberUpdatedState(note.scaleX)
+    val scaleY by rememberUpdatedState(note.scaleY)
 
     var baseSize by remember { mutableStateOf(IntSize.Zero) }
+    val density = LocalDensity.current.density
 
     val handleSize = 24.dp
     val handleRadiusPx = with(LocalDensity.current) { handleSize.toPx() / 2f }
+
+    val latestProportional by rememberUpdatedState(proportionalEditing)
 
     val uriString = note.content.removePrefix("Image: ")
     val uri = uriString.toUri()
 
     Box(
         modifier = Modifier
-            .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
+            .offset {
+                IntOffset(
+                    (offset.x * density).roundToInt(),
+                    (offset.y * density).roundToInt()
+                )
+            }
             .wrapContentSize(unbounded = true)
             .alpha(if (isLocked) 0.2f else 1f)
     ) {
@@ -1197,22 +1245,24 @@ fun CanvasImageItem(
 
                         val screenPanX = localPanX * cos(angleRad) - localPanY * sin(angleRad)
                         val screenPanY = localPanX * sin(angleRad) + localPanY * cos(angleRad)
-                        offset += Offset(screenPanX.toFloat(), screenPanY.toFloat())
+                        offset += Offset(
+                            screenPanX.toFloat() / density,
+                            screenPanY.toFloat() / density
+                        )
 
-                        scaleX = (scaleX * zoom).coerceIn(0.1f, 10f)
-                        scaleY = (scaleY * zoom).coerceIn(0.1f, 10f)
+                        val newScaleX = (scaleX * zoom).coerceIn(0.1f, 10f)
+                        val newScaleY = (scaleY * zoom).coerceIn(0.1f, 10f)
                         rotation += rot
 
-                        onScaleChanged(scaleX, scaleY)
+                        onScaleChanged(newScaleX, newScaleY)
                         onUpdatePosition(offset, note.width, note.height, rotation)
                     }
                 }
                 .pointerInput(Unit) {
-                    detectTapGestures {
-                        onSelect()
-                    }
+                    detectTapGestures { onSelect() }
                 }
         ) {
+            // Image + overlay + selection border inside this box
             Box(
                 modifier = Modifier
                     .width(note.width.dp)
@@ -1224,7 +1274,7 @@ fun CanvasImageItem(
                     Box(
                         modifier = Modifier
                             .matchParentSize()
-                            .border(1.dp, Color.Gray.copy(alpha = 0.5f))
+                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.33f))
                     )
                 }
 
@@ -1233,6 +1283,12 @@ fun CanvasImageItem(
                     contentDescription = "Canvas Image",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Fit
+                )
+
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(note.backgroundColor)
                 )
             }
         }
@@ -1255,22 +1311,36 @@ fun CanvasImageItem(
                 )
             }
 
+            // Delete handle – top‑left
             Box(
                 modifier = Modifier
-                    .offset { getTargetHandleOffset(0f, 0f) }
+                    .offset { getTargetHandleOffset(handleRadiusPx, handleRadiusPx) }
                     .size(handleSize)
                     .background(Color.White, CircleShape)
-                    .border(1.dp, Color.Gray.copy(alpha = 0.5f), CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape)
                     .clickable { onDeleteRequested() },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Close, contentDescription = "Delete", tint = Color.Red, modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.Close, "Delete", tint = Color.Red, modifier = Modifier.size(14.dp))
             }
 
-            // Rotation Handle
+            // Color handle – bottom‑left (NEW)
             Box(
                 modifier = Modifier
-                    .offset { getTargetHandleOffset(baseSize.width.toFloat(), 0f) }
+                    .offset { getTargetHandleOffset(handleRadiusPx, baseSize.height - handleRadiusPx) }
+                    .size(handleSize)
+                    .background(Color.White, CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape)
+                    .clickable { onColorPickerRequested() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Palette, "Change Color", tint = Color.Blue, modifier = Modifier.size(14.dp))
+            }
+
+            // Rotation handle – top‑right
+            Box(
+                modifier = Modifier
+                    .offset { getTargetHandleOffset(baseSize.width - handleRadiusPx, handleRadiusPx) }
                     .size(handleSize)
                     .pointerInput(baseSize) {
                         var startRotation = 0f
@@ -1281,15 +1351,13 @@ fun CanvasImageItem(
                             onDragStart = {
                                 startRotation = rotation
                                 accumulatedAngle = 0f
-
                                 val rad = startRotation * (Math.PI / 180.0)
-                                val dx = baseSize.width.toFloat() - cx
-                                val dy = 0f - cy
+                                val dx = (baseSize.width - handleRadiusPx) - cx
+                                val dy = handleRadiusPx - cy
                                 val scaledDx = dx * scaleX
                                 val scaledDy = dy * scaleY
                                 val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
                                 val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
-
                                 currentVector = Offset(rx.toFloat(), ry.toFloat())
                             },
                             onDrag = { change, dragAmount ->
@@ -1298,27 +1366,25 @@ fun CanvasImageItem(
                                 currentVector += dragAmount
                                 val newAngle = atan2(currentVector.y, currentVector.x)
                                 var deltaAngle = Math.toDegrees((newAngle - previousAngle).toDouble()).toFloat()
-
                                 if (deltaAngle > 180f) deltaAngle -= 360f
                                 else if (deltaAngle < -180f) deltaAngle += 360f
                                 accumulatedAngle += deltaAngle
                                 rotation = startRotation + accumulatedAngle
-
                                 onUpdatePosition(offset, note.width, note.height, rotation)
                             }
                         )
                     }
                     .background(Color.White, CircleShape)
-                    .border(1.dp, Color.Gray.copy(alpha = 0.5f), CircleShape),
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Refresh, contentDescription = "Rotate", tint = Color.DarkGray, modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.Refresh, "Rotate", tint = Color.DarkGray, modifier = Modifier.size(14.dp))
             }
 
-            // Scale Handle
+            // Scale handle – bottom‑right
             Box(
                 modifier = Modifier
-                    .offset { getTargetHandleOffset(baseSize.width.toFloat(), baseSize.height.toFloat()) }
+                    .offset { getTargetHandleOffset(baseSize.width - handleRadiusPx, baseSize.height - handleRadiusPx) }
                     .size(handleSize)
                     .pointerInput(baseSize) {
                         var startScaleX = 1f
@@ -1333,13 +1399,12 @@ fun CanvasImageItem(
                                 fixedRotation = rotation
 
                                 val rad = fixedRotation * (Math.PI / 180.0)
-                                val dx = baseSize.width.toFloat() - cx
-                                val dy = baseSize.height.toFloat() - cy
+                                val dx = (baseSize.width - handleRadiusPx) - cx
+                                val dy = (baseSize.height - handleRadiusPx) - cy
                                 val scaledDx = dx * startScaleX
                                 val scaledDy = dy * startScaleY
                                 val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
                                 val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
-
                                 currentVector = Offset(rx.toFloat(), ry.toFloat())
                             },
                             onDrag = { change, dragAmount ->
@@ -1351,21 +1416,44 @@ fun CanvasImageItem(
                                 val newScaledDx = currentVector.x * cos(unrotatedRad) - currentVector.y * sin(unrotatedRad)
                                 val newScaledDy = currentVector.x * sin(unrotatedRad) + currentVector.y * cos(unrotatedRad)
 
-                                val dx = baseSize.width.toFloat() - cx
-                                val dy = baseSize.height.toFloat() - cy
+                                val dx = (baseSize.width - handleRadiusPx) - cx
+                                val dy = (baseSize.height - handleRadiusPx) - cy
 
-                                scaleX = if (dx != 0f) (newScaledDx / dx).toFloat().coerceIn(0.1f, 10f) else startScaleX
-                                scaleY = if (dy != 0f) (newScaledDy / dy).toFloat().coerceIn(0.1f, 10f) else startScaleY
-
-                                onScaleChanged(scaleX, scaleY)
+                                if (latestProportional) {
+                                    val originalDist = sqrt(dx * dx + dy * dy)
+                                    val newDist = sqrt(newScaledDx * newScaledDx + newScaledDy * newScaledDy)
+                                    val uniformScale = if (originalDist > 0f) (newDist / originalDist).toFloat().coerceIn(0.1f, 10f) else 1f
+                                    onScaleChanged(uniformScale, uniformScale)
+                                } else {
+                                    val newScaleX = if (dx != 0f) (newScaledDx / dx).toFloat().coerceIn(0.1f, 10f) else startScaleX
+                                    val newScaleY = if (dy != 0f) (newScaledDy / dy).toFloat().coerceIn(0.1f, 10f) else startScaleY
+                                    onScaleChanged(newScaleX, newScaleY)
+                                }
                             }
                         )
                     }
                     .background(Color.White, CircleShape)
-                    .border(1.dp, Color.Gray.copy(alpha = 0.5f), CircleShape),
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Box(modifier = Modifier.size(10.dp).background(Color.DarkGray, CircleShape))
+            }
+
+            Box(
+                modifier = Modifier
+                    .offset { getTargetHandleOffset(baseSize.width / 2f, handleRadiusPx) }
+                    .size(handleSize)
+                    .background(Color.White, CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape)
+                    .clickable { onProportionalToggle() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (proportionalEditing) Icons.Default.Link else Icons.Default.LinkOff,
+                    contentDescription = if (proportionalEditing) "Disable proportional" else "Enable proportional",
+                    tint = if (proportionalEditing) Color(0xFF1976D2) else Color.Gray,
+                    modifier = Modifier.size(14.dp)
+                )
             }
         }
     }

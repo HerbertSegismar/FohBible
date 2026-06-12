@@ -69,8 +69,8 @@ fun CreatorScreen() {
     var showEditPropertiesDialog by rememberSaveable { mutableStateOf(false) }
     var editX by rememberSaveable { mutableStateOf("") }
     var editY by rememberSaveable { mutableStateOf("") }
-    var editWidth by rememberSaveable { mutableStateOf("") }
-    var editHeight by rememberSaveable { mutableStateOf("") }
+    var editScaleX by rememberSaveable { mutableStateOf("") }   // NEW
+    var editScaleY by rememberSaveable { mutableStateOf("") }   // NEW
     var editRotation by rememberSaveable { mutableStateOf("") }
     var editPropertiesNoteId by rememberSaveable { mutableStateOf<String?>(null) }
     var editColorForDialog by remember { mutableStateOf(Color.White) }
@@ -87,11 +87,20 @@ fun CreatorScreen() {
     var initialIsLineMode by rememberSaveable { mutableStateOf(false) }
     var dragGroupDelta by remember { mutableStateOf(Offset.Zero) }
 
+    val onProportionalToggle: () -> Unit = remember {
+        { viewModel.proportionalEditing = !viewModel.proportionalEditing }
+    }
+
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
-            viewModel.addToCanvas(CanvasNote(content = "Image: $uri"))
+            viewModel.addToCanvas(
+                CanvasNote(
+                    content = "Image: $uri",
+                    backgroundColor = Color.Transparent
+                )
+            )
         }
     }
 
@@ -252,7 +261,9 @@ fun CreatorScreen() {
                     isDark = isDark,
                     notesGrouped = notesGrouped,
                     graphicsLayer = graphicsLayer,
-                    onNoteScaleChange = { id, sx, sy -> viewModel.updateNoteScale(id, sx, sy) }
+                    onNoteScaleChange = { id, sx, sy -> viewModel.updateNoteScale(id, sx, sy) },
+                    proportionalEditing = viewModel.proportionalEditing,
+                    onProportionalToggle = onProportionalToggle
                 )
             }
             Spacer(modifier = Modifier.size(8.dp))
@@ -319,10 +330,10 @@ fun CreatorScreen() {
                     },
                     onEditProperties = { note ->
                         editPropertiesNoteId = note.id
-                        editX = (note.offset.x).toString()
-                        editY = (note.offset.y).toString()
-                        editWidth = (note.width * note.scaleX).toString()
-                        editHeight = (note.height * note.scaleY).toString()
+                        editX = note.offset.x.toString()
+                        editY = note.offset.y.toString()
+                        editScaleX = note.scaleX.toString()
+                        editScaleY = note.scaleY.toString()
                         editRotation = note.rotation.toString()
                         editColorForDialog = if (!note.content.startsWith("Shape:") && !note.content.startsWith("Image:"))
                             note.textColor ?: Color.Black
@@ -439,6 +450,7 @@ fun CreatorScreen() {
                                 rotation = rotation
                             )
                         },
+                        onNoteScaleChange = { id, sx, sy -> viewModel.updateNoteScale(id, sx, sy) },
                         onColorPickerRequested = {
                             noteToColorEditId = it
                             showColorPicker = true
@@ -455,7 +467,8 @@ fun CreatorScreen() {
                         isDark = isDark,
                         notesGrouped = notesGrouped,
                         graphicsLayer = graphicsLayer,
-                        onNoteScaleChange = { id, sx, sy -> viewModel.updateNoteScale(id, sx, sy) }
+                        proportionalEditing = viewModel.proportionalEditing,
+                        onProportionalToggle = onProportionalToggle
                     )
 
                     Spacer(Modifier.height(4.dp))
@@ -520,10 +533,10 @@ fun CreatorScreen() {
                         },
                         onEditProperties = { note ->
                             editPropertiesNoteId = note.id
-                            editX = (note.offset.x).toString()
-                            editY = (note.offset.y).toString()
-                            editWidth = (note.width * note.scaleX).toString()
-                            editHeight = (note.height * note.scaleY).toString()
+                            editX = note.offset.x.toString()
+                            editY = note.offset.y.toString()
+                            editScaleX = note.scaleX.toString()
+                            editScaleY = note.scaleY.toString()
                             editRotation = note.rotation.toString()
                             editColorForDialog = if (!note.content.startsWith("Shape:") && !note.content.startsWith("Image:"))
                                 note.textColor ?: Color.Black
@@ -748,31 +761,41 @@ fun CreatorScreen() {
         noteId = editPropertiesNoteId,
         initialX = editX,
         initialY = editY,
-        initialWidth = editWidth,
-        initialHeight = editHeight,
+        initialScaleX = editScaleX,
+        initialScaleY = editScaleY,
         initialRotation = editRotation,
         initialColor = editColorForDialog,
+        proportionalEnabled = viewModel.proportionalEditing,
+        onProportionalToggle = { viewModel.proportionalEditing = it },
         onDismiss = {
             showEditPropertiesDialog = false
             editPropertiesNoteId = null
         },
-        onApply = onApply@{ id, x, y, w, h, rot, color ->
-            val xFloat = x.toFloatOrNull() ?: return@onApply
-            val yFloat = y.toFloatOrNull() ?: return@onApply
-            val wFloat = w.toFloatOrNull() ?: return@onApply
-            val hFloat = h.toFloatOrNull() ?: return@onApply
-            val rotFloat = rot.toFloatOrNull() ?: return@onApply
+        onApply = { id, x, y, scaleX, scaleY, rot, color ->
+            val currentNote = viewModel.canvasNotes.find { it.id == id }
+            if (currentNote != null) {
+                val xFloat = x.toFloatOrNull() ?: currentNote.offset.x
+                val yFloat = y.toFloatOrNull() ?: currentNote.offset.y
+                val rotFloat = rot.toFloatOrNull() ?: currentNote.rotation
+                val sx = scaleX.toFloatOrNull()?.coerceIn(0.1f, 10f) ?: currentNote.scaleX
+                val sy = scaleY.toFloatOrNull()?.coerceIn(0.1f, 10f) ?: currentNote.scaleY
 
-            viewModel.updateNoteProperties(id, xFloat, yFloat, wFloat, hFloat, rotFloat)
-            viewModel.updateNoteScale(id, 1f, 1f)
+                viewModel.updateNoteProperties(
+                    id = id,
+                    x = xFloat,
+                    y = yFloat,
+                    width = currentNote.width,
+                    height = currentNote.height,
+                    rotation = rotFloat
+                )
+                viewModel.updateNoteScale(id, sx, sy)
 
-            val note = viewModel.canvasNotes.find { it.id == id }
-            if (note != null && !note.content.startsWith("Shape:") && !note.content.startsWith("Image:")) {
-                viewModel.updateNoteTextColor(id, color)
-            } else {
-                viewModel.updateNoteColor(id, color)
+                if (!currentNote.content.startsWith("Shape:") && !currentNote.content.startsWith("Image:")) {
+                    viewModel.updateNoteTextColor(id, color)
+                } else {
+                    viewModel.updateNoteColor(id, color)
+                }
             }
-
             showEditPropertiesDialog = false
             editPropertiesNoteId = null
         }

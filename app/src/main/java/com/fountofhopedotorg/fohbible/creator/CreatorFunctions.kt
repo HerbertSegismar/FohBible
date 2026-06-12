@@ -381,48 +381,38 @@ fun getElementDisplayName(
         return note.customName
     }
 
-    val category = when {
-        note.content.startsWith("Image:") -> "Image"
-        note.content.startsWith("Shape: Square") -> "Square"
-        note.content.startsWith("Shape: Circle") -> "Circle"
-        note.content.startsWith("Shape: Triangle") -> "Triangle"
-        note.content.startsWith("Shape: Pentagon") -> "Pentagon"
-        note.content.startsWith("Shape: Line") -> "Line"
-        note.content.startsWith("Shape: Hexagon") -> "Hexagon"
-        note.content.startsWith("Shape: Star") -> "Star"
-        note.content.startsWith("Shape: Diamond") -> "Diamond"
-        note.content.startsWith("Shape: Heart") -> "Heart"
-        note.content.startsWith("Shape: ArrowRight") -> "Arrow"
-        note.content.startsWith("Shape: Octagon") -> "Octagon"
-        note.content.startsWith("Shape:CustomPolygon:") -> "Custom Polygon"
-        note.content.startsWith("Shape:CustomLine:") -> "Custom Line"
-        note.content.startsWith("Shape:") -> "Shape"
-        else -> "Text"
-    }
-
+    val category = noteCategory(note)
     val count = allNotes.take(currentIndex + 1).count { other ->
-        val otherCategory = when {
-            other.content.startsWith("Image:") -> "Image"
-            other.content.startsWith("Shape: Square") -> "Square"
-            other.content.startsWith("Shape: Circle") -> "Circle"
-            other.content.startsWith("Shape: Triangle") -> "Triangle"
-            other.content.startsWith("Shape: Pentagon") -> "Pentagon"
-            other.content.startsWith("Shape: Line") -> "Line"
-            other.content.startsWith("Shape: Hexagon") -> "Hexagon"
-            other.content.startsWith("Shape: Star") -> "Star"
-            other.content.startsWith("Shape: Diamond") -> "Diamond"
-            other.content.startsWith("Shape: Heart") -> "Heart"
-            other.content.startsWith("Shape: ArrowRight") -> "Arrow"
-            other.content.startsWith("Shape: Octagon") -> "Octagon"
-            other.content.startsWith("Shape:CustomPolygon:") -> "Custom Polygon"
-            other.content.startsWith("Shape:CustomLine:") -> "Custom Line"
-            other.content.startsWith("Shape:") -> "Shape"
-            else -> "Text"
-        }
-        otherCategory == category
+        noteCategory(other) == category
     }
-
     return "$category $count"
+}
+
+private fun noteCategory(note: CanvasNote): String {
+    val content = note.content.trim()
+    return when {
+        content == "Shape: Square"            -> "Square"
+        content == "Shape: Circle"            -> "Circle"
+        content == "Shape: Triangle"          -> "Triangle"
+        content == "Shape: Line"              -> "Line"
+        content == "Shape: Pentagon"          -> "Pentagon"
+        content == "Shape: Hexagon"           -> "Hexagon"
+        content == "Shape: Star"              -> "Star"
+        content == "Shape: Diamond"           -> "Diamond"
+        content == "Shape: Heart"             -> "Heart"
+        content == "Shape: ArrowRight"        -> "Arrow"
+        content == "Shape: Octagon"           -> "Octagon"
+        content == "Shape: Cross"             -> "Cross"
+        content == "Shape: ThornCrown"        -> "Thorn Crown" 
+        content == "Shape: Moon"              -> "Moon"
+        content == "Shape: DavidStar"         -> "David Star"
+        content == "Shape: Gear"              -> "Gear"
+        content.startsWith("Shape:CustomPolygon:") -> "Custom Polygon"
+        content.startsWith("Shape:CustomLine:")   -> "Custom Line"
+        content.startsWith("Shape:")              -> "Shape"
+        content.startsWith("Image:")              -> "Image"
+        else                                      -> "Text"
+    }
 }
 
 fun buildProcessedContent(

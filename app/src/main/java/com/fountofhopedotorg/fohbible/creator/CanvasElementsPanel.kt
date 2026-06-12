@@ -76,8 +76,6 @@ fun CanvasElementsPanel(
 ) {
     val groupedNotes = viewModel.canvasNotes.groupBy { it.groupId }
     val expandedGroups = remember { mutableStateMapOf<String, Boolean>() }
-
-    // Build the base list of group headers and notes
     val baseItems = buildList {
         for ((groupId, notes) in groupedNotes) {
             if (groupId == null) continue
@@ -110,8 +108,6 @@ fun CanvasElementsPanel(
             add(DisplayItem.NoteItem(note, originalIndex, isGrouped = false))
         }
     }
-
-    // Insert the action row after the last visible selected note (if any)
     val displayItems = remember(baseItems, expandedGroups, selectedNoteIds) {
         val mutableList = baseItems.toMutableList()
         var insertionIndex = -1
@@ -130,8 +126,6 @@ fun CanvasElementsPanel(
         }
         mutableList
     }
-
-    // Group bounds for reordering (unchanged)
     val groupBounds = remember(displayItems) {
         val bounds = mutableMapOf<String?, Pair<Int, Int>>()
         displayItems.forEachIndexed { index, item ->

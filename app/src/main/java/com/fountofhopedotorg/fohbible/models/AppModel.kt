@@ -92,7 +92,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         "om1.jpg", "om2.jpg", "om3.jpg", "om4.jpg", "om5.jpg"
     )
 
-
+    var proportionalEditing by mutableStateOf(true)
     var showSaveMenu by mutableStateOf(false)
     var isGraphicalFullScreen by mutableStateOf(false)
     var disabledVersions by mutableStateOf<Set<String>>(emptySet())

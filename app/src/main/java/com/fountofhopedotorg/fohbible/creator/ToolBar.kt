@@ -141,11 +141,9 @@ fun CombinedToolbarSection(
                 )
             }
 
-            // --- UPDATED DROPDOWN MENU GRID LOGIC ---
             DropdownMenu(
                 expanded = showMoreShapes,
                 onDismissRequest = { showMoreShapes = false },
-                // Doubles width to 80.dp in landscape to fit two columns
                 modifier = Modifier
                     .width(if (isLandscape) 80.dp else 40.dp)
                     .background(MaterialTheme.colorScheme.primary.copy(0.05f))
@@ -165,7 +163,6 @@ fun CombinedToolbarSection(
                 )
 
                 if (isLandscape) {
-                    // Group elements into sub-lists of 2 for the row structure
                     val chunkedShapes = newShapes.chunked(2)
                     chunkedShapes.forEach { rowItems ->
                         Row(modifier = Modifier.fillMaxWidth()) {
@@ -187,7 +184,6 @@ fun CombinedToolbarSection(
                         }
                     }
                 } else {
-                    // Default Single Column Portrait Layout
                     newShapes.forEach { (name, preview) ->
                         DropdownMenuItem(
                             text = {},
