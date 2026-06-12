@@ -365,4 +365,34 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun renameGroup(groupId: String, newName: String) {
         groupNames[groupId] = newName
     }
+
+    fun applyAllNoteProperties(
+        id: String,
+        x: Float, y: Float, width: Float, height: Float, rotation: Float,
+        scaleX: Float, scaleY: Float,
+        color: Color, isTextElement: Boolean,
+        shadowColor: Color?, shadowOffsetX: Float, shadowOffsetY: Float,
+        borderThickness: Float, borderColor: Color?
+    ) {
+        val index = canvasNotes.indexOfFirst { it.id == id }
+        if (index != -1) {
+            val current = canvasNotes[index]
+            canvasNotes[index] = current.copy(
+                offset = Offset(x, y),
+                width = width,
+                height = height,
+                rotation = rotation,
+                scaleX = scaleX,
+                scaleY = scaleY,
+                // Route the color based on the element type
+                textColor = if (isTextElement) color else current.textColor,
+                backgroundColor = if (!isTextElement) color else current.backgroundColor,
+                shadowColor = shadowColor,
+                shadowOffsetX = shadowOffsetX,
+                shadowOffsetY = shadowOffsetY,
+                borderThickness = borderThickness,
+                borderColor = borderColor
+            )
+        }
+    }
 }

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Link
@@ -36,14 +37,20 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathOperation
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -51,23 +58,24 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import coil.compose.AsyncImage
+import com.fountofhopedotorg.fohbible.data.BezierNodeData
 import com.fountofhopedotorg.fohbible.data.CanvasNote
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.absoluteValue
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
-import androidx.core.net.toUri
-import com.fountofhopedotorg.fohbible.data.BezierNodeData
-import kotlin.math.abs
-import androidx.compose.ui.geometry.Rect
-import kotlin.math.PI
 import kotlin.math.sqrt
 
 @Composable
@@ -87,7 +95,7 @@ fun ShapeSelectionCard(
 }
 
 @Composable
-fun HexagonShape(modifier: Modifier = Modifier, color: Color = getRandomColor().copy(0.4f)) {
+fun HexagonShape(modifier: Modifier = Modifier, color: Color = getRandomColor().copy(0.4f), drawStyle: DrawStyle = Fill) {
     Canvas(modifier = modifier) {
         val path = Path()
         val sides = 6
@@ -103,12 +111,12 @@ fun HexagonShape(modifier: Modifier = Modifier, color: Color = getRandomColor().
             if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
         path.close()
-        drawPath(path = path, color = color)
+        drawPath(path = path, color = color, style = drawStyle)
     }
 }
 
 @Composable
-fun OctagonShape(modifier: Modifier = Modifier, color: Color = getRandomColor().copy(0.4f)) {
+fun OctagonShape(modifier: Modifier = Modifier, color: Color = getRandomColor().copy(0.4f), drawStyle: DrawStyle = Fill) {
     Canvas(modifier = modifier) {
         val path = Path()
         val sides = 8
@@ -124,12 +132,12 @@ fun OctagonShape(modifier: Modifier = Modifier, color: Color = getRandomColor().
             if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
         path.close()
-        drawPath(path = path, color = color)
+        drawPath(path = path, color = color, style = drawStyle)
     }
 }
 
 @Composable
-fun StarShape(modifier: Modifier = Modifier, color: Color = getRandomColor().copy(0.4f)) {
+fun StarShape(modifier: Modifier = Modifier, color: Color = getRandomColor().copy(0.4f),  drawStyle: DrawStyle = Fill) {
     Canvas(modifier = modifier) {
         val path = Path()
         val points = 5
@@ -147,14 +155,15 @@ fun StarShape(modifier: Modifier = Modifier, color: Color = getRandomColor().cop
             if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
         path.close()
-        drawPath(path = path, color = color)
+        drawPath(path = path, color = color, style = drawStyle)
     }
 }
 
 @Composable
 fun DiamondShape(
     modifier: Modifier = Modifier,
-    color: Color = getRandomColor().copy(0.4f)
+    color: Color = getRandomColor().copy(0.4f),
+    drawStyle: DrawStyle = Fill
 ) {
     Canvas(modifier = modifier) {
         val path = Path()
@@ -168,14 +177,15 @@ fun DiamondShape(
         path.quadraticTo(w * 0.32f, h * 0.32f, w / 2f, 0f)
 
         path.close()
-        drawPath(path = path, color = color)
+        drawPath(path = path, color = color, style = drawStyle)
     }
 }
 
 @Composable
 fun MoonShape(
     modifier: Modifier = Modifier,
-    color: Color = getRandomColor().copy(0.4f)
+    color: Color = getRandomColor().copy(0.4f),
+    drawStyle: DrawStyle = Fill
 ) {
     Canvas(modifier = modifier) {
         val w = size.width
@@ -193,14 +203,15 @@ fun MoonShape(
             path2 = cutterPath
         )
 
-        drawPath(path = crescentPath, color = color)
+        drawPath(path = crescentPath, color = color, style = drawStyle)
     }
 }
 
 @Composable
 fun CrossShape(
     modifier: Modifier = Modifier,
-    color: Color = getRandomColor().copy(0.4f)
+    color: Color = getRandomColor().copy(0.4f),
+    drawStyle: DrawStyle = Fill
 ) {
     Canvas(modifier = modifier) {
         val path = Path()
@@ -244,7 +255,7 @@ fun CrossShape(
         path.quadraticTo(w * 0.40f, h * 0.28f, w * 0.40f, h * 0.21f)
 
         path.close()
-        drawPath(path = path, color = color)
+        drawPath(path = path, color = color, style = drawStyle)
     }
 }
 
@@ -252,7 +263,8 @@ fun CrossShape(
 fun GearShape(
     modifier: Modifier = Modifier,
     color: Color = getRandomColor().copy(0.4f),
-    teethCount: Int = 8
+    teethCount: Int = 8,
+    drawStyle: DrawStyle = Fill
 ) {
     Canvas(modifier = modifier) {
         val w = size.width
@@ -300,7 +312,7 @@ fun GearShape(
             path2 = holePath
         )
 
-        drawPath(path = finalPath, color = color)
+        drawPath(path = finalPath, color = color, style = drawStyle)
     }
 }
 
@@ -308,7 +320,8 @@ fun GearShape(
 fun DavidStarShape(
     modifier: Modifier = Modifier,
     color: Color = getRandomColor().copy(0.4f),
-    curveFactor: Float = 0.85f
+    curveFactor: Float = 0.85f,
+    drawStyle: DrawStyle = Fill
 ) {
     Canvas(modifier = modifier) {
         val w = size.width
@@ -346,12 +359,12 @@ fun DavidStarShape(
         }
 
         path.close()
-        drawPath(path = path, color = color)
+        drawPath(path = path, color = color, style = drawStyle)
     }
 }
 
 @Composable
-fun HeartShape(modifier: Modifier = Modifier, color: Color = getRandomColor().copy(0.4f)) {
+fun HeartShape(modifier: Modifier = Modifier, color: Color = getRandomColor().copy(0.4f), drawStyle: DrawStyle = Fill) {
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
@@ -386,12 +399,12 @@ fun HeartShape(modifier: Modifier = Modifier, color: Color = getRandomColor().co
             close()
         }
 
-        drawPath(path = path, color = color)
+        drawPath(path = path, color = color, style = drawStyle)
     }
 }
 
 @Composable
-fun ArrowRightShape(modifier: Modifier = Modifier, color: Color = getRandomColor().copy(0.4f)) {
+fun ArrowRightShape(modifier: Modifier = Modifier, color: Color = getRandomColor().copy(0.4f), drawStyle: DrawStyle = Fill) {
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
@@ -405,43 +418,38 @@ fun ArrowRightShape(modifier: Modifier = Modifier, color: Color = getRandomColor
         path.lineTo(w - headWidth, h * 0.7f)
         path.lineTo(0f, h * 0.7f)
         path.close()
-        drawPath(path = path, color = color)
+        drawPath(path = path, color = color, style = drawStyle)
     }
 }
 
 @Composable
-fun LineShape(
+fun SquareShape(
     modifier: Modifier = Modifier,
     color: Color = getRandomColor().copy(0.4f),
-    strokeWidth: Float = 8f
+    drawStyle: DrawStyle = Fill
 ) {
     Canvas(modifier = modifier) {
-        drawLine(
-            color = color,
-            start = Offset(0f, size.height / 2),
-            end = Offset(size.width, size.height / 2),
-            strokeWidth = strokeWidth,
-            cap = StrokeCap.Round
-        )
+        drawRect(color = color, style = drawStyle)
     }
 }
 
 @Composable
-fun SquareShape(modifier: Modifier = Modifier, color: Color = getRandomColor().copy(0.4f)) {
+fun CircleShape(
+    modifier: Modifier = Modifier,
+    color: Color = getRandomColor().copy(0.4f),
+    drawStyle: DrawStyle = Fill
+) {
     Canvas(modifier = modifier) {
-        drawRect(color = color)
+        drawCircle(color = color, style = drawStyle)
     }
 }
 
 @Composable
-fun CircleShape(modifier: Modifier = Modifier, color: Color = getRandomColor().copy(0.4f)) {
-    Canvas(modifier = modifier) {
-        drawCircle(color = color)
-    }
-}
-
-@Composable
-fun TriangleShape(modifier: Modifier = Modifier, color: Color = getRandomColor().copy(0.4f)) {
+fun TriangleShape(
+    modifier: Modifier = Modifier,
+    color: Color = getRandomColor().copy(0.4f),
+    drawStyle: DrawStyle = Fill
+) {
     Canvas(modifier = modifier) {
         val trianglePath = Path().apply {
             moveTo(size.width / 2f, 0f)
@@ -449,7 +457,24 @@ fun TriangleShape(modifier: Modifier = Modifier, color: Color = getRandomColor()
             lineTo(0f, size.height)
             close()
         }
-        drawPath(path = trianglePath, color = color)
+        drawPath(path = trianglePath, color = color, style = drawStyle)
+    }
+}
+
+@Composable
+fun LineShape(
+    modifier: Modifier = Modifier,
+    color: Color = getRandomColor().copy(0.4f),
+    strokeWidth: Float = 8f,
+) {
+    Canvas(modifier = modifier) {
+        drawLine(
+            color = color,
+            start = Offset(0f, size.height / 2),
+            end = Offset(size.width, size.height / 2),
+            strokeWidth = strokeWidth,
+            cap = StrokeCap.Round,
+        )
     }
 }
 
@@ -464,11 +489,12 @@ fun ThornCrownShape(
             val crownPaths = generateThornCrownPaths(seed, size)
 
             onDrawBehind {
+                val strokeWidthScale = size.minDimension / 938f
                 drawPath(
                     path = crownPaths.vinePath,
                     color = thornColor,
                     style = Stroke(
-                        width = 8f * (size.minDimension / 1000f),
+                        width = 8f * strokeWidthScale,
                         cap = StrokeCap.Round,
                         join = StrokeJoin.Round
                     )
@@ -482,11 +508,13 @@ fun ThornCrownShape(
         }
     )
 }
+
 @Composable
 fun PolygonShape(
     points: List<Offset>,
     modifier: Modifier = Modifier,
     color: Color = getRandomColor().copy(0.8f),
+    drawStyle: DrawStyle = Fill
 ) {
     Canvas(modifier = modifier) {
         if (points.isEmpty()) return@Canvas
@@ -499,7 +527,7 @@ fun PolygonShape(
             close()
         }
 
-        drawPath(path = path, color = color)
+        drawPath(path = path, color = color, style = drawStyle)
     }
 }
 
@@ -508,7 +536,8 @@ fun BezierPolygonShape(
     nodes: List<BezierNodeData>,
     modifier: Modifier = Modifier,
     color: Color = getRandomColor().copy(0.8f),
-    closed: Boolean = true
+    closed: Boolean = true,
+    drawStyle: DrawStyle = if (closed) Fill else Stroke(width = 4f)
 ) {
     Canvas(modifier = modifier) {
         if (nodes.isEmpty()) return@Canvas
@@ -537,7 +566,7 @@ fun BezierPolygonShape(
         if (closed) {
             drawPath(path, color = color)
         } else {
-            drawPath(path, color = color, style = Stroke(width = 4f))
+            drawPath(path, color = color, style = drawStyle)
         }
     }
 }
@@ -555,6 +584,7 @@ fun CanvasSvgItem(
     proportionalEditing: Boolean,
     onProportionalToggle: () -> Unit
 ) {
+    val density = LocalDensity.current.density
     val latestProportional by rememberUpdatedState(proportionalEditing)
     var offset by remember(note.offset) { mutableStateOf(note.offset) }
     var baseSize by remember { mutableStateOf(IntSize.Zero) }
@@ -630,7 +660,12 @@ fun CanvasSvgItem(
 
     Box(
         modifier = Modifier
-            .offset { IntOffset((offset.x * density).roundToInt(), (offset.y * density).roundToInt()) }
+            .offset {
+                IntOffset(
+                    (offset.x * density).roundToInt(),
+                    (offset.y * density).roundToInt()
+                )
+            }
             .wrapContentSize(unbounded = true)
             .alpha(if (isLocked) 0.2f else 1f)
     ) {
@@ -651,7 +686,10 @@ fun CanvasSvgItem(
 
                         val screenPanX = localPanX * cos(angleRad) - localPanY * sin(angleRad)
                         val screenPanY = localPanX * sin(angleRad) + localPanY * cos(angleRad)
-                        offset += Offset(screenPanX.toFloat() / density, screenPanY.toFloat() / density)
+                        offset += Offset(
+                            screenPanX.toFloat() / density,
+                            screenPanY.toFloat() / density
+                        )
 
                         val newScaleX = (currentScaleX * zoom).coerceIn(0.1f, 10f)
                         val newScaleY = (currentScaleY * zoom).coerceIn(0.1f, 10f)
@@ -674,97 +712,136 @@ fun CanvasSvgItem(
                     .padding(handleSize / 2),
                 contentAlignment = Alignment.Center
             ) {
-                if (isSelected) {
-                    Box(Modifier.matchParentSize().border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.33f)))
+                // Shadow layer
+                if (note.shadowColor != null && note.shadowColor.alpha > 0f) {
+                    val shadowModifier = Modifier
+                        .fillMaxSize()
+                        .offset(x = note.shadowOffsetX.dp, y = note.shadowOffsetY.dp)
+                        .blur(radius = 2.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
+
+                    when {
+                        note.content == "Shape: Square" -> SquareShape(shadowModifier, note.shadowColor)
+                        note.content == "Shape: Circle" -> CircleShape(shadowModifier, note.shadowColor)
+                        note.content == "Shape: Triangle" -> TriangleShape(shadowModifier, note.shadowColor)
+                        note.content == "Shape: Line" -> LineShape(shadowModifier, note.shadowColor)
+                        note.content == "Shape: Pentagon" -> {
+                            val pentagonPoints = listOf(
+                                Offset(0.5f, 0f), Offset(1f, 0.4f),
+                                Offset(0.8f, 1f), Offset(0.2f, 1f), Offset(0f, 0.4f)
+                            )
+                            PolygonShape(pentagonPoints, shadowModifier, note.shadowColor)
+                        }
+                        note.content == "Shape: Hexagon" -> HexagonShape(shadowModifier, note.shadowColor)
+                        note.content == "Shape: Star" -> StarShape(shadowModifier, note.shadowColor)
+                        note.content == "Shape: Diamond" -> DiamondShape(shadowModifier, note.shadowColor)
+                        note.content == "Shape: Heart" -> HeartShape(shadowModifier, note.shadowColor)
+                        note.content == "Shape: ArrowRight" -> ArrowRightShape(shadowModifier, note.shadowColor)
+                        note.content == "Shape: Octagon" -> OctagonShape(shadowModifier, note.shadowColor)
+                        note.content == "Shape: Cross" -> CrossShape(shadowModifier, note.shadowColor)
+                        note.content == "Shape: ThornCrown" -> ThornCrownShape(shadowModifier, note.shadowColor)
+                        note.content == "Shape: Moon" -> MoonShape(shadowModifier, note.shadowColor)
+                        note.content == "Shape: DavidStar" -> DavidStarShape(shadowModifier, note.shadowColor)
+                        note.content == "Shape: Gear" -> GearShape(shadowModifier, note.shadowColor)
+                        parsedData != null -> {
+                            BezierPolygonShape(
+                                nodes = parsedData.first,
+                                modifier = shadowModifier,
+                                color = note.shadowColor,
+                                closed = !isCustomLine
+                            )
+                        }
+                    }
                 }
 
+                // --- Main (fill) layer ---
+                val mainModifier = Modifier.fillMaxSize()
                 when {
-                    note.content == "Shape: Square" -> SquareShape(
-                        modifier = Modifier.fillMaxSize(),
-                        color = note.backgroundColor
-                    )
-                    note.content == "Shape: Circle" -> CircleShape(
-                        modifier = Modifier.fillMaxSize(),
-                        color = note.backgroundColor
-                    )
-                    note.content == "Shape: Triangle" -> TriangleShape(
-                        modifier = Modifier.fillMaxSize(),
-                        color = note.backgroundColor
-                    )
-                    note.content == "Shape: Line" -> LineShape(
-                        modifier = Modifier.fillMaxSize(),
-                        color = note.backgroundColor
-                    )
+                    note.content == "Shape: Square" -> SquareShape(mainModifier, note.backgroundColor)
+                    note.content == "Shape: Circle" -> CircleShape(mainModifier, note.backgroundColor)
+                    note.content == "Shape: Triangle" -> TriangleShape(mainModifier, note.backgroundColor)
+                    note.content == "Shape: Line" -> LineShape(mainModifier, note.backgroundColor)
                     note.content == "Shape: Pentagon" -> {
                         val pentagonPoints = listOf(
-                            Offset(0.5f, 0f),
-                            Offset(1f, 0.4f),
-                            Offset(0.8f, 1f),
-                            Offset(0.2f, 1f),
-                            Offset(0f, 0.4f)
+                            Offset(0.5f, 0f), Offset(1f, 0.4f),
+                            Offset(0.8f, 1f), Offset(0.2f, 1f), Offset(0f, 0.4f)
                         )
-                        PolygonShape(
-                            points = pentagonPoints,
-                            modifier = Modifier.fillMaxSize(),
-                            color = note.backgroundColor
-                        )
+                        PolygonShape(pentagonPoints, mainModifier, note.backgroundColor)
                     }
-                    note.content == "Shape: Hexagon" -> HexagonShape(
-                        modifier = Modifier.fillMaxSize(),
-                        color = note.backgroundColor
-                    )
-                    note.content == "Shape: Star" -> StarShape(
-                        modifier = Modifier.fillMaxSize(),
-                        color = note.backgroundColor
-                    )
-                    note.content == "Shape: Diamond" -> DiamondShape(
-                        modifier = Modifier.fillMaxSize(),
-                        color = note.backgroundColor
-                    )
-                    note.content == "Shape: Heart" -> HeartShape(
-                        modifier = Modifier.fillMaxSize(),
-                        color = note.backgroundColor
-                    )
-                    note.content == "Shape: ArrowRight" -> ArrowRightShape(
-                        modifier = Modifier.fillMaxSize(),
-                        color = note.backgroundColor
-                    )
-                    note.content == "Shape: Octagon" -> OctagonShape(
-                        modifier = Modifier.fillMaxSize(),
-                        color = note.backgroundColor
-                    )
-                    note.content == "Shape: Cross" -> CrossShape(
-                        modifier = Modifier.fillMaxSize(),
-                        color = note.backgroundColor
-                    )
-                    note.content == "Shape: ThornCrown" -> ThornCrownShape(
-                        modifier = Modifier.fillMaxSize(),
-                        thornColor = note.backgroundColor
-                    )
-                    note.content == "Shape: Moon" -> MoonShape(
-                        modifier = Modifier.fillMaxSize(),
-                        color = note.backgroundColor
-                    )
-                    note.content == "Shape: DavidStar" -> DavidStarShape(
-                        modifier = Modifier.fillMaxSize(),
-                        color = note.backgroundColor
-                    )
-                    note.content == "Shape: Gear" -> GearShape(
-                        modifier = Modifier.fillMaxSize(),
-                        color = note.backgroundColor
-                    )
+                    note.content == "Shape: Hexagon" -> HexagonShape(mainModifier, note.backgroundColor)
+                    note.content == "Shape: Star" -> StarShape(mainModifier, note.backgroundColor)
+                    note.content == "Shape: Diamond" -> DiamondShape(mainModifier, note.backgroundColor)
+                    note.content == "Shape: Heart" -> HeartShape(mainModifier, note.backgroundColor)
+                    note.content == "Shape: ArrowRight" -> ArrowRightShape(mainModifier, note.backgroundColor)
+                    note.content == "Shape: Octagon" -> OctagonShape(mainModifier, note.backgroundColor)
+                    note.content == "Shape: Cross" -> CrossShape(mainModifier, note.backgroundColor)
+                    note.content == "Shape: ThornCrown" -> ThornCrownShape(mainModifier, note.backgroundColor)
+                    note.content == "Shape: Moon" -> MoonShape(mainModifier, note.backgroundColor)
+                    note.content == "Shape: DavidStar" -> DavidStarShape(mainModifier, note.backgroundColor)
+                    note.content == "Shape: Gear" -> GearShape(mainModifier, note.backgroundColor)
                     parsedData != null -> {
                         BezierPolygonShape(
                             nodes = parsedData.first,
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = mainModifier,
                             color = note.backgroundColor,
                             closed = !isCustomLine
                         )
                     }
                 }
+
+                // --- Border layer (on top) ---
+                if (note.borderThickness > 0f && note.borderColor != null) {
+                    val borderColor = note.borderColor
+                    val strokeWidthPx = with(LocalDensity.current) { note.borderThickness.dp.toPx() }
+                    val strokeStyle = Stroke(width = strokeWidthPx, cap = StrokeCap.Round, join = StrokeJoin.Round)
+                    val borderModifier = Modifier.fillMaxSize()
+
+                    when {
+                        note.content == "Shape: Square" -> SquareShape(borderModifier, borderColor, drawStyle = strokeStyle)
+                        note.content == "Shape: Circle" -> CircleShape(borderModifier, borderColor, drawStyle = strokeStyle)
+                        note.content == "Shape: Triangle" -> TriangleShape(borderModifier, borderColor, drawStyle = strokeStyle)
+                        note.content == "Shape: Line" -> LineShape(borderModifier, borderColor, strokeWidth = strokeWidthPx)
+                        note.content == "Shape: Pentagon" -> {
+                            val pentagonPoints = listOf(
+                                Offset(0.5f, 0f), Offset(1f, 0.4f),
+                                Offset(0.8f, 1f), Offset(0.2f, 1f), Offset(0f, 0.4f)
+                            )
+                            PolygonShape(pentagonPoints, borderModifier, borderColor, drawStyle = strokeStyle)
+                        }
+                        note.content == "Shape: Hexagon" -> HexagonShape(borderModifier, borderColor, drawStyle = strokeStyle)
+                        note.content == "Shape: Star" -> StarShape(borderModifier, borderColor, drawStyle = strokeStyle)
+                        note.content == "Shape: Diamond" -> DiamondShape(borderModifier, borderColor, drawStyle = strokeStyle)
+                        note.content == "Shape: Heart" -> HeartShape(borderModifier, borderColor, drawStyle = strokeStyle)
+                        note.content == "Shape: ArrowRight" -> ArrowRightShape(borderModifier, borderColor, drawStyle = strokeStyle)
+                        note.content == "Shape: Octagon" -> OctagonShape(borderModifier, borderColor, drawStyle = strokeStyle)
+                        note.content == "Shape: Cross" -> CrossShape(borderModifier, borderColor, drawStyle = strokeStyle)
+                        note.content == "Shape: ThornCrown" -> {}
+                        note.content == "Shape: Moon" -> MoonShape(borderModifier, borderColor, drawStyle = strokeStyle)
+                        note.content == "Shape: DavidStar" -> DavidStarShape(borderModifier, borderColor, drawStyle = strokeStyle)
+                        note.content == "Shape: Gear" -> GearShape(borderModifier, borderColor, drawStyle = strokeStyle)
+                        parsedData != null -> {
+                            BezierPolygonShape(
+                                nodes = parsedData.first,
+                                modifier = borderModifier,
+                                color = borderColor,
+                                closed = !isCustomLine,
+                                drawStyle = strokeStyle
+                            )
+                        }
+                    }
+                }
+
+                // --- Selection border (exactly like image & text items) ---
+                if (isSelected) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.33f))
+                    )
+                }
             }
         }
 
+        // Handles remain exactly as they were – they now align perfectly with the selection border
         if (isSelected && baseSize != IntSize.Zero && !isLocked) {
             val cx = baseSize.width / 2f
             val cy = baseSize.height / 2f
@@ -783,6 +860,7 @@ fun CanvasSvgItem(
                 )
             }
 
+            // Delete handle
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(handleRadiusPx, handleRadiusPx) }
@@ -795,7 +873,7 @@ fun CanvasSvgItem(
                 Icon(Icons.Default.Close, "Delete", tint = Color.Red, modifier = Modifier.size(14.dp))
             }
 
-            // Color handle – bottom‑left shape corner
+            // Color handle
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(handleRadiusPx, baseSize.height - handleRadiusPx) }
@@ -808,7 +886,7 @@ fun CanvasSvgItem(
                 Icon(Icons.Default.Palette, "Change Color", tint = Color.Blue, modifier = Modifier.size(14.dp))
             }
 
-            // Rotation handle – top‑right shape corner
+            // Rotation handle
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(baseSize.width - handleRadiusPx, handleRadiusPx) }
@@ -851,7 +929,7 @@ fun CanvasSvgItem(
                 Icon(Icons.Default.Refresh, "Rotate", tint = Color.DarkGray, modifier = Modifier.size(14.dp))
             }
 
-            // Scale handle – bottom‑right shape corner
+            // Scale handle
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(baseSize.width - handleRadiusPx, baseSize.height - handleRadiusPx) }
@@ -904,7 +982,7 @@ fun CanvasSvgItem(
                 Box(modifier = Modifier.size(10.dp).background(Color.DarkGray, CircleShape))
             }
 
-            // Proportional toggle handle – top‑center
+            // Proportional toggle handle
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(baseSize.width / 2f, handleRadiusPx) }
@@ -924,6 +1002,7 @@ fun CanvasSvgItem(
         }
     }
 }
+
 @Composable
 fun CanvasTextItem(
     note: CanvasNote,
@@ -996,8 +1075,15 @@ fun CanvasTextItem(
                     detectTapGestures { onSelect() }
                 }
         ) {
+            // Padded container for the text – creates space for handles
             Box(
-                modifier = Modifier.padding(handleSize / 2),
+                modifier = Modifier
+                    .padding(handleSize / 2)         // ← ADDED PADDING
+                    .then(
+                        if (note.borderThickness > 0f && note.borderColor != null) {
+                            Modifier.border(note.borderThickness.dp, note.borderColor, RoundedCornerShape(4.dp))
+                        } else Modifier
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 if (isSelected) {
@@ -1008,19 +1094,42 @@ fun CanvasTextItem(
                     )
                 }
 
-                Text(
-                    text = note.content,
-                    color = note.textColor ?: Color.Black,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .padding(8.dp)
-                        .widthIn(max = 250.dp)
-                )
+                // Inner box that measures only the text area (not the padding)
+                Box(
+                    modifier = Modifier.onSizeChanged { size ->
+                        val newWidth = size.width / density
+                        val newHeight = size.height / density
+                        if ((newWidth - currentWidth).absoluteValue > 1f ||
+                            (newHeight - currentHeight).absoluteValue > 1f
+                        ) {
+                            onUpdatePosition(offset, newWidth, newHeight, currentRotation)
+                        }
+                    }
+                ) {
+                    val textShadow = if (note.shadowColor != null && note.shadowColor.alpha > 0f) {
+                        Shadow(
+                            color = note.shadowColor,
+                            offset = Offset(note.shadowOffsetX * density, note.shadowOffsetY * density),
+                            blurRadius = 2f * density
+                        )
+                    } else null
+
+                    Text(
+                        text = note.content,
+                        color = note.textColor ?: Color.Black,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center,
+                        style = TextStyle(shadow = textShadow),
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .widthIn(max = 250.dp)
+                    )
+                }
             }
         }
 
+        // Handles – now perfectly centred on the padded selection border
         if (isSelected && baseSize != IntSize.Zero && !isLocked) {
             val cx = baseSize.width / 2f
             val cy = baseSize.height / 2f
@@ -1039,7 +1148,7 @@ fun CanvasTextItem(
                 )
             }
 
-            // Delete handle – top‑left
+            // Delete handle
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(handleRadiusPx, handleRadiusPx) }
@@ -1052,7 +1161,7 @@ fun CanvasTextItem(
                 Icon(Icons.Default.Close, "Delete", tint = Color.Red, modifier = Modifier.size(14.dp))
             }
 
-            // Color handle – bottom‑left
+            // Color handle
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(handleRadiusPx, baseSize.height - handleRadiusPx) }
@@ -1065,7 +1174,7 @@ fun CanvasTextItem(
                 Icon(Icons.Default.Palette, "Change Color", tint = Color.Blue, modifier = Modifier.size(14.dp))
             }
 
-            // Rotation handle – top‑right
+            // Rotation handle
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(baseSize.width - handleRadiusPx, handleRadiusPx) }
@@ -1074,7 +1183,6 @@ fun CanvasTextItem(
                         var startRotation = 0f
                         var accumulatedAngle = 0f
                         var currentVector = Offset.Zero
-
                         detectDragGestures(
                             onDragStart = {
                                 startRotation = currentRotation
@@ -1109,7 +1217,7 @@ fun CanvasTextItem(
                 Icon(Icons.Default.Refresh, "Rotate", tint = Color.DarkGray, modifier = Modifier.size(14.dp))
             }
 
-            // Scale handle – bottom‑right
+            // Scale handle
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(baseSize.width - handleRadiusPx, baseSize.height - handleRadiusPx) }
@@ -1119,13 +1227,11 @@ fun CanvasTextItem(
                         var startScaleY = 1f
                         var fixedRotation = 0f
                         var currentVector = Offset.Zero
-
                         detectDragGestures(
                             onDragStart = {
                                 startScaleX = currentScaleX
                                 startScaleY = currentScaleY
                                 fixedRotation = currentRotation
-
                                 val rad = fixedRotation * (Math.PI / 180.0)
                                 val dx = (baseSize.width - handleRadiusPx) - cx
                                 val dy = (baseSize.height - handleRadiusPx) - cy
@@ -1138,15 +1244,12 @@ fun CanvasTextItem(
                             onDrag = { change, dragAmount ->
                                 change.consume()
                                 currentVector += dragAmount
-
                                 val rad = fixedRotation * (Math.PI / 180.0)
                                 val unrotatedRad = -rad
                                 val newScaledDx = currentVector.x * cos(unrotatedRad) - currentVector.y * sin(unrotatedRad)
                                 val newScaledDy = currentVector.x * sin(unrotatedRad) + currentVector.y * cos(unrotatedRad)
-
                                 val dx = (baseSize.width - handleRadiusPx) - cx
                                 val dy = (baseSize.height - handleRadiusPx) - cy
-
                                 if (latestProportional) {
                                     val originalDist = sqrt(dx * dx + dy * dy)
                                     val newDist = sqrt(newScaledDx * newScaledDx + newScaledDy * newScaledDy)
@@ -1167,7 +1270,7 @@ fun CanvasTextItem(
                 Box(modifier = Modifier.size(10.dp).background(Color.DarkGray, CircleShape))
             }
 
-            // Proportional toggle handle – top‑center
+            // Proportional toggle handle
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(baseSize.width / 2f, handleRadiusPx) }
@@ -1196,7 +1299,7 @@ fun CanvasImageItem(
     onSelect: () -> Unit,
     onUpdatePosition: (Offset, Float, Float, Float) -> Unit,
     onScaleChanged: (Float, Float) -> Unit,
-    onColorPickerRequested: () -> Unit,          // NEW
+    onColorPickerRequested: () -> Unit,
     onDeleteRequested: () -> Unit,
     proportionalEditing: Boolean,
     onProportionalToggle: () -> Unit
@@ -1262,7 +1365,6 @@ fun CanvasImageItem(
                     detectTapGestures { onSelect() }
                 }
         ) {
-            // Image + overlay + selection border inside this box
             Box(
                 modifier = Modifier
                     .width(note.width.dp)
@@ -1270,6 +1372,21 @@ fun CanvasImageItem(
                     .padding(handleSize / 2),
                 contentAlignment = Alignment.Center
             ) {
+
+                // --- Added Unclipped Shadow Layer ---
+                if (note.shadowColor != null && note.shadowColor.alpha > 0f) {
+                    AsyncImage(
+                        model = uri,
+                        contentDescription = "Image Shadow",
+                        modifier = Modifier
+                            .matchParentSize()
+                            .offset(x = note.shadowOffsetX.dp, y = note.shadowOffsetY.dp)
+                            .blur(radius = 2.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded),
+                        contentScale = ContentScale.Fit,
+                        colorFilter = ColorFilter.tint(note.shadowColor)
+                    )
+                }
+
                 if (isSelected) {
                     Box(
                         modifier = Modifier
@@ -1324,7 +1441,7 @@ fun CanvasImageItem(
                 Icon(Icons.Default.Close, "Delete", tint = Color.Red, modifier = Modifier.size(14.dp))
             }
 
-            // Color handle – bottom‑left (NEW)
+            // Color handle – bottom‑left
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(handleRadiusPx, baseSize.height - handleRadiusPx) }

@@ -267,7 +267,12 @@ data class CanvasNote(
     val groupId: String? = null,
     val scaleX: Float = 1f,
     val scaleY: Float = 1f,
-    val textColor: Color? = null
+    val textColor: Color? = null,
+    val shadowColor: Color? = null,
+    val shadowOffsetX: Float = 2f,
+    val shadowOffsetY: Float = 2f,
+    val borderThickness: Float = 2f,
+    val borderColor: Color? = null
 )
 
 data class BezierNode(
@@ -332,7 +337,6 @@ data class SelectedWord(
         return result
     }
 }
-
 
 data class CrownStructure(val vinePath: Path, val thornsPath: Path)
 

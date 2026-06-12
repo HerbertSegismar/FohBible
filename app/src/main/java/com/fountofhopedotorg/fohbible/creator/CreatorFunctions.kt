@@ -205,8 +205,8 @@ suspend fun saveCanvasAsSVG(
 
 private fun buildVectorSvg(
     notes: List<CanvasNote>,
-    canvasWidth: Float,   // dp
-    canvasHeight: Float   // dp
+    canvasWidth: Float,
+    canvasHeight: Float
 ): String {
     val sb = StringBuilder()
     sb.append("""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $canvasWidth $canvasHeight" width="$canvasWidth" height="$canvasHeight">""")
@@ -764,7 +764,7 @@ fun generateThornCrownPaths(seed: Long, size: Size): CrownStructure {
     val centerX = size.width / 2f
     val centerY = size.height / 2f
     val minDimension = min(size.width, size.height)
-    val scaleFactor = minDimension / 1000f
+    val scaleFactor = minDimension / 938f   // ← changed from 1000f
 
     val baseRadius = 350f * scaleFactor
     val numVines = 8

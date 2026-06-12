@@ -21,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -54,6 +55,12 @@ fun CreatorScreen() {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    var editShadowColorForDialog by remember { mutableStateOf<Color?>(null) }
+    var editShadowOffsetX by remember { mutableFloatStateOf(0f) }
+    var editShadowOffsetY by remember { mutableFloatStateOf(0f) }
+    var editBorderThickness by remember { mutableFloatStateOf(0f) }
+    var editBorderColorForDialog by remember { mutableStateOf<Color?>(null) }
 
     val viewModel: AppViewModel = viewModel()
     val graphicsLayer = rememberGraphicsLayer()
@@ -339,6 +346,11 @@ fun CreatorScreen() {
                             note.textColor ?: Color.Black
                         else
                             note.backgroundColor
+                        editShadowColorForDialog = note.shadowColor
+                        editShadowOffsetX = note.shadowOffsetX
+                        editShadowOffsetY = note.shadowOffsetY
+                        editBorderThickness = note.borderThickness
+                        editBorderColorForDialog = note.borderColor
                         showEditPropertiesDialog = true
                     },
                     onToggleVisibility = { viewModel.toggleVisibility(it) },
@@ -542,6 +554,11 @@ fun CreatorScreen() {
                                 note.textColor ?: Color.Black
                             else
                                 note.backgroundColor
+                            editShadowColorForDialog = note.shadowColor
+                            editShadowOffsetX = note.shadowOffsetX
+                            editShadowOffsetY = note.shadowOffsetY
+                            editBorderThickness = note.borderThickness
+                            editBorderColorForDialog = note.borderColor
                             showEditPropertiesDialog = true
                         },
                         onToggleVisibility = { viewModel.toggleVisibility(it) },
@@ -632,7 +649,7 @@ fun CreatorScreen() {
                         viewModel.addToCanvas(
                             CanvasNote(
                                 content = newContent,
-                                textColor = getRandomColor()
+                                textColor = getRandomColor(),
                             )
                         )
                     }
@@ -767,34 +784,41 @@ fun CreatorScreen() {
         initialColor = editColorForDialog,
         proportionalEnabled = viewModel.proportionalEditing,
         onProportionalToggle = { viewModel.proportionalEditing = it },
+        // --- NEW shadow & border initial values ---
+        initialShadowColor = editShadowColorForDialog,
+        initialShadowOffsetX = editShadowOffsetX,
+        initialShadowOffsetY = editShadowOffsetY,
+        initialBorderThickness = editBorderThickness,
+        initialBorderColor = editBorderColorForDialog,
         onDismiss = {
             showEditPropertiesDialog = false
             editPropertiesNoteId = null
         },
-        onApply = { id, x, y, scaleX, scaleY, rot, color ->
+        onApply = { id, x, y, scaleX, scaleY, rot, color,
+                    shadowColor, shadowOffsetX, shadowOffsetY,
+                    borderThickness, borderColor ->
+
             val currentNote = viewModel.canvasNotes.find { it.id == id }
             if (currentNote != null) {
-                val xFloat = x.toFloatOrNull() ?: currentNote.offset.x
-                val yFloat = y.toFloatOrNull() ?: currentNote.offset.y
-                val rotFloat = rot.toFloatOrNull() ?: currentNote.rotation
-                val sx = scaleX.toFloatOrNull()?.coerceIn(0.1f, 10f) ?: currentNote.scaleX
-                val sy = scaleY.toFloatOrNull()?.coerceIn(0.1f, 10f) ?: currentNote.scaleY
+                val isText = !currentNote.content.startsWith("Shape:") && !currentNote.content.startsWith("Image:")
 
-                viewModel.updateNoteProperties(
+                viewModel.applyAllNoteProperties(
                     id = id,
-                    x = xFloat,
-                    y = yFloat,
+                    x = x.toFloatOrNull() ?: currentNote.offset.x,
+                    y = y.toFloatOrNull() ?: currentNote.offset.y,
                     width = currentNote.width,
                     height = currentNote.height,
-                    rotation = rotFloat
+                    rotation = rot.toFloatOrNull() ?: currentNote.rotation,
+                    scaleX = scaleX.toFloatOrNull()?.coerceIn(0.1f, 10f) ?: currentNote.scaleX,
+                    scaleY = scaleY.toFloatOrNull()?.coerceIn(0.1f, 10f) ?: currentNote.scaleY,
+                    color = color,
+                    isTextElement = isText,
+                    shadowColor = shadowColor,
+                    shadowOffsetX = shadowOffsetX,
+                    shadowOffsetY = shadowOffsetY,
+                    borderThickness = borderThickness,
+                    borderColor = borderColor
                 )
-                viewModel.updateNoteScale(id, sx, sy)
-
-                if (!currentNote.content.startsWith("Shape:") && !currentNote.content.startsWith("Image:")) {
-                    viewModel.updateNoteTextColor(id, color)
-                } else {
-                    viewModel.updateNoteColor(id, color)
-                }
             }
             showEditPropertiesDialog = false
             editPropertiesNoteId = null

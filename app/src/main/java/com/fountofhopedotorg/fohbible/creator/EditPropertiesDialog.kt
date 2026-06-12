@@ -49,6 +49,11 @@ fun EditPropertiesDialog(
     initialColor: Color,
     proportionalEnabled: Boolean,
     onProportionalToggle: (Boolean) -> Unit,
+    initialShadowColor: Color? = null,
+    initialShadowOffsetX: Float = 2f,
+    initialShadowOffsetY: Float = 2f,
+    initialBorderThickness: Float = 2f,
+    initialBorderColor: Color? = null,
     onDismiss: () -> Unit,
     onApply: (
         noteId: String,
@@ -57,7 +62,12 @@ fun EditPropertiesDialog(
         scaleX: String,
         scaleY: String,
         rotation: String,
-        color: Color
+        color: Color,
+        shadowColor: Color?,
+        shadowOffsetX: Float,
+        shadowOffsetY: Float,
+        borderThickness: Float,
+        borderColor: Color?
     ) -> Unit
 ) {
     if (show && noteId != null) {
@@ -74,6 +84,14 @@ fun EditPropertiesDialog(
             var editRotation by remember(show, normalizedInitialRotation) { mutableStateOf(normalizedInitialRotation) }
             var editColor by remember(show, initialColor) { mutableStateOf(initialColor) }
             var showEditColorPicker by remember { mutableStateOf(false) }
+            var editShadowColor by remember(show, initialShadowColor) { mutableStateOf(initialShadowColor) }
+            var editShadowOffsetX by remember(show, initialShadowOffsetX) { mutableStateOf(initialShadowOffsetX.toString()) }
+            var editShadowOffsetY by remember(show, initialShadowOffsetY) { mutableStateOf(initialShadowOffsetY.toString()) }
+            var editBorderThickness by remember(show, initialBorderThickness) { mutableStateOf(initialBorderThickness.toString()) }
+            var editBorderColor by remember(show, initialBorderColor) { mutableStateOf(initialBorderColor) }
+            var showShadowColorPicker by remember { mutableStateOf(false) }
+            var showBorderColorPicker by remember { mutableStateOf(false) }
+
             val scrollState = rememberScrollState()
 
             AlertDialog(
@@ -84,6 +102,7 @@ fun EditPropertiesDialog(
                         modifier = Modifier.verticalScroll(scrollState),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        // --- Existing fields ---
                         OutlinedTextField(
                             value = editX,
                             onValueChange = { editX = it },
@@ -158,6 +177,7 @@ fun EditPropertiesDialog(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                         )
 
+                        // Main Color
                         OutlinedTextField(
                             value = " ",
                             onValueChange = {},
@@ -176,6 +196,81 @@ fun EditPropertiesDialog(
                                 )
                             }
                         )
+
+                        // --- SHADOW SECTION ---
+                        Text("Shadow", style = MaterialTheme.typography.titleSmall)
+
+                        // Shadow Color
+                        OutlinedTextField(
+                            value = " ",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Shadow Color") },
+                            modifier = Modifier.fillMaxWidth(),
+                            textStyle = LocalTextStyle.current.copy(color = Color.Transparent),
+                            leadingIcon = {
+                                Box(
+                                    modifier = Modifier
+                                        .padding(start = 12.dp)
+                                        .size(32.dp)
+                                        .background(editShadowColor ?: Color.Transparent, RoundedCornerShape(6.dp))
+                                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(6.dp))
+                                        .clickable { showShadowColorPicker = true }
+                                )
+                            }
+                        )
+
+                        // Shadow Offset X & Y
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                value = editShadowOffsetX,
+                                onValueChange = { editShadowOffsetX = it },
+                                label = { Text("Offset X") },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                modifier = Modifier.weight(1f)
+                            )
+                            OutlinedTextField(
+                                value = editShadowOffsetY,
+                                onValueChange = { editShadowOffsetY = it },
+                                label = { Text("Offset Y") },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        // --- BORDER SECTION ---
+                        Text("Border", style = MaterialTheme.typography.titleSmall)
+
+                        // Border Color
+                        OutlinedTextField(
+                            value = " ",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Border Color") },
+                            modifier = Modifier.fillMaxWidth(),
+                            textStyle = LocalTextStyle.current.copy(color = Color.Transparent),
+                            leadingIcon = {
+                                Box(
+                                    modifier = Modifier
+                                        .padding(start = 12.dp)
+                                        .size(32.dp)
+                                        .background(editBorderColor ?: Color.Transparent, RoundedCornerShape(6.dp))
+                                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(6.dp))
+                                        .clickable { showBorderColorPicker = true }
+                                )
+                            }
+                        )
+
+                        // Border Thickness
+                        OutlinedTextField(
+                            value = editBorderThickness,
+                            onValueChange = { editBorderThickness = it },
+                            label = { Text("Thickness (dp)") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                        )
                     }
                 },
                 confirmButton = {
@@ -186,6 +281,13 @@ fun EditPropertiesDialog(
                         } catch (_: NumberFormatException) { 0.0 }
                         val rotationToApply = rotationValue.toString()
 
+                        // Parse new values
+                        val shadowColor = editShadowColor
+                        val shadowOffsetX = editShadowOffsetX.toFloatOrNull() ?: 0f
+                        val shadowOffsetY = editShadowOffsetY.toFloatOrNull() ?: 0f
+                        val borderThickness = editBorderThickness.toFloatOrNull() ?: 0f
+                        val borderColor = editBorderColor
+
                         onApply(
                             noteId,
                             editX,
@@ -193,7 +295,12 @@ fun EditPropertiesDialog(
                             editScaleX,
                             editScaleY,
                             rotationToApply,
-                            editColor
+                            editColor,
+                            shadowColor,
+                            shadowOffsetX,
+                            shadowOffsetY,
+                            borderThickness,
+                            borderColor
                         )
                     }) { Text("Apply") }
                 },
@@ -202,6 +309,7 @@ fun EditPropertiesDialog(
                 }
             )
 
+            // Existing main color picker
             if (showEditColorPicker) {
                 ColorWheelDialog(
                     onDismissRequest = { showEditColorPicker = false },
@@ -210,6 +318,30 @@ fun EditPropertiesDialog(
                         showEditColorPicker = false
                     },
                     initialColor = editColor
+                )
+            }
+
+            // Shadow color picker
+            if (showShadowColorPicker) {
+                ColorWheelDialog(
+                    onDismissRequest = { showShadowColorPicker = false },
+                    onColorSelected = { selectedColor ->
+                        editShadowColor = selectedColor
+                        showShadowColorPicker = false
+                    },
+                    initialColor = editShadowColor ?: Color.Black
+                )
+            }
+
+            // Border color picker
+            if (showBorderColorPicker) {
+                ColorWheelDialog(
+                    onDismissRequest = { showBorderColorPicker = false },
+                    onColorSelected = { selectedColor ->
+                        editBorderColor = selectedColor
+                        showBorderColorPicker = false
+                    },
+                    initialColor = editBorderColor ?: Color.Black
                 )
             }
         }
