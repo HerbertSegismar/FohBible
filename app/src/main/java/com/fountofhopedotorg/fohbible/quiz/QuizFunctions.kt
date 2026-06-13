@@ -22,7 +22,7 @@ fun generateQuizItems(dbHelper: DatabaseHelper, count: Int): List<QuizItem> {
         if (words.isEmpty()) continue
         val eligibleIndices = words.indices.filter {
             val w = words[it].replace(Regex("[^A-Za-z]"), "")
-            w.length >= 3
+            w.length >= 5
         }
         if (eligibleIndices.isEmpty()) continue
         val hideIndex = eligibleIndices.random()

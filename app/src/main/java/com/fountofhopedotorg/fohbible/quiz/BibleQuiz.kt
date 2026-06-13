@@ -217,6 +217,9 @@ fun BibleQuizScreen() {
                             }
                         }
                     }
+                    item {
+                        Spacer(modifier = Modifier.height(400.dp))
+                    }
                 }
             }
         }
