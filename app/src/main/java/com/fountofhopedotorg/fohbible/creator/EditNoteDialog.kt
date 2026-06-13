@@ -40,12 +40,10 @@ fun EditNoteDialog(
         var currentReference by remember { mutableStateOf("") }
         val isEditMode = noteId != null
         val isManualNew = isNew && !fetchMode
-        // Keep the original condition: editable field is NOT shown in fetch mode
         val showEditableField = isEditMode || isManualNew
 
         val canSave = content.isNotBlank()
 
-        // Dynamic fetch on reference input change (debounced)
         if (fetchMode && dbHelper != null && viewModel != null && verseProcessor != null && themeColors != null) {
             LaunchedEffect(referenceInput) {
                 if (referenceInput.isBlank()) {
@@ -137,7 +135,6 @@ fun EditNoteDialog(
             text = {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     if (dbHelper != null && viewModel != null && verseProcessor != null && themeColors != null) {
-                        // Reference input – no Fetch button, auto‑fetch handles it
                         OutlinedTextField(
                             value = referenceInput,
                             onValueChange = { referenceInput = it },
@@ -154,8 +151,6 @@ fun EditNoteDialog(
                                 modifier = Modifier.padding(bottom = 4.dp)
                             )
                         }
-
-                        // Verse preview card (always shown after fetch)
                         if (fetchedVerses.isNotEmpty()) {
                             Card(
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
@@ -205,7 +200,6 @@ fun EditNoteDialog(
                         }
                     }
 
-                    // Editable note field – only shown for editing or manual new notes, NOT for fetch mode
                     if (showEditableField) {
                         OutlinedTextField(
                             value = content,

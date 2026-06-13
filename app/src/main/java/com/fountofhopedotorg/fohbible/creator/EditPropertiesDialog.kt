@@ -102,7 +102,6 @@ fun EditPropertiesDialog(
                         modifier = Modifier.verticalScroll(scrollState),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // --- Existing fields ---
                         OutlinedTextField(
                             value = editX,
                             onValueChange = { editX = it },
@@ -177,7 +176,6 @@ fun EditPropertiesDialog(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                         )
 
-                        // Main Color
                         OutlinedTextField(
                             value = " ",
                             onValueChange = {},
@@ -197,10 +195,8 @@ fun EditPropertiesDialog(
                             }
                         )
 
-                        // --- SHADOW SECTION ---
                         Text("Shadow", style = MaterialTheme.typography.titleSmall)
 
-                        // Shadow Color
                         OutlinedTextField(
                             value = " ",
                             onValueChange = {},
@@ -220,7 +216,6 @@ fun EditPropertiesDialog(
                             }
                         )
 
-                        // Shadow Offset X & Y
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedTextField(
                                 value = editShadowOffsetX,
@@ -240,10 +235,8 @@ fun EditPropertiesDialog(
                             )
                         }
 
-                        // --- BORDER SECTION ---
                         Text("Border", style = MaterialTheme.typography.titleSmall)
 
-                        // Border Color
                         OutlinedTextField(
                             value = " ",
                             onValueChange = {},
@@ -263,11 +256,10 @@ fun EditPropertiesDialog(
                             }
                         )
 
-                        // Border Thickness
                         OutlinedTextField(
                             value = editBorderThickness,
                             onValueChange = { editBorderThickness = it },
-                            label = { Text("Thickness (dp)") },
+                            label = { Text("Thickness") },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                         )
@@ -280,8 +272,6 @@ fun EditPropertiesDialog(
                             ((input % 360) + 360) % 360
                         } catch (_: NumberFormatException) { 0.0 }
                         val rotationToApply = rotationValue.toString()
-
-                        // Parse new values
                         val shadowColor = editShadowColor
                         val shadowOffsetX = editShadowOffsetX.toFloatOrNull() ?: 0f
                         val shadowOffsetY = editShadowOffsetY.toFloatOrNull() ?: 0f
@@ -308,8 +298,6 @@ fun EditPropertiesDialog(
                     TextButton(onClick = onDismiss) { Text("Cancel") }
                 }
             )
-
-            // Existing main color picker
             if (showEditColorPicker) {
                 ColorWheelDialog(
                     onDismissRequest = { showEditColorPicker = false },
@@ -320,8 +308,6 @@ fun EditPropertiesDialog(
                     initialColor = editColor
                 )
             }
-
-            // Shadow color picker
             if (showShadowColorPicker) {
                 ColorWheelDialog(
                     onDismissRequest = { showShadowColorPicker = false },
@@ -332,8 +318,6 @@ fun EditPropertiesDialog(
                     initialColor = editShadowColor ?: Color.Black
                 )
             }
-
-            // Border color picker
             if (showBorderColorPicker) {
                 ColorWheelDialog(
                     onDismissRequest = { showBorderColorPicker = false },

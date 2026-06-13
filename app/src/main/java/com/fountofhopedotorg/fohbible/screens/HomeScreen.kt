@@ -85,6 +85,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.random.Random
+import kotlin.time.Duration.Companion.milliseconds
 
 private object BookmarkHelper {
     suspend fun isBookmarked(verse: Verse, dbHelper: DatabaseHelper): Boolean =
@@ -141,7 +142,8 @@ fun HomeScreen(
     onNavigateToReader: (PassageSelection) -> Unit,
     onNavigateToScreen: (Screen) -> Unit,
     databaseHelper: DatabaseHelper? = null,
-    onAddEditableTextClick: () -> Unit = {}
+    onCreateSermonMaterialsClick: () -> Unit = {},
+    onTakeBibleQuizClick: () -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -262,7 +264,7 @@ fun HomeScreen(
         }
         item {
             Button(
-                onClick = onAddEditableTextClick,
+                onClick = onCreateSermonMaterialsClick,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
@@ -270,8 +272,18 @@ fun HomeScreen(
                 Text("Create Sermon Materials", color = Color.White)
             }
         }
+        item {
+            Button(
+                onClick = onTakeBibleQuizClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) {
+                Text("Take Bible Quiz", color = Color.White)
+            }
+        }
 
-        item { Spacer(Modifier.height(40.dp)) }
+        item { Spacer(Modifier.height(33.dp)) }
 
         item {
             val isMatrixVisible by remember { mutableStateOf(true) }
@@ -498,7 +510,7 @@ private fun DailyVerseCard(
                                 isLoading = true
                                 onRefresh()
                                 scope.launch {
-                                    delay(500)
+                                    delay(500.milliseconds)
                                     isLoading = false
                                 }
                             },

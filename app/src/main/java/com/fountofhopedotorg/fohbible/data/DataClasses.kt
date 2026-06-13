@@ -271,7 +271,7 @@ data class CanvasNote(
     val shadowColor: Color? = null,
     val shadowOffsetX: Float = 2f,
     val shadowOffsetY: Float = 2f,
-    val borderThickness: Float = 2f,
+    val borderThickness: Float = 1f,
     val borderColor: Color? = null
 )
 
@@ -282,6 +282,12 @@ data class BezierNode(
 )
 
 data class SearchOptions(val bookRange: Pair<Int, Int>? = null)
+
+data class QuizItem(
+    val verse: Verse,
+    val missingWord: String,
+    val displayText: String
+)
 
 data class QuickAction(
     val title: String,

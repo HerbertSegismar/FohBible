@@ -108,6 +108,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import com.fountofhopedotorg.fohbible.functions.ColorOptionItem
+import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun LoadingIndicator() {
@@ -471,7 +472,7 @@ fun ScrollSyncButton(
         onClick = {
             if (pendingJob.value?.isActive == true) return@AnimatedIconButton
             pendingJob.value = scope.launch {
-                delay(250L)
+                delay(250L.milliseconds)
                 viewModel.scrollSync = !viewModel.scrollSync
                 pendingJob.value = null
                 viewModel.scrollSyncAction = true
@@ -547,6 +548,7 @@ fun HomeAppBar(
         is Screen.Settings -> "Settings"
         is Screen.Search -> "Search"
         is Screen.Creator -> "Creator"
+        is Screen.Quiz -> "Quiz"
     }
     TopAppBar(
         title = { Text(text = screenTitle, color = viewModel.headerButtonsColor, fontWeight = FontWeight.Bold, modifier = Modifier
@@ -978,7 +980,7 @@ fun ReaderDropdownContent(
                 leadingIcon = { Icon(if (viewModel.isDictionaryMode) Icons.AutoMirrored.Filled.Label else Icons.Filled.LocalFireDepartment, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                 onClick = {
                     viewModel.isDictionaryMode = !viewModel.isDictionaryMode
-                    coroutineScope.launch { delay(400) }
+                    coroutineScope.launch { delay(400.milliseconds) }
                 }
             )
             if (!viewModel.isDictionaryMode) {
@@ -1059,7 +1061,7 @@ fun ExtraReaderControls(viewModel: AppViewModel, coroutineScope: kotlinx.corouti
         leadingIcon = { Icon(if (viewModel.isDictionaryMode) Icons.AutoMirrored.Filled.Label else Icons.Filled.LocalFireDepartment, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
         onClick = {
             viewModel.isDictionaryMode = !viewModel.isDictionaryMode
-            coroutineScope.launch { delay(400) }
+            coroutineScope.launch { delay(400.milliseconds) }
         }
     )
     if (!viewModel.isDictionaryMode) {

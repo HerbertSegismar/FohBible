@@ -784,7 +784,6 @@ fun CreatorScreen() {
         initialColor = editColorForDialog,
         proportionalEnabled = viewModel.proportionalEditing,
         onProportionalToggle = { viewModel.proportionalEditing = it },
-        // --- NEW shadow & border initial values ---
         initialShadowColor = editShadowColorForDialog,
         initialShadowOffsetX = editShadowOffsetX,
         initialShadowOffsetY = editShadowOffsetY,

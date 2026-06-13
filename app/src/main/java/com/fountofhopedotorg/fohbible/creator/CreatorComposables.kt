@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Link
@@ -712,7 +711,6 @@ fun CanvasSvgItem(
                     .padding(handleSize / 2),
                 contentAlignment = Alignment.Center
             ) {
-                // Shadow layer
                 if (note.shadowColor != null && note.shadowColor.alpha > 0f) {
                     val shadowModifier = Modifier
                         .fillMaxSize()
@@ -752,8 +750,6 @@ fun CanvasSvgItem(
                         }
                     }
                 }
-
-                // --- Main (fill) layer ---
                 val mainModifier = Modifier.fillMaxSize()
                 when {
                     note.content == "Shape: Square" -> SquareShape(mainModifier, note.backgroundColor)
@@ -788,7 +784,6 @@ fun CanvasSvgItem(
                     }
                 }
 
-                // --- Border layer (on top) ---
                 if (note.borderThickness > 0f && note.borderColor != null) {
                     val borderColor = note.borderColor
                     val strokeWidthPx = with(LocalDensity.current) { note.borderThickness.dp.toPx() }
@@ -830,18 +825,16 @@ fun CanvasSvgItem(
                     }
                 }
 
-                // --- Selection border (exactly like image & text items) ---
                 if (isSelected) {
                     Box(
                         modifier = Modifier
                             .matchParentSize()
-                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.33f))
+                            .border(0.5.dp, MaterialTheme.colorScheme.primary)
                     )
                 }
             }
         }
 
-        // Handles remain exactly as they were – they now align perfectly with the selection border
         if (isSelected && baseSize != IntSize.Zero && !isLocked) {
             val cx = baseSize.width / 2f
             val cy = baseSize.height / 2f
@@ -860,33 +853,30 @@ fun CanvasSvgItem(
                 )
             }
 
-            // Delete handle
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(handleRadiusPx, handleRadiusPx) }
                     .size(handleSize)
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
                     .clickable { onDeleteRequested() },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(Icons.Default.Close, "Delete", tint = Color.Red, modifier = Modifier.size(14.dp))
             }
 
-            // Color handle
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(handleRadiusPx, baseSize.height - handleRadiusPx) }
                     .size(handleSize)
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
                     .clickable { onColorPickerRequested() },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(Icons.Default.Palette, "Change Color", tint = Color.Blue, modifier = Modifier.size(14.dp))
             }
 
-            // Rotation handle
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(baseSize.width - handleRadiusPx, handleRadiusPx) }
@@ -923,13 +913,12 @@ fun CanvasSvgItem(
                         )
                     }
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape),
+                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(Icons.Default.Refresh, "Rotate", tint = Color.DarkGray, modifier = Modifier.size(14.dp))
             }
 
-            // Scale handle
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(baseSize.width - handleRadiusPx, baseSize.height - handleRadiusPx) }
@@ -976,19 +965,18 @@ fun CanvasSvgItem(
                         )
                     }
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape),
+                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Box(modifier = Modifier.size(10.dp).background(Color.DarkGray, CircleShape))
             }
 
-            // Proportional toggle handle
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(baseSize.width / 2f, handleRadiusPx) }
                     .size(handleSize)
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
                     .clickable { onProportionalToggle() },
                 contentAlignment = Alignment.Center
             ) {
@@ -1075,26 +1063,18 @@ fun CanvasTextItem(
                     detectTapGestures { onSelect() }
                 }
         ) {
-            // Padded container for the text – creates space for handles
             Box(
                 modifier = Modifier
-                    .padding(handleSize / 2)         // ← ADDED PADDING
-                    .then(
-                        if (note.borderThickness > 0f && note.borderColor != null) {
-                            Modifier.border(note.borderThickness.dp, note.borderColor, RoundedCornerShape(4.dp))
-                        } else Modifier
-                    ),
+                    .padding(handleSize / 2),
                 contentAlignment = Alignment.Center
             ) {
                 if (isSelected) {
                     Box(
                         modifier = Modifier
                             .matchParentSize()
-                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.33f))
+                            .border(0.5.dp, MaterialTheme.colorScheme.primary)
                     )
                 }
-
-                // Inner box that measures only the text area (not the padding)
                 Box(
                     modifier = Modifier.onSizeChanged { size ->
                         val newWidth = size.width / density
@@ -1104,7 +1084,8 @@ fun CanvasTextItem(
                         ) {
                             onUpdatePosition(offset, newWidth, newHeight, currentRotation)
                         }
-                    }
+                    },
+                    contentAlignment = Alignment.Center
                 ) {
                     val textShadow = if (note.shadowColor != null && note.shadowColor.alpha > 0f) {
                         Shadow(
@@ -1114,13 +1095,35 @@ fun CanvasTextItem(
                         )
                     } else null
 
+                    if (note.borderThickness > 0f && note.borderColor != null) {
+                        Text(
+                            text = note.content,
+                            color = note.borderColor,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Center,
+                            style = TextStyle(
+                                shadow = textShadow,
+                                drawStyle = Stroke(
+                                    width = note.borderThickness * density,
+                                    join = StrokeJoin.Round
+                                )
+                            ),
+                            modifier = Modifier
+                                .padding(8.dp)
+                                .widthIn(max = 250.dp)
+                        )
+                    }
+
                     Text(
                         text = note.content,
                         color = note.textColor ?: Color.Black,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Medium,
                         textAlign = TextAlign.Center,
-                        style = TextStyle(shadow = textShadow),
+                        style = TextStyle(
+                            shadow = if (note.borderThickness > 0f && note.borderColor != null) null else textShadow
+                        ),
                         modifier = Modifier
                             .padding(8.dp)
                             .widthIn(max = 250.dp)
@@ -1128,8 +1131,6 @@ fun CanvasTextItem(
                 }
             }
         }
-
-        // Handles – now perfectly centred on the padded selection border
         if (isSelected && baseSize != IntSize.Zero && !isLocked) {
             val cx = baseSize.width / 2f
             val cy = baseSize.height / 2f
@@ -1148,33 +1149,30 @@ fun CanvasTextItem(
                 )
             }
 
-            // Delete handle
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(handleRadiusPx, handleRadiusPx) }
                     .size(handleSize)
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
                     .clickable { onDeleteRequested() },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(Icons.Default.Close, "Delete", tint = Color.Red, modifier = Modifier.size(14.dp))
             }
 
-            // Color handle
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(handleRadiusPx, baseSize.height - handleRadiusPx) }
                     .size(handleSize)
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
                     .clickable { onColorPickerRequested() },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(Icons.Default.Palette, "Change Color", tint = Color.Blue, modifier = Modifier.size(14.dp))
             }
 
-            // Rotation handle
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(baseSize.width - handleRadiusPx, handleRadiusPx) }
@@ -1211,13 +1209,12 @@ fun CanvasTextItem(
                         )
                     }
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape),
+                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(Icons.Default.Refresh, "Rotate", tint = Color.DarkGray, modifier = Modifier.size(14.dp))
             }
 
-            // Scale handle
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(baseSize.width - handleRadiusPx, baseSize.height - handleRadiusPx) }
@@ -1264,19 +1261,18 @@ fun CanvasTextItem(
                         )
                     }
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape),
+                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Box(modifier = Modifier.size(10.dp).background(Color.DarkGray, CircleShape))
             }
 
-            // Proportional toggle handle
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(baseSize.width / 2f, handleRadiusPx) }
                     .size(handleSize)
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
                     .clickable { onProportionalToggle() },
                 contentAlignment = Alignment.Center
             ) {
@@ -1373,7 +1369,6 @@ fun CanvasImageItem(
                 contentAlignment = Alignment.Center
             ) {
 
-                // --- Added Unclipped Shadow Layer ---
                 if (note.shadowColor != null && note.shadowColor.alpha > 0f) {
                     AsyncImage(
                         model = uri,
@@ -1391,7 +1386,7 @@ fun CanvasImageItem(
                     Box(
                         modifier = Modifier
                             .matchParentSize()
-                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.33f))
+                            .border(0.5.dp, MaterialTheme.colorScheme.primary)
                     )
                 }
 
@@ -1428,33 +1423,30 @@ fun CanvasImageItem(
                 )
             }
 
-            // Delete handle – top‑left
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(handleRadiusPx, handleRadiusPx) }
                     .size(handleSize)
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
                     .clickable { onDeleteRequested() },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(Icons.Default.Close, "Delete", tint = Color.Red, modifier = Modifier.size(14.dp))
             }
 
-            // Color handle – bottom‑left
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(handleRadiusPx, baseSize.height - handleRadiusPx) }
                     .size(handleSize)
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
                     .clickable { onColorPickerRequested() },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(Icons.Default.Palette, "Change Color", tint = Color.Blue, modifier = Modifier.size(14.dp))
             }
 
-            // Rotation handle – top‑right
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(baseSize.width - handleRadiusPx, handleRadiusPx) }
@@ -1492,13 +1484,12 @@ fun CanvasImageItem(
                         )
                     }
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape),
+                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(Icons.Default.Refresh, "Rotate", tint = Color.DarkGray, modifier = Modifier.size(14.dp))
             }
 
-            // Scale handle – bottom‑right
             Box(
                 modifier = Modifier
                     .offset { getTargetHandleOffset(baseSize.width - handleRadiusPx, baseSize.height - handleRadiusPx) }
@@ -1550,7 +1541,7 @@ fun CanvasImageItem(
                         )
                     }
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape),
+                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Box(modifier = Modifier.size(10.dp).background(Color.DarkGray, CircleShape))
@@ -1561,7 +1552,7 @@ fun CanvasImageItem(
                     .offset { getTargetHandleOffset(baseSize.width / 2f, handleRadiusPx) }
                     .size(handleSize)
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
                     .clickable { onProportionalToggle() },
                 contentAlignment = Alignment.Center
             ) {
