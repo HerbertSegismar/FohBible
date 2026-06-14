@@ -666,7 +666,6 @@ fun CanvasSvgItem(
                 )
             }
             .wrapContentSize(unbounded = true)
-            .alpha(if (isLocked) 0.2f else 1f)
     ) {
         Box(
             modifier = Modifier
@@ -676,33 +675,41 @@ fun CanvasSvgItem(
                     rotationZ = currentRotation
                 }
                 .onSizeChanged { baseSize = it }
-                .pointerInput(isLocked) {
-                    if (isLocked) return@pointerInput
-                    detectTransformGestures { _, pan, zoom, rot ->
-                        val angleRad = currentRotation * (Math.PI / 180.0)
-                        val localPanX = pan.x * currentScaleX
-                        val localPanY = pan.y * currentScaleY
+                .then(
+                    // Gesture detection only for unlocked items
+                    if (!isLocked) {
+                        Modifier
+                            .pointerInput(Unit) {
+                                detectTransformGestures { _, pan, zoom, rot ->
+                                    val angleRad = currentRotation * (Math.PI / 180.0)
+                                    val localPanX = pan.x * currentScaleX
+                                    val localPanY = pan.y * currentScaleY
 
-                        val screenPanX = localPanX * cos(angleRad) - localPanY * sin(angleRad)
-                        val screenPanY = localPanX * sin(angleRad) + localPanY * cos(angleRad)
-                        offset += Offset(
-                            screenPanX.toFloat() / density,
-                            screenPanY.toFloat() / density
-                        )
+                                    val screenPanX = localPanX * cos(angleRad) - localPanY * sin(angleRad)
+                                    val screenPanY = localPanX * sin(angleRad) + localPanY * cos(angleRad)
+                                    offset += Offset(
+                                        screenPanX.toFloat() / density,
+                                        screenPanY.toFloat() / density
+                                    )
 
-                        val newScaleX = (currentScaleX * zoom).coerceIn(0.1f, 10f)
-                        val newScaleY = (currentScaleY * zoom).coerceIn(0.1f, 10f)
-                        val newRotation = currentRotation + rot
+                                    val newScaleX = (currentScaleX * zoom).coerceIn(0.1f, 10f)
+                                    val newScaleY = (currentScaleY * zoom).coerceIn(0.1f, 10f)
+                                    val newRotation = currentRotation + rot
 
-                        onScaleChanged(newScaleX, newScaleY)
-                        onUpdatePosition(offset, currentWidth, currentHeight, newRotation)
+                                    onScaleChanged(newScaleX, newScaleY)
+                                    onUpdatePosition(offset, currentWidth, currentHeight, newRotation)
+                                }
+                            }
+                            .pointerInput(Unit) {
+                                detectTapGestures {
+                                    onSelect()
+                                }
+                            }
+                    } else {
+                        Modifier
                     }
-                }
-                .pointerInput(Unit) {
-                    detectTapGestures {
-                        onSelect()
-                    }
-                }
+                )
+                .alpha(if (isLocked) 0.2f else 1f)
         ) {
             Box(
                 modifier = Modifier
@@ -1027,7 +1034,6 @@ fun CanvasTextItem(
                 )
             }
             .wrapContentSize(unbounded = true)
-            .alpha(if (isLocked) 0.2f else 1f)
     ) {
         Box(
             modifier = Modifier
@@ -1037,31 +1043,39 @@ fun CanvasTextItem(
                     rotationZ = currentRotation
                 }
                 .onSizeChanged { baseSize = it }
-                .pointerInput(isLocked) {
-                    if (isLocked) return@pointerInput
-                    detectTransformGestures { _, pan, zoom, rot ->
-                        val angleRad = currentRotation * (Math.PI / 180.0)
-                        val localPanX = pan.x * currentScaleX
-                        val localPanY = pan.y * currentScaleY
+                .then(
+                    // Gesture detection only for unlocked items
+                    if (!isLocked) {
+                        Modifier
+                            .pointerInput(Unit) {
+                                detectTransformGestures { _, pan, zoom, rot ->
+                                    val angleRad = currentRotation * (Math.PI / 180.0)
+                                    val localPanX = pan.x * currentScaleX
+                                    val localPanY = pan.y * currentScaleY
 
-                        val screenPanX = localPanX * cos(angleRad) - localPanY * sin(angleRad)
-                        val screenPanY = localPanX * sin(angleRad) + localPanY * cos(angleRad)
-                        offset += Offset(
-                            screenPanX.toFloat() / density,
-                            screenPanY.toFloat() / density
-                        )
+                                    val screenPanX = localPanX * cos(angleRad) - localPanY * sin(angleRad)
+                                    val screenPanY = localPanX * sin(angleRad) + localPanY * cos(angleRad)
+                                    offset += Offset(
+                                        screenPanX.toFloat() / density,
+                                        screenPanY.toFloat() / density
+                                    )
 
-                        val newScaleX = (currentScaleX * zoom).coerceIn(0.1f, 10f)
-                        val newScaleY = (currentScaleY * zoom).coerceIn(0.1f, 10f)
-                        val newRotation = currentRotation + rot
+                                    val newScaleX = (currentScaleX * zoom).coerceIn(0.1f, 10f)
+                                    val newScaleY = (currentScaleY * zoom).coerceIn(0.1f, 10f)
+                                    val newRotation = currentRotation + rot
 
-                        onScaleChanged(newScaleX, newScaleY)
-                        onUpdatePosition(offset, currentWidth, currentHeight, newRotation)
+                                    onScaleChanged(newScaleX, newScaleY)
+                                    onUpdatePosition(offset, currentWidth, currentHeight, newRotation)
+                                }
+                            }
+                            .pointerInput(Unit) {
+                                detectTapGestures { onSelect() }
+                            }
+                    } else {
+                        Modifier
                     }
-                }
-                .pointerInput(Unit) {
-                    detectTapGestures { onSelect() }
-                }
+                )
+                .alpha(if (isLocked) 0.2f else 1f)
         ) {
             Box(
                 modifier = Modifier
@@ -1325,7 +1339,6 @@ fun CanvasImageItem(
                 )
             }
             .wrapContentSize(unbounded = true)
-            .alpha(if (isLocked) 0.2f else 1f)
     ) {
         Box(
             modifier = Modifier
@@ -1335,31 +1348,39 @@ fun CanvasImageItem(
                     rotationZ = rotation
                 }
                 .onSizeChanged { baseSize = it }
-                .pointerInput(isLocked) {
-                    if (isLocked) return@pointerInput
-                    detectTransformGestures { _, pan, zoom, rot ->
-                        val angleRad = rotation * (Math.PI / 180.0)
-                        val localPanX = pan.x * scaleX
-                        val localPanY = pan.y * scaleY
+                .then(
+                    // Gesture detection only for unlocked items
+                    if (!isLocked) {
+                        Modifier
+                            .pointerInput(Unit) {
+                                detectTransformGestures { _, pan, zoom, rot ->
+                                    val angleRad = rotation * (Math.PI / 180.0)
+                                    val localPanX = pan.x * scaleX
+                                    val localPanY = pan.y * scaleY
 
-                        val screenPanX = localPanX * cos(angleRad) - localPanY * sin(angleRad)
-                        val screenPanY = localPanX * sin(angleRad) + localPanY * cos(angleRad)
-                        offset += Offset(
-                            screenPanX.toFloat() / density,
-                            screenPanY.toFloat() / density
-                        )
+                                    val screenPanX = localPanX * cos(angleRad) - localPanY * sin(angleRad)
+                                    val screenPanY = localPanX * sin(angleRad) + localPanY * cos(angleRad)
+                                    offset += Offset(
+                                        screenPanX.toFloat() / density,
+                                        screenPanY.toFloat() / density
+                                    )
 
-                        val newScaleX = (scaleX * zoom).coerceIn(0.1f, 10f)
-                        val newScaleY = (scaleY * zoom).coerceIn(0.1f, 10f)
-                        rotation += rot
+                                    val newScaleX = (scaleX * zoom).coerceIn(0.1f, 10f)
+                                    val newScaleY = (scaleY * zoom).coerceIn(0.1f, 10f)
+                                    rotation += rot
 
-                        onScaleChanged(newScaleX, newScaleY)
-                        onUpdatePosition(offset, note.width, note.height, rotation)
+                                    onScaleChanged(newScaleX, newScaleY)
+                                    onUpdatePosition(offset, note.width, note.height, rotation)
+                                }
+                            }
+                            .pointerInput(Unit) {
+                                detectTapGestures { onSelect() }
+                            }
+                    } else {
+                        Modifier
                     }
-                }
-                .pointerInput(Unit) {
-                    detectTapGestures { onSelect() }
-                }
+                )
+                .alpha(if (isLocked) 0.2f else 1f)
         ) {
             Box(
                 modifier = Modifier
