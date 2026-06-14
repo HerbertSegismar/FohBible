@@ -2,7 +2,9 @@ package com.fountofhopedotorg.fohbible.quiz
 
 import android.annotation.SuppressLint
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -10,6 +12,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,6 +31,8 @@ import com.fountofhopedotorg.fohbible.data.QuizItem
 import com.fountofhopedotorg.fohbible.modals.VersionSelectionModal
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
@@ -46,19 +52,26 @@ fun BibleQuizScreen() {
     }
 
     var quizCount by remember { mutableIntStateOf(10) }
+    var quizType by remember { mutableStateOf(QuizType.FILL_IN_THE_BLANK) }
     var quizItems by remember { mutableStateOf<List<QuizItem>>(emptyList()) }
     var userAnswers by remember { mutableStateOf<List<String>>(emptyList()) }
     var submitted by remember { mutableStateOf(false) }
     var score by remember { mutableIntStateOf(0) }
     var showVersionModal by remember { mutableStateOf(false) }
     var versionTrigger by remember { mutableIntStateOf(0) }
+    var typeMenuExpanded by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
 
-    LaunchedEffect(versionTrigger, dbHelper) {
-        val items = generateQuizItems(dbHelper, quizCount)
+    LaunchedEffect(versionTrigger, dbHelper, quizType) {
+        isLoading = true
+        val items = withContext(Dispatchers.IO) {
+            generateQuizItems(dbHelper, quizCount, quizType)
+        }
         quizItems = items
         userAnswers = List(items.size) { "" }
         submitted = false
         score = 0
+        isLoading = false
     }
 
     Scaffold(
@@ -85,8 +98,7 @@ fun BibleQuizScreen() {
         }
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
+            modifier = Modifier.fillMaxSize()
         ) {
             Row(
                 modifier = Modifier
@@ -95,13 +107,70 @@ fun BibleQuizScreen() {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = "Fill in the blanks Quiz",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { typeMenuExpanded = true }
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = when (quizType) {
+                                QuizType.FILL_IN_THE_BLANK -> "Fill‑in the blanks Quiz"
+                                QuizType.MULTIPLE_CHOICE -> "Multiple choice Quiz"
+                            },
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = "Select quiz type",
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+
+                    DropdownMenu(
+                        modifier = Modifier.background(MaterialTheme.colorScheme.primary.copy(0.1f)),
+                        expanded = typeMenuExpanded,
+                        onDismissRequest = { typeMenuExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Fill‑in the blank") },
+                            onClick = {
+                                quizType = QuizType.FILL_IN_THE_BLANK
+                                typeMenuExpanded = false
+                            },
+                            trailingIcon = {
+                                if (quizType == QuizType.FILL_IN_THE_BLANK) {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Multiple choice") },
+                            onClick = {
+                                quizType = QuizType.MULTIPLE_CHOICE
+                                typeMenuExpanded = false
+                            },
+                            trailingIcon = {
+                                if (quizType == QuizType.MULTIPLE_CHOICE) {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        )
+                    }
+                }
 
                 BasicTextField(
                     value = if (quizCount == 0) "" else quizCount.toString(),
@@ -139,6 +208,15 @@ fun BibleQuizScreen() {
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
+                            if (quizCount == 0) {
+                                Text(
+                                    text = "1–50",
+                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                        textAlign = TextAlign.Center,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                    )
+                                )
+                            }
                             innerTextField()
                         }
                     }
@@ -171,54 +249,78 @@ fun BibleQuizScreen() {
                 }
             }
 
-            if (quizItems.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    itemsIndexed(quizItems) { index, item ->
-                        QuizItemCard(
-                            index = index,
-                            item = item,
-                            userAnswer = userAnswers[index],
-                            onAnswerChange = { newAns ->
-                                userAnswers = userAnswers.toMutableList()
-                                    .also { it[index] = newAns }
-                                    .toList()
-                            },
-                            submitted = submitted
-                        )
-                    }
+            Spacer(modifier = Modifier.height(8.dp))
 
-                    if (submitted) {
-                        item {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 16.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    text = "Final Score: $score / ${quizItems.size}",
-                                    style = MaterialTheme.typography.headlineSmall
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Button(onClick = { versionTrigger++ }) {
-                                    Text("New Quiz", color = Color.White)
+            when {
+                isLoading -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            CircularProgressIndicator()
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text("Loading Bible Quiz")
+                        }
+                    }
+                }
+                quizItems.isNotEmpty() -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        itemsIndexed(quizItems) { index, item ->
+                            QuizItemCard(
+                                index = index,
+                                item = item,
+                                userAnswer = userAnswers[index],
+                                onAnswerChange = { newAns ->
+                                    userAnswers = userAnswers.toMutableList()
+                                        .also { it[index] = newAns }
+                                        .toList()
+                                },
+                                submitted = submitted
+                            )
+                        }
+
+                        if (submitted) {
+                            item {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 16.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = "Final Score: $score / ${quizItems.size}",
+                                        style = MaterialTheme.typography.headlineSmall
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Button(onClick = { versionTrigger++ }) {
+                                        Text("New Quiz", color = Color.White)
+                                    }
                                 }
                             }
                         }
+                        item {
+                            Spacer(modifier = Modifier.height(400.dp))
+                        }
                     }
-                    item {
-                        Spacer(modifier = Modifier.height(400.dp))
+                }
+                else -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "Tap Generate to start a quiz",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
                     }
                 }
             }

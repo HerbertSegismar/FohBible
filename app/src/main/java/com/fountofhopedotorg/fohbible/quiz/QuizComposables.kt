@@ -22,6 +22,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.fountofhopedotorg.fohbible.data.QuizItem
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.RadioButton
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 
 @Composable
 fun QuizItemCard(
@@ -56,38 +63,100 @@ fun QuizItemCard(
                     color = MaterialTheme.colorScheme.primary
                 )
                 if (isCorrect) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = "Correct",
-                        tint = Color(0xFF4CAF50)
-                    )
+                    Icon(Icons.Default.Check, "Correct", tint = Color(0xFF4CAF50))
                 } else if (isWrong) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Wrong",
-                        tint = MaterialTheme.colorScheme.error
-                    )
+                    Icon(Icons.Default.Close, "Wrong", tint = MaterialTheme.colorScheme.error)
                 }
             }
+
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = item.displayText,
-                style = MaterialTheme.typography.bodyLarge
-            )
+
+            if (submitted) {
+                VerseTextWithAnswer(item.displayText, item.missingWord)
+            } else {
+                Text(text = item.displayText, style = MaterialTheme.typography.bodyLarge)
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = userAnswer,
-                onValueChange = onAnswerChange,
-                label = { Text("Your answer") },
-                enabled = !submitted,
-                modifier = Modifier.fillMaxWidth(),
-                isError = isWrong,
-                supportingText = if (isWrong) {
-                    { Text("Correct: ${item.missingWord}") }
-                } else if (isCorrect) {
-                    { Text("Correct!") }
-                } else null
-            )
+
+            if (item.options.isNotEmpty()) {
+                item.options.forEach { option ->
+                    val selected = option == userAnswer
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = !submitted) { onAnswerChange(option) }
+                            .padding(vertical = 4.dp)
+                    ) {
+                        RadioButton(
+                            selected = selected,
+                            onClick = { if (!submitted) onAnswerChange(option) }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = option,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+                if (submitted) {
+                    Text(
+                        text = "Your answer: $userAnswer",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isCorrect) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error
+                    )
+                    if (isWrong) {
+                        Text(
+                            text = "Correct: ${item.missingWord}",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            } else {
+                OutlinedTextField(
+                    value = userAnswer,
+                    onValueChange = onAnswerChange,
+                    label = { Text("Your answer") },
+                    enabled = !submitted,
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = isWrong,
+                    supportingText = if (isWrong) {
+                        { Text("Correct: ${item.missingWord}") }
+                    } else if (isCorrect) {
+                        { Text("Correct!") }
+                    } else null
+                )
+            }
         }
     }
+}
+
+@Composable
+private fun VerseTextWithAnswer(displayText: String, missingWord: String) {
+    val blank = "_".repeat(missingWord.length)
+    val annotatedString = buildAnnotatedString {
+        val parts = displayText.split(blank)
+        if (parts.size >= 2) {
+            append(parts[0])
+            withStyle(
+                SpanStyle(
+                    color = Color(0xFF4CAF50),
+                    fontWeight = FontWeight.Bold
+                )
+            ) {
+                append(missingWord)
+            }
+            append(parts[1])
+        } else {
+            append(displayText)
+        }
+    }
+
+    Text(
+        text = annotatedString,
+        style = MaterialTheme.typography.bodyLarge
+    )
 }

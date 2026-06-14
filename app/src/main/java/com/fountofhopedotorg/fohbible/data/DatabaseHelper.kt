@@ -7,6 +7,7 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import com.fountofhopedotorg.fohbible.functions.customDistance
+import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Locale.getDefault
@@ -363,6 +364,119 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             }
         } catch (_: Exception) { }
         return subheadings
+    }
+
+    fun getRandomDistractors(
+        excludeWord: String,
+        count: Int,
+        additionalExcludeWords: Set<String> = emptySet()
+    ): List<String> {
+        val distractors = mutableListOf<String>()          // final chosen distractors
+        val backupDistractors = mutableListOf<String>()    // candidates missing first/last match
+        val usedVersesText = mutableSetOf<String>()        // avoid re‑processing same verse
+        val usedWords = mutableSetOf<String>()             // all words already added (distractors + backup)
+        val backupWordsSet = mutableSetOf<String>()        // for quick lookup in backup
+
+        val db = database ?: return distractors
+
+        val targetLength = excludeWord.length
+        val isLatin = excludeWord.matches(Regex("^[A-Za-z]+$"))
+        val answerFirstCharIsUpper = if (isLatin) excludeWord.first().isUpperCase() else false
+
+        // Lowercase exclusion set – includes answer + adjacent words
+        val excludedLower = (setOf(excludeWord) + additionalExcludeWords)
+            .map { it.lowercase() }
+            .toSet()
+
+        val maxStrictBatches = 10          // 10 batches = 50 random verses
+        var strictPhase = true
+        var batchesScanned = 0
+
+        while (distractors.size < count) {
+            val cursor = db.rawQuery(
+                "SELECT text FROM verses ORDER BY RANDOM() LIMIT 5",
+                null
+            )
+            if (!cursor.moveToFirst()) {
+                cursor.close()
+                break
+            }
+            do {
+                val raw = cursor.getString(0) ?: ""
+                val clean = SimpleVerseProcessor.stripXmlTags(raw)
+                if (clean.isEmpty() || usedVersesText.contains(clean)) continue
+                usedVersesText.add(clean)
+
+                val words = clean.split(" ")
+                    .map { it.replace(Regex("[^\\p{L}]"), "") }
+                    .filter { word ->
+                        word.length == targetLength &&
+                                word.lowercase() !in excludedLower
+                    }
+                    .distinct()
+
+                for (word in words) {
+                    if (distractors.size >= count) break
+                    val wordLower = word.lowercase()
+                    if (wordLower in usedWords) continue
+
+                    // Suffix rule (Latin only)
+                    val suffixOk = when {
+                        isLatin && excludeWord.endsWith("ing", ignoreCase = true) ->
+                            word.endsWith("ing", ignoreCase = true)
+                        isLatin && excludeWord.endsWith("ed", ignoreCase = true) ->
+                            word.endsWith("ed", ignoreCase = true)
+                        else -> true
+                    }
+                    if (!suffixOk) continue
+
+                    // Case matching (Latin only)
+                    if (isLatin && word.first().isUpperCase() != answerFirstCharIsUpper) continue
+
+                    // All hard rules passed – now check first/last letter
+                    val matchesFirstLast = word.first().lowercaseChar() == excludeWord.first().lowercaseChar() &&
+                            word.last().lowercaseChar() == excludeWord.last().lowercaseChar()
+
+                    if (strictPhase) {
+                        if (matchesFirstLast) {
+                            distractors.add(word)
+                            usedWords.add(wordLower)
+                        } else {
+                            // Save as backup – only if not already in backup pool
+                            if (wordLower !in backupWordsSet) {
+                                backupDistractors.add(word)
+                                backupWordsSet.add(wordLower)
+                            }
+                        }
+                    } else {
+                        // Relaxed phase – accept any word that passes the basic rules
+                        distractors.add(word)
+                        usedWords.add(wordLower)
+                    }
+                }
+            } while (cursor.moveToNext() && distractors.size < count)
+            cursor.close()
+
+            // Phase transition logic
+            if (strictPhase) {
+                batchesScanned++
+                if (batchesScanned >= maxStrictBatches) {
+                    // Move to relaxed phase, first fill with backup words
+                    for (backupWord in backupDistractors) {
+                        if (distractors.size >= count) break
+                        if (backupWord.lowercase() !in usedWords) {
+                            distractors.add(backupWord)
+                            usedWords.add(backupWord.lowercase())
+                        }
+                    }
+                    strictPhase = false
+                    // Reset scan counter to avoid unnecessary limit in relaxed phase
+                }
+            }
+
+            if (distractors.size >= count) break
+        }
+        return distractors
     }
 
     fun getRandomVerses(): List<Verse> {

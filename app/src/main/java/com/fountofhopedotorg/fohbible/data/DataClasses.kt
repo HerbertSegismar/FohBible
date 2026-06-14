@@ -286,7 +286,8 @@ data class SearchOptions(val bookRange: Pair<Int, Int>? = null)
 data class QuizItem(
     val verse: Verse,
     val missingWord: String,
-    val displayText: String
+    val displayText: String,
+    val options: List<String> = emptyList()
 )
 
 data class QuickAction(
