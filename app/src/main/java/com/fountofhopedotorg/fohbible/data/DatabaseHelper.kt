@@ -371,11 +371,11 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
         count: Int,
         additionalExcludeWords: Set<String> = emptySet()
     ): List<String> {
-        val distractors = mutableListOf<String>()          // final chosen distractors
-        val backupDistractors = mutableListOf<String>()    // candidates missing first/last match
-        val usedVersesText = mutableSetOf<String>()        // avoid re‑processing same verse
-        val usedWords = mutableSetOf<String>()             // all words already added (distractors + backup)
-        val backupWordsSet = mutableSetOf<String>()        // for quick lookup in backup
+        val distractors = mutableListOf<String>()
+        val backupDistractors = mutableListOf<String>()
+        val usedVersesText = mutableSetOf<String>()
+        val usedWords = mutableSetOf<String>()
+        val backupWordsSet = mutableSetOf<String>()
 
         val db = database ?: return distractors
 
