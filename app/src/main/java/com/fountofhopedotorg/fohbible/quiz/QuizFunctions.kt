@@ -1,28 +1,49 @@
 package com.fountofhopedotorg.fohbible.quiz
 
+import com.fountofhopedotorg.fohbible.data.BibleData
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.QuizItem
 import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
+import kotlin.random.Random
 
 enum class QuizType { FILL_IN_THE_BLANK, MULTIPLE_CHOICE }
 
 fun generateQuizItems(
     dbHelper: DatabaseHelper,
     count: Int,
-    type: QuizType = QuizType.FILL_IN_THE_BLANK
+    type: QuizType = QuizType.FILL_IN_THE_BLANK,
+    bookRange: Pair<Int, Int>? = null
 ): List<QuizItem> {
     val items = mutableListOf<QuizItem>()
     val usedVerses = mutableSetOf<String>()
+    val random = Random
+    var maxAttempts = count * 30
+    val eligibleBooks = if (bookRange != null) {
+        BibleData.allBooks.filter { it.customNumber in bookRange.first..bookRange.second }
+    } else {
+        BibleData.allBooks
+    }
+    if (eligibleBooks.isEmpty()) return emptyList()
 
-    while (items.size < count) {
-        val verses = dbHelper.getRandomVerses()
-        if (verses.isEmpty()) continue
-        val verse = verses.first()
-        val key = "${verse.bookName}:${verse.chapter}:${verse.verseNumber}"
+    while (items.size < count && maxAttempts > 0) {
+        val book = eligibleBooks[random.nextInt(eligibleBooks.size)]
+        val chapter = random.nextInt(book.chapters) + 1
+        val verseCount = dbHelper.getVerseCount(book.customNumber, chapter)
+        if (verseCount == 0) continue
+
+        val verseNumber = random.nextInt(verseCount) + 1
+        val verses = dbHelper.getVerses(book.customNumber, chapter)
+        val verse = verses.find { it.verseNumber == verseNumber } ?: continue
+        val enrichedVerse = verse.copy(
+            bookName = book.name,
+            chapter = chapter
+        )
+
+        val key = "${book.name}:${chapter}:${verseNumber}"
         if (usedVerses.contains(key)) continue
         usedVerses.add(key)
 
-        val cleanText = SimpleVerseProcessor.stripXmlTags(verse.text)
+        val cleanText = SimpleVerseProcessor.stripXmlTags(enrichedVerse.text)
         if (cleanText.isBlank()) continue
         val words = cleanText.split(" ")
         if (words.isEmpty()) continue
@@ -61,12 +82,13 @@ fun generateQuizItems(
 
         items.add(
             QuizItem(
-                verse = verse,
+                verse = enrichedVerse,
                 missingWord = missingWord,
                 displayText = displayText,
                 options = options
             )
         )
+        maxAttempts--
     }
     return items
 }

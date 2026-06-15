@@ -56,7 +56,6 @@ fun QuizItemCard(
         }
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // ---- Header row with verse reference and status icon ----
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -76,7 +75,6 @@ fun QuizItemCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // ---- Verse text (with highlighted answer when submitted) ----
             if (submitted) {
                 VerseTextWithAnswer(item.displayText, item.missingWord)
             } else {
@@ -85,7 +83,6 @@ fun QuizItemCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // ---- Multiple‑choice options (flow layout) ----
             if (item.options.isNotEmpty()) {
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
@@ -97,8 +94,8 @@ fun QuizItemCard(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
-                                .widthIn(min = 150.dp)   // ensures two items fit on most screens
-                                .weight(1f, fill = true) // fills equal width in row
+                                .widthIn(min = 150.dp)
+                                .weight(1f, fill = true)
                                 .clickable(enabled = !submitted) { onAnswerChange(option) }
                                 .padding(vertical = 4.dp)
                         ) {
@@ -115,8 +112,6 @@ fun QuizItemCard(
                         }
                     }
                 }
-
-                // Feedback text after submission
                 if (submitted) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -133,7 +128,6 @@ fun QuizItemCard(
                     }
                 }
             } else {
-                // Fill‑in‑the‑blank text field (unchanged)
                 OutlinedTextField(
                     value = userAnswer,
                     onValueChange = onAnswerChange,

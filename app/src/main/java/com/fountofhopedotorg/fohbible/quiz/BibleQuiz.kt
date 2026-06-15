@@ -27,9 +27,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.fountofhopedotorg.fohbible.data.DatabaseHelper
-import com.fountofhopedotorg.fohbible.data.QuizItem
+import com.fountofhopedotorg.fohbible.composables.ScopeDropdown
+import com.fountofhopedotorg.fohbible.data.*
 import com.fountofhopedotorg.fohbible.modals.VersionSelectionModal
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
@@ -40,10 +41,9 @@ import kotlinx.coroutines.withContext
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun BibleQuizScreen() {
-    val primaryColor = MaterialTheme.colorScheme.primary
     val viewModel: AppViewModel = viewModel()
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
+    val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     val focusManager = LocalFocusManager.current
 
@@ -54,14 +54,12 @@ fun BibleQuizScreen() {
         DatabaseHelper(context, viewModel.currentDbName)
     }
 
-    DisposableEffect(viewModel.currentDbName) {
-        onDispose { dbHelper.close() }
-    }
-
     var quizCount by remember { mutableIntStateOf(10) }
     var quizType by remember { mutableStateOf(QuizType.FILL_IN_THE_BLANK) }
     var showVersionModal by remember { mutableStateOf(false) }
     var typeMenuExpanded by remember { mutableStateOf(false) }
+    var quizScope by remember { mutableStateOf(SCOPE_WHOLE) }
+    var showScopeDropdown by remember { mutableStateOf(false) }
 
     var fillItems by remember { mutableStateOf<List<QuizItem>>(emptyList()) }
     var fillUserAnswers by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -82,9 +80,18 @@ fun BibleQuizScreen() {
     val currentSubmitted = if (quizType == QuizType.FILL_IN_THE_BLANK) fillSubmitted else multiSubmitted
     val currentScore = if (quizType == QuizType.FILL_IN_THE_BLANK) fillScore else multiScore
 
+    fun getBookRangeFromScope(scopeKey: String): Pair<Int, Int>? {
+        return if (isBookScope(scopeKey)) {
+            getBookNumberFromScope(scopeKey)?.let { Pair(it, it) }
+        } else {
+            SCOPE_RANGES[scopeKey]?.let { Pair(it.start, it.end) }
+        }
+    }
+
     fun generateFillQuiz() {
-        scope.launch(Dispatchers.IO) {
-            val newFill = generateQuizItems(dbHelper, quizCount, QuizType.FILL_IN_THE_BLANK)
+        coroutineScope.launch(Dispatchers.IO) {
+            val range = getBookRangeFromScope(quizScope)
+            val newFill = generateQuizItems(dbHelper, quizCount, QuizType.FILL_IN_THE_BLANK, range)
             fillItems = newFill
             fillUserAnswers = List(newFill.size) { "" }
             fillSubmitted = false
@@ -106,8 +113,9 @@ fun BibleQuizScreen() {
                     prefetchedMulti = null
                     quizVersion++
 
-                    scope.launch(Dispatchers.IO) {
-                        val next = generateQuizItems(dbHelper, quizCount, QuizType.MULTIPLE_CHOICE)
+                    coroutineScope.launch(Dispatchers.IO) {
+                        val range = getBookRangeFromScope(quizScope)
+                        val next = generateQuizItems(dbHelper, quizCount, QuizType.MULTIPLE_CHOICE, range)
                         prefetchedMulti = next
                     }
                 }
@@ -120,35 +128,38 @@ fun BibleQuizScreen() {
                     quizVersion++
                     val alreadyShown = pre.size
 
-                    scope.launch(Dispatchers.IO) {
-                        val fullNew = generateQuizItems(dbHelper, quizCount, QuizType.MULTIPLE_CHOICE)
+                    coroutineScope.launch(Dispatchers.IO) {
+                        val range = getBookRangeFromScope(quizScope)
+                        val fullNew = generateQuizItems(dbHelper, quizCount, QuizType.MULTIPLE_CHOICE, range)
                         val additional = fullNew.takeLast(quizCount - alreadyShown)
                         multiItems = pre + additional
                         multiUserAnswers = multiUserAnswers + List(additional.size) { "" }
 
-                        val next = generateQuizItems(dbHelper, quizCount, QuizType.MULTIPLE_CHOICE)
+                        val next = generateQuizItems(dbHelper, quizCount, QuizType.MULTIPLE_CHOICE, range)
                         prefetchedMulti = next
                     }
                 }
             }
         } else {
-            scope.launch(Dispatchers.IO) {
-                val newMulti = generateQuizItems(dbHelper, quizCount, QuizType.MULTIPLE_CHOICE)
+            coroutineScope.launch(Dispatchers.IO) {
+                val range = getBookRangeFromScope(quizScope)
+                val newMulti = generateQuizItems(dbHelper, quizCount, QuizType.MULTIPLE_CHOICE, range)
                 multiItems = newMulti
                 multiUserAnswers = List(newMulti.size) { "" }
                 multiSubmitted = false
                 multiScore = 0
                 quizVersion++
 
-                val next = generateQuizItems(dbHelper, quizCount, QuizType.MULTIPLE_CHOICE)
+                val next = generateQuizItems(dbHelper, quizCount, QuizType.MULTIPLE_CHOICE, range)
                 prefetchedMulti = next
             }
         }
     }
 
     LaunchedEffect(dbHelper) {
+        val range = getBookRangeFromScope(quizScope)
         val fill = withContext(Dispatchers.IO) {
-            generateQuizItems(dbHelper, quizCount, QuizType.FILL_IN_THE_BLANK)
+            generateQuizItems(dbHelper, quizCount, QuizType.FILL_IN_THE_BLANK, range)
         }
         fillItems = fill
         fillUserAnswers = List(fill.size) { "" }
@@ -157,14 +168,14 @@ fun BibleQuizScreen() {
         quizVersion++
 
         launch(Dispatchers.IO) {
-            val firstMulti = generateQuizItems(dbHelper, quizCount, QuizType.MULTIPLE_CHOICE)
+            val firstMulti = generateQuizItems(dbHelper, quizCount, QuizType.MULTIPLE_CHOICE, range)
             multiItems = firstMulti
             multiUserAnswers = List(firstMulti.size) { "" }
             multiSubmitted = false
             multiScore = 0
             quizVersion++
 
-            val next = generateQuizItems(dbHelper, quizCount, QuizType.MULTIPLE_CHOICE)
+            val next = generateQuizItems(dbHelper, quizCount, QuizType.MULTIPLE_CHOICE, range)
             prefetchedMulti = next
         }
 
@@ -188,6 +199,23 @@ fun BibleQuizScreen() {
         focusManager.clearFocus()
         listState.scrollToItem(0)
     }
+
+    LaunchedEffect(quizScope) {
+        if (initialized) {
+            prefetchedMulti = null
+            generateFillQuiz()
+            generateMultiQuiz()
+        }
+    }
+
+    val scopeColors = SearchColors(
+        primary = MaterialTheme.colorScheme.primary,
+        background = Color.Transparent,
+        text = MaterialTheme.colorScheme.onSurface,
+        muted = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+        card = MaterialTheme.colorScheme.surfaceVariant,
+        border = MaterialTheme.colorScheme.outline
+    )
 
     Scaffold(
         floatingActionButton = {
@@ -238,7 +266,9 @@ fun BibleQuizScreen() {
                         Icon(Icons.Default.ArrowDropDown, null, modifier = Modifier.size(22.dp))
                     }
                     DropdownMenu(
-                        modifier = Modifier.background(primaryColor.copy(0.1f)),
+                        modifier = Modifier
+                            .fillMaxWidth(0.9f)
+                            .background(MaterialTheme.colorScheme.secondary.copy(0.2f)),
                         expanded = typeMenuExpanded,
                         onDismissRequest = { typeMenuExpanded = false }
                     ) {
@@ -268,6 +298,23 @@ fun BibleQuizScreen() {
                                         modifier = Modifier.size(20.dp))
                             }
                         )
+                        HorizontalDivider()
+                        Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
+                            Column {
+                                Text("Select Quiz Scope", fontSize = 14.sp)
+                                ScopeDropdown(
+                                    scope = quizScope,
+                                    onScopeChange = { newScope ->
+                                        quizScope = newScope
+                                        showScopeDropdown = false
+                                    },
+                                    isOpen = showScopeDropdown,
+                                    onToggle = { showScopeDropdown = !showScopeDropdown },
+                                    colors = scopeColors,
+                                    dialogTitle = "Select Quiz Scope"
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -398,7 +445,7 @@ fun BibleQuizScreen() {
                             }
                         }
 
-                        item { Spacer(modifier = Modifier.height(360.dp)) }
+                        item { Spacer(modifier = Modifier.height(350.dp)) }
                     }
                 }
             }

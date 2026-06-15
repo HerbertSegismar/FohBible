@@ -107,7 +107,8 @@ fun ScopeDropdown(
     onScopeChange: (SearchScope) -> Unit,
     isOpen: Boolean,
     onToggle: () -> Unit,
-    colors: SearchColors
+    colors: SearchColors,
+    dialogTitle: String = "Select Search Scope"
 ) {
     val currentConfig = getScopeConfig(scope)
     Card(
@@ -130,7 +131,7 @@ fun ScopeDropdown(
     if (isOpen) {
         Dialog(onDismissRequest = onToggle) {
             Card(
-                modifier = Modifier.fillMaxWidth(0.9f).wrapContentHeight().padding(16.dp),
+                modifier = Modifier.fillMaxWidth().wrapContentHeight().padding(16.dp),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Column {
@@ -142,7 +143,7 @@ fun ScopeDropdown(
                         horizontalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            "Select Search Scope",
+                            dialogTitle,
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center,
@@ -158,7 +159,7 @@ fun ScopeDropdown(
                                 Text(
                                     category,
                                     modifier = Modifier.fillMaxWidth()
-                                        .background(colors.primary)
+                                        .background(colors.primary.copy(0.8f))
                                         .padding(8.dp),
                                     color = Color.White,
                                     fontSize = 14.sp,

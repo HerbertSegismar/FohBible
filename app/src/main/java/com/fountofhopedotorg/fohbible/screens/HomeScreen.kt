@@ -33,7 +33,6 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -77,6 +76,7 @@ import com.fountofhopedotorg.fohbible.data.PopularDevotional
 import com.fountofhopedotorg.fohbible.data.QuickAction
 import com.fountofhopedotorg.fohbible.data.Verse
 import com.fountofhopedotorg.fohbible.creator.getRandomColor
+import com.fountofhopedotorg.fohbible.home.UsefulSpaceGrid
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
 import com.fountofhopedotorg.fohbible.utils.getFontFamily
@@ -263,27 +263,14 @@ fun HomeScreen(
             )
         }
         item {
-            Button(
-                onClick = onCreateSermonMaterialsClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-            ) {
-                Text("Create Sermon Materials", color = Color.White)
-            }
-        }
-        item {
-            Button(
-                onClick = onTakeBibleQuizClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-            ) {
-                Text("Take Bible Quiz", color = Color.White)
-            }
+            Spacer(Modifier.height(16.dp))
+            UsefulSpaceGrid(
+                onCreateSermonMaterialsClick = onCreateSermonMaterialsClick,
+                onTakeBibleQuizClick = onTakeBibleQuizClick,
+            )
         }
 
-        item { Spacer(Modifier.height(33.dp)) }
+        item { Spacer(Modifier.height(17.dp)) }
 
         item {
             val isMatrixVisible by remember { mutableStateOf(true) }

@@ -56,7 +56,7 @@ val scopeColors = mapOf(
 val SCOPE_CONFIG: Map<String, ScopeConfig> = mapOf(
     SCOPE_WHOLE to ScopeConfig(
         label = "Whole Bible",
-        description = "Search all books (Genesis - Revelation)",
+        description = "Include all books (Genesis - Revelation)",
         category = "All"
     ),
     SCOPE_OLD_TESTAMENT to ScopeConfig(
@@ -140,14 +140,14 @@ fun getScopeConfig(scope: SearchScope): ScopeConfig {
             if (bookInfo != null) {
                 return ScopeConfig(
                     label = bookInfo.name,
-                    description = "Search only ${bookInfo.name}",
+                    description = "Include only ${bookInfo.name}",
                     category = "Individual Books"
                 )
             }
         }
         return ScopeConfig(
             label = "Unknown Book",
-            description = "Search this book",
+            description = "Include this book",
             category = "Individual Books"
         )
     }

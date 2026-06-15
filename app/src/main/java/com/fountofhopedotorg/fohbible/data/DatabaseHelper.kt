@@ -382,13 +382,11 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
         val targetLength = excludeWord.length
         val isLatin = excludeWord.matches(Regex("^[A-Za-z]+$"))
         val answerFirstCharIsUpper = if (isLatin) excludeWord.first().isUpperCase() else false
-
-        // Lowercase exclusion set – includes answer + adjacent words
         val excludedLower = (setOf(excludeWord) + additionalExcludeWords)
             .map { it.lowercase() }
             .toSet()
 
-        val maxStrictBatches = 10          // 10 batches = 50 random verses
+        val maxStrictBatches = 10
         var strictPhase = true
         var batchesScanned = 0
 
@@ -420,20 +418,19 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                     val wordLower = word.lowercase()
                     if (wordLower in usedWords) continue
 
-                    // Suffix rule (Latin only)
                     val suffixOk = when {
                         isLatin && excludeWord.endsWith("ing", ignoreCase = true) ->
                             word.endsWith("ing", ignoreCase = true)
                         isLatin && excludeWord.endsWith("ed", ignoreCase = true) ->
                             word.endsWith("ed", ignoreCase = true)
+                        isLatin && excludeWord.endsWith("ly", ignoreCase = true) ->
+                            word.endsWith("ly", ignoreCase = true)
                         else -> true
                     }
                     if (!suffixOk) continue
 
-                    // Case matching (Latin only)
                     if (isLatin && word.first().isUpperCase() != answerFirstCharIsUpper) continue
 
-                    // All hard rules passed – now check first/last letter
                     val matchesFirstLast = word.first().lowercaseChar() == excludeWord.first().lowercaseChar() &&
                             word.last().lowercaseChar() == excludeWord.last().lowercaseChar()
 
@@ -442,14 +439,12 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                             distractors.add(word)
                             usedWords.add(wordLower)
                         } else {
-                            // Save as backup – only if not already in backup pool
                             if (wordLower !in backupWordsSet) {
                                 backupDistractors.add(word)
                                 backupWordsSet.add(wordLower)
                             }
                         }
                     } else {
-                        // Relaxed phase – accept any word that passes the basic rules
                         distractors.add(word)
                         usedWords.add(wordLower)
                     }
@@ -457,11 +452,9 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             } while (cursor.moveToNext() && distractors.size < count)
             cursor.close()
 
-            // Phase transition logic
             if (strictPhase) {
                 batchesScanned++
                 if (batchesScanned >= maxStrictBatches) {
-                    // Move to relaxed phase, first fill with backup words
                     for (backupWord in backupDistractors) {
                         if (distractors.size >= count) break
                         if (backupWord.lowercase() !in usedWords) {
@@ -470,7 +463,6 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                         }
                     }
                     strictPhase = false
-                    // Reset scan counter to avoid unnecessary limit in relaxed phase
                 }
             }
 
