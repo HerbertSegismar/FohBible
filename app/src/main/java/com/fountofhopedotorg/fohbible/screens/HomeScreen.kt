@@ -143,7 +143,8 @@ fun HomeScreen(
     onNavigateToScreen: (Screen) -> Unit,
     databaseHelper: DatabaseHelper? = null,
     onCreateSermonMaterialsClick: () -> Unit = {},
-    onTakeBibleQuizClick: () -> Unit
+    onTakeBibleQuizClick: () -> Unit,
+    onLearnHebrewClick: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -267,6 +268,7 @@ fun HomeScreen(
             UsefulSpaceGrid(
                 onCreateSermonMaterialsClick = onCreateSermonMaterialsClick,
                 onTakeBibleQuizClick = onTakeBibleQuizClick,
+                onLearnHebrewClick = onLearnHebrewClick,
             )
         }
 
@@ -377,7 +379,6 @@ private fun QuickActionCarouselItem(action: QuickAction) {
                     )
             )
 
-            // Content
             Column(
                 modifier = Modifier
                     .fillMaxSize()

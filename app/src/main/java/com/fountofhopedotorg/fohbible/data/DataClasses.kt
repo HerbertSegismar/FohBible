@@ -5,6 +5,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.BaselineShift
@@ -344,6 +345,12 @@ data class SelectedWord(
         return result
     }
 }
+
+data class HebrewLetter(
+    val name: String,
+    val english: String,
+    val draw: DrawScope.(progress: Float) -> Unit
+)
 
 data class CrownStructure(val vinePath: Path, val thornsPath: Path)
 

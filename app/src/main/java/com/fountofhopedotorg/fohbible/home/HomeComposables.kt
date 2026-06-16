@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Note
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.QuestionAnswer
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -41,7 +42,8 @@ import com.fountofhopedotorg.fohbible.models.AppViewModel
 @Composable
 fun UsefulSpaceGrid(
     onCreateSermonMaterialsClick: () -> Unit,
-    onTakeBibleQuizClick: () -> Unit
+    onTakeBibleQuizClick: () -> Unit,
+    onLearnHebrewClick: () -> Unit,
 ) {
     val viewModel: AppViewModel = viewModel()
     Box(
@@ -72,14 +74,14 @@ fun UsefulSpaceGrid(
             }
 
             Spacer(Modifier.height(16.dp))
-            for (row in 0..2) {
+            for (row in 0..3) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     for (col in 0..2) {
                         val index = row * 3 + col
-                        val isOccupied = index < 2
+                        val isOccupied = index < 3
 
                         Box(
                             modifier = Modifier
@@ -99,8 +101,11 @@ fun UsefulSpaceGrid(
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = ripple(bounded = true, color = Color.White),
                                         onClick = {
-                                            if (index == 0) onCreateSermonMaterialsClick()
-                                            else onTakeBibleQuizClick()
+                                            when (index) {
+                                                0 -> onCreateSermonMaterialsClick()
+                                                1 -> onTakeBibleQuizClick()
+                                                else -> onLearnHebrewClick()
+                                            }
                                         }
                                     ) else Modifier
                                 ),
@@ -112,16 +117,22 @@ fun UsefulSpaceGrid(
                                     verticalArrangement = Arrangement.Center
                                 ) {
                                     Icon(
-                                        imageVector = if (index == 0) Icons.AutoMirrored.Filled.Note
-                                        else Icons.Filled.QuestionAnswer,
+                                        imageVector = when (index) {
+                                            0 -> Icons.AutoMirrored.Filled.Note
+                                            1 -> Icons.Filled.QuestionAnswer
+                                            else -> Icons.Filled.School
+                                        },
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.secondary,
-                                        modifier = Modifier.size(36.dp).rotate(90f)
+                                        modifier = if (index == 0) Modifier.rotate(90f) else Modifier.size(24.dp)
                                     )
                                     Spacer(Modifier.height(8.dp))
                                     Text(
-                                        text = if (index == 0) "Create Sermon"
-                                        else "Bible Quiz",
+                                        text =  when (index) {
+                                            0 -> "Create Sermon"
+                                            1 -> "Bible Quiz"
+                                            else -> "Learn Hebrew"
+                                        },
                                         style = MaterialTheme.typography.labelMedium,
                                         fontWeight = FontWeight.Bold,
                                         textAlign = TextAlign.Center,

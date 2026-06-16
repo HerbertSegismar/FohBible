@@ -83,6 +83,7 @@ import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.data.BibleVersionInfo
 import com.fountofhopedotorg.fohbible.data.BibleVersionInfoRepository
 import com.fountofhopedotorg.fohbible.creator.CreatorScreen
+import com.fountofhopedotorg.fohbible.learn.LearnHebrewScreen
 import com.fountofhopedotorg.fohbible.quiz.BibleQuizScreen
 import com.fountofhopedotorg.fohbible.screens.BookmarksScreen
 import com.fountofhopedotorg.fohbible.screens.HomeScreen
@@ -474,7 +475,8 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             },
                             databaseHelper = dbHelper,
                             onCreateSermonMaterialsClick = { viewModel.navigateTo(Screen.Creator) },
-                            onTakeBibleQuizClick = { viewModel.navigateTo(Screen.Quiz) }
+                            onTakeBibleQuizClick = { viewModel.navigateTo(Screen.Quiz) },
+                            onLearnHebrewClick = {viewModel.navigateTo(Screen.LearnHebrew)}
                         )
                         is Screen.Reader -> {
                             val passage = currentScreen.passage ?: viewModel.primaryPassage
@@ -525,6 +527,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                         )
                         Screen.Creator -> CreatorScreen()
                         Screen.Quiz -> BibleQuizScreen()
+                        Screen.LearnHebrew -> LearnHebrewScreen()
                     }
                     if (viewModel.showNavigationModal) {
                         NavigationModal(
@@ -784,6 +787,7 @@ sealed class Screen {
     object Search : Screen()
     object Creator : Screen()
     object Quiz : Screen()
+    object LearnHebrew : Screen()
 }
 
 private fun copyUriToInternalStorage(context: Context, sourceUri: Uri): String? {

@@ -35,6 +35,7 @@ import com.fountofhopedotorg.fohbible.modals.VersionSelectionModal
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -60,20 +61,19 @@ fun BibleQuizScreen() {
     var typeMenuExpanded by remember { mutableStateOf(false) }
     var quizScope by remember { mutableStateOf(SCOPE_WHOLE) }
     var showScopeDropdown by remember { mutableStateOf(false) }
-
     var fillItems by remember { mutableStateOf<List<QuizItem>>(emptyList()) }
     var fillUserAnswers by remember { mutableStateOf<List<String>>(emptyList()) }
     var fillSubmitted by remember { mutableStateOf(false) }
     var fillScore by remember { mutableIntStateOf(0) }
-
-    var multiItems by remember { mutableStateOf<List<QuizItem>>(emptyList()) }
+    val multiPool = remember { mutableStateListOf<QuizItem>() }
+    val multiItems = remember { mutableStateListOf<QuizItem>() }
     var multiUserAnswers by remember { mutableStateOf<List<String>>(emptyList()) }
     var multiSubmitted by remember { mutableStateOf(false) }
     var multiScore by remember { mutableIntStateOf(0) }
-    var prefetchedMulti by remember { mutableStateOf<List<QuizItem>?>(null) }
 
     var initialized by remember { mutableStateOf(false) }
     var quizVersion by remember { mutableIntStateOf(0) }
+    var activeMultiJob by remember { mutableStateOf<Job?>(null) }
 
     val currentItems = if (quizType == QuizType.FILL_IN_THE_BLANK) fillItems else multiItems
     val currentUserAnswers = if (quizType == QuizType.FILL_IN_THE_BLANK) fillUserAnswers else multiUserAnswers
@@ -92,100 +92,95 @@ fun BibleQuizScreen() {
         coroutineScope.launch(Dispatchers.IO) {
             val range = getBookRangeFromScope(quizScope)
             val newFill = generateQuizItems(dbHelper, quizCount, QuizType.FILL_IN_THE_BLANK, range)
-            fillItems = newFill
-            fillUserAnswers = List(newFill.size) { "" }
-            fillSubmitted = false
-            fillScore = 0
-            quizVersion++
+            withContext(Dispatchers.Main) {
+                fillItems = newFill
+                fillUserAnswers = List(newFill.size) { "" }
+                fillSubmitted = false
+                fillScore = 0
+                quizVersion++
+            }
         }
     }
 
     fun generateMultiQuiz() {
-        val pre = prefetchedMulti
-        if (pre != null) {
-            when {
-                pre.size >= quizCount -> {
-                    val trimmed = pre.take(quizCount)
-                    multiItems = trimmed
-                    multiUserAnswers = List(trimmed.size) { "" }
-                    multiSubmitted = false
-                    multiScore = 0
-                    prefetchedMulti = null
-                    quizVersion++
+        activeMultiJob?.cancel()
 
-                    coroutineScope.launch(Dispatchers.IO) {
+        val available = minOf(quizCount, multiPool.size)
+
+        if (available > 0) {
+            val consumed = multiPool.take(available)
+            multiItems.clear()
+            multiItems.addAll(consumed)
+            multiPool.removeAll(consumed)
+
+            multiUserAnswers = MutableList(available) { "" }
+            multiSubmitted = false
+            multiScore = 0
+            quizVersion++
+
+            val stillMissing = quizCount - available
+            if (stillMissing == 0) {
+                val needed = 50 - multiPool.size
+                if (needed > 0) {
+                    activeMultiJob = coroutineScope.launch(Dispatchers.IO) {
                         val range = getBookRangeFromScope(quizScope)
-                        val next = generateQuizItems(dbHelper, quizCount, QuizType.MULTIPLE_CHOICE, range)
-                        prefetchedMulti = next
+                        val extra = generateQuizItems(dbHelper, needed, QuizType.MULTIPLE_CHOICE, range)
+                        withContext(Dispatchers.Main) {
+                            multiPool.addAll(extra)
+                        }
                     }
                 }
-                pre.size < quizCount -> {
-                    multiItems = pre
-                    multiUserAnswers = List(pre.size) { "" }
-                    multiSubmitted = false
-                    multiScore = 0
-                    prefetchedMulti = null
-                    quizVersion++
-                    val alreadyShown = pre.size
-
-                    coroutineScope.launch(Dispatchers.IO) {
-                        val range = getBookRangeFromScope(quizScope)
-                        val fullNew = generateQuizItems(dbHelper, quizCount, QuizType.MULTIPLE_CHOICE, range)
-                        val additional = fullNew.takeLast(quizCount - alreadyShown)
-                        multiItems = pre + additional
-                        multiUserAnswers = multiUserAnswers + List(additional.size) { "" }
-
-                        val next = generateQuizItems(dbHelper, quizCount, QuizType.MULTIPLE_CHOICE, range)
-                        prefetchedMulti = next
+            } else {
+                activeMultiJob = coroutineScope.launch(Dispatchers.IO) {
+                    val range = getBookRangeFromScope(quizScope)
+                    val missingItems = generateQuizItems(dbHelper, stillMissing, QuizType.MULTIPLE_CHOICE, range)
+                    withContext(Dispatchers.Main) {
+                        for (item in missingItems) {
+                            multiItems.add(item)
+                            multiUserAnswers = multiUserAnswers + ""
+                        }
+                        quizVersion++
+                    }
+                    val freshPool = generateQuizItems(dbHelper, 50, QuizType.MULTIPLE_CHOICE, range)
+                    val shownSet = (consumed + missingItems).toSet()
+                    val remaining = freshPool.filter { it !in shownSet }.take(50)
+                    withContext(Dispatchers.Main) {
+                        multiPool.clear()
+                        multiPool.addAll(remaining)
                     }
                 }
             }
         } else {
             coroutineScope.launch(Dispatchers.IO) {
                 val range = getBookRangeFromScope(quizScope)
-                val newMulti = generateQuizItems(dbHelper, quizCount, QuizType.MULTIPLE_CHOICE, range)
-                multiItems = newMulti
-                multiUserAnswers = List(newMulti.size) { "" }
-                multiSubmitted = false
-                multiScore = 0
-                quizVersion++
-
-                val next = generateQuizItems(dbHelper, quizCount, QuizType.MULTIPLE_CHOICE, range)
-                prefetchedMulti = next
+                val immediateQuiz = generateQuizItems(dbHelper, quizCount, QuizType.MULTIPLE_CHOICE, range)
+                withContext(Dispatchers.Main) {
+                    multiItems.clear()
+                    multiItems.addAll(immediateQuiz)
+                    multiUserAnswers = MutableList(quizCount) { "" }
+                    multiSubmitted = false
+                    multiScore = 0
+                    quizVersion++
+                }
+                val fullPool = generateQuizItems(dbHelper, 50, QuizType.MULTIPLE_CHOICE, range)
+                val remaining = fullPool.filter { it !in immediateQuiz.toSet() }.take(50 - quizCount)
+                withContext(Dispatchers.Main) {
+                    multiPool.clear()
+                    multiPool.addAll(remaining)
+                }
             }
         }
     }
 
     LaunchedEffect(dbHelper) {
-        val range = getBookRangeFromScope(quizScope)
-        val fill = withContext(Dispatchers.IO) {
-            generateQuizItems(dbHelper, quizCount, QuizType.FILL_IN_THE_BLANK, range)
-        }
-        fillItems = fill
-        fillUserAnswers = List(fill.size) { "" }
-        fillSubmitted = false
-        fillScore = 0
-        quizVersion++
-
-        launch(Dispatchers.IO) {
-            val firstMulti = generateQuizItems(dbHelper, quizCount, QuizType.MULTIPLE_CHOICE, range)
-            multiItems = firstMulti
-            multiUserAnswers = List(firstMulti.size) { "" }
-            multiSubmitted = false
-            multiScore = 0
-            quizVersion++
-
-            val next = generateQuizItems(dbHelper, quizCount, QuizType.MULTIPLE_CHOICE, range)
-            prefetchedMulti = next
-        }
-
+        generateMultiQuiz()
+        generateFillQuiz()
         initialized = true
     }
 
     LaunchedEffect(quizType) {
         focusManager.clearFocus()
         listState.scrollToItem(0)
-
         if (initialized) {
             if (quizType == QuizType.FILL_IN_THE_BLANK && fillItems.isNotEmpty() && fillItems.size != quizCount) {
                 generateFillQuiz()
@@ -202,9 +197,9 @@ fun BibleQuizScreen() {
 
     LaunchedEffect(quizScope) {
         if (initialized) {
-            prefetchedMulti = null
-            generateFillQuiz()
+            multiPool.clear()
             generateMultiQuiz()
+            generateFillQuiz()
         }
     }
 
@@ -234,9 +229,11 @@ fun BibleQuizScreen() {
                             multiScore = correct
                             multiSubmitted = true
                         }
-                        Toast.makeText(context,
+                        Toast.makeText(
+                            context,
                             "You scored $correct / ${currentItems.size}",
-                            Toast.LENGTH_LONG).show()
+                            Toast.LENGTH_LONG
+                        ).show()
                     },
                     content = { Text("Submit Answers") }
                 )
@@ -280,9 +277,11 @@ fun BibleQuizScreen() {
                             },
                             trailingIcon = {
                                 if (quizType == QuizType.FILL_IN_THE_BLANK)
-                                    Icon(Icons.Default.Check, null,
+                                    Icon(
+                                        Icons.Default.Check, null,
                                         tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp))
+                                        modifier = Modifier.size(20.dp)
+                                    )
                             }
                         )
                         DropdownMenuItem(
@@ -293,9 +292,11 @@ fun BibleQuizScreen() {
                             },
                             trailingIcon = {
                                 if (quizType == QuizType.MULTIPLE_CHOICE)
-                                    Icon(Icons.Default.Check, null,
+                                    Icon(
+                                        Icons.Default.Check, null,
                                         tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp))
+                                        modifier = Modifier.size(20.dp)
+                                    )
                             }
                         )
                         HorizontalDivider()
@@ -343,9 +344,12 @@ fun BibleQuizScreen() {
                     decorationBox = { innerTextField ->
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             if (quizCount == 0)
-                                Text("1–50", style = MaterialTheme.typography.bodyLarge.copy(
-                                    textAlign = TextAlign.Center,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)))
+                                Text(
+                                    "1–50", style = MaterialTheme.typography.bodyLarge.copy(
+                                        textAlign = TextAlign.Center,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                    )
+                                )
                             innerTextField()
                         }
                     }
@@ -368,10 +372,12 @@ fun BibleQuizScreen() {
                 }
 
                 IconButton(onClick = { showVersionModal = true }) {
-                    Icon(modifier = Modifier.size(35.dp),
+                    Icon(
+                        modifier = Modifier.size(35.dp),
                         tint = MaterialTheme.colorScheme.primary,
                         imageVector = Icons.Default.Language,
-                        contentDescription = "Select Bible version")
+                        contentDescription = "Select Bible version"
+                    )
                 }
             }
 
@@ -394,9 +400,11 @@ fun BibleQuizScreen() {
                 }
                 currentItems.isEmpty() -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Tap Generate to start a quiz",
+                        Text(
+                            "Tap Generate to start a quiz",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
                     }
                 }
                 else -> {
