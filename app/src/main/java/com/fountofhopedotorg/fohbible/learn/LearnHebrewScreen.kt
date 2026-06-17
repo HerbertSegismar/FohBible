@@ -12,13 +12,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.PathMeasure
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fountofhopedotorg.fohbible.data.HebrewLetter
@@ -27,8 +20,13 @@ import com.fountofhopedotorg.fohbible.data.HebrewLetter
 fun LearnHebrewScreen() {
     val letters = listOf(
         HebrewLetter("Aleph", "A") { progress -> drawAleph(progress) },
-        HebrewLetter("Beth", "B") { progress -> drawBeth(progress) },
-        HebrewLetter("Gimel", "G") { progress -> drawGimel(progress) }
+        HebrewLetter("Beth", "B/V") { progress -> drawBeth(progress) },
+        HebrewLetter("Gimel", "G") { progress -> drawGimel(progress) },
+        HebrewLetter("Dalet", "D") { progress -> drawDalet(progress) },
+        HebrewLetter("He", "H") { progress -> drawHe(progress) },
+        HebrewLetter("Vav", "V") { progress -> drawVav(progress) },
+        HebrewLetter("Zayin", "Z") { progress -> drawZayin(progress) },
+        HebrewLetter("Chet", "Ch") { progress -> drawChet(progress) }
     )
 
     var currentIndex by remember { mutableIntStateOf(0) }
@@ -39,7 +37,7 @@ fun LearnHebrewScreen() {
     LaunchedEffect(currentIndex, replayTrigger) {
         showEnglish = false
         progressAnimatable.snapTo(0f)
-        progressAnimatable.animateTo(1f, animationSpec = tween(2000))
+        progressAnimatable.animateTo(1f, animationSpec = tween(4000))
         showEnglish = true
     }
 
@@ -55,9 +53,9 @@ fun LearnHebrewScreen() {
                 currentLetter.draw(this, progressAnimatable.value)
             }
         }
-
+        Spacer(modifier = Modifier.height(20.dp))
         Text(currentLetter.name, style = MaterialTheme.typography.bodyLarge, fontSize = 24.sp)
-        Text("English: ${currentLetter.english}", modifier = Modifier.alpha(if (showEnglish) 1f else 0f))
+        Text("English: ${currentLetter.english}", color = MaterialTheme.colorScheme.primary, modifier = Modifier.alpha(if (showEnglish) 1f else 0f))
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -69,103 +67,6 @@ fun LearnHebrewScreen() {
             }) {
                 Text(if (currentIndex < letters.size - 1) "Next" else "Restart", color = Color.White)
             }
-        }
-    }
-}
-
-fun DrawScope.drawAleph(progress: Float) {
-    val strokeWidth = 80f
-    val color = Color(0xFF1A237E)
-
-    val paths = listOf(
-        Path().apply {
-            moveTo(0.35f * size.width, 0.2f * size.height)
-            quadraticTo(0.45f * size.width, 0.5f * size.height, 0.65f * size.width, 0.8f * size.height)
-        },
-        Path().apply {
-            moveTo(0.75f * size.width, 0.25f * size.height)
-            quadraticTo(0.55f * size.width, 0.25f * size.height, 0.5f * size.width, 0.45f * size.height)
-        },
-        Path().apply {
-            moveTo(0.5f * size.width, 0.55f * size.height)
-            quadraticTo(0.35f * size.width, 0.65f * size.height, 0.25f * size.width, 0.75f * size.height)
-        }
-    )
-
-    drawComplexPath(paths, progress, color, strokeWidth)
-}
-
-fun DrawScope.drawBeth(progress: Float) {
-    val strokeWidth = 80f
-    val color = Color(0xFF1A237E)
-
-    val paths = listOf(
-        Path().apply {
-            moveTo(0.2f * size.width, 0.2f * size.height)
-            quadraticTo(
-                0.5f * size.width,
-                0.15f * size.height,
-                0.8f * size.width,
-                0.2f * size.height
-            )
-        },
-        Path().apply {
-            moveTo(0.8f * size.width, 0.2f * size.height)
-            lineTo(0.8f * size.width, 0.7f * size.height)
-            quadraticTo(
-                0.8f * size.width,
-                0.85f * size.height,
-                0.6f * size.width,
-                0.85f * size.height
-            )
-            lineTo(0.2f * size.width, 0.85f * size.height)
-        }
-    )
-
-    drawComplexPath(paths, progress, color, strokeWidth)
-}
-
-// Add this function to your file
-fun DrawScope.drawGimel(progress: Float) {
-    val strokeWidth = 80f
-    val color = Color(0xFF1A237E)
-
-    val paths = listOf(
-        Path().apply {
-            moveTo(0.6f * size.width, 0.2f * size.height)
-            lineTo(0.6f * size.width, 0.7f * size.height)
-        },
-        Path().apply {
-            moveTo(0.6f * size.width, 0.7f * size.height)
-            quadraticTo(
-                0.55f * size.width,
-                0.85f * size.height,
-                0.3f * size.width,
-                0.8f * size.height
-            )
-        }
-    )
-
-    drawComplexPath(paths, progress, color, strokeWidth)
-}
-
-fun DrawScope.drawComplexPath(paths: List<Path>, totalProgress: Float, color: Color, strokeWidth: Float) {
-    val segmentCount = paths.size
-    val segmentProgress = 1f / segmentCount
-
-    paths.forEachIndexed { index, path ->
-        val start = index * segmentProgress
-        val progressInSegment = ((totalProgress - start) / segmentProgress).coerceIn(0f, 1f)
-
-        if (progressInSegment > 0f) {
-            val measure = PathMeasure().apply { setPath(path, false) }
-            val length = measure.length
-            drawPath(
-                path = path, color = color,
-                style = Stroke(strokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round,
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(length, length), phase = length - length * progressInSegment)
-                )
-            )
         }
     }
 }
