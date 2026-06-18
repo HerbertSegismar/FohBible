@@ -26,7 +26,21 @@ fun LearnHebrewScreen() {
         HebrewLetter("He", "H") { progress -> drawHe(progress) },
         HebrewLetter("Vav", "V") { progress -> drawVav(progress) },
         HebrewLetter("Zayin", "Z") { progress -> drawZayin(progress) },
-        HebrewLetter("Chet", "Ch") { progress -> drawChet(progress) }
+        HebrewLetter("Chet", "Ch") { progress -> drawChet(progress) },
+        HebrewLetter("Tet", "T") { progress -> drawTet(progress) },
+        HebrewLetter("Yod", "Y") { progress -> drawYod(progress) },
+        HebrewLetter("Kaf", "K/Kh") { progress -> drawKaf(progress) },
+        HebrewLetter("Lamed", "L") { progress -> drawLamed(progress) },
+        HebrewLetter("Mem", "M") { progress -> drawMem(progress) },
+        HebrewLetter("Nun", "N") { progress -> drawNun(progress) },
+        HebrewLetter("Samech", "S") { progress -> drawSamech(progress) },
+        HebrewLetter("Ayin", "Silent") { progress -> drawAyin(progress) },
+        HebrewLetter("Peh", "P/F") { progress -> drawPeh(progress) },
+        HebrewLetter("Tsadeh", "Ts") { progress -> drawTsadeh(progress) },
+        HebrewLetter("Qof", "Q") { progress -> drawQof(progress) },
+        HebrewLetter("Resh", "R") { progress -> drawResh(progress) },
+        HebrewLetter("Shin", "S/Sh") { progress -> drawShin(progress) },
+        HebrewLetter("Tav", "T") { progress -> drawTav(progress) },
     )
 
     var currentIndex by remember { mutableIntStateOf(0) }
