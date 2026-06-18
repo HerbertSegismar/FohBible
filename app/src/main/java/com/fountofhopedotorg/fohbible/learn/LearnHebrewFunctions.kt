@@ -76,7 +76,7 @@ fun DrawScope.drawAleph(progress: Float, isDarkMode: Boolean = false) {
     }
 }
 
-fun DrawScope.drawBeth(progress: Float, isDarkMode: Boolean = false) {
+fun DrawScope.drawBet(progress: Float, isDarkMode: Boolean = false) {
     val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
     val strokeEnd = 0.8f
     val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
