@@ -349,7 +349,7 @@ data class SelectedWord(
 data class HebrewLetter(
     val name: String,
     val english: String,
-    val draw: DrawScope.(progress: Float) -> Unit
+    val draw: DrawScope.(progress: Float, isDarkMode: Boolean) -> Unit
 )
 
 data class CrownStructure(val vinePath: Path, val thornsPath: Path)

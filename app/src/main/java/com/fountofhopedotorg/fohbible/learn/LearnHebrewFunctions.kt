@@ -1,25 +1,35 @@
 package com.fountofhopedotorg.fohbible.learn
 
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.geometry.Offset
 
-fun DrawScope.drawAleph(progress: Float) {
-    val color = Color(0xFF1A237E)
+private const val EM_HEIGHT = 110f
+private const val BASELINE_PATH_Y = 64f
+private const val BASELINE_FRACTION = 0.85f
 
-    val baseWidth = 63f
-    val baseHeight = 64f
+private fun DrawScope.calculateOffsets(
+    bounds: Rect,
+    scale: Float
+): Pair<Float, Float> {
+    val baselineYCanvas = size.height * BASELINE_FRACTION
+    val leftOffset = (size.width - bounds.width * scale) / 2f - bounds.left * scale
+    val topOffset = baselineYCanvas - BASELINE_PATH_Y * scale
+    return leftOffset to topOffset
+}
 
+fun DrawScope.drawAleph(progress: Float, isDarkMode: Boolean = false) {
+    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
     val strokeEnd = 0.8f
-
     val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
     val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
 
@@ -45,36 +55,30 @@ fun DrawScope.drawAleph(progress: Float) {
 
     val pathMeasure = PathMeasure().apply { setPath(alephPath, false) }
     val animatedPath = Path()
-
     pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
 
+    val scale = size.height / EM_HEIGHT
+    val bounds = alephPath.getBounds()
+    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
+
     withTransform({
-        scale(size.width / baseWidth, size.height / baseHeight, pivot = Offset.Zero)
+        translate(left = leftOffset, top = topOffset)
+        scale(scale, scale, pivot = Offset.Zero)
     }) {
         drawPath(
             path = animatedPath,
             color = color,
             style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
         )
-
         if (fillProgress > 0f) {
-            drawPath(
-                path = alephPath,
-                color = color.copy(alpha = fillProgress),
-                style = Fill
-            )
+            drawPath(path = alephPath, color = color.copy(alpha = fillProgress), style = Fill)
         }
     }
 }
 
-fun DrawScope.drawBeth(progress: Float) {
-    val color = Color(0xFF1A237E)
-
-    val baseWidth = 54f
-    val baseHeight = 64f
-
+fun DrawScope.drawBeth(progress: Float, isDarkMode: Boolean = false) {
+    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
     val strokeEnd = 0.8f
-
     val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
     val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
 
@@ -100,31 +104,27 @@ fun DrawScope.drawBeth(progress: Float) {
     val animatedPath = Path()
     pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
 
+    val scale = size.height / EM_HEIGHT
+    val bounds = bethPath.getBounds()
+    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
+
     withTransform({
-        scale(size.width / baseWidth, size.height / baseHeight, pivot = Offset.Zero)
+        translate(left = leftOffset, top = topOffset)
+        scale(scale, scale, pivot = Offset.Zero)
     }) {
         drawPath(
             path = animatedPath,
             color = color,
             style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
         )
-
         if (fillProgress > 0f) {
-            drawPath(
-                path = bethPath,
-                color = color.copy(alpha = fillProgress),
-                style = Fill
-            )
+            drawPath(path = bethPath, color = color.copy(alpha = fillProgress), style = Fill)
         }
     }
 }
 
-fun DrawScope.drawGimel(progress: Float) {
-    val color = Color(0xFF1A237E)
-
-    val baseWidth = 33f
-    val baseHeight = 64f
-
+fun DrawScope.drawGimel(progress: Float, isDarkMode: Boolean = false) {
+    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
     val strokeEnd = 0.8f
     val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
     val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
@@ -146,10 +146,9 @@ fun DrawScope.drawGimel(progress: Float) {
     val animatedPath = Path()
     pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
 
-    val scale = minOf(size.width / baseWidth, size.height / baseHeight)
-
-    val leftOffset = (size.width - (baseWidth * scale)) / 2f
-    val topOffset = (size.height - (baseHeight * scale)) / 2f
+    val scale = size.height / EM_HEIGHT
+    val bounds = gimelPath.getBounds()
+    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
 
     withTransform({
         translate(left = leftOffset, top = topOffset)
@@ -160,23 +159,14 @@ fun DrawScope.drawGimel(progress: Float) {
             color = color,
             style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
         )
-
         if (fillProgress > 0f) {
-            drawPath(
-                path = gimelPath,
-                color = color.copy(alpha = fillProgress),
-                style = Fill
-            )
+            drawPath(path = gimelPath, color = color.copy(alpha = fillProgress), style = Fill)
         }
     }
 }
 
-fun DrawScope.drawDalet(progress: Float) {
-    val color = Color(0xFF1A237E)
-
-    val baseWidth = 51f
-    val baseHeight = 64f
-
+fun DrawScope.drawDalet(progress: Float, isDarkMode: Boolean = false) {
+    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
     val strokeEnd = 0.8f
     val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
     val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
@@ -202,10 +192,9 @@ fun DrawScope.drawDalet(progress: Float) {
     val animatedPath = Path()
     pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
 
-    val scale = minOf(size.width / baseWidth, size.height / baseHeight)
-
-    val leftOffset = (size.width - (baseWidth * scale)) / 2f
-    val topOffset = (size.height - (baseHeight * scale)) / 2f
+    val scale = size.height / EM_HEIGHT
+    val bounds = daletPath.getBounds()
+    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
 
     withTransform({
         translate(left = leftOffset, top = topOffset)
@@ -216,23 +205,14 @@ fun DrawScope.drawDalet(progress: Float) {
             color = color,
             style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
         )
-
         if (fillProgress > 0f) {
-            drawPath(
-                path = daletPath,
-                color = color.copy(alpha = fillProgress),
-                style = Fill
-            )
+            drawPath(path = daletPath, color = color.copy(alpha = fillProgress), style = Fill)
         }
     }
 }
 
-fun DrawScope.drawHe(progress: Float) {
-    val color = Color(0xFF1A237E)
-
-    val baseWidth = 54f
-    val baseHeight = 64f
-
+fun DrawScope.drawHe(progress: Float, isDarkMode: Boolean = false) {
+    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
     val strokeEnd = 0.8f
     val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
     val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
@@ -267,7 +247,6 @@ fun DrawScope.drawHe(progress: Float) {
     val targetLength = totalLength * strokeProgress
 
     val animatedPath = Path()
-
     if (targetLength <= rightMeasure.length) {
         rightMeasure.getSegment(0f, targetLength, animatedPath, true)
     } else {
@@ -281,9 +260,9 @@ fun DrawScope.drawHe(progress: Float) {
         addPath(leftLegPath)
     }
 
-    val scale = minOf(size.width / baseWidth, size.height / baseHeight)
-    val leftOffset = (size.width - (baseWidth * scale)) / 2f
-    val topOffset = (size.height - (baseHeight * scale)) / 2f
+    val scale = size.height / EM_HEIGHT
+    val bounds = fullHePath.getBounds()
+    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
 
     withTransform({
         translate(left = leftOffset, top = topOffset)
@@ -294,23 +273,14 @@ fun DrawScope.drawHe(progress: Float) {
             color = color,
             style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
         )
-
         if (fillProgress > 0f) {
-            drawPath(
-                path = fullHePath,
-                color = color.copy(alpha = fillProgress),
-                style = Fill
-            )
+            drawPath(path = fullHePath, color = color.copy(alpha = fillProgress), style = Fill)
         }
     }
 }
 
-fun DrawScope.drawVav(progress: Float) {
-    val color = Color(0xFF1A237E)
-
-    val baseWidth = 26f
-    val baseHeight = 64f
-
+fun DrawScope.drawVav(progress: Float, isDarkMode: Boolean = false) {
+    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
     val strokeEnd = 0.8f
     val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
     val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
@@ -332,9 +302,9 @@ fun DrawScope.drawVav(progress: Float) {
     val animatedPath = Path()
     pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
 
-    val scale = minOf(size.width / baseWidth, size.height / baseHeight)
-    val leftOffset = (size.width - (baseWidth * scale)) / 2f
-    val topOffset = (size.height - (baseHeight * scale)) / 2f
+    val scale = size.height / EM_HEIGHT
+    val bounds = vavPath.getBounds()
+    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
 
     withTransform({
         translate(left = leftOffset, top = topOffset)
@@ -351,12 +321,8 @@ fun DrawScope.drawVav(progress: Float) {
     }
 }
 
-fun DrawScope.drawZayin(progress: Float) {
-    val color = Color(0xFF1A237E)
-
-    val baseWidth = 30f
-    val baseHeight = 64f
-
+fun DrawScope.drawZayin(progress: Float, isDarkMode: Boolean = false) {
+    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
     val strokeEnd = 0.8f
     val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
     val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
@@ -379,9 +345,9 @@ fun DrawScope.drawZayin(progress: Float) {
     val animatedPath = Path()
     pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
 
-    val scale = minOf(size.width / baseWidth, size.height / baseHeight)
-    val leftOffset = (size.width - (baseWidth * scale)) / 2f
-    val topOffset = (size.height - (baseHeight * scale)) / 2f
+    val scale = size.height / EM_HEIGHT
+    val bounds = zayinPath.getBounds()
+    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
 
     withTransform({
         translate(left = leftOffset, top = topOffset)
@@ -398,12 +364,8 @@ fun DrawScope.drawZayin(progress: Float) {
     }
 }
 
-fun DrawScope.drawChet(progress: Float) {
-    val color = Color(0xFF1A237E)
-
-    val baseWidth = 55f
-    val baseHeight = 64f
-
+fun DrawScope.drawChet(progress: Float, isDarkMode: Boolean = false) {
+    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
     val strokeEnd = 0.8f
     val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
     val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
@@ -430,9 +392,9 @@ fun DrawScope.drawChet(progress: Float) {
     val animatedPath = Path()
     pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
 
-    val scale = minOf(size.width / baseWidth, size.height / baseHeight)
-    val leftOffset = (size.width - (baseWidth * scale)) / 2f
-    val topOffset = (size.height - (baseHeight * scale)) / 2f
+    val scale = size.height / EM_HEIGHT
+    val bounds = chetPath.getBounds()
+    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
 
     withTransform({
         translate(left = leftOffset, top = topOffset)
@@ -449,12 +411,8 @@ fun DrawScope.drawChet(progress: Float) {
     }
 }
 
-fun DrawScope.drawAyin(progress: Float) {
-    val color = Color(0xFF1A237E)
-
-    val baseWidth = 47f
-    val baseHeight = 71f
-
+fun DrawScope.drawAyin(progress: Float, isDarkMode: Boolean = false) {
+    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
     val strokeEnd = 0.8f
     val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
     val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
@@ -477,25 +435,27 @@ fun DrawScope.drawAyin(progress: Float) {
     val animatedPath = Path()
     pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
 
-    val scale = minOf(size.width / baseWidth, size.height / baseHeight)
-    val leftOffset = (size.width - (baseWidth * scale)) / 2f
-    val topOffset = (size.height - (baseHeight * scale)) / 2f
+    val scale = size.height / EM_HEIGHT
+    val bounds = ayinPath.getBounds()
+    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
 
     withTransform({
         translate(left = leftOffset, top = topOffset)
         scale(scale, scale, pivot = Offset.Zero)
     }) {
-        drawPath(path = animatedPath, color = color, style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-        if (fillProgress > 0f) drawPath(path = ayinPath, color = color.copy(alpha = fillProgress), style = Fill)
+        drawPath(
+            path = animatedPath,
+            color = color,
+            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        )
+        if (fillProgress > 0f) {
+            drawPath(path = ayinPath, color = color.copy(alpha = fillProgress), style = Fill)
+        }
     }
 }
 
-fun DrawScope.drawKaf(progress: Float) {
-    val color = Color(0xFF1A237E)
-
-    val baseWidth = 50f
-    val baseHeight = 64f
-
+fun DrawScope.drawKaf(progress: Float, isDarkMode: Boolean = false) {
+    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
     val strokeEnd = 0.8f
     val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
     val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
@@ -518,25 +478,27 @@ fun DrawScope.drawKaf(progress: Float) {
     val animatedPath = Path()
     pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
 
-    val scale = minOf(size.width / baseWidth, size.height / baseHeight)
-    val leftOffset = (size.width - (baseWidth * scale)) / 2f
-    val topOffset = (size.height - (baseHeight * scale)) / 2f
+    val scale = size.height / EM_HEIGHT
+    val bounds = kafPath.getBounds()
+    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
 
     withTransform({
         translate(left = leftOffset, top = topOffset)
         scale(scale, scale, pivot = Offset.Zero)
     }) {
-        drawPath(path = animatedPath, color = color, style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-        if (fillProgress > 0f) drawPath(path = kafPath, color = color.copy(alpha = fillProgress), style = Fill)
+        drawPath(
+            path = animatedPath,
+            color = color,
+            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        )
+        if (fillProgress > 0f) {
+            drawPath(path = kafPath, color = color.copy(alpha = fillProgress), style = Fill)
+        }
     }
 }
 
-fun DrawScope.drawLamed(progress: Float) {
-    val color = Color(0xFF1A237E)
-
-    val baseWidth = 45f
-    val baseHeight = 82f
-
+fun DrawScope.drawLamed(progress: Float, isDarkMode: Boolean = false) {
+    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
     val strokeEnd = 0.8f
     val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
     val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
@@ -564,25 +526,29 @@ fun DrawScope.drawLamed(progress: Float) {
     val animatedPath = Path()
     pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
 
-    val scale = minOf(size.width / baseWidth, size.height / baseHeight)
-    val leftOffset = (size.width - (baseWidth * scale)) / 2f
-    val topOffset = (size.height - (baseHeight * scale)) / 2f
+    val scale = size.height / EM_HEIGHT
+    val bounds = lamedPath.getBounds()
+    var (leftOffset, topOffset) = calculateOffsets(bounds, scale)
+    val descenderDepth = (bounds.bottom - BASELINE_PATH_Y).coerceAtLeast(0f)
+    topOffset -= descenderDepth * scale
 
     withTransform({
         translate(left = leftOffset, top = topOffset)
         scale(scale, scale, pivot = Offset.Zero)
     }) {
-        drawPath(path = animatedPath, color = color, style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-        if (fillProgress > 0f) drawPath(path = lamedPath, color = color.copy(alpha = fillProgress), style = Fill)
+        drawPath(
+            path = animatedPath,
+            color = color,
+            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        )
+        if (fillProgress > 0f) {
+            drawPath(path = lamedPath, color = color.copy(alpha = fillProgress), style = Fill)
+        }
     }
 }
 
-fun DrawScope.drawMem(progress: Float) {
-    val color = Color(0xFF1A237E)
-
-    val baseWidth = 59f
-    val baseHeight = 64f
-
+fun DrawScope.drawMem(progress: Float, isDarkMode: Boolean = false) {
+    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
     val strokeEnd = 0.8f
     val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
     val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
@@ -606,25 +572,27 @@ fun DrawScope.drawMem(progress: Float) {
     val animatedPath = Path()
     pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
 
-    val scale = minOf(size.width / baseWidth, size.height / baseHeight)
-    val leftOffset = (size.width - (baseWidth * scale)) / 2f
-    val topOffset = (size.height - (baseHeight * scale)) / 2f
+    val scale = size.height / EM_HEIGHT
+    val bounds = memPath.getBounds()
+    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
 
     withTransform({
         translate(left = leftOffset, top = topOffset)
         scale(scale, scale, pivot = Offset.Zero)
     }) {
-        drawPath(path = animatedPath, color = color, style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-        if (fillProgress > 0f) drawPath(path = memPath, color = color.copy(alpha = fillProgress), style = Fill)
+        drawPath(
+            path = animatedPath,
+            color = color,
+            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        )
+        if (fillProgress > 0f) {
+            drawPath(path = memPath, color = color.copy(alpha = fillProgress), style = Fill)
+        }
     }
 }
 
-fun DrawScope.drawNun(progress: Float) {
-    val color = Color(0xFF1A237E)
-
-    val baseWidth = 30f
-    val baseHeight = 64f
-
+fun DrawScope.drawNun(progress: Float, isDarkMode: Boolean = false) {
+    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
     val strokeEnd = 0.8f
     val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
     val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
@@ -648,25 +616,27 @@ fun DrawScope.drawNun(progress: Float) {
     val animatedPath = Path()
     pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
 
-    val scale = minOf(size.width / baseWidth, size.height / baseHeight)
-    val leftOffset = (size.width - (baseWidth * scale)) / 2f
-    val topOffset = (size.height - (baseHeight * scale)) / 2f
+    val scale = size.height / EM_HEIGHT
+    val bounds = nunPath.getBounds()
+    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
 
     withTransform({
         translate(left = leftOffset, top = topOffset)
         scale(scale, scale, pivot = Offset.Zero)
     }) {
-        drawPath(path = animatedPath, color = color, style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-        if (fillProgress > 0f) drawPath(path = nunPath, color = color.copy(alpha = fillProgress), style = Fill)
+        drawPath(
+            path = animatedPath,
+            color = color,
+            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        )
+        if (fillProgress > 0f) {
+            drawPath(path = nunPath, color = color.copy(alpha = fillProgress), style = Fill)
+        }
     }
 }
 
-fun DrawScope.drawPeh(progress: Float) {
-    val color = Color(0xFF1A237E)
-
-    val baseWidth = 51f
-    val baseHeight = 64f
-
+fun DrawScope.drawPeh(progress: Float, isDarkMode: Boolean = false) {
+    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
     val strokeEnd = 0.8f
     val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
     val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
@@ -691,30 +661,32 @@ fun DrawScope.drawPeh(progress: Float) {
     val animatedPath = Path()
     pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
 
-    val scale = minOf(size.width / baseWidth, size.height / baseHeight)
-    val leftOffset = (size.width - (baseWidth * scale)) / 2f
-    val topOffset = (size.height - (baseHeight * scale)) / 2f
+    val scale = size.height / EM_HEIGHT
+    val bounds = pehPath.getBounds()
+    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
 
     withTransform({
         translate(left = leftOffset, top = topOffset)
         scale(scale, scale, pivot = Offset.Zero)
     }) {
-        drawPath(path = animatedPath, color = color, style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-        if (fillProgress > 0f) drawPath(path = pehPath, color = color.copy(alpha = fillProgress), style = Fill)
+        drawPath(
+            path = animatedPath,
+            color = color,
+            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        )
+        if (fillProgress > 0f) {
+            drawPath(path = pehPath, color = color.copy(alpha = fillProgress), style = Fill)
+        }
     }
 }
 
-fun DrawScope.drawQof(progress: Float) {
-    val color = Color(0xFF1A237E)
-
-    val baseWidth = 60f
-    val baseHeight = 87f
-
+fun DrawScope.drawQof(progress: Float, isDarkMode: Boolean = false) {
+    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
     val strokeEnd = 0.8f
     val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
     val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
 
-     val qofTopPath = Path().apply {
+    val qofTopPath = Path().apply {
         moveTo(0.500f, 16.817f)
         lineTo(14.098f, 0.500f)
         lineTo(14.098f, 8.067f)
@@ -760,25 +732,27 @@ fun DrawScope.drawQof(progress: Float) {
         measureStem.getSegment(0f, currentDistance - lenTop, animatedPath, true)
     }
 
-    val scale = minOf(size.width / baseWidth, size.height / baseHeight)
-    val leftOffset = (size.width - (baseWidth * scale)) / 2f
-    val topOffset = (size.height - (baseHeight * scale)) / 2f
+    val scale = size.height / EM_HEIGHT
+    val bounds = qofFull.getBounds()
+    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
 
     withTransform({
         translate(left = leftOffset, top = topOffset)
         scale(scale, scale, pivot = Offset.Zero)
     }) {
-        drawPath(path = animatedPath, color = color, style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-        if (fillProgress > 0f) drawPath(path = qofFull, color = color.copy(alpha = fillProgress), style = Fill)
+        drawPath(
+            path = animatedPath,
+            color = color,
+            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        )
+        if (fillProgress > 0f) {
+            drawPath(path = qofFull, color = color.copy(alpha = fillProgress), style = Fill)
+        }
     }
 }
 
-fun DrawScope.drawResh(progress: Float) {
-    val color = Color(0xFF1A237E)
-
-    val baseWidth = 45f
-    val baseHeight = 64f
-
+fun DrawScope.drawResh(progress: Float, isDarkMode: Boolean = false) {
+    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
     val strokeEnd = 0.8f
     val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
     val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
@@ -801,25 +775,27 @@ fun DrawScope.drawResh(progress: Float) {
     val animatedPath = Path()
     pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
 
-    val scale = minOf(size.width / baseWidth, size.height / baseHeight)
-    val leftOffset = (size.width - (baseWidth * scale)) / 2f
-    val topOffset = (size.height - (baseHeight * scale)) / 2f
+    val scale = size.height / EM_HEIGHT
+    val bounds = reshPath.getBounds()
+    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
 
     withTransform({
         translate(left = leftOffset, top = topOffset)
         scale(scale, scale, pivot = Offset.Zero)
     }) {
-        drawPath(path = animatedPath, color = color, style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-        if (fillProgress > 0f) drawPath(path = reshPath, color = color.copy(alpha = fillProgress), style = Fill)
+        drawPath(
+            path = animatedPath,
+            color = color,
+            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        )
+        if (fillProgress > 0f) {
+            drawPath(path = reshPath, color = color.copy(alpha = fillProgress), style = Fill)
+        }
     }
 }
 
-fun DrawScope.drawSamech(progress: Float) {
-    val color = Color(0xFF1A237E)
-
-    val baseWidth = 60f
-    val baseHeight = 64f
-
+fun DrawScope.drawSamech(progress: Float, isDarkMode: Boolean = false) {
+    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
     val strokeEnd = 0.8f
     val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
     val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
@@ -850,7 +826,7 @@ fun DrawScope.drawSamech(progress: Float) {
         close()
     }
 
-     val samechFull = Path().apply {
+    val samechFull = Path().apply {
         fillType = PathFillType.EvenOdd
         addPath(samechOuter)
         addPath(samechInner)
@@ -872,25 +848,27 @@ fun DrawScope.drawSamech(progress: Float) {
         measureInner.getSegment(0f, currentDistance - lenOuter, animatedPath, true)
     }
 
-    val scale = minOf(size.width / baseWidth, size.height / baseHeight)
-    val leftOffset = (size.width - (baseWidth * scale)) / 2f
-    val topOffset = (size.height - (baseHeight * scale)) / 2f
+    val scale = size.height / EM_HEIGHT
+    val bounds = samechFull.getBounds()
+    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
 
     withTransform({
         translate(left = leftOffset, top = topOffset)
         scale(scale, scale, pivot = Offset.Zero)
     }) {
-        drawPath(path = animatedPath, color = color, style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-        if (fillProgress > 0f) drawPath(path = samechFull, color = color.copy(alpha = fillProgress), style = Fill)
+        drawPath(
+            path = animatedPath,
+            color = color,
+            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        )
+        if (fillProgress > 0f) {
+            drawPath(path = samechFull, color = color.copy(alpha = fillProgress), style = Fill)
+        }
     }
 }
 
-fun DrawScope.drawShin(progress: Float) {
-    val color = Color(0xFF1A237E)
-
-    val baseWidth = 62f
-    val baseHeight = 64f
-
+fun DrawScope.drawShin(progress: Float, isDarkMode: Boolean = false) {
+    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
     val strokeEnd = 0.8f
     val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
     val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
@@ -916,25 +894,27 @@ fun DrawScope.drawShin(progress: Float) {
     val animatedPath = Path()
     pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
 
-    val scale = minOf(size.width / baseWidth, size.height / baseHeight)
-    val leftOffset = (size.width - (baseWidth * scale)) / 2f
-    val topOffset = (size.height - (baseHeight * scale)) / 2f
+    val scale = size.height / EM_HEIGHT
+    val bounds = shinPath.getBounds()
+    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
 
     withTransform({
         translate(left = leftOffset, top = topOffset)
         scale(scale, scale, pivot = Offset.Zero)
     }) {
-        drawPath(path = animatedPath, color = color, style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-        if (fillProgress > 0f) drawPath(path = shinPath, color = color.copy(alpha = fillProgress), style = Fill)
+        drawPath(
+            path = animatedPath,
+            color = color,
+            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        )
+        if (fillProgress > 0f) {
+            drawPath(path = shinPath, color = color.copy(alpha = fillProgress), style = Fill)
+        }
     }
 }
 
-fun DrawScope.drawTav(progress: Float) {
-    val color = Color(0xFF1A237E)
-
-    val baseWidth = 61f
-    val baseHeight = 64f
-
+fun DrawScope.drawTav(progress: Float, isDarkMode: Boolean = false) {
+    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
     val strokeEnd = 0.8f
     val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
     val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
@@ -963,25 +943,27 @@ fun DrawScope.drawTav(progress: Float) {
     val animatedPath = Path()
     pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
 
-    val scale = minOf(size.width / baseWidth, size.height / baseHeight)
-    val leftOffset = (size.width - (baseWidth * scale)) / 2f
-    val topOffset = (size.height - (baseHeight * scale)) / 2f
+    val scale = size.height / EM_HEIGHT
+    val bounds = tavPath.getBounds()
+    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
 
     withTransform({
         translate(left = leftOffset, top = topOffset)
         scale(scale, scale, pivot = Offset.Zero)
     }) {
-        drawPath(path = animatedPath, color = color, style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-        if (fillProgress > 0f) drawPath(path = tavPath, color = color.copy(alpha = fillProgress), style = Fill)
+        drawPath(
+            path = animatedPath,
+            color = color,
+            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        )
+        if (fillProgress > 0f) {
+            drawPath(path = tavPath, color = color.copy(alpha = fillProgress), style = Fill)
+        }
     }
 }
 
-fun DrawScope.drawTet(progress: Float) {
-    val color = Color(0xFF1A237E)
-
-    val baseWidth = 62f
-    val baseHeight = 64f
-
+fun DrawScope.drawTet(progress: Float, isDarkMode: Boolean = false) {
+    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
     val strokeEnd = 0.8f
     val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
     val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
@@ -1001,25 +983,27 @@ fun DrawScope.drawTet(progress: Float) {
     val animatedPath = Path()
     pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
 
-    val scale = minOf(size.width / baseWidth, size.height / baseHeight)
-    val leftOffset = (size.width - (baseWidth * scale)) / 2f
-    val topOffset = (size.height - (baseHeight * scale)) / 2f
+    val scale = size.height / EM_HEIGHT
+    val bounds = tetPath.getBounds()
+    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
 
     withTransform({
         translate(left = leftOffset, top = topOffset)
         scale(scale, scale, pivot = Offset.Zero)
     }) {
-        drawPath(path = animatedPath, color = color, style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-        if (fillProgress > 0f) drawPath(path = tetPath, color = color.copy(alpha = fillProgress), style = Fill)
+        drawPath(
+            path = animatedPath,
+            color = color,
+            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        )
+        if (fillProgress > 0f) {
+            drawPath(path = tetPath, color = color.copy(alpha = fillProgress), style = Fill)
+        }
     }
 }
 
-fun DrawScope.drawTsadeh(progress: Float) {
-    val color = Color(0xFF1A237E)
-
-    val baseWidth = 49f
-    val baseHeight = 64f
-
+fun DrawScope.drawTsadeh(progress: Float, isDarkMode: Boolean = false) {
+    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
     val strokeEnd = 0.8f
     val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
     val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
@@ -1044,25 +1028,27 @@ fun DrawScope.drawTsadeh(progress: Float) {
     val animatedPath = Path()
     pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
 
-    val scale = minOf(size.width / baseWidth, size.height / baseHeight)
-    val leftOffset = (size.width - (baseWidth * scale)) / 2f
-    val topOffset = (size.height - (baseHeight * scale)) / 2f
+    val scale = size.height / EM_HEIGHT
+    val bounds = tsadehPath.getBounds()
+    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
 
     withTransform({
         translate(left = leftOffset, top = topOffset)
         scale(scale, scale, pivot = Offset.Zero)
     }) {
-        drawPath(path = animatedPath, color = color, style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-        if (fillProgress > 0f) drawPath(path = tsadehPath, color = color.copy(alpha = fillProgress), style = Fill)
+        drawPath(
+            path = animatedPath,
+            color = color,
+            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        )
+        if (fillProgress > 0f) {
+            drawPath(path = tsadehPath, color = color.copy(alpha = fillProgress), style = Fill)
+        }
     }
 }
 
-fun DrawScope.drawYod(progress: Float) {
-    val color = Color(0xFF1A237E)
-
-    val baseWidth = 28f
-    val baseHeight = 46f
-
+fun DrawScope.drawYod(progress: Float, isDarkMode: Boolean = false) {
+    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
     val strokeEnd = 0.8f
     val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
     val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
@@ -1079,15 +1065,21 @@ fun DrawScope.drawYod(progress: Float) {
     val animatedPath = Path()
     pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
 
-    val scale = minOf(size.width / baseWidth, size.height / baseHeight)
-    val leftOffset = (size.width - (baseWidth * scale)) / 2f
-    val topOffset = (size.height - (baseHeight * scale)) / 2f
+    val scale = size.height / EM_HEIGHT
+    val bounds = yodPath.getBounds()
+    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
 
     withTransform({
         translate(left = leftOffset, top = topOffset)
         scale(scale, scale, pivot = Offset.Zero)
     }) {
-        drawPath(path = animatedPath, color = color, style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-        if (fillProgress > 0f) drawPath(path = yodPath, color = color.copy(alpha = fillProgress), style = Fill)
+        drawPath(
+            path = animatedPath,
+            color = color,
+            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        )
+        if (fillProgress > 0f) {
+            drawPath(path = yodPath, color = color.copy(alpha = fillProgress), style = Fill)
+        }
     }
 }
