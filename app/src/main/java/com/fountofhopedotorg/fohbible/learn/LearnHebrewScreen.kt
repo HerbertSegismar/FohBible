@@ -19,7 +19,7 @@ fun LearnHebrewScreen() {
         listOf(
             HebrewLetter("Aleph", "Silent") { progress, isDarkMode ->
                 drawAleph(progress, isDarkMode) },
-            HebrewLetter("Beth", "B/V") { progress, isDarkMode ->
+            HebrewLetter("Bet", "B/V") { progress, isDarkMode ->
                 drawBeth(progress, isDarkMode) },
             HebrewLetter("Gimel", "G") { progress, isDarkMode ->
                 drawGimel(progress, isDarkMode) },
