@@ -145,6 +145,7 @@ fun HomeScreen(
     onCreateSermonMaterialsClick: () -> Unit = {},
     onTakeBibleQuizClick: () -> Unit,
     onLearnHebrewClick: () -> Unit,
+    onLearnGreekClick: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -269,6 +270,7 @@ fun HomeScreen(
                 onCreateSermonMaterialsClick = onCreateSermonMaterialsClick,
                 onTakeBibleQuizClick = onTakeBibleQuizClick,
                 onLearnHebrewClick = onLearnHebrewClick,
+                onLearnGreekClick = onLearnGreekClick,
             )
         }
 

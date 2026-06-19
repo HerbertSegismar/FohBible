@@ -346,7 +346,7 @@ data class SelectedWord(
     }
 }
 
-data class HebrewLetter(
+data class Letter(
     val name: String,
     val english: String,
     val draw: DrawScope.(progress: Float, isDarkMode: Boolean) -> Unit

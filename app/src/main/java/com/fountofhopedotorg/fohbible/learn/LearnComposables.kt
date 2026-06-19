@@ -28,7 +28,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.fountofhopedotorg.fohbible.data.HebrewLetter
+import com.fountofhopedotorg.fohbible.data.Letter
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -37,7 +37,7 @@ import androidx.compose.material3.*
 import androidx.compose.ui.platform.LocalConfiguration
 
 @Composable
-fun HistoryTable(letters: List<HebrewLetter>, modifier: Modifier = Modifier, isDarkMode: Boolean = false ) {
+fun HistoryTable(letters: List<Letter>, modifier: Modifier = Modifier, isDarkMode: Boolean = false ) {
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 48.dp),
         modifier = modifier.padding(4.dp),
@@ -65,7 +65,7 @@ fun HistoryTable(letters: List<HebrewLetter>, modifier: Modifier = Modifier, isD
 
 @Composable
 fun MainLetterContent(
-    currentLetter: HebrewLetter,
+    currentLetter: Letter,
     progress: Float,
     showEnglish: Boolean,
     isLastLetter: Boolean,
@@ -167,8 +167,8 @@ fun CompletionScreen(
 }
 
 @Composable
-fun HebrewTestScreen(
-    testLetters: List<HebrewLetter>,
+fun TestScreen(
+    testLetters: List<Letter>,
     testIndex: Int,
     testScore: Int,
     currentOptions: List<String>,
@@ -238,7 +238,18 @@ fun HebrewTestScreen(
                     verticalArrangement = Arrangement.Center
                 ) {
                     OptionsSection(currentOptions, currentLetter, selectedOption, onOptionSelected)
-                    NextButtonSection(selectedOption, testIndex, testLetters.size, onNextQuestion)
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = onBackToLearn) {
+                            Text("Cancel Test", color = MaterialTheme.colorScheme.error)
+                        }
+                        NextButtonSection(selectedOption, testIndex, testLetters.size, onNextQuestion)
+                    }
                 }
             }
         } else {
@@ -253,7 +264,18 @@ fun HebrewTestScreen(
                 QuestionHeader(testIndex, testLetters.size, currentLetter, isDarkMode)
                 Spacer(modifier = Modifier.height(24.dp))
                 OptionsSection(currentOptions, currentLetter, selectedOption, onOptionSelected)
-                NextButtonSection(selectedOption, testIndex, testLetters.size, onNextQuestion)
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onBackToLearn) {
+                        Text("Cancel Test", color = MaterialTheme.colorScheme.error)
+                    }
+                    NextButtonSection(selectedOption, testIndex, testLetters.size, onNextQuestion)
+                }
             }
         }
     }
@@ -264,7 +286,7 @@ fun HebrewTestScreen(
 private fun QuestionHeader(
     testIndex: Int,
     totalQuestions: Int,
-    currentLetter: HebrewLetter,
+    currentLetter: Letter,
     isDarkMode: Boolean = false
 ) {
     Text(
@@ -287,7 +309,7 @@ private fun QuestionHeader(
 @Composable
 private fun OptionsSection(
     currentOptions: List<String>,
-    currentLetter: HebrewLetter,
+    currentLetter: Letter,
     selectedOption: String?,
     onOptionSelected: (String) -> Unit
 ) {
@@ -342,7 +364,7 @@ private fun NextButtonSection(
             contentAlignment = Alignment.CenterEnd
         ) {
             Button(onClick = onNextQuestion) {
-                Text(text = if (testIndex == totalQuestions - 1) "View Results" else "Next")
+                Text(text = if (testIndex == totalQuestions - 1) "View Results" else "Next", color = Color.White)
             }
         }
     } else {

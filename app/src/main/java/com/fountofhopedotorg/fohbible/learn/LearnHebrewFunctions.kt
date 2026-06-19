@@ -1,5 +1,6 @@
 package com.fountofhopedotorg.fohbible.learn
 
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -11,11 +12,11 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
-import androidx.compose.ui.geometry.Offset
 
 private const val EM_HEIGHT = 110f
 private const val BASELINE_PATH_Y = 64f
 private const val BASELINE_FRACTION = 0.85f
+
 
 private fun DrawScope.calculateOffsets(
     bounds: Rect,
@@ -27,13 +28,47 @@ private fun DrawScope.calculateOffsets(
     return leftOffset to topOffset
 }
 
-fun DrawScope.drawAleph(progress: Float, isDarkMode: Boolean = false) {
+private fun DrawScope.calculateLayout(letterPath: Path): Triple<Float, Float, Float> {
+    val scale = size.height / EM_HEIGHT
+    val bounds = letterPath.getBounds()
+    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
+    return Triple(scale, leftOffset, topOffset)
+}
+
+private fun DrawScope.drawAnimatedLetter(
+    progress: Float,
+    letterPath: Path,
+    isDarkMode: Boolean,
+    scale: Float,
+    leftOffset: Float,
+    topOffset: Float
+) {
     val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
     val strokeEnd = 0.8f
     val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
     val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
 
-    val alephPath = Path().apply {
+    val pathMeasure = PathMeasure().apply { setPath(letterPath, false) }
+    val animatedPath = Path()
+    pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
+
+    withTransform({
+        translate(left = leftOffset, top = topOffset)
+        scale(scale, scale, pivot = Offset.Zero)
+    }) {
+        drawPath(
+            path = animatedPath,
+            color = color,
+            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        )
+        if (fillProgress > 0f) {
+            drawPath(path = letterPath, color = color.copy(alpha = fillProgress), style = Fill)
+        }
+    }
+}
+
+fun DrawScope.drawAleph(progress: Float, isDarkMode: Boolean = false) {
+    val path = Path().apply {
         moveTo(8.629f, 0.5f)
         lineTo(1.091f, 8.925f)
         lineTo(16.758f, 21.34f)
@@ -52,37 +87,12 @@ fun DrawScope.drawAleph(progress: Float, isDarkMode: Boolean = false) {
         lineTo(8.629f, 0.5f)
         close()
     }
-
-    val pathMeasure = PathMeasure().apply { setPath(alephPath, false) }
-    val animatedPath = Path()
-    pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
-
-    val scale = size.height / EM_HEIGHT
-    val bounds = alephPath.getBounds()
-    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
-
-    withTransform({
-        translate(left = leftOffset, top = topOffset)
-        scale(scale, scale, pivot = Offset.Zero)
-    }) {
-        drawPath(
-            path = animatedPath,
-            color = color,
-            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-        )
-        if (fillProgress > 0f) {
-            drawPath(path = alephPath, color = color.copy(alpha = fillProgress), style = Fill)
-        }
-    }
+    val (scale, leftOffset, topOffset) = calculateLayout(path)
+    drawAnimatedLetter(progress, path, isDarkMode, scale, leftOffset, topOffset)
 }
 
 fun DrawScope.drawBet(progress: Float, isDarkMode: Boolean = false) {
-    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
-    val strokeEnd = 0.8f
-    val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
-    val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
-
-    val bethPath = Path().apply {
+    val path = Path().apply {
         moveTo(11.96f, 0.5f)
         lineTo(1.023f, 14.689f)
         lineTo(31.914f, 14.689f)
@@ -99,37 +109,12 @@ fun DrawScope.drawBet(progress: Float, isDarkMode: Boolean = false) {
         lineTo(11.96f, 0.5f)
         close()
     }
-
-    val pathMeasure = PathMeasure().apply { setPath(bethPath, false) }
-    val animatedPath = Path()
-    pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
-
-    val scale = size.height / EM_HEIGHT
-    val bounds = bethPath.getBounds()
-    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
-
-    withTransform({
-        translate(left = leftOffset, top = topOffset)
-        scale(scale, scale, pivot = Offset.Zero)
-    }) {
-        drawPath(
-            path = animatedPath,
-            color = color,
-            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-        )
-        if (fillProgress > 0f) {
-            drawPath(path = bethPath, color = color.copy(alpha = fillProgress), style = Fill)
-        }
-    }
+    val (scale, leftOffset, topOffset) = calculateLayout(path)
+    drawAnimatedLetter(progress, path, isDarkMode, scale, leftOffset, topOffset)
 }
 
 fun DrawScope.drawGimel(progress: Float, isDarkMode: Boolean = false) {
-    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
-    val strokeEnd = 0.8f
-    val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
-    val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
-
-    val gimelPath = Path().apply {
+    val path = Path().apply {
         moveTo(5.135f, 8.729f)
         lineTo(12.324f, 0.5f)
         cubicTo(34.201f, 13.382f, 30.365f, 20.834f, 32.379f, 56.121f)
@@ -141,37 +126,12 @@ fun DrawScope.drawGimel(progress: Float, isDarkMode: Boolean = false) {
         cubicTo(21.332f, 18.479f, 15.14f, 12.429f, 5.135f, 8.729f)
         close()
     }
-
-    val pathMeasure = PathMeasure().apply { setPath(gimelPath, false) }
-    val animatedPath = Path()
-    pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
-
-    val scale = size.height / EM_HEIGHT
-    val bounds = gimelPath.getBounds()
-    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
-
-    withTransform({
-        translate(left = leftOffset, top = topOffset)
-        scale(scale, scale, pivot = Offset.Zero)
-    }) {
-        drawPath(
-            path = animatedPath,
-            color = color,
-            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-        )
-        if (fillProgress > 0f) {
-            drawPath(path = gimelPath, color = color.copy(alpha = fillProgress), style = Fill)
-        }
-    }
+    val (scale, leftOffset, topOffset) = calculateLayout(path)
+    drawAnimatedLetter(progress, path, isDarkMode, scale, leftOffset, topOffset)
 }
 
 fun DrawScope.drawDalet(progress: Float, isDarkMode: Boolean = false) {
-    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
-    val strokeEnd = 0.8f
-    val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
-    val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
-
-    val daletPath = Path().apply {
+    val path = Path().apply {
         moveTo(12.442f, 6.709f)
         lineTo(12.506f, 1.506f)
         lineTo(0.5f, 16.598f)
@@ -187,37 +147,12 @@ fun DrawScope.drawDalet(progress: Float, isDarkMode: Boolean = false) {
         lineTo(12.442f, 6.709f)
         close()
     }
-
-    val pathMeasure = PathMeasure().apply { setPath(daletPath, false) }
-    val animatedPath = Path()
-    pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
-
-    val scale = size.height / EM_HEIGHT
-    val bounds = daletPath.getBounds()
-    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
-
-    withTransform({
-        translate(left = leftOffset, top = topOffset)
-        scale(scale, scale, pivot = Offset.Zero)
-    }) {
-        drawPath(
-            path = animatedPath,
-            color = color,
-            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-        )
-        if (fillProgress > 0f) {
-            drawPath(path = daletPath, color = color.copy(alpha = fillProgress), style = Fill)
-        }
-    }
+    val (scale, leftOffset, topOffset) = calculateLayout(path)
+    drawAnimatedLetter(progress, path, isDarkMode, scale, leftOffset, topOffset)
 }
 
 fun DrawScope.drawHe(progress: Float, isDarkMode: Boolean = false) {
-    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
-    val strokeEnd = 0.8f
-    val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
-    val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
-
-    val rightSidePath = Path().apply {
+    val rightSide = Path().apply {
         moveTo(11.844f, 0.5f)
         cubicTo(8.796f, 5.463f, 5.001f, 10.426f, 0.5f, 15.389f)
         lineTo(40.063f, 15.593f)
@@ -230,8 +165,7 @@ fun DrawScope.drawHe(progress: Float, isDarkMode: Boolean = false) {
         lineTo(11.844f, 0.5f)
         close()
     }
-
-    val leftLegPath = Path().apply {
+    val leftLeg = Path().apply {
         moveTo(4.874f, 33.472f)
         cubicTo(8.069f, 31.495f, 11.095f, 28.924f, 13.967f, 25.817f)
         lineTo(13.755f, 56.14f)
@@ -239,10 +173,19 @@ fun DrawScope.drawHe(progress: Float, isDarkMode: Boolean = false) {
         lineTo(4.874f, 33.472f)
         close()
     }
+    val fullPath = Path().apply {
+        addPath(rightSide)
+        addPath(leftLeg)
+    }
+    val (scale, leftOffset, topOffset) = calculateLayout(fullPath)
 
-    val rightMeasure = PathMeasure().apply { setPath(rightSidePath, false) }
-    val leftMeasure = PathMeasure().apply { setPath(leftLegPath, false) }
+    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
+    val strokeEnd = 0.8f
+    val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
+    val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
 
+    val rightMeasure = PathMeasure().apply { setPath(rightSide, false) }
+    val leftMeasure = PathMeasure().apply { setPath(leftLeg, false) }
     val totalLength = rightMeasure.length + leftMeasure.length
     val targetLength = totalLength * strokeProgress
 
@@ -251,18 +194,9 @@ fun DrawScope.drawHe(progress: Float, isDarkMode: Boolean = false) {
         rightMeasure.getSegment(0f, targetLength, animatedPath, true)
     } else {
         rightMeasure.getSegment(0f, rightMeasure.length, animatedPath, true)
-        val remainingLength = targetLength - rightMeasure.length
-        leftMeasure.getSegment(0f, remainingLength, animatedPath, true)
+        val remaining = targetLength - rightMeasure.length
+        leftMeasure.getSegment(0f, remaining, animatedPath, true)
     }
-
-    val fullHePath = Path().apply {
-        addPath(rightSidePath)
-        addPath(leftLegPath)
-    }
-
-    val scale = size.height / EM_HEIGHT
-    val bounds = fullHePath.getBounds()
-    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
 
     withTransform({
         translate(left = leftOffset, top = topOffset)
@@ -274,18 +208,13 @@ fun DrawScope.drawHe(progress: Float, isDarkMode: Boolean = false) {
             style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
         )
         if (fillProgress > 0f) {
-            drawPath(path = fullHePath, color = color.copy(alpha = fillProgress), style = Fill)
+            drawPath(path = fullPath, color = color.copy(alpha = fillProgress), style = Fill)
         }
     }
 }
 
 fun DrawScope.drawVav(progress: Float, isDarkMode: Boolean = false) {
-    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
-    val strokeEnd = 0.8f
-    val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
-    val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
-
-    val vavPath = Path().apply {
+    val path = Path().apply {
         moveTo(0.500f, 9.676f)
         lineTo(8.257f, 0.500f)
         lineTo(20.932f, 12.325f)
@@ -297,37 +226,12 @@ fun DrawScope.drawVav(progress: Float, isDarkMode: Boolean = false) {
         lineTo(0.500f, 9.676f)
         close()
     }
-
-    val pathMeasure = PathMeasure().apply { setPath(vavPath, false) }
-    val animatedPath = Path()
-    pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
-
-    val scale = size.height / EM_HEIGHT
-    val bounds = vavPath.getBounds()
-    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
-
-    withTransform({
-        translate(left = leftOffset, top = topOffset)
-        scale(scale, scale, pivot = Offset.Zero)
-    }) {
-        drawPath(
-            path = animatedPath,
-            color = color,
-            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-        )
-        if (fillProgress > 0f) {
-            drawPath(path = vavPath, color = color.copy(alpha = fillProgress), style = Fill)
-        }
-    }
+    val (scale, leftOffset, topOffset) = calculateLayout(path)
+    drawAnimatedLetter(progress, path, isDarkMode, scale, leftOffset, topOffset)
 }
 
 fun DrawScope.drawZayin(progress: Float, isDarkMode: Boolean = false) {
-    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
-    val strokeEnd = 0.8f
-    val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
-    val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
-
-    val zayinPath = Path().apply {
+    val path = Path().apply {
         moveTo(0.500f, 6.404f)
         lineTo(6.175f, 1.409f)
         cubicTo(8.066f, 0.159f, 9.859f, 0.187f, 11.548f, 1.560f)
@@ -340,37 +244,12 @@ fun DrawScope.drawZayin(progress: Float, isDarkMode: Boolean = false) {
         cubicTo(9.129f, 11.671f, 4.806f, 9.043f, 0.500f, 6.404f)
         close()
     }
-
-    val pathMeasure = PathMeasure().apply { setPath(zayinPath, false) }
-    val animatedPath = Path()
-    pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
-
-    val scale = size.height / EM_HEIGHT
-    val bounds = zayinPath.getBounds()
-    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
-
-    withTransform({
-        translate(left = leftOffset, top = topOffset)
-        scale(scale, scale, pivot = Offset.Zero)
-    }) {
-        drawPath(
-            path = animatedPath,
-            color = color,
-            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-        )
-        if (fillProgress > 0f) {
-            drawPath(path = zayinPath, color = color.copy(alpha = fillProgress), style = Fill)
-        }
-    }
+    val (scale, leftOffset, topOffset) = calculateLayout(path)
+    drawAnimatedLetter(progress, path, isDarkMode, scale, leftOffset, topOffset)
 }
 
 fun DrawScope.drawChet(progress: Float, isDarkMode: Boolean = false) {
-    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
-    val strokeEnd = 0.8f
-    val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
-    val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
-
-    val chetPath = Path().apply {
+    val path = Path().apply {
         moveTo(0.500f, 6.402f)
         cubicTo(3.984f, 4.697f, 8.216f, 2.608f, 11.094f, 0.500f)
         lineTo(11.170f, 6.024f)
@@ -387,37 +266,12 @@ fun DrawScope.drawChet(progress: Float, isDarkMode: Boolean = false) {
         cubicTo(3.805f, 11.825f, 2.669f, 8.597f, 0.500f, 6.402f)
         close()
     }
-
-    val pathMeasure = PathMeasure().apply { setPath(chetPath, false) }
-    val animatedPath = Path()
-    pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
-
-    val scale = size.height / EM_HEIGHT
-    val bounds = chetPath.getBounds()
-    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
-
-    withTransform({
-        translate(left = leftOffset, top = topOffset)
-        scale(scale, scale, pivot = Offset.Zero)
-    }) {
-        drawPath(
-            path = animatedPath,
-            color = color,
-            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-        )
-        if (fillProgress > 0f) {
-            drawPath(path = chetPath, color = color.copy(alpha = fillProgress), style = Fill)
-        }
-    }
+    val (scale, leftOffset, topOffset) = calculateLayout(path)
+    drawAnimatedLetter(progress, path, isDarkMode, scale, leftOffset, topOffset)
 }
 
 fun DrawScope.drawAyin(progress: Float, isDarkMode: Boolean = false) {
-    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
-    val strokeEnd = 0.8f
-    val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
-    val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
-
-    val ayinPath = Path().apply {
+    val path = Path().apply {
         moveTo(1.635f, 10.716f)
         lineTo(10.149f, 0.878f)
         lineTo(27.932f, 47.608f)
@@ -430,37 +284,12 @@ fun DrawScope.drawAyin(progress: Float, isDarkMode: Boolean = false) {
         cubicTo(16.574f, 35.468f, 9.967f, 21.942f, 1.635f, 10.716f)
         close()
     }
-
-    val pathMeasure = PathMeasure().apply { setPath(ayinPath, false) }
-    val animatedPath = Path()
-    pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
-
-    val scale = size.height / EM_HEIGHT
-    val bounds = ayinPath.getBounds()
-    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
-
-    withTransform({
-        translate(left = leftOffset, top = topOffset)
-        scale(scale, scale, pivot = Offset.Zero)
-    }) {
-        drawPath(
-            path = animatedPath,
-            color = color,
-            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-        )
-        if (fillProgress > 0f) {
-            drawPath(path = ayinPath, color = color.copy(alpha = fillProgress), style = Fill)
-        }
-    }
+    val (scale, leftOffset, topOffset) = calculateLayout(path)
+    drawAnimatedLetter(progress, path, isDarkMode, scale, leftOffset, topOffset)
 }
 
 fun DrawScope.drawKaf(progress: Float, isDarkMode: Boolean = false) {
-    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
-    val strokeEnd = 0.8f
-    val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
-    val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
-
-    val kafPath = Path().apply {
+    val path = Path().apply {
         moveTo(3.098f, 15.621f)
         lineTo(15.606f, 0.500f)
         lineTo(15.791f, 6.657f)
@@ -473,37 +302,12 @@ fun DrawScope.drawKaf(progress: Float, isDarkMode: Boolean = false) {
         lineTo(3.098f, 15.621f)
         close()
     }
-
-    val pathMeasure = PathMeasure().apply { setPath(kafPath, false) }
-    val animatedPath = Path()
-    pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
-
-    val scale = size.height / EM_HEIGHT
-    val bounds = kafPath.getBounds()
-    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
-
-    withTransform({
-        translate(left = leftOffset, top = topOffset)
-        scale(scale, scale, pivot = Offset.Zero)
-    }) {
-        drawPath(
-            path = animatedPath,
-            color = color,
-            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-        )
-        if (fillProgress > 0f) {
-            drawPath(path = kafPath, color = color.copy(alpha = fillProgress), style = Fill)
-        }
-    }
+    val (scale, leftOffset, topOffset) = calculateLayout(path)
+    drawAnimatedLetter(progress, path, isDarkMode, scale, leftOffset, topOffset)
 }
 
 fun DrawScope.drawLamed(progress: Float, isDarkMode: Boolean = false) {
-    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
-    val strokeEnd = 0.8f
-    val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
-    val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
-
-    val lamedPath = Path().apply {
+    val path = Path().apply {
         moveTo(10.149f, 22.846f)
         lineTo(10.244f, 1.941f)
         cubicTo(9.551f, 0.803f, 8.571f, 0.240f, 7.122f, 0.616f)
@@ -521,39 +325,14 @@ fun DrawScope.drawLamed(progress: Float, isDarkMode: Boolean = false) {
         lineTo(10.149f, 22.846f)
         close()
     }
-
-    val pathMeasure = PathMeasure().apply { setPath(lamedPath, false) }
-    val animatedPath = Path()
-    pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
-
-    val scale = size.height / EM_HEIGHT
-    val bounds = lamedPath.getBounds()
-    var (leftOffset, topOffset) = calculateOffsets(bounds, scale)
-    val descenderDepth = (bounds.bottom - BASELINE_PATH_Y).coerceAtLeast(0f)
-    topOffset -= descenderDepth * scale
-
-    withTransform({
-        translate(left = leftOffset, top = topOffset)
-        scale(scale, scale, pivot = Offset.Zero)
-    }) {
-        drawPath(
-            path = animatedPath,
-            color = color,
-            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-        )
-        if (fillProgress > 0f) {
-            drawPath(path = lamedPath, color = color.copy(alpha = fillProgress), style = Fill)
-        }
-    }
+    val (scale, leftOffset, topOffset) = calculateLayout(path)
+    val descenderDepth = (path.getBounds().bottom - BASELINE_PATH_Y).coerceAtLeast(0f)
+    val adjustedTopOffset = topOffset - descenderDepth * scale
+    drawAnimatedLetter(progress, path, isDarkMode, scale, leftOffset, adjustedTopOffset)
 }
 
 fun DrawScope.drawMem(progress: Float, isDarkMode: Boolean = false) {
-    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
-    val strokeEnd = 0.8f
-    val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
-    val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
-
-    val memPath = Path().apply {
+    val path = Path().apply {
         moveTo(1.541f, 10.527f)
         lineTo(8.730f, 0.500f)
         cubicTo(13.243f, 7.043f, 15.411f, 15.241f, 15.635f, 24.811f)
@@ -567,37 +346,12 @@ fun DrawScope.drawMem(progress: Float, isDarkMode: Boolean = false) {
         cubicTo(7.681f, 42.210f, 14.219f, 25.154f, 1.541f, 10.527f)
         close()
     }
-
-    val pathMeasure = PathMeasure().apply { setPath(memPath, false) }
-    val animatedPath = Path()
-    pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
-
-    val scale = size.height / EM_HEIGHT
-    val bounds = memPath.getBounds()
-    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
-
-    withTransform({
-        translate(left = leftOffset, top = topOffset)
-        scale(scale, scale, pivot = Offset.Zero)
-    }) {
-        drawPath(
-            path = animatedPath,
-            color = color,
-            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-        )
-        if (fillProgress > 0f) {
-            drawPath(path = memPath, color = color.copy(alpha = fillProgress), style = Fill)
-        }
-    }
+    val (scale, leftOffset, topOffset) = calculateLayout(path)
+    drawAnimatedLetter(progress, path, isDarkMode, scale, leftOffset, topOffset)
 }
 
 fun DrawScope.drawNun(progress: Float, isDarkMode: Boolean = false) {
-    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
-    val strokeEnd = 0.8f
-    val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
-    val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
-
-    val nunPath = Path().apply {
+    val path = Path().apply {
         moveTo(6.270f, 10.149f)
         lineTo(12.608f, 0.500f)
         lineTo(26.324f, 11.851f)
@@ -611,37 +365,12 @@ fun DrawScope.drawNun(progress: Float, isDarkMode: Boolean = false) {
         cubicTo(19.043f, 19.241f, 13.519f, 14.650f, 6.270f, 10.149f)
         close()
     }
-
-    val pathMeasure = PathMeasure().apply { setPath(nunPath, false) }
-    val animatedPath = Path()
-    pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
-
-    val scale = size.height / EM_HEIGHT
-    val bounds = nunPath.getBounds()
-    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
-
-    withTransform({
-        translate(left = leftOffset, top = topOffset)
-        scale(scale, scale, pivot = Offset.Zero)
-    }) {
-        drawPath(
-            path = animatedPath,
-            color = color,
-            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-        )
-        if (fillProgress > 0f) {
-            drawPath(path = nunPath, color = color.copy(alpha = fillProgress), style = Fill)
-        }
-    }
+    val (scale, leftOffset, topOffset) = calculateLayout(path)
+    drawAnimatedLetter(progress, path, isDarkMode, scale, leftOffset, topOffset)
 }
 
 fun DrawScope.drawPeh(progress: Float, isDarkMode: Boolean = false) {
-    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
-    val strokeEnd = 0.8f
-    val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
-    val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
-
-    val pehPath = Path().apply {
+    val path = Path().apply {
         moveTo(16.699f, 37.392f)
         cubicTo(0.679f, 28.899f, 2.765f, 16.561f, 22.375f, 0.500f)
         cubicTo(36.556f, 4.796f, 49.824f, 19.587f, 49.824f, 19.587f)
@@ -656,37 +385,12 @@ fun DrawScope.drawPeh(progress: Float, isDarkMode: Boolean = false) {
         lineTo(16.699f, 37.392f)
         close()
     }
-
-    val pathMeasure = PathMeasure().apply { setPath(pehPath, false) }
-    val animatedPath = Path()
-    pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
-
-    val scale = size.height / EM_HEIGHT
-    val bounds = pehPath.getBounds()
-    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
-
-    withTransform({
-        translate(left = leftOffset, top = topOffset)
-        scale(scale, scale, pivot = Offset.Zero)
-    }) {
-        drawPath(
-            path = animatedPath,
-            color = color,
-            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-        )
-        if (fillProgress > 0f) {
-            drawPath(path = pehPath, color = color.copy(alpha = fillProgress), style = Fill)
-        }
-    }
+    val (scale, leftOffset, topOffset) = calculateLayout(path)
+    drawAnimatedLetter(progress, path, isDarkMode, scale, leftOffset, topOffset)
 }
 
 fun DrawScope.drawQof(progress: Float, isDarkMode: Boolean = false) {
-    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
-    val strokeEnd = 0.8f
-    val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
-    val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
-
-    val qofTopPath = Path().apply {
+    val topPart = Path().apply {
         moveTo(0.500f, 16.817f)
         lineTo(14.098f, 0.500f)
         lineTo(14.098f, 8.067f)
@@ -701,8 +405,7 @@ fun DrawScope.drawQof(progress: Float, isDarkMode: Boolean = false) {
         lineTo(0.500f, 16.817f)
         close()
     }
-
-    val qofStemPath = Path().apply {
+    val stemPart = Path().apply {
         moveTo(13.979f, 24.030f)
         cubicTo(12.071f, 27.980f, 8.714f, 31.943f, 5.229f, 35.263f)
         lineTo(5.466f, 85.871f)
@@ -710,31 +413,29 @@ fun DrawScope.drawQof(progress: Float, isDarkMode: Boolean = false) {
         lineTo(13.979f, 24.030f)
         close()
     }
-
-    val qofFull = Path().apply {
-        addPath(qofTopPath)
-        addPath(qofStemPath)
+    val fullPath = Path().apply {
+        addPath(topPart)
+        addPath(stemPart)
     }
+    val (scale, leftOffset, topOffset) = calculateLayout(fullPath)
 
-    val measureTop = PathMeasure().apply { setPath(qofTopPath, false) }
-    val measureStem = PathMeasure().apply { setPath(qofStemPath, false) }
+    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
+    val strokeEnd = 0.8f
+    val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
+    val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
 
-    val lenTop = measureTop.length
-    val lenStem = measureStem.length
-    val totalLength = lenTop + lenStem
-    val currentDistance = strokeProgress * totalLength
+    val topMeasure = PathMeasure().apply { setPath(topPart, false) }
+    val stemMeasure = PathMeasure().apply { setPath(stemPart, false) }
+    val totalLength = topMeasure.length + stemMeasure.length
+    val targetLength = totalLength * strokeProgress
 
     val animatedPath = Path()
-    if (currentDistance <= lenTop) {
-        measureTop.getSegment(0f, currentDistance, animatedPath, true)
+    if (targetLength <= topMeasure.length) {
+        topMeasure.getSegment(0f, targetLength, animatedPath, true)
     } else {
-        measureTop.getSegment(0f, lenTop, animatedPath, true)
-        measureStem.getSegment(0f, currentDistance - lenTop, animatedPath, true)
+        topMeasure.getSegment(0f, topMeasure.length, animatedPath, true)
+        stemMeasure.getSegment(0f, targetLength - topMeasure.length, animatedPath, true)
     }
-
-    val scale = size.height / EM_HEIGHT
-    val bounds = qofFull.getBounds()
-    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
 
     withTransform({
         translate(left = leftOffset, top = topOffset)
@@ -746,18 +447,13 @@ fun DrawScope.drawQof(progress: Float, isDarkMode: Boolean = false) {
             style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
         )
         if (fillProgress > 0f) {
-            drawPath(path = qofFull, color = color.copy(alpha = fillProgress), style = Fill)
+            drawPath(path = fullPath, color = color.copy(alpha = fillProgress), style = Fill)
         }
     }
 }
 
 fun DrawScope.drawResh(progress: Float, isDarkMode: Boolean = false) {
-    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
-    val strokeEnd = 0.8f
-    val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
-    val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
-
-    val reshPath = Path().apply {
+    val path = Path().apply {
         moveTo(0.500f, 16.463f)
         lineTo(13.270f, 0.500f)
         lineTo(13.388f, 6.648f)
@@ -770,37 +466,12 @@ fun DrawScope.drawResh(progress: Float, isDarkMode: Boolean = false) {
         lineTo(0.500f, 16.463f)
         close()
     }
-
-    val pathMeasure = PathMeasure().apply { setPath(reshPath, false) }
-    val animatedPath = Path()
-    pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
-
-    val scale = size.height / EM_HEIGHT
-    val bounds = reshPath.getBounds()
-    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
-
-    withTransform({
-        translate(left = leftOffset, top = topOffset)
-        scale(scale, scale, pivot = Offset.Zero)
-    }) {
-        drawPath(
-            path = animatedPath,
-            color = color,
-            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-        )
-        if (fillProgress > 0f) {
-            drawPath(path = reshPath, color = color.copy(alpha = fillProgress), style = Fill)
-        }
-    }
+    val (scale, leftOffset, topOffset) = calculateLayout(path)
+    drawAnimatedLetter(progress, path, isDarkMode, scale, leftOffset, topOffset)
 }
 
 fun DrawScope.drawSamech(progress: Float, isDarkMode: Boolean = false) {
-    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
-    val strokeEnd = 0.8f
-    val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
-    val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
-
-    val samechOuter = Path().apply {
+    val outer = Path().apply {
         moveTo(0.500f, 14.406f)
         lineTo(11.094f, 0.500f)
         lineTo(11.284f, 6.649f)
@@ -814,8 +485,7 @@ fun DrawScope.drawSamech(progress: Float, isDarkMode: Boolean = false) {
         cubicTo(4.035f, 16.114f, 2.609f, 14.967f, 0.500f, 14.406f)
         close()
     }
-
-    val samechInner = Path().apply {
+    val inner = Path().apply {
         moveTo(11.284f, 16.298f)
         lineTo(11.094f, 53.189f)
         lineTo(48.648f, 53.189f)
@@ -825,32 +495,30 @@ fun DrawScope.drawSamech(progress: Float, isDarkMode: Boolean = false) {
         lineTo(11.284f, 16.298f)
         close()
     }
-
-    val samechFull = Path().apply {
+    val fullPath = Path().apply {
         fillType = PathFillType.EvenOdd
-        addPath(samechOuter)
-        addPath(samechInner)
+        addPath(outer)
+        addPath(inner)
     }
+    val (scale, leftOffset, topOffset) = calculateLayout(fullPath)
 
-    val measureOuter = PathMeasure().apply { setPath(samechOuter, false) }
-    val measureInner = PathMeasure().apply { setPath(samechInner, false) }
+    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
+    val strokeEnd = 0.8f
+    val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
+    val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
 
-    val lenOuter = measureOuter.length
-    val lenInner = measureInner.length
-    val totalLength = lenOuter + lenInner
-    val currentDistance = strokeProgress * totalLength
+    val outerMeasure = PathMeasure().apply { setPath(outer, false) }
+    val innerMeasure = PathMeasure().apply { setPath(inner, false) }
+    val totalLength = outerMeasure.length + innerMeasure.length
+    val targetLength = totalLength * strokeProgress
 
     val animatedPath = Path()
-    if (currentDistance <= lenOuter) {
-        measureOuter.getSegment(0f, currentDistance, animatedPath, true)
+    if (targetLength <= outerMeasure.length) {
+        outerMeasure.getSegment(0f, targetLength, animatedPath, true)
     } else {
-        measureOuter.getSegment(0f, lenOuter, animatedPath, true)
-        measureInner.getSegment(0f, currentDistance - lenOuter, animatedPath, true)
+        outerMeasure.getSegment(0f, outerMeasure.length, animatedPath, true)
+        innerMeasure.getSegment(0f, targetLength - outerMeasure.length, animatedPath, true)
     }
-
-    val scale = size.height / EM_HEIGHT
-    val bounds = samechFull.getBounds()
-    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
 
     withTransform({
         translate(left = leftOffset, top = topOffset)
@@ -862,18 +530,13 @@ fun DrawScope.drawSamech(progress: Float, isDarkMode: Boolean = false) {
             style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
         )
         if (fillProgress > 0f) {
-            drawPath(path = samechFull, color = color.copy(alpha = fillProgress), style = Fill)
+            drawPath(path = fullPath, color = color.copy(alpha = fillProgress), style = Fill)
         }
     }
 }
 
 fun DrawScope.drawShin(progress: Float, isDarkMode: Boolean = false) {
-    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
-    val strokeEnd = 0.8f
-    val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
-    val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
-
-    val shinPath = Path().apply {
+    val path = Path().apply {
         moveTo(0.500f, 10.550f)
         lineTo(8.659f, 0.973f)
         cubicTo(13.150f, 10.580f, 15.756f, 21.872f, 17.409f, 35.263f)
@@ -889,37 +552,12 @@ fun DrawScope.drawShin(progress: Float, isDarkMode: Boolean = false) {
         cubicTo(10.076f, 38.668f, 5.587f, 22.516f, 0.500f, 10.550f)
         close()
     }
-
-    val pathMeasure = PathMeasure().apply { setPath(shinPath, false) }
-    val animatedPath = Path()
-    pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
-
-    val scale = size.height / EM_HEIGHT
-    val bounds = shinPath.getBounds()
-    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
-
-    withTransform({
-        translate(left = leftOffset, top = topOffset)
-        scale(scale, scale, pivot = Offset.Zero)
-    }) {
-        drawPath(
-            path = animatedPath,
-            color = color,
-            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-        )
-        if (fillProgress > 0f) {
-            drawPath(path = shinPath, color = color.copy(alpha = fillProgress), style = Fill)
-        }
-    }
+    val (scale, leftOffset, topOffset) = calculateLayout(path)
+    drawAnimatedLetter(progress, path, isDarkMode, scale, leftOffset, topOffset)
 }
 
 fun DrawScope.drawTav(progress: Float, isDarkMode: Boolean = false) {
-    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
-    val strokeEnd = 0.8f
-    val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
-    val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
-
-    val tavPath = Path().apply {
+    val path = Path().apply {
         moveTo(3.692f, 16.462f)
         lineTo(19.655f, 0.500f)
         lineTo(19.773f, 6.885f)
@@ -938,37 +576,12 @@ fun DrawScope.drawTav(progress: Float, isDarkMode: Boolean = false) {
         lineTo(3.692f, 16.462f)
         close()
     }
-
-    val pathMeasure = PathMeasure().apply { setPath(tavPath, false) }
-    val animatedPath = Path()
-    pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
-
-    val scale = size.height / EM_HEIGHT
-    val bounds = tavPath.getBounds()
-    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
-
-    withTransform({
-        translate(left = leftOffset, top = topOffset)
-        scale(scale, scale, pivot = Offset.Zero)
-    }) {
-        drawPath(
-            path = animatedPath,
-            color = color,
-            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-        )
-        if (fillProgress > 0f) {
-            drawPath(path = tavPath, color = color.copy(alpha = fillProgress), style = Fill)
-        }
-    }
+    val (scale, leftOffset, topOffset) = calculateLayout(path)
+    drawAnimatedLetter(progress, path, isDarkMode, scale, leftOffset, topOffset)
 }
 
 fun DrawScope.drawTet(progress: Float, isDarkMode: Boolean = false) {
-    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
-    val strokeEnd = 0.8f
-    val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
-    val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
-
-    val tetPath = Path().apply {
+    val path = Path().apply {
         moveTo(25.904f, 16.088f)
         lineTo(30.523f, 4.541f)
         cubicTo(77.349f, -8.538f, 68.858f, 69.101f, 14.645f, 60.256f)
@@ -978,37 +591,12 @@ fun DrawScope.drawTet(progress: Float, isDarkMode: Boolean = false) {
         cubicTo(57.910f, 61.389f, 67.801f, -2.269f, 25.904f, 16.088f)
         close()
     }
-
-    val pathMeasure = PathMeasure().apply { setPath(tetPath, false) }
-    val animatedPath = Path()
-    pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
-
-    val scale = size.height / EM_HEIGHT
-    val bounds = tetPath.getBounds()
-    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
-
-    withTransform({
-        translate(left = leftOffset, top = topOffset)
-        scale(scale, scale, pivot = Offset.Zero)
-    }) {
-        drawPath(
-            path = animatedPath,
-            color = color,
-            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-        )
-        if (fillProgress > 0f) {
-            drawPath(path = tetPath, color = color.copy(alpha = fillProgress), style = Fill)
-        }
-    }
+    val (scale, leftOffset, topOffset) = calculateLayout(path)
+    drawAnimatedLetter(progress, path, isDarkMode, scale, leftOffset, topOffset)
 }
 
 fun DrawScope.drawTsadeh(progress: Float, isDarkMode: Boolean = false) {
-    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
-    val strokeEnd = 0.8f
-    val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
-    val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
-
-    val tsadehPath = Path().apply {
+    val path = Path().apply {
         moveTo(4.520f, 8.304f)
         lineTo(11.733f, 0.736f)
         cubicTo(19.222f, 15.565f, 26.710f, 23.322f, 34.199f, 28.996f)
@@ -1023,63 +611,18 @@ fun DrawScope.drawTsadeh(progress: Float, isDarkMode: Boolean = false) {
         cubicTo(46.298f, 50.351f, 15.883f, 27.684f, 4.520f, 8.304f)
         close()
     }
-
-    val pathMeasure = PathMeasure().apply { setPath(tsadehPath, false) }
-    val animatedPath = Path()
-    pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
-
-    val scale = size.height / EM_HEIGHT
-    val bounds = tsadehPath.getBounds()
-    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
-
-    withTransform({
-        translate(left = leftOffset, top = topOffset)
-        scale(scale, scale, pivot = Offset.Zero)
-    }) {
-        drawPath(
-            path = animatedPath,
-            color = color,
-            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-        )
-        if (fillProgress > 0f) {
-            drawPath(path = tsadehPath, color = color.copy(alpha = fillProgress), style = Fill)
-        }
-    }
+    val (scale, leftOffset, topOffset) = calculateLayout(path)
+    drawAnimatedLetter(progress, path, isDarkMode, scale, leftOffset, topOffset)
 }
 
 fun DrawScope.drawYod(progress: Float, isDarkMode: Boolean = false) {
-    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
-    val strokeEnd = 0.8f
-    val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
-    val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
-
-    val yodPath = Path().apply {
+    val path = Path().apply {
         moveTo(0.500f, 10.027f)
         lineTo(9.449f, 0.500f)
         cubicTo(39.345f, 15.486f, 26.541f, 38.068f, 9.449f, 44.668f)
         cubicTo(23.259f, 23.756f, 22.199f, 19.584f, 0.500f, 10.027f)
         close()
     }
-
-    val pathMeasure = PathMeasure().apply { setPath(yodPath, false) }
-    val animatedPath = Path()
-    pathMeasure.getSegment(0f, pathMeasure.length * strokeProgress, animatedPath, startWithMoveTo = true)
-
-    val scale = size.height / EM_HEIGHT
-    val bounds = yodPath.getBounds()
-    val (leftOffset, topOffset) = calculateOffsets(bounds, scale)
-
-    withTransform({
-        translate(left = leftOffset, top = topOffset)
-        scale(scale, scale, pivot = Offset.Zero)
-    }) {
-        drawPath(
-            path = animatedPath,
-            color = color,
-            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-        )
-        if (fillProgress > 0f) {
-            drawPath(path = yodPath, color = color.copy(alpha = fillProgress), style = Fill)
-        }
-    }
+    val (scale, leftOffset, topOffset) = calculateLayout(path)
+    drawAnimatedLetter(progress, path, isDarkMode, scale, leftOffset, topOffset)
 }

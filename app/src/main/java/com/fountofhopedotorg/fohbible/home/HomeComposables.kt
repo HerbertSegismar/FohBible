@@ -1,5 +1,6 @@
 package com.fountofhopedotorg.fohbible.home
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Note
@@ -31,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,19 +47,30 @@ fun UsefulSpaceGrid(
     onCreateSermonMaterialsClick: () -> Unit,
     onTakeBibleQuizClick: () -> Unit,
     onLearnHebrewClick: () -> Unit,
+    onLearnGreekClick: () -> Unit,
 ) {
     val viewModel: AppViewModel = viewModel()
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    val iconSize = if (isLandscape) 48.dp else 24.dp
+    val comingSoonIconSize = if (isLandscape) 48.dp else 24.dp
+    val gridSpacing = if (isLandscape) 14.dp else 10.dp
+
+    val textStyle = if (isLandscape) MaterialTheme.typography.titleSmall else MaterialTheme.typography.labelMedium
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
+        contentAlignment = Alignment.Center
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .then(if (isLandscape) Modifier.widthIn(max = 600.dp) else Modifier)
                 .background(
-                    if (viewModel.darkTheme) Color.Black.copy(0.5f) else MaterialTheme.colorScheme.primary.copy(0.1f
-                    ),
+                    if (viewModel.darkTheme) Color.Black.copy(0.5f) else MaterialTheme.colorScheme.primary.copy(0.1f),
                     shape = RoundedCornerShape(16.dp)
                 )
                 .padding(20.dp)
@@ -74,14 +88,14 @@ fun UsefulSpaceGrid(
             }
 
             Spacer(Modifier.height(16.dp))
-            for (row in 0..3) {
+            for (row in 0..2) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(gridSpacing)
                 ) {
                     for (col in 0..2) {
                         val index = row * 3 + col
-                        val isOccupied = index < 3
+                        val isOccupied = index < 4
 
                         Box(
                             modifier = Modifier
@@ -104,7 +118,8 @@ fun UsefulSpaceGrid(
                                             when (index) {
                                                 0 -> onCreateSermonMaterialsClick()
                                                 1 -> onTakeBibleQuizClick()
-                                                else -> onLearnHebrewClick()
+                                                2 -> onLearnHebrewClick()
+                                                else -> onLearnGreekClick()
                                             }
                                         }
                                     ) else Modifier
@@ -114,26 +129,31 @@ fun UsefulSpaceGrid(
                             if (isOccupied) {
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
+                                    verticalArrangement = Arrangement.Center,
+                                    modifier = Modifier.padding(8.dp)
                                 ) {
                                     Icon(
                                         imageVector = when (index) {
                                             0 -> Icons.AutoMirrored.Filled.Note
                                             1 -> Icons.Filled.QuestionAnswer
+                                            2 -> Icons.Filled.School
                                             else -> Icons.Filled.School
                                         },
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.secondary,
-                                        modifier = if (index == 0) Modifier.rotate(90f) else Modifier.size(24.dp)
+                                        modifier = Modifier
+                                            .size(iconSize)
+                                            .then(if (index == 0) Modifier.rotate(90f) else Modifier)
                                     )
                                     Spacer(Modifier.height(8.dp))
                                     Text(
-                                        text =  when (index) {
+                                        text = when (index) {
                                             0 -> "Create Sermon"
                                             1 -> "Bible Quiz"
-                                            else -> "Learn Hebrew"
+                                            2 -> "Learn Hebrew"
+                                            else -> "Learn Greek"
                                         },
-                                        style = MaterialTheme.typography.labelMedium,
+                                        style = textStyle,
                                         fontWeight = FontWeight.Bold,
                                         textAlign = TextAlign.Center,
                                         maxLines = 2,
@@ -143,26 +163,28 @@ fun UsefulSpaceGrid(
                             } else {
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
+                                    verticalArrangement = Arrangement.Center,
+                                    modifier = Modifier.padding(8.dp)
                                 ) {
                                     Icon(
                                         imageVector = Icons.Filled.AutoAwesome,
                                         contentDescription = "Coming Soon",
                                         tint = MaterialTheme.colorScheme.secondary,
-                                        modifier = Modifier.size(28.dp)
+                                        modifier = Modifier.size(comingSoonIconSize)
                                     )
                                     Spacer(Modifier.height(4.dp))
                                     Text(
-                                        text = "Soon",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Medium
+                                        text = "Coming Soon",
+                                        style = textStyle,
+                                        fontWeight = FontWeight.Bold,
+                                        textAlign = TextAlign.Center
                                     )
                                 }
                             }
                         }
                     }
                 }
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(gridSpacing))
             }
         }
     }

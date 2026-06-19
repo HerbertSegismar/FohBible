@@ -13,54 +13,23 @@ import com.fountofhopedotorg.fohbible.data.Letter
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 
 @Composable
-fun LearnHebrewScreen() {
+fun LearnGreekScreen() {
     val viewModel: AppViewModel = viewModel()
+
     val letters = remember {
         listOf(
-            Letter("Aleph", "Silent") { progress, isDarkMode ->
-                drawAleph(progress, isDarkMode) },
-            Letter("Bet", "B/V") { progress, isDarkMode ->
-                drawBet(progress, isDarkMode) },
-            Letter("Gimel", "G") { progress, isDarkMode ->
-                drawGimel(progress, isDarkMode) },
-            Letter("Dalet", "D") { progress, isDarkMode ->
-                drawDalet(progress, isDarkMode) },
-            Letter("He", "H") { progress, isDarkMode ->
-                drawHe(progress, isDarkMode) },
-            Letter("Vav", "V") { progress, isDarkMode ->
-                drawVav(progress, isDarkMode) },
-            Letter("Zayin", "Z") { progress, isDarkMode ->
-                drawZayin(progress, isDarkMode) },
-            Letter("Chet", "Ch") { progress, isDarkMode ->
-                drawChet(progress, isDarkMode) },
-            Letter("Tet", "T") { progress, isDarkMode ->
-                drawTet(progress, isDarkMode) },
-            Letter("Yod", "Y") { progress, isDarkMode ->
-                drawYod(progress, isDarkMode) },
-            Letter("Kaf", "K/Kh") { progress, isDarkMode ->
-                drawKaf(progress, isDarkMode) },
-            Letter("Lamed", "L") { progress, isDarkMode ->
-                drawLamed(progress, isDarkMode) },
-            Letter("Mem", "M") { progress, isDarkMode ->
-                drawMem(progress, isDarkMode) },
-            Letter("Nun", "N") { progress, isDarkMode ->
-                drawNun(progress, isDarkMode) },
-            Letter("Samech", "S") { progress, isDarkMode ->
-                drawSamech(progress, isDarkMode) },
-            Letter("Ayin", "Silent") { progress, isDarkMode ->
-                drawAyin(progress, isDarkMode) },
-            Letter("Peh", "P/F") { progress, isDarkMode ->
-                drawPeh(progress, isDarkMode) },
-            Letter("Tsadeh", "Ts") { progress, isDarkMode ->
-                drawTsadeh(progress, isDarkMode) },
-            Letter("Qof", "Q") { progress, isDarkMode ->
-                drawQof(progress, isDarkMode) },
-            Letter("Resh", "R") { progress, isDarkMode ->
-                drawResh(progress, isDarkMode) },
-            Letter("Shin", "S/Sh") { progress, isDarkMode ->
-                drawShin(progress, isDarkMode) },
-            Letter("Tav", "T") { progress, isDarkMode ->
-                drawTav(progress, isDarkMode) },
+            Letter("Alpha", "A") { progress, isDarkMode ->
+                drawBigAlpha(progress, isDarkMode)
+            },
+            Letter("alpha", "a") { progress, isDarkMode ->
+                drawSmallAlpha(progress, isDarkMode)
+            },
+            Letter("Beta", "B") { progress, isDarkMode ->
+                drawBigBeta(progress, isDarkMode)
+            },
+            Letter("beta", "b") { progress, isDarkMode ->
+                drawSmallBeta(progress, isDarkMode)
+            }
         )
     }
 
@@ -107,6 +76,7 @@ fun LearnHebrewScreen() {
             selectedOption = null
         }
     }
+
     LaunchedEffect(currentIndex, replayTrigger) {
         if (!isTesting && currentIndex < letters.size) {
             showEnglish = false
