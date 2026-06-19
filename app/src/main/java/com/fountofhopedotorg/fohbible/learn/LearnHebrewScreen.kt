@@ -67,7 +67,7 @@ fun LearnHebrewScreen() {
     var currentIndex by rememberSaveable { mutableIntStateOf(0) }
     var replayTrigger by rememberSaveable { mutableIntStateOf(0) }
     var showEnglish by rememberSaveable { mutableStateOf(false) }
-    val progressAnimatable = remember { Animatable(0f) }
+    val progressAnimatable = remember(currentIndex, replayTrigger) { Animatable(0f) }
 
     var isTesting by rememberSaveable { mutableStateOf(false) }
     val shuffledIndices = rememberSaveable {
@@ -171,8 +171,14 @@ fun LearnHebrewScreen() {
                             progress = progressAnimatable.value,
                             showEnglish = showEnglish,
                             isLastLetter = currentIndex == letters.size - 1,
-                            onReplay = { replayTrigger++ },
-                            onNext = { currentIndex++ },
+                            onReplay = {
+                                showEnglish = false
+                                replayTrigger++
+                            },
+                            onNext = {
+                                showEnglish = false
+                                currentIndex++
+                            },
                             modifier = Modifier.weight(1f).fillMaxHeight(),
                             isDarkMode = viewModel.darkTheme
                         )
@@ -200,8 +206,14 @@ fun LearnHebrewScreen() {
                             progress = progressAnimatable.value,
                             showEnglish = showEnglish,
                             isLastLetter = currentIndex == letters.size - 1,
-                            onReplay = { replayTrigger++ },
-                            onNext = { currentIndex++ },
+                            onReplay = {
+                                showEnglish = false
+                                replayTrigger++
+                            },
+                            onNext = {
+                                showEnglish = false
+                                currentIndex++
+                            },
                             modifier = Modifier.weight(1f).fillMaxWidth(),
                             isDarkMode = viewModel.darkTheme
                         )
