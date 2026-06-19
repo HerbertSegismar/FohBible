@@ -213,6 +213,20 @@ fun TestScreen(
         }
     } else {
         val currentLetter = testLetters[testIndex]
+        val isLastQuestion = testIndex == testLetters.size - 1
+
+        val nextButton = @Composable {
+            Button(
+                onClick = onNextQuestion,
+                enabled = selectedOption != null,
+                colors = ButtonDefaults.buttonColors(
+                    disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                    disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                )
+            ) {
+                Text(text = if (isLastQuestion) "Finish" else "Next", color = Color.White)
+            }
+        }
 
         if (isLandscape) {
             Row(
@@ -248,7 +262,7 @@ fun TestScreen(
                         TextButton(onClick = onBackToLearn) {
                             Text("Cancel Test", color = MaterialTheme.colorScheme.error)
                         }
-                        NextButtonSection(selectedOption, testIndex, testLetters.size, onNextQuestion)
+                        nextButton()
                     }
                 }
             }
@@ -274,7 +288,7 @@ fun TestScreen(
                     TextButton(onClick = onBackToLearn) {
                         Text("Cancel Test", color = MaterialTheme.colorScheme.error)
                     }
-                    NextButtonSection(selectedOption, testIndex, testLetters.size, onNextQuestion)
+                    nextButton()
                 }
             }
         }
@@ -346,28 +360,5 @@ private fun OptionsSection(
         ) {
             Text(text = option, style = MaterialTheme.typography.bodyLarge)
         }
-    }
-}
-
-@Composable
-private fun NextButtonSection(
-    selectedOption: String?,
-    testIndex: Int,
-    totalQuestions: Int,
-    onNextQuestion: () -> Unit
-) {
-    Spacer(modifier = Modifier.height(24.dp))
-
-    if (selectedOption != null) {
-        Box(
-            modifier = Modifier.fillMaxWidth(0.8f),
-            contentAlignment = Alignment.CenterEnd
-        ) {
-            Button(onClick = onNextQuestion) {
-                Text(text = if (testIndex == totalQuestions - 1) "View Results" else "Next", color = Color.White)
-            }
-        }
-    } else {
-        Spacer(modifier = Modifier.height(48.dp))
     }
 }
