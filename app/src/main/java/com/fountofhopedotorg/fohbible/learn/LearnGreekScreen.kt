@@ -19,16 +19,76 @@ fun LearnGreekScreen() {
     val letters = remember {
         listOf(
             Letter("Alpha", "A") { progress, isDarkMode ->
-                drawBigAlpha(progress, isDarkMode)
+                drawGreekGlyph(GreekGlyph.ALPHA_UPPER, progress, isDarkMode)
             },
             Letter("alpha", "a") { progress, isDarkMode ->
-                drawSmallAlpha(progress, isDarkMode)
+                drawGreekGlyph(GreekGlyph.ALPHA_LOWER, progress, isDarkMode)
             },
             Letter("Beta", "B") { progress, isDarkMode ->
-                drawBigBeta(progress, isDarkMode)
+                drawGreekGlyph(GreekGlyph.BETA_UPPER, progress, isDarkMode)
             },
             Letter("beta", "b") { progress, isDarkMode ->
-                drawSmallBeta(progress, isDarkMode)
+                drawGreekGlyph(GreekGlyph.BETA_LOWER, progress, isDarkMode)
+            },
+            Letter("Gamma", "Γ") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.GAMMA_UPPER, progress, isDarkMode)
+            },
+            Letter("gamma", "γ") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.GAMMA_LOWER, progress, isDarkMode)
+            },
+            Letter("Delta", "Δ") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.DELTA_UPPER, progress, isDarkMode)
+            },
+            Letter("delta", "δ") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.DELTA_LOWER, progress, isDarkMode)
+            },
+            Letter("Epsilon", "Ε") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.EPSILON_UPPER, progress, isDarkMode)
+            },
+            Letter("epsilon", "ε") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.EPSILON_LOWER, progress, isDarkMode)
+            },
+            Letter("Zeta", "Ζ") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.ZETA_UPPER, progress, isDarkMode)
+            },
+            Letter("zeta", "ζ") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.ZETA_LOWER, progress, isDarkMode)
+            },
+            Letter("Eta", "Η") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.ETA_UPPER, progress, isDarkMode)
+            },
+            Letter("eta", "η") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.ETA_LOWER, progress, isDarkMode)
+            },
+            Letter("Theta", "Θ") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.THETA_UPPER, progress, isDarkMode)
+            },
+            Letter("theta", "θ") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.THETA_LOWER, progress, isDarkMode)
+            },
+            Letter("Iota", "Ι") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.IOTA_UPPER, progress, isDarkMode)
+            },
+            Letter("iota", "ι") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.IOTA_LOWER, progress, isDarkMode)
+            },
+            Letter("Kappa", "Κ") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.KAPPA_UPPER, progress, isDarkMode)
+            },
+            Letter("kappa", "κ") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.KAPPA_LOWER, progress, isDarkMode)
+            },
+            Letter("Lambda", "Λ") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.LAMBDA_UPPER, progress, isDarkMode)
+            },
+            Letter("lambda", "λ") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.LAMBDA_LOWER, progress, isDarkMode)
+            },
+            Letter("Mu", "Μ") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.MU_UPPER, progress, isDarkMode)
+            },
+            Letter("mu", "μ") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.MU_LOWER, progress, isDarkMode)
             }
         )
     }

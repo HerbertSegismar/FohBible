@@ -18,7 +18,7 @@ fun LearnHebrewScreen() {
     val letters = remember {
         listOf(
             Letter("Aleph", "Silent") { progress, isDarkMode ->
-                drawAleph(progress, isDarkMode) },
+                drawAlef(progress, isDarkMode) },
             Letter("Bet", "B/V") { progress, isDarkMode ->
                 drawBet(progress, isDarkMode) },
             Letter("Gimel", "G") { progress, isDarkMode ->
