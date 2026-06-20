@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -30,14 +29,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fountofhopedotorg.fohbible.data.Letter
 import android.content.res.Configuration
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.ui.platform.LocalConfiguration
 
 @Composable
-fun HistoryTable(letters: List<Letter>, modifier: Modifier = Modifier, isDarkMode: Boolean = false ) {
+fun HistoryTable(
+    letters: List<Letter>,
+    modifier: Modifier = Modifier,
+    isDarkMode: Boolean = false,
+    onLetterClick: (Int) -> Unit = {}
+) {
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 48.dp),
         modifier = modifier.padding(4.dp),
@@ -45,8 +51,12 @@ fun HistoryTable(letters: List<Letter>, modifier: Modifier = Modifier, isDarkMod
         verticalArrangement = Arrangement.spacedBy(8.dp),
         contentPadding = PaddingValues(vertical = 4.dp)
     ) {
-        items(letters) { letter ->
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        itemsIndexed(letters) { index, letter ->
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .clickable { onLetterClick(index) }
+            ) {
                 Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
                     Canvas(modifier = Modifier.fillMaxSize()) {
                         letter.draw(this, 1f, isDarkMode)

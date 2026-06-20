@@ -154,7 +154,12 @@ fun LearnHebrewScreen() {
                     HistoryTable(
                         letters = previouslySeenLetters,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
-                        isDarkMode = viewModel.darkTheme
+                        isDarkMode = viewModel.darkTheme,
+                        onLetterClick = { index ->
+                            currentIndex = index
+                            showEnglish = false
+                            replayTrigger++
+                        }
                     )
 
                     Spacer(modifier = Modifier.width(16.dp))
@@ -188,8 +193,13 @@ fun LearnHebrewScreen() {
                 Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
                     HistoryTable(
                         letters = previouslySeenLetters,
-                        modifier = Modifier.weight(1f).fillMaxWidth(),
-                        isDarkMode = viewModel.darkTheme
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        isDarkMode = viewModel.darkTheme,
+                        onLetterClick = { index ->
+                            currentIndex = index
+                            showEnglish = false
+                            replayTrigger++
+                        }
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))

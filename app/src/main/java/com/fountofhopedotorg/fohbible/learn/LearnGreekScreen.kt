@@ -30,16 +30,16 @@ fun LearnGreekScreen() {
             Letter("beta", "b") { progress, isDarkMode ->
                 drawGreekGlyph(GreekGlyph.BETA_LOWER, progress, isDarkMode)
             },
-            Letter("Gamma", "Γ") { progress, isDarkMode ->
+            Letter("Gamma", "G") { progress, isDarkMode ->
                 drawGreekGlyph(GreekGlyph.GAMMA_UPPER, progress, isDarkMode)
             },
-            Letter("gamma", "γ") { progress, isDarkMode ->
+            Letter("gamma", "g") { progress, isDarkMode ->
                 drawGreekGlyph(GreekGlyph.GAMMA_LOWER, progress, isDarkMode)
             },
-            Letter("Delta", "Δ") { progress, isDarkMode ->
+            Letter("Delta", "D") { progress, isDarkMode ->
                 drawGreekGlyph(GreekGlyph.DELTA_UPPER, progress, isDarkMode)
             },
-            Letter("delta", "δ") { progress, isDarkMode ->
+            Letter("delta", "d") { progress, isDarkMode ->
                 drawGreekGlyph(GreekGlyph.DELTA_LOWER, progress, isDarkMode)
             },
             Letter("Epsilon", "Ε") { progress, isDarkMode ->
@@ -51,25 +51,25 @@ fun LearnGreekScreen() {
             Letter("Zeta", "Ζ") { progress, isDarkMode ->
                 drawGreekGlyph(GreekGlyph.ZETA_UPPER, progress, isDarkMode)
             },
-            Letter("zeta", "ζ") { progress, isDarkMode ->
+            Letter("zeta", "z") { progress, isDarkMode ->
                 drawGreekGlyph(GreekGlyph.ZETA_LOWER, progress, isDarkMode)
             },
             Letter("Eta", "Η") { progress, isDarkMode ->
                 drawGreekGlyph(GreekGlyph.ETA_UPPER, progress, isDarkMode)
             },
-            Letter("eta", "η") { progress, isDarkMode ->
+            Letter("eta", "h") { progress, isDarkMode ->
                 drawGreekGlyph(GreekGlyph.ETA_LOWER, progress, isDarkMode)
             },
-            Letter("Theta", "Θ") { progress, isDarkMode ->
+            Letter("Theta", "T") { progress, isDarkMode ->
                 drawGreekGlyph(GreekGlyph.THETA_UPPER, progress, isDarkMode)
             },
-            Letter("theta", "θ") { progress, isDarkMode ->
+            Letter("theta", "t") { progress, isDarkMode ->
                 drawGreekGlyph(GreekGlyph.THETA_LOWER, progress, isDarkMode)
             },
             Letter("Iota", "Ι") { progress, isDarkMode ->
                 drawGreekGlyph(GreekGlyph.IOTA_UPPER, progress, isDarkMode)
             },
-            Letter("iota", "ι") { progress, isDarkMode ->
+            Letter("iota", "i") { progress, isDarkMode ->
                 drawGreekGlyph(GreekGlyph.IOTA_LOWER, progress, isDarkMode)
             },
             Letter("Kappa", "Κ") { progress, isDarkMode ->
@@ -78,17 +78,53 @@ fun LearnGreekScreen() {
             Letter("kappa", "κ") { progress, isDarkMode ->
                 drawGreekGlyph(GreekGlyph.KAPPA_LOWER, progress, isDarkMode)
             },
-            Letter("Lambda", "Λ") { progress, isDarkMode ->
+            Letter("Lambda", "L") { progress, isDarkMode ->
                 drawGreekGlyph(GreekGlyph.LAMBDA_UPPER, progress, isDarkMode)
             },
-            Letter("lambda", "λ") { progress, isDarkMode ->
+            Letter("lambda", "l") { progress, isDarkMode ->
                 drawGreekGlyph(GreekGlyph.LAMBDA_LOWER, progress, isDarkMode)
             },
             Letter("Mu", "Μ") { progress, isDarkMode ->
                 drawGreekGlyph(GreekGlyph.MU_UPPER, progress, isDarkMode)
             },
-            Letter("mu", "μ") { progress, isDarkMode ->
+            Letter("mu", "m") { progress, isDarkMode ->
                 drawGreekGlyph(GreekGlyph.MU_LOWER, progress, isDarkMode)
+            },
+            Letter("Nu", "Ν") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.NU_UPPER, progress, isDarkMode)
+            },
+            Letter("nu", "n") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.NU_LOWER, progress, isDarkMode)
+            },
+            Letter("Xi", "X") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.XI_UPPER, progress, isDarkMode)
+            },
+            Letter("xi", "x") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.XI_LOWER, progress, isDarkMode)
+            },
+            Letter("Omicron", "Ο") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.OMICRON_UPPER, progress, isDarkMode)
+            },
+            Letter("omicron", "ο") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.OMICRON_LOWER, progress, isDarkMode)
+            },
+            Letter("Pi", "P") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.PI_UPPER, progress, isDarkMode)
+            },
+            Letter("pi", "p") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.PI_LOWER, progress, isDarkMode)
+            },
+            Letter("Rho", "R") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.RHO_UPPER, progress, isDarkMode)
+            },
+            Letter("rho", "r") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.RHO_LOWER, progress, isDarkMode)
+            },
+            Letter("Sigma", "S") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.SIGMA_UPPER, progress, isDarkMode)
+            },
+            Letter("sigma", "s") { progress, isDarkMode ->
+                drawGreekGlyph(GreekGlyph.SIGMA_LOWER, progress, isDarkMode)
             }
         )
     }
@@ -184,7 +220,12 @@ fun LearnGreekScreen() {
                     HistoryTable(
                         letters = previouslySeenLetters,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
-                        isDarkMode = viewModel.darkTheme
+                        isDarkMode = viewModel.darkTheme,
+                        onLetterClick = { index ->
+                            currentIndex = index
+                            showEnglish = false
+                            replayTrigger++
+                        }
                     )
 
                     Spacer(modifier = Modifier.width(16.dp))
@@ -218,8 +259,13 @@ fun LearnGreekScreen() {
                 Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
                     HistoryTable(
                         letters = previouslySeenLetters,
-                        modifier = Modifier.weight(1f).fillMaxWidth(),
-                        isDarkMode = viewModel.darkTheme
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        isDarkMode = viewModel.darkTheme,
+                        onLetterClick = { index ->
+                            currentIndex = index
+                            showEnglish = false
+                            replayTrigger++
+                        }
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
