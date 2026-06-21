@@ -303,6 +303,42 @@ fun InteractiveModal(
                         )
                     )
                 }
+                "verses" -> {
+                    val bookNum = bookNumber ?: 1
+                    val chap = chapter ?: 1
+                    val vers = verse ?: 1
+                    val displayName = crossReferenceDatabaseDisplayNames[viewModel.selectedCrossReferenceDatabase]
+                        ?: viewModel.selectedCrossReferenceDatabase
+                    val bookName = BibleData.getBookByCustomNumber(bookNum)?.name ?: "Book"
+                    val title = "$bookName $chap:$vers"
+
+                    val loadingPage = ModalPage(
+                        title = title,
+                        type = "verses",
+                        content = "Loading...",
+                        description = null,
+                        isOldTestament = isOldTestament,
+                        bookNumber = bookNum,
+                        chapter = chap,
+                        verse = vers
+                    )
+                    stack.add(loadingPage)
+
+                    val verses = fetchVerses(
+                        PassageSelection(bookNum, bookName, chap, vers),
+                        databaseHelper
+                    )
+
+                    val newPage = loadingPage.copy(
+                        content = "",
+                        verses = verses,
+                        passage = PassageSelection(bookNum, bookName, chap, vers)
+                    )
+                    val index = stack.indexOf(loadingPage)
+                    if (index != -1) {
+                        stack[index] = newPage
+                    }
+                }
             }
         }
     }

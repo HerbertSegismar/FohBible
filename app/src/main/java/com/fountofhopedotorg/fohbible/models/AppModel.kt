@@ -91,7 +91,40 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         "nm9.jpg", "nm10.jpg", "nm11.jpg", "nm12.jpg", "nm13.jpg", "nm14.jpg",
         "om1.jpg", "om2.jpg", "om3.jpg", "om4.jpg", "om5.jpg"
     )
-
+    //video editor
+    var videoCanvasNotes = mutableStateListOf<CanvasNote>()
+    var videoSelectedNoteIds by mutableStateOf<Set<String>>(emptySet())
+    var videoSelectedNoteId by mutableStateOf<String?>(null)
+    var videoShowGroupDialog by mutableStateOf(false)
+    var videoGroupName by mutableStateOf("")
+    val videoGroupNames = mutableStateMapOf<String, String>()
+    var videoGroupToRenameId by mutableStateOf<String?>(null)
+    var videoGroupRenameText by mutableStateOf("")
+    var videoNoteToRenameId by mutableStateOf<String?>(null)
+    var videoRenameText by mutableStateOf("")
+    var videoShowColorPicker by mutableStateOf(false)
+    var videoNoteToColorEditId by mutableStateOf<String?>(null)
+    var videoShowCustomPolygonDialog by mutableStateOf(false)
+    var videoPolygonNoteToEditId by mutableStateOf<String?>(null)
+    var videoInitialPolygonString by mutableStateOf("")
+    var videoInitialIsLineMode by mutableStateOf(false)
+    var videoShowEditPropertiesDialog by mutableStateOf(false)
+    var videoEditPropertiesNoteId by mutableStateOf<String?>(null)
+    var videoEditX by mutableStateOf("")
+    var videoEditY by mutableStateOf("")
+    var videoEditScaleX by mutableStateOf("")
+    var videoEditScaleY by mutableStateOf("")
+    var videoEditRotation by mutableStateOf("")
+    var videoEditColorForDialog by mutableStateOf(Color.White)
+    var videoEditShadowColorForDialog by mutableStateOf<Color?>(null)
+    var videoEditShadowOffsetX by mutableFloatStateOf(0f)
+    var videoEditShadowOffsetY by mutableFloatStateOf(0f)
+    var videoEditBorderThickness by mutableFloatStateOf(0f)
+    var videoEditBorderColorForDialog by mutableStateOf<Color?>(null)
+    var videoSelectedInputMode by mutableStateOf("Add SVG")
+    var videoContentDialogType by mutableStateOf<VideoContentDialogType?>(null)
+    var videoIsGraphicalFullScreen by mutableStateOf(false)
+    // video editor ends
     var proportionalEditing by mutableStateOf(true)
     var showSaveMenu by mutableStateOf(false)
     var isGraphicalFullScreen by mutableStateOf(false)
@@ -394,5 +427,110 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 borderColor = borderColor
             )
         }
+    }
+    //video editor functions
+    fun addToVideoCanvas(note: CanvasNote) {
+        videoCanvasNotes.add(note.copy(id = UUID.randomUUID().toString()))
+    }
+
+    fun removeFromVideoCanvas(index: Int) {
+        if (index in videoCanvasNotes.indices) videoCanvasNotes.removeAt(index)
+    }
+
+    fun updateVideoNoteColor(id: String, color: Color) {
+        videoCanvasNotes.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let {
+            videoCanvasNotes[it] = videoCanvasNotes[it].copy(backgroundColor = color)
+        }
+    }
+
+    fun updateVideoNoteTextColor(noteId: String, color: Color) {
+        videoCanvasNotes.indexOfFirst { it.id == noteId }.takeIf { it != -1 }?.let {
+            videoCanvasNotes[it] = videoCanvasNotes[it].copy(textColor = color)
+        }
+    }
+
+    fun updateVideoNoteProperties(id: String, x: Float, y: Float, width: Float, height: Float, rotation: Float) {
+        videoCanvasNotes.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let {
+            videoCanvasNotes[it] = videoCanvasNotes[it].copy(
+                offset = Offset(x, y), width = width, height = height, rotation = rotation
+            )
+        }
+    }
+
+    fun updateVideoNoteScale(id: String, scaleX: Float, scaleY: Float) {
+        videoCanvasNotes.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let {
+            videoCanvasNotes[it] = videoCanvasNotes[it].copy(scaleX = scaleX, scaleY = scaleY)
+        }
+    }
+
+    fun updateVideoNoteContent(id: String, newContent: String) {
+        videoCanvasNotes.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let {
+            videoCanvasNotes[it] = videoCanvasNotes[it].copy(content = newContent)
+        }
+    }
+
+    fun toggleVideoVisibility(noteId: String) {
+        videoCanvasNotes.indexOfFirst { it.id == noteId }.takeIf { it != -1 }?.let {
+            videoCanvasNotes[it] = videoCanvasNotes[it].copy(isVisible = !videoCanvasNotes[it].isVisible)
+        }
+    }
+
+    fun toggleVideoLock(noteId: String) {
+        videoCanvasNotes.indexOfFirst { it.id == noteId }.takeIf { it != -1 }?.let {
+            videoCanvasNotes[it] = videoCanvasNotes[it].copy(isLocked = !videoCanvasNotes[it].isLocked)
+        }
+    }
+
+    fun renameVideoCanvasNote(noteId: String, newName: String) {
+        videoCanvasNotes.indexOfFirst { it.id == noteId }.takeIf { it != -1 }?.let {
+            videoCanvasNotes[it] = videoCanvasNotes[it].copy(customName = newName.trim())
+        }
+    }
+
+    fun renameVideoGroup(groupId: String, newName: String) {
+        videoGroupNames[groupId] = newName
+    }
+
+    fun createVideoGroup(noteIds: List<String>) {
+        if (noteIds.size < 2) return
+        val groupId = "vid_group_${UUID.randomUUID().toString().take(8)}"
+        val grouped = videoCanvasNotes.filter { it.id in noteIds }.mapIndexed { _, note ->
+            note.copy(groupId = groupId)
+        }
+        videoCanvasNotes.removeAll { it.id in noteIds }
+        videoCanvasNotes.addAll(0, grouped)
+    }
+
+    fun ungroupVideoNotes(noteIds: Set<String>) {
+        for (i in videoCanvasNotes.indices) {
+            if (videoCanvasNotes[i].id in noteIds) {
+                videoCanvasNotes[i] = videoCanvasNotes[i].copy(groupId = null)
+            }
+        }
+    }
+
+    fun applyAllVideoNoteProperties(
+        id: String, x: Float, y: Float, width: Float, height: Float, rotation: Float,
+        scaleX: Float, scaleY: Float, color: Color, isTextElement: Boolean,
+        shadowColor: Color?, shadowOffsetX: Float, shadowOffsetY: Float,
+        borderThickness: Float, borderColor: Color?
+    ) {
+        videoCanvasNotes.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let {
+            val current = videoCanvasNotes[it]
+            videoCanvasNotes[it] = current.copy(
+                offset = Offset(x, y), width = width, height = height, rotation = rotation,
+                scaleX = scaleX, scaleY = scaleY,
+                textColor = if (isTextElement) color else current.textColor,
+                backgroundColor = if (!isTextElement) color else current.backgroundColor,
+                shadowColor = shadowColor, shadowOffsetX = shadowOffsetX, shadowOffsetY = shadowOffsetY,
+                borderThickness = borderThickness, borderColor = borderColor
+            )
+        }
+    }
+
+    fun reorderVideoCanvasNotes(from: Int, to: Int) {
+        if (from == to || from !in videoCanvasNotes.indices || to !in videoCanvasNotes.indices) return
+        val item = videoCanvasNotes.removeAt(from)
+        videoCanvasNotes.add(to, item)
     }
 }

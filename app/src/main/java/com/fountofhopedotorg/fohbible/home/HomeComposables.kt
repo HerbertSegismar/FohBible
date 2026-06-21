@@ -19,6 +19,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Note
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.QuestionAnswer
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.Icon
@@ -48,6 +50,8 @@ fun UsefulSpaceGrid(
     onTakeBibleQuizClick: () -> Unit,
     onLearnHebrewClick: () -> Unit,
     onLearnGreekClick: () -> Unit,
+    onOpenDictionaryClick: () -> Unit = {},
+    onOpenVideoEditorClick: () -> Unit = {}
 ) {
     val viewModel: AppViewModel = viewModel()
     val configuration = LocalConfiguration.current
@@ -95,7 +99,7 @@ fun UsefulSpaceGrid(
                 ) {
                     for (col in 0..2) {
                         val index = row * 3 + col
-                        val isOccupied = index < 4
+                        val isOccupied = index < 6
 
                         Box(
                             modifier = Modifier
@@ -119,7 +123,9 @@ fun UsefulSpaceGrid(
                                                 0 -> onCreateSermonMaterialsClick()
                                                 1 -> onTakeBibleQuizClick()
                                                 2 -> onLearnHebrewClick()
-                                                else -> onLearnGreekClick()
+                                                3 -> onLearnGreekClick()
+                                                4 -> onOpenDictionaryClick()
+                                                5 -> onOpenVideoEditorClick()
                                             }
                                         }
                                     ) else Modifier
@@ -137,6 +143,9 @@ fun UsefulSpaceGrid(
                                             0 -> Icons.AutoMirrored.Filled.Note
                                             1 -> Icons.Filled.QuestionAnswer
                                             2 -> Icons.Filled.School
+                                            3 -> Icons.Filled.School
+                                            4 -> Icons.Filled.Book
+                                            5 -> Icons.Filled.PlayArrow
                                             else -> Icons.Filled.School
                                         },
                                         contentDescription = null,
@@ -151,7 +160,10 @@ fun UsefulSpaceGrid(
                                             0 -> "Create Sermon"
                                             1 -> "Bible Quiz"
                                             2 -> "Learn Hebrew"
-                                            else -> "Learn Greek"
+                                            3 -> "Learn Greek"
+                                            4 -> "Dictionary"
+                                            5 -> "Video Editor"
+                                            else -> ""
                                         },
                                         style = textStyle,
                                         fontWeight = FontWeight.Bold,

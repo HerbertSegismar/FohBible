@@ -17,50 +17,28 @@ fun LearnHebrewScreen() {
     val viewModel: AppViewModel = viewModel()
     val letters = remember {
         listOf(
-            Letter("Aleph", "Silent") { progress, isDarkMode ->
-                drawAlef(progress, isDarkMode) },
-            Letter("Bet", "B/V") { progress, isDarkMode ->
-                drawBet(progress, isDarkMode) },
-            Letter("Gimel", "G") { progress, isDarkMode ->
-                drawGimel(progress, isDarkMode) },
-            Letter("Dalet", "D") { progress, isDarkMode ->
-                drawDalet(progress, isDarkMode) },
-            Letter("He", "H") { progress, isDarkMode ->
-                drawHe(progress, isDarkMode) },
-            Letter("Vav", "V") { progress, isDarkMode ->
-                drawVav(progress, isDarkMode) },
-            Letter("Zayin", "Z") { progress, isDarkMode ->
-                drawZayin(progress, isDarkMode) },
-            Letter("Chet", "Ch") { progress, isDarkMode ->
-                drawChet(progress, isDarkMode) },
-            Letter("Tet", "T") { progress, isDarkMode ->
-                drawTet(progress, isDarkMode) },
-            Letter("Yod", "Y") { progress, isDarkMode ->
-                drawYod(progress, isDarkMode) },
-            Letter("Kaf", "K/Kh") { progress, isDarkMode ->
-                drawKaf(progress, isDarkMode) },
-            Letter("Lamed", "L") { progress, isDarkMode ->
-                drawLamed(progress, isDarkMode) },
-            Letter("Mem", "M") { progress, isDarkMode ->
-                drawMem(progress, isDarkMode) },
-            Letter("Nun", "N") { progress, isDarkMode ->
-                drawNun(progress, isDarkMode) },
-            Letter("Samech", "S") { progress, isDarkMode ->
-                drawSamech(progress, isDarkMode) },
-            Letter("Ayin", "Silent") { progress, isDarkMode ->
-                drawAyin(progress, isDarkMode) },
-            Letter("Peh", "P/F") { progress, isDarkMode ->
-                drawPeh(progress, isDarkMode) },
-            Letter("Tsadeh", "Ts") { progress, isDarkMode ->
-                drawTsadeh(progress, isDarkMode) },
-            Letter("Qof", "Q") { progress, isDarkMode ->
-                drawQof(progress, isDarkMode) },
-            Letter("Resh", "R") { progress, isDarkMode ->
-                drawResh(progress, isDarkMode) },
-            Letter("Shin", "S/Sh") { progress, isDarkMode ->
-                drawShin(progress, isDarkMode) },
-            Letter("Tav", "T") { progress, isDarkMode ->
-                drawTav(progress, isDarkMode) },
+            Letter("Aleph", "Silent") { progress, isDarkMode -> drawAlef(progress, isDarkMode) },
+            Letter("Bet", "B/V") { progress, isDarkMode -> drawBet(progress, isDarkMode) },
+            Letter("Gimel", "G") { progress, isDarkMode -> drawGimel(progress, isDarkMode) },
+            Letter("Dalet", "D") { progress, isDarkMode -> drawDalet(progress, isDarkMode) },
+            Letter("He", "H") { progress, isDarkMode -> drawHe(progress, isDarkMode) },
+            Letter("Vav", "V") { progress, isDarkMode -> drawVav(progress, isDarkMode) },
+            Letter("Zayin", "Z") { progress, isDarkMode -> drawZayin(progress, isDarkMode) },
+            Letter("Chet", "Ch") { progress, isDarkMode -> drawChet(progress, isDarkMode) },
+            Letter("Tet", "T") { progress, isDarkMode -> drawTet(progress, isDarkMode) },
+            Letter("Yod", "Y") { progress, isDarkMode -> drawYod(progress, isDarkMode) },
+            Letter("Kaf", "K/Kh") { progress, isDarkMode -> drawKaf(progress, isDarkMode) },
+            Letter("Lamed", "L") { progress, isDarkMode -> drawLamed(progress, isDarkMode) },
+            Letter("Mem", "M") { progress, isDarkMode -> drawMem(progress, isDarkMode) },
+            Letter("Nun", "N") { progress, isDarkMode -> drawNun(progress, isDarkMode) },
+            Letter("Samech", "S") { progress, isDarkMode -> drawSamech(progress, isDarkMode) },
+            Letter("Ayin", "Silent") { progress, isDarkMode -> drawAyin(progress, isDarkMode) },
+            Letter("Peh", "P/F") { progress, isDarkMode -> drawPeh(progress, isDarkMode) },
+            Letter("Tsadeh", "Ts") { progress, isDarkMode -> drawTsadeh(progress, isDarkMode) },
+            Letter("Qof", "Q") { progress, isDarkMode -> drawQof(progress, isDarkMode) },
+            Letter("Resh", "R") { progress, isDarkMode -> drawResh(progress, isDarkMode) },
+            Letter("Shin", "Sh/S") { progress, isDarkMode -> drawShin(progress, isDarkMode) },
+            Letter("Tav", "T") { progress, isDarkMode -> drawTav(progress, isDarkMode) }
         )
     }
 
@@ -155,6 +133,7 @@ fun LearnHebrewScreen() {
                         letters = previouslySeenLetters,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
                         isDarkMode = viewModel.darkTheme,
+                        isAllCompleted = isAllCompleted,
                         onLetterClick = { index ->
                             currentIndex = index
                             showEnglish = false
@@ -195,6 +174,7 @@ fun LearnHebrewScreen() {
                         letters = previouslySeenLetters,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
                         isDarkMode = viewModel.darkTheme,
+                        isAllCompleted = isAllCompleted,
                         onLetterClick = { index ->
                             currentIndex = index
                             showEnglish = false

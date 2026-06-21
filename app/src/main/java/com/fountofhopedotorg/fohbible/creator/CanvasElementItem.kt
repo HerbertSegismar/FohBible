@@ -38,11 +38,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.fountofhopedotorg.fohbible.data.CanvasNote
 import com.fountofhopedotorg.fohbible.data.ThemeColors
-import com.fountofhopedotorg.fohbible.models.AppViewModel
 
 @Composable
 fun CanvasElementItem(
-    viewModel: AppViewModel,
+    notes: List<CanvasNote>,          // ← passed list instead of viewModel
     note: CanvasNote,
     originalIndex: Int,
     isSelected: Boolean,
@@ -64,6 +63,7 @@ fun CanvasElementItem(
     onLockToggle: () -> Unit,
     onDuplicate: () -> Unit,
     onDelete: () -> Unit,
+    onReorder: (Int, Int) -> Unit,   // ← callback for reorder
     themeColors: ThemeColors,
     modifier: Modifier = Modifier
 ) {
@@ -119,7 +119,7 @@ fun CanvasElementItem(
             Spacer(Modifier.width(8.dp))
 
             Text(
-                text = getElementDisplayName(note, originalIndex, viewModel.canvasNotes),
+                text = getElementDisplayName(note, originalIndex, notes),  // use passed notes
                 modifier = Modifier
                     .weight(1f)
                     .clickable(
@@ -134,7 +134,7 @@ fun CanvasElementItem(
                 originalIndex = originalIndex,
                 isUpEnabled = isUpEnabled,
                 isDownEnabled = isDownEnabled,
-                onReorder = { from, to -> viewModel.reorderCanvasNotes(from, to) },
+                onReorder = onReorder,                 // use passed callback
                 primaryColor = themeColors.primary
             )
             IconButton(onClick = onVisibilityToggle, modifier = Modifier.size(28.dp)) {

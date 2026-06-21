@@ -24,14 +24,12 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.fountofhopedotorg.fohbible.data.CanvasNote
 import com.fountofhopedotorg.fohbible.data.ThemeColors
-import com.fountofhopedotorg.fohbible.models.AppViewModel
-import kotlin.collections.contains
 import kotlin.math.roundToInt
 
 @Composable
 fun CanvasArea(
     modifier: Modifier = Modifier,
-    viewModel: AppViewModel,
+    notes: List<CanvasNote>,                      // ← reusable list
     selectedNoteIds: Set<String>,
     selectedNoteId: String?,
     selectedGroups: Set<String>,
@@ -53,7 +51,10 @@ fun CanvasArea(
     Box(
         modifier = modifier
             .clipToBounds()
-            .background(if (isDark) Color(0xFF1E2937) else themeColors.primary.copy(0.1f), shape = MaterialTheme.shapes.medium)
+            .background(
+                if (isDark) Color(0xFF1E2937) else themeColors.primary.copy(0.1f),
+                shape = MaterialTheme.shapes.medium
+            )
             .pointerInput(Unit) {
                 detectTapGestures(onTap = { onClearSelection() })
             }
@@ -66,7 +67,7 @@ fun CanvasArea(
                     drawContent()
                 }
         ) {
-            viewModel.canvasNotes.forEach { note ->
+            notes.forEach { note ->   // ← iterate over the passed list
                 if (!note.isVisible) return@forEach
 
                 key(note.id) {
@@ -75,7 +76,9 @@ fun CanvasArea(
                             (selectedNoteId == note.id && selectedNoteIds.isEmpty())
                     Box(
                         modifier = if (isInSelectedGroup) {
-                            Modifier.offset { IntOffset(dragGroupDelta.x.roundToInt(), dragGroupDelta.y.roundToInt()) }
+                            Modifier.offset {
+                                IntOffset(dragGroupDelta.x.roundToInt(), dragGroupDelta.y.roundToInt())
+                            }
                         } else {
                             Modifier
                         }

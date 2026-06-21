@@ -551,6 +551,8 @@ fun HomeAppBar(
         is Screen.Quiz -> "Quiz"
         is Screen.LearnHebrew -> "Learn Hebrew"
         is Screen.LearnGreek -> "Learn Greek"
+        is Screen.Dictionary -> "Dictionary"
+        is Screen.VideoEditor -> "Video Editor"
     }
     TopAppBar(
         title = { Text(text = screenTitle, color = viewModel.headerButtonsColor, fontWeight = FontWeight.Bold, modifier = Modifier

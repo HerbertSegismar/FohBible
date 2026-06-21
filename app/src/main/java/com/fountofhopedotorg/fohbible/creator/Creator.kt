@@ -76,8 +76,8 @@ fun CreatorScreen() {
     var showEditPropertiesDialog by rememberSaveable { mutableStateOf(false) }
     var editX by rememberSaveable { mutableStateOf("") }
     var editY by rememberSaveable { mutableStateOf("") }
-    var editScaleX by rememberSaveable { mutableStateOf("") }   // NEW
-    var editScaleY by rememberSaveable { mutableStateOf("") }   // NEW
+    var editScaleX by rememberSaveable { mutableStateOf("") }
+    var editScaleY by rememberSaveable { mutableStateOf("") }
     var editRotation by rememberSaveable { mutableStateOf("") }
     var editPropertiesNoteId by rememberSaveable { mutableStateOf<String?>(null) }
     var editColorForDialog by remember { mutableStateOf(Color.White) }
@@ -235,7 +235,7 @@ fun CreatorScreen() {
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
-                    viewModel = viewModel,
+                    notes = viewModel.canvasNotes,
                     selectedNoteIds = selectedNoteIds,
                     selectedNoteId = selectedNoteId,
                     selectedGroups = selectedGroups,
@@ -280,8 +280,9 @@ fun CreatorScreen() {
                     .fillMaxHeight()
                     .padding(top = 10.dp)
             ) {
+                // ----- CHANGED -----
                 CanvasElementsPanel(
-                    viewModel = viewModel,
+                    notes = viewModel.canvasNotes,
                     selectedNoteIds = selectedNoteIds,
                     selectedNoteId = selectedNoteId,
                     showTree = showCanvasElementsTree,
@@ -374,6 +375,7 @@ fun CreatorScreen() {
                         }
                     },
                     onClearSelection = { selectedNoteIds = emptySet() },
+                    onReorder = { from, to -> viewModel.reorderCanvasNotes(from, to) },
                     themeColors = themeColors,
                     density = LocalDensity.current,
                     groupNames = viewModel.groupNames,
@@ -445,7 +447,7 @@ fun CreatorScreen() {
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(520.dp),
-                        viewModel = viewModel,
+                        notes = viewModel.canvasNotes,
                         selectedNoteIds = selectedNoteIds,
                         selectedNoteId = selectedNoteId,
                         selectedGroups = selectedGroups,
@@ -485,8 +487,9 @@ fun CreatorScreen() {
 
                     Spacer(Modifier.height(4.dp))
 
+                    // ----- CHANGED -----
                     CanvasElementsPanel(
-                        viewModel = viewModel,
+                        notes = viewModel.canvasNotes,
                         selectedNoteIds = selectedNoteIds,
                         selectedNoteId = selectedNoteId,
                         showTree = showCanvasElementsTree,
@@ -582,6 +585,7 @@ fun CreatorScreen() {
                             }
                         },
                         onClearSelection = { selectedNoteIds = emptySet() },
+                        onReorder = { from, to -> viewModel.reorderCanvasNotes(from, to) },
                         themeColors = themeColors,
                         density = LocalDensity.current,
                         groupNames = viewModel.groupNames,

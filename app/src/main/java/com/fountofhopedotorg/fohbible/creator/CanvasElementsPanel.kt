@@ -45,12 +45,11 @@ import androidx.compose.ui.unit.dp
 import com.fountofhopedotorg.fohbible.data.CanvasNote
 import com.fountofhopedotorg.fohbible.data.DisplayItem
 import com.fountofhopedotorg.fohbible.data.ThemeColors
-import com.fountofhopedotorg.fohbible.models.AppViewModel
 import kotlin.math.roundToInt
 
 @Composable
 fun CanvasElementsPanel(
-    viewModel: AppViewModel,
+    notes: List<CanvasNote>,
     selectedNoteIds: Set<String>,
     selectedNoteId: String?,
     showTree: Boolean,
@@ -69,18 +68,19 @@ fun CanvasElementsPanel(
     onUngroup: (Set<String>) -> Unit,
     onGroup: (String, List<String>) -> Unit,
     onClearSelection: () -> Unit,
+    onReorder: (Int, Int) -> Unit,                // ← replaces viewModel.reorderCanvasNotes
     themeColors: ThemeColors,
     density: Density,
     groupNames: Map<String, String> = emptyMap(),
     onRenameGroup: ((groupId: String, currentName: String) -> Unit)? = null
 ) {
-    val groupedNotes = viewModel.canvasNotes.groupBy { it.groupId }
+    val groupedNotes = notes.groupBy { it.groupId }   // use passed notes
     val expandedGroups = remember { mutableStateMapOf<String, Boolean>() }
     val baseItems = buildList {
-        for ((groupId, notes) in groupedNotes) {
+        for ((groupId, groupNotes) in groupedNotes) {
             if (groupId == null) continue
             val expanded = expandedGroups[groupId] ?: false
-            val actualChildren = notes.filter { note -> note.id != groupId }
+            val actualChildren = groupNotes.filter { note -> note.id != groupId }
             val groupName = groupNames[groupId] ?: "Group of ${actualChildren.size}"
             add(
                 DisplayItem.GroupHeader(
@@ -91,7 +91,7 @@ fun CanvasElementsPanel(
                 )
             )
             actualChildren.forEach { note ->
-                val originalIndex = viewModel.canvasNotes.indexOf(note)
+                val originalIndex = notes.indexOf(note)   // from the passed list
                 add(
                     DisplayItem.NoteItem(
                         note = note,
@@ -104,7 +104,7 @@ fun CanvasElementsPanel(
         }
         val ungrouped = groupedNotes[null] ?: emptyList()
         ungrouped.forEach { note ->
-            val originalIndex = viewModel.canvasNotes.indexOf(note)
+            val originalIndex = notes.indexOf(note)
             add(DisplayItem.NoteItem(note, originalIndex, isGrouped = false))
         }
     }
@@ -190,7 +190,7 @@ fun CanvasElementsPanel(
                                 is DisplayItem.GroupHeader -> {
                                     val isGroupSelected = selectedNoteId == displayItem.groupId ||
                                             selectedNoteIds.contains(displayItem.groupId) ||
-                                            viewModel.canvasNotes.any {
+                                            notes.any {    // ← use passed notes
                                                 it.groupId == displayItem.groupId &&
                                                         (it.id == selectedNoteId || selectedNoteIds.contains(it.id))
                                             }
@@ -231,7 +231,8 @@ fun CanvasElementsPanel(
                                         val isDownEnabled = bounds != null && displayIndex < bounds.second
 
                                         CanvasElementItem(
-                                            viewModel = viewModel,
+                                            notes = notes,
+                                            onReorder = onReorder,
                                             note = note,
                                             originalIndex = originalIndex,
                                             isSelected = selectedNoteId == note.id,
@@ -269,7 +270,7 @@ fun CanvasElementsPanel(
                                                             if (targetDisplayIdx != fromDisplayIndex) {
                                                                 val targetItem =
                                                                     displayItems[targetDisplayIdx] as DisplayItem.NoteItem
-                                                                viewModel.reorderCanvasNotes(
+                                                                onReorder(
                                                                     draggedItem.originalIndex,
                                                                     targetItem.originalIndex
                                                                 )
@@ -297,7 +298,7 @@ fun CanvasElementsPanel(
                                 }
 
                                 is DisplayItem.ActionRow -> {
-                                    val hasGroup = viewModel.canvasNotes.any {
+                                    val hasGroup = notes.any {   // ← use passed notes
                                         it.groupId != null && it.id in selectedNoteIds
                                     }
                                     GroupActionRow(
@@ -308,8 +309,7 @@ fun CanvasElementsPanel(
                                         },
                                         onUngroup = { onUngroup(selectedNoteIds) },
                                         onRename = {
-                                            val selectedNotes =
-                                                viewModel.canvasNotes.filter { it.id in selectedNoteIds }
+                                            val selectedNotes = notes.filter { it.id in selectedNoteIds }   // ← use passed notes
                                             val uniqueGroupIds = selectedNotes.mapNotNull { it.groupId }.distinct()
                                             if (hasGroup && uniqueGroupIds.isNotEmpty()) {
                                                 onRenameGroup?.invoke(
@@ -323,8 +323,7 @@ fun CanvasElementsPanel(
                                         },
                                         onEditProperties = {
                                             if (selectedNoteIds.size == 1) {
-                                                val note =
-                                                    viewModel.canvasNotes.find { it.id == selectedNoteIds.first() }
+                                                val note = notes.find { it.id == selectedNoteIds.first() }
                                                 if (note != null) onEditProperties(note)
                                             }
                                         },
@@ -340,6 +339,7 @@ fun CanvasElementsPanel(
         }
     }
 }
+
 
 @Composable
 private fun GroupHeaderRow(

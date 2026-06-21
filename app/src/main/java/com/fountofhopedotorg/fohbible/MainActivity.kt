@@ -83,6 +83,7 @@ import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.data.BibleVersionInfo
 import com.fountofhopedotorg.fohbible.data.BibleVersionInfoRepository
 import com.fountofhopedotorg.fohbible.creator.CreatorScreen
+import com.fountofhopedotorg.fohbible.dictionary.DictionaryScreen
 import com.fountofhopedotorg.fohbible.learn.LearnGreekScreen
 import com.fountofhopedotorg.fohbible.learn.LearnHebrewScreen
 import com.fountofhopedotorg.fohbible.quiz.BibleQuizScreen
@@ -97,6 +98,7 @@ import com.fountofhopedotorg.fohbible.ui.theme.FohBibleTheme
 import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
 import com.fountofhopedotorg.fohbible.ui.theme.ThemeManager
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
+import com.fountofhopedotorg.fohbible.videoeditor.VideoEditorScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
@@ -478,7 +480,9 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                             onCreateSermonMaterialsClick = { viewModel.navigateTo(Screen.Creator) },
                             onTakeBibleQuizClick = { viewModel.navigateTo(Screen.Quiz) },
                             onLearnHebrewClick = {viewModel.navigateTo(Screen.LearnHebrew)},
-                            onLearnGreekClick = {viewModel.navigateTo(Screen.LearnGreek)}
+                            onLearnGreekClick = {viewModel.navigateTo(Screen.LearnGreek)},
+                            onOpenDictionaryClick = { viewModel.navigateTo(Screen.Dictionary) },
+                            onOpenVideoEditorClick = { viewModel.navigateTo(Screen.VideoEditor) }
                         )
                         is Screen.Reader -> {
                             val passage = currentScreen.passage ?: viewModel.primaryPassage
@@ -531,6 +535,14 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                         Screen.Quiz -> BibleQuizScreen()
                         Screen.LearnHebrew -> LearnHebrewScreen()
                         Screen.LearnGreek -> LearnGreekScreen()
+                        Screen.Dictionary -> DictionaryScreen(
+                            onNavigateToReader = { passage ->
+                                viewModel.primaryPassage = passage
+                                if (viewModel.scrollSync) viewModel.secondaryPassage = passage
+                                viewModel.navigateTo(Screen.Reader(passage))
+                            }
+                        )
+                        Screen.VideoEditor -> VideoEditorScreen()
                     }
                     if (viewModel.showNavigationModal) {
                         NavigationModal(
@@ -792,6 +804,8 @@ sealed class Screen {
     object Quiz : Screen()
     object LearnHebrew : Screen()
     object LearnGreek : Screen()
+    object Dictionary : Screen()
+    object VideoEditor : Screen()
 }
 
 private fun copyUriToInternalStorage(context: Context, sourceUri: Uri): String? {
