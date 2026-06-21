@@ -36,6 +36,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.runtime.LaunchedEffect
 
 @Composable
 fun HistoryTable(
@@ -44,9 +46,18 @@ fun HistoryTable(
     isDarkMode: Boolean = false,
     onLetterClick: (Int) -> Unit = {}
 ) {
+    val gridState = rememberLazyGridState()
+
+    LaunchedEffect(letters.size) {
+        if (letters.isNotEmpty()) {
+            gridState.animateScrollToItem(letters.size - 1)
+        }
+    }
+
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 48.dp),
         modifier = modifier.padding(4.dp),
+        state = gridState,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         contentPadding = PaddingValues(vertical = 4.dp)
@@ -108,7 +119,6 @@ fun MainLetterContent(
                     strokeWidth = lineThickness,
                     pathEffect = dashPath
                 )
-
                 drawLine(
                     color = guideLineColor,
                     start = Offset(0f, midY),
@@ -116,7 +126,6 @@ fun MainLetterContent(
                     strokeWidth = lineThickness,
                     pathEffect = dashPath
                 )
-
                 drawLine(
                     color = guideLineColor,
                     start = Offset(0f, bottomY),
