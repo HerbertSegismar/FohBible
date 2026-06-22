@@ -1,4 +1,4 @@
-package com.fountofhopedotorg.fohbible.creator
+package com.fountofhopedotorg.fohbible.videoeditor
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -42,13 +42,34 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import com.fountofhopedotorg.fohbible.creator.NoteThumbnail
+import com.fountofhopedotorg.fohbible.creator.ReorderHandle
+import com.fountofhopedotorg.fohbible.creator.getElementDisplayName
 import com.fountofhopedotorg.fohbible.data.CanvasNote
 import com.fountofhopedotorg.fohbible.data.DisplayItem
 import com.fountofhopedotorg.fohbible.data.ThemeColors
 import kotlin.math.roundToInt
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.style.TextOverflow
 
 @Composable
-fun CanvasElementsPanel(
+fun VideoCanvasElementsPanel(
     notes: List<CanvasNote>,
     selectedNoteIds: Set<String>,
     selectedNoteId: String?,
@@ -73,6 +94,7 @@ fun CanvasElementsPanel(
     density: Density,
     groupNames: Map<String, String> = emptyMap(),
     onRenameGroup: ((groupId: String, currentName: String) -> Unit)? = null,
+    onAnimateKeyframes: ((CanvasNote) -> Unit)? = null,
 ) {
     val groupedNotes = notes.groupBy { it.groupId }
     val expandedGroups = remember { mutableStateMapOf<String, Boolean>() }
@@ -195,7 +217,7 @@ fun CanvasElementsPanel(
                                                         (it.id == selectedNoteId || selectedNoteIds.contains(it.id))
                                             }
 
-                                    GroupHeaderRow(
+                                    VideoGroupHeaderRow(
                                         groupName = displayItem.groupName,
                                         isExpanded = displayItem.isExpanded,
                                         isSelected = isGroupSelected,
@@ -230,7 +252,7 @@ fun CanvasElementsPanel(
                                         val isUpEnabled = bounds != null && displayIndex > bounds.first
                                         val isDownEnabled = bounds != null && displayIndex < bounds.second
 
-                                        CanvasElementItem(
+                                        VideoCanvasElementItem(
                                             notes = notes,
                                             onReorder = onReorder,
                                             note = note,
@@ -299,7 +321,7 @@ fun CanvasElementsPanel(
 
                                 is DisplayItem.ActionRow -> {
                                     val hasGroup = notes.any { it.groupId != null && it.id in selectedNoteIds }
-                                    GroupActionRow(
+                                    VideoGroupActionRow(
                                         selectedCount = selectedNoteIds.size,
                                         hasGroup = hasGroup,
                                         onGroup = { onGroup("Group ${selectedNoteIds.size}", selectedNoteIds.toList()) },
@@ -325,6 +347,12 @@ fun CanvasElementsPanel(
                                         },
                                         onClearSelection = onClearSelection,
                                         modifier = Modifier.animateItem(),
+                                        onAnimate = {                              // ← NEW
+                                            if (selectedNoteIds.size == 1) {
+                                                val note = notes.first { it.id in selectedNoteIds }
+                                                onAnimateKeyframes?.invoke(note)
+                                            }
+                                        }
                                     )
                                 }
                             }
@@ -336,9 +364,156 @@ fun CanvasElementsPanel(
     }
 }
 
+@Composable
+fun VideoCanvasElementItem(
+    notes: List<CanvasNote>,
+    note: CanvasNote,
+    originalIndex: Int,
+    isSelected: Boolean,
+    isDragTarget: Boolean,
+    isUpEnabled: Boolean,
+    isDownEnabled: Boolean,
+    dragOffset: Float,
+    selectedNoteIds: Set<String>,
+    isGrouped: Boolean,
+    onRowTap: () -> Unit,
+    onToggleGroupSelection: () -> Unit,
+    onDragStart: (Offset) -> Unit,
+    onDrag: (PointerInputChange, Offset) -> Unit,
+    onDragEnd: () -> Unit,
+    onDragCancel: () -> Unit,
+    onEdit: () -> Unit,
+    onCustomPolygonEdit: () -> Unit,
+    onVisibilityToggle: () -> Unit,
+    onLockToggle: () -> Unit,
+    onDuplicate: () -> Unit,
+    onDelete: () -> Unit,
+    onReorder: (Int, Int) -> Unit,
+    themeColors: ThemeColors,
+    modifier: Modifier = Modifier
+) {
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 1.dp)
+            .graphicsLayer { if (isDragTarget) translationY = dragOffset }
+            .then(
+                if (!isGrouped) {
+                    Modifier.pointerInput(note.id, originalIndex) {
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = { offset -> onDragStart(offset) },
+                            onDrag = { change, dragAmount -> onDrag(change, dragAmount) },
+                            onDragEnd = onDragEnd,
+                            onDragCancel = onDragCancel
+                        )
+                    }
+                } else Modifier
+            )
+            .background(
+                color = if (isSelected) themeColors.primary.copy(alpha = 0.15f)
+                else MaterialTheme.colorScheme.surface,
+                shape = RoundedCornerShape(6.dp)
+            )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { onToggleGroupSelection() }
+                    .then(
+                        if (selectedNoteIds.contains(note.id)) {
+                            Modifier.border(2.dp, themeColors.primary, RoundedCornerShape(6.dp))
+                        } else {
+                            Modifier
+                        }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                NoteThumbnail(note, themeColors)
+            }
+
+            Spacer(Modifier.width(8.dp))
+
+            Text(
+                text = getElementDisplayName(note, originalIndex, notes),  // use passed notes
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { onRowTap() },
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            ReorderHandle(
+                originalIndex = originalIndex,
+                isUpEnabled = isUpEnabled,
+                isDownEnabled = isDownEnabled,
+                onReorder = onReorder,                 // use passed callback
+                primaryColor = themeColors.primary
+            )
+            IconButton(onClick = onVisibilityToggle, modifier = Modifier.size(28.dp)) {
+                Icon(
+                    imageVector = if (note.isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                    contentDescription = if (note.isVisible) "Hide Element" else "Show Element",
+                    tint = if (note.isVisible) themeColors.primary else Color.Gray,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            IconButton(onClick = onLockToggle, modifier = Modifier.size(28.dp)) {
+                Icon(
+                    imageVector = if (note.isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
+                    contentDescription = if (note.isLocked) "Unlock Element" else "Lock Element",
+                    tint = if (note.isLocked) Color.Gray else themeColors.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            IconButton(onClick = {
+                if (note.content.startsWith("Shape:")) {
+                    onCustomPolygonEdit()
+                } else {
+                    onEdit()
+                }
+            }, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "Edit",
+                    tint = themeColors.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            IconButton(onClick = onDuplicate, modifier = Modifier.size(28.dp)) {
+                Icon(
+                    imageVector = Icons.Default.ContentCopy,
+                    contentDescription = "Duplicate",
+                    tint = themeColors.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete",
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+    }
+}
 
 @Composable
-private fun GroupHeaderRow(
+private fun VideoGroupHeaderRow(
     groupName: String,
     isExpanded: Boolean,
     isSelected: Boolean,
@@ -391,7 +566,7 @@ private fun GroupHeaderRow(
 }
 
 @Composable
-private fun GroupActionRow(
+private fun VideoGroupActionRow(
     selectedCount: Int,
     hasGroup: Boolean,
     onGroup: () -> Unit,
@@ -400,6 +575,7 @@ private fun GroupActionRow(
     onEditProperties: () -> Unit,
     onClearSelection: () -> Unit,
     modifier: Modifier = Modifier,
+    onAnimate: (() -> Unit)? = null
 ) {
     Row(
         modifier = modifier
@@ -429,6 +605,11 @@ private fun GroupActionRow(
         } else if (selectedCount == 1) {
             TextButton(onClick = onRename) { Text("Rename") }
             TextButton(onClick = onEditProperties) { Text("Properties") }
+            if (onAnimate != null) {
+                TextButton(onClick = onAnimate) {
+                    Text("Animate")
+                }
+            }
         }
         TextButton(onClick = onClearSelection) {
             Text("Clear", color = MaterialTheme.colorScheme.error)

@@ -273,7 +273,9 @@ data class CanvasNote(
     val shadowOffsetX: Float = 2f,
     val shadowOffsetY: Float = 2f,
     val borderThickness: Float = 1f,
-    val borderColor: Color? = null
+    val borderColor: Color? = null,
+    val keyframes: List<CanvasKeyframe> = emptyList(),
+    val alpha: Float = 1f
 )
 
 data class BezierNode(
@@ -353,6 +355,15 @@ data class Letter(
 )
 
 data class CrownStructure(val vinePath: Path, val thornsPath: Path)
+
+data class CanvasKeyframe(
+    val timestampMs: Long,
+    val x: Float?,
+    val y: Float?,
+    val scaleX: Float?,
+    val scaleY: Float?,
+    val rotation: Float?
+)
 
 sealed class DisplayItem {
     data class GroupHeader(

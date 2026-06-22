@@ -10,6 +10,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
@@ -17,6 +18,7 @@ import androidx.lifecycle.viewModelScope
 import com.fountofhopedotorg.fohbible.Screen
 import com.fountofhopedotorg.fohbible.creator.getElementDisplayName
 import com.fountofhopedotorg.fohbible.data.BibleData
+import com.fountofhopedotorg.fohbible.data.CanvasKeyframe
 import com.fountofhopedotorg.fohbible.data.CanvasNote
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
@@ -32,6 +34,15 @@ import java.util.UUID
 @Stable
 class AppViewModel(application: Application) : AndroidViewModel(application) {
     var canvasNotes = mutableStateListOf<CanvasNote>()
+    var videoKeyframeTargetNoteId: String? by mutableStateOf(null)
+    var videoShowKeyframeDialog: Boolean by mutableStateOf(false)
+
+    fun updateVideoNoteKeyframes(noteId: String, keyframes: List<CanvasKeyframe>) {
+        val index = videoCanvasNotes.indexOfFirst { it.id == noteId }
+        if (index != -1) {
+            videoCanvasNotes[index] = videoCanvasNotes[index].copy(keyframes = keyframes)
+        }
+    }
 
     fun addToCanvas(note: CanvasNote) {
         canvasNotes.add(note.copy(id = UUID.randomUUID().toString()))
