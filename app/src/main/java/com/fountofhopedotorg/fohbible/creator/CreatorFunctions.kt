@@ -532,6 +532,16 @@ fun getSerializedPointsForShape(shapeType: String): String {
                 "${it.anchor.x},${it.anchor.y}:${it.handleIn.x},${it.handleIn.y}:${it.handleOut.x},${it.handleOut.y}"
             }
         }
+        "pentagon" -> {
+            (0 until 5).map { i ->
+                val angle = -Math.PI / 2 + 2 * Math.PI * i / 5
+                val x = (0.5f + 0.5f * cos(angle)).toFloat()
+                val y = (0.5f + 0.5f * sin(angle)).toFloat()
+                BezierNode(Offset(x, y), Offset(x, y), Offset(x, y))
+            }.joinToString(";") {
+                "${it.anchor.x},${it.anchor.y}:${it.handleIn.x},${it.handleIn.y}:${it.handleOut.x},${it.handleOut.y}"
+            }
+        }
         "hexagon" -> {
             (0 until 6).map { i ->
                 val angle = -Math.PI / 2 + 2 * Math.PI * i / 6
@@ -764,7 +774,7 @@ fun generateThornCrownPaths(seed: Long, size: Size): CrownStructure {
     val centerX = size.width / 2f
     val centerY = size.height / 2f
     val minDimension = min(size.width, size.height)
-    val scaleFactor = minDimension / 938f   // ← changed from 1000f
+    val scaleFactor = minDimension / 938f
 
     val baseRadius = 350f * scaleFactor
     val numVines = 8

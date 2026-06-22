@@ -10,8 +10,11 @@ import android.widget.TextView
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -51,9 +54,10 @@ fun DictionaryScreen(
 
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    var searchWord by remember { mutableStateOf("") }
-    var resultTitle by remember { mutableStateOf("") }
-    var resultContent by remember { mutableStateOf("") }
+    // Persist search state across configuration changes (and within the same app session)
+    var searchWord by rememberSaveable { mutableStateOf("") }
+    var resultTitle by rememberSaveable { mutableStateOf("") }
+    var resultContent by rememberSaveable { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
 
     var dictionaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
@@ -128,6 +132,12 @@ fun DictionaryScreen(
         }
     }
 
+    LaunchedEffect(selectedDictionary) {
+        if (searchWord.isNotBlank()) {
+            performSearch(searchWord)
+        }
+    }
+
     val onLinkClick: (String) -> Unit = { href ->
         if (href.startsWith("B:")) {
             val passage = parseVerseLink(href, href.removePrefix("B:"))
@@ -175,7 +185,11 @@ fun DictionaryScreen(
 
         Spacer(Modifier.height(12.dp))
 
-        Box(modifier = Modifier.fillMaxWidth()) {
+        // Dictionary selector row with fast‑forward cycle button
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
             TextButton(onClick = { dictionaryDropdownExpanded = true }) {
                 Text(
                     text = "Dictionary: ${dictionaryDisplayNames[selectedDictionary] ?: selectedDictionary}",
@@ -183,25 +197,54 @@ fun DictionaryScreen(
                     color = MaterialTheme.colorScheme.primary
                 )
             }
-            DropdownMenu(
-                expanded = dictionaryDropdownExpanded,
-                onDismissRequest = { dictionaryDropdownExpanded = false }
-            ) {
-                dictionaries.forEach { dictKey ->
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                text = dictionaryDisplayNames[dictKey] ?: dictKey,
-                                fontWeight = if (dictKey == selectedDictionary) FontWeight.Bold else FontWeight.Normal,
-                                color = if (dictKey == selectedDictionary) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurface
-                            )
-                        },
-                        onClick = {
-                            dictionaryDropdownExpanded = false
-                            viewModel.selectedPrimaryDictionary = dictKey
-                        }
+
+            // Cycle to the next dictionary in the same language group
+            if (dictionaries.size > 1) {
+                Spacer(modifier = Modifier.size(2.dp))
+                val currentDictIndex = dictionaries.indexOf(selectedDictionary)
+                val nextDict = if (currentDictIndex != -1) {
+                    dictionaries[(currentDictIndex + 1) % dictionaries.size]
+                } else {
+                    dictionaries.first()
+                }
+                IconButton(
+                    onClick = {
+                        viewModel.selectedPrimaryDictionary = nextDict
+                        // LaunchedEffect(selectedDictionary) will automatically re‑fetch
+                    },
+                    modifier = Modifier.size(28.dp).padding(start = 10.dp)
+                ) {
+                    Icon(
+                        Icons.Filled.FastForward,
+                        contentDescription = "Next Dictionary",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+            }
+
+            // DropdownMenu is still inside a Box to anchor correctly
+            Box {
+                DropdownMenu(
+                    expanded = dictionaryDropdownExpanded,
+                    onDismissRequest = { dictionaryDropdownExpanded = false }
+                ) {
+                    dictionaries.forEach { dictKey ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = dictionaryDisplayNames[dictKey] ?: dictKey,
+                                    fontWeight = if (dictKey == selectedDictionary) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (dictKey == selectedDictionary) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurface
+                                )
+                            },
+                            onClick = {
+                                dictionaryDropdownExpanded = false
+                                viewModel.selectedPrimaryDictionary = dictKey
+                                // Auto‑fetch happens via LaunchedEffect(selectedDictionary)
+                            }
+                        )
+                    }
                 }
             }
         }
