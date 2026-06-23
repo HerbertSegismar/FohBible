@@ -35,7 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.fountofhopedotorg.fohbible.composables.ColorWheelDialog
+import com.fountofhopedotorg.fohbible.color_wheel.ColorWheelDialog
 
 @Composable
 fun EditPropertiesDialog(

@@ -15,8 +15,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.fountofhopedotorg.fohbible.models.AppViewModel
-import com.fountofhopedotorg.fohbible.screens.MAX_FONT_SIZE
-import com.fountofhopedotorg.fohbible.screens.MIN_FONT_SIZE
+import com.fountofhopedotorg.fohbible.settings.MAX_FONT_SIZE
+import com.fountofhopedotorg.fohbible.settings.MIN_FONT_SIZE
 
 @Composable
 fun FontModal(

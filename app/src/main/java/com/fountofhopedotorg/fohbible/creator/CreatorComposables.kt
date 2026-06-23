@@ -676,7 +676,6 @@ fun CanvasSvgItem(
                 }
                 .onSizeChanged { baseSize = it }
                 .then(
-                    // Gesture detection only for unlocked items
                     if (!isLocked) {
                         Modifier
                             .pointerInput(Unit) {
@@ -1044,7 +1043,6 @@ fun CanvasTextItem(
                 }
                 .onSizeChanged { baseSize = it }
                 .then(
-                    // Gesture detection only for unlocked items
                     if (!isLocked) {
                         Modifier
                             .pointerInput(Unit) {
@@ -1349,7 +1347,6 @@ fun CanvasImageItem(
                 }
                 .onSizeChanged { baseSize = it }
                 .then(
-                    // Gesture detection only for unlocked items
                     if (!isLocked) {
                         Modifier
                             .pointerInput(Unit) {

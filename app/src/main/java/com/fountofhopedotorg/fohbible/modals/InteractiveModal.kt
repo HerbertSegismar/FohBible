@@ -77,9 +77,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.text.HtmlCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.fountofhopedotorg.fohbible.composables.ColorWheelDialog
-import com.fountofhopedotorg.fohbible.composables.InteractiveLoadingIndicator
-import com.fountofhopedotorg.fohbible.core.createCommentaryHelperIfExists
+import com.fountofhopedotorg.fohbible.color_wheel.ColorWheelDialog
+import com.fountofhopedotorg.fohbible.app_composables.InteractiveLoadingIndicator
+import com.fountofhopedotorg.fohbible.reader.createCommentaryHelperIfExists
 import com.fountofhopedotorg.fohbible.data.BibleData
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.ModalPage
@@ -87,15 +87,15 @@ import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.data.ProcessedVerse
 import com.fountofhopedotorg.fohbible.data.Testament
 import com.fountofhopedotorg.fohbible.data.ThemeColors
-import com.fountofhopedotorg.fohbible.functions.buildDefinitionContent
-import com.fountofhopedotorg.fohbible.functions.cleanDefinition
-import com.fountofhopedotorg.fohbible.functions.fetchVerses
-import com.fountofhopedotorg.fohbible.functions.getDefinitionOrClosest
-import com.fountofhopedotorg.fohbible.functions.getLanguageForDictionary
-import com.fountofhopedotorg.fohbible.functions.getVerseCommentaries
-import com.fountofhopedotorg.fohbible.functions.parseVerseLink
-import com.fountofhopedotorg.fohbible.functions.prepareStrongContent
-import com.fountofhopedotorg.fohbible.functions.sanitizeHtmlContent
+import com.fountofhopedotorg.fohbible.modal_functions.buildDefinitionContent
+import com.fountofhopedotorg.fohbible.modal_functions.cleanDefinition
+import com.fountofhopedotorg.fohbible.modal_functions.fetchVerses
+import com.fountofhopedotorg.fohbible.modal_functions.getDefinitionOrClosest
+import com.fountofhopedotorg.fohbible.modal_functions.getLanguageForDictionary
+import com.fountofhopedotorg.fohbible.modal_functions.getVerseCommentaries
+import com.fountofhopedotorg.fohbible.modal_functions.parseVerseLink
+import com.fountofhopedotorg.fohbible.modal_functions.prepareStrongContent
+import com.fountofhopedotorg.fohbible.modal_functions.sanitizeHtmlContent
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.utils.Fonts
 import com.fountofhopedotorg.fohbible.utils.InteractiveModalUtils.crossReferenceDatabaseDisplayNames
@@ -307,8 +307,6 @@ fun InteractiveModal(
                     val bookNum = bookNumber ?: 1
                     val chap = chapter ?: 1
                     val vers = verse ?: 1
-                    val displayName = crossReferenceDatabaseDisplayNames[viewModel.selectedCrossReferenceDatabase]
-                        ?: viewModel.selectedCrossReferenceDatabase
                     val bookName = BibleData.getBookByCustomNumber(bookNum)?.name ?: "Book"
                     val title = "$bookName $chap:$vers"
 
@@ -1229,7 +1227,7 @@ fun InteractiveModal(
                                                                 val gDef = withContext(Dispatchers.IO) {
                                                                     strongDbHelper?.getStrongDefinition(gNum) ?: ""
                                                                 }
-                                                                var combinedDef = ""
+                                                                var combinedDef: String
                                                                 var combinedTitle = "Strong's Definition"
                                                                 var combinedStrongNum = ""
                                                                 val preparedH = if (hDef.isNotBlank()) prepareStrongContent(hDef) else ""

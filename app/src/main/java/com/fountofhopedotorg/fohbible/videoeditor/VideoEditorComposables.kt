@@ -53,6 +53,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -212,7 +213,7 @@ fun VideoCanvasElementsPanel(
                                 is DisplayItem.GroupHeader -> {
                                     val isGroupSelected = selectedNoteId == displayItem.groupId ||
                                             selectedNoteIds.contains(displayItem.groupId) ||
-                                            notes.any {    // ← use passed notes
+                                            notes.any {
                                                 it.groupId == displayItem.groupId &&
                                                         (it.id == selectedNoteId || selectedNoteIds.contains(it.id))
                                             }
@@ -347,7 +348,7 @@ fun VideoCanvasElementsPanel(
                                         },
                                         onClearSelection = onClearSelection,
                                         modifier = Modifier.animateItem(),
-                                        onAnimate = {                              // ← NEW
+                                        onAnimate = {
                                             if (selectedNoteIds.size == 1) {
                                                 val note = notes.first { it.id in selectedNoteIds }
                                                 onAnimateKeyframes?.invoke(note)
@@ -444,7 +445,7 @@ fun VideoCanvasElementItem(
             Spacer(Modifier.width(8.dp))
 
             Text(
-                text = getElementDisplayName(note, originalIndex, notes),  // use passed notes
+                text = getElementDisplayName(note, originalIndex, notes),
                 modifier = Modifier
                     .weight(1f)
                     .clickable(
@@ -459,7 +460,7 @@ fun VideoCanvasElementItem(
                 originalIndex = originalIndex,
                 isUpEnabled = isUpEnabled,
                 isDownEnabled = isDownEnabled,
-                onReorder = onReorder,                 // use passed callback
+                onReorder = onReorder,
                 primaryColor = themeColors.primary
             )
             IconButton(onClick = onVisibilityToggle, modifier = Modifier.size(28.dp)) {
@@ -611,8 +612,8 @@ private fun VideoGroupActionRow(
                 }
             }
         }
-        TextButton(onClick = onClearSelection) {
-            Text("Clear", color = MaterialTheme.colorScheme.error)
+        IconButton(onClick = onClearSelection, modifier = Modifier.size(18.dp)) {
+            Icon(Icons.Filled.Close,"Clear", tint = MaterialTheme.colorScheme.error)
         }
     }
 }

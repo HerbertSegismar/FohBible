@@ -29,7 +29,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.fountofhopedotorg.fohbible.composables.ScopeDropdown
+import com.fountofhopedotorg.fohbible.search.ScopeDropdown
 import com.fountofhopedotorg.fohbible.data.*
 import com.fountofhopedotorg.fohbible.modals.VersionSelectionModal
 import com.fountofhopedotorg.fohbible.models.AppViewModel

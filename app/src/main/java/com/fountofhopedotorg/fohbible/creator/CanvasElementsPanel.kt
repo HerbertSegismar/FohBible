@@ -190,7 +190,7 @@ fun CanvasElementsPanel(
                                 is DisplayItem.GroupHeader -> {
                                     val isGroupSelected = selectedNoteId == displayItem.groupId ||
                                             selectedNoteIds.contains(displayItem.groupId) ||
-                                            notes.any {    // ← use passed notes
+                                            notes.any {
                                                 it.groupId == displayItem.groupId &&
                                                         (it.id == selectedNoteId || selectedNoteIds.contains(it.id))
                                             }

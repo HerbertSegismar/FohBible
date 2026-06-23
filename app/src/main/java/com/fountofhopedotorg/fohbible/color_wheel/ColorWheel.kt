@@ -1,0 +1,499 @@
+package com.fountofhopedotorg.fohbible.color_wheel
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.core.graphics.toColorInt
+import com.fountofhopedotorg.fohbible.ui.theme.ThemeManager
+import kotlin.math.PI
+import kotlin.math.atan2
+import kotlin.math.min
+import kotlin.math.sqrt
+import android.content.res.Configuration
+import androidx.compose.ui.unit.IntSize
+import android.graphics.Color as AndroidColor
+
+@Composable
+fun ColorWheelDialog(
+    onDismissRequest: () -> Unit,
+    onColorSelected: (Color) -> Unit,
+    initialColor: Color = ThemeManager.primaryColor
+) {
+    var selectedColor by remember { mutableStateOf(initialColor) }
+    var brightness by remember { mutableFloatStateOf(initialColor.getBrightness()) }
+    var saturation by remember { mutableFloatStateOf(initialColor.getSaturation()) }
+    var opacity by remember { mutableFloatStateOf(initialColor.alpha) }
+    val initialHex = colorToHexString(initialColor)
+    var hexTextFieldValue by remember {
+        mutableStateOf(TextFieldValue(initialHex, selection = TextRange(initialHex.length)))
+    }
+    var isValidHex by remember { mutableStateOf(true) }
+
+    val lightBackground = Color.White
+    val darkBackground = Color.Black
+
+    val colorPalette = remember {
+        listOf(
+            Color(0xFFEF4444), Color(0xFFF97316), Color(0xFFF59E0B), Color(0xFFEAB308),
+            Color(0xFF84CC16), Color(0xFF22C55E), Color(0xFF10B981), Color(0xFF14B8A6),
+            Color(0xFF06B6D4), Color(0xFF0EA5E9), Color(0xFF3B82F6), Color(0xFF6366F1),
+            Color(0xFF8B5CF6), Color(0xFFA855F7), Color(0xFFD946EF), Color(0xFFEC4899),
+            Color(0xFF6B7280), Color(0xFF000000), Color(0xFFFFFFFF)
+        )
+    }
+    val scrollState = rememberScrollState()
+
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = true
+        )
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            ) {
+                Scaffold(
+                    topBar = {
+                        FixedHeader(
+                            title = "Color Picker",
+                            onBackClick = onDismissRequest
+                        )
+                    },
+                    containerColor = Color.Transparent
+                ) { padding ->
+                    val configuration = LocalConfiguration.current
+                    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+                    if (isLandscape) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(padding)
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(20.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.weight(0.3f),
+                                verticalArrangement = Arrangement.spacedBy(20.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                ColorWheelSection(
+                                    selectedColor = selectedColor,
+                                    brightness = brightness,
+                                    onColorSelected = { color ->
+                                        selectedColor = color
+                                        saturation = color.getSaturation()
+                                        brightness = color.getBrightness()
+                                        opacity = color.alpha
+                                        val newHex = colorToHexString(color)
+                                        hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
+                                        isValidHex = true
+                                    }
+                                )
+                            }
+                            Column(
+                                modifier = Modifier.weight(0.32f),
+                                verticalArrangement = Arrangement.spacedBy(20.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                ColorAdjustmentsSection(
+                                    brightness = brightness,
+                                    saturation = saturation,
+                                    opacity = opacity,
+                                    selectedColor = selectedColor,
+                                    onBrightnessChange = {
+                                        brightness = it
+                                        selectedColor = adjustBrightness(selectedColor, it)
+                                        val newHex = colorToHexString(selectedColor)
+                                        hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
+                                    },
+                                    onSaturationChange = {
+                                        saturation = it
+                                        selectedColor = adjustSaturation(selectedColor, it)
+                                        val newHex = colorToHexString(selectedColor)
+                                        hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
+                                    },
+                                    onOpacityChange = {
+                                        opacity = it
+                                        selectedColor = adjustOpacity(selectedColor, it)
+                                        val newHex = colorToHexString(selectedColor)
+                                        hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
+                                    }
+                                )
+                            }
+                            Column(
+                                modifier = Modifier
+                                    .weight(0.38f)
+                                    .fillMaxHeight(),
+                                verticalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(
+                                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                                ) {
+                                    ColorPreviewSection(
+                                        selectedColor = selectedColor,
+                                        hexTextFieldValue = hexTextFieldValue,
+                                        isValidHex = isValidHex,
+                                        lightBackground = lightBackground,
+                                        darkBackground = darkBackground,
+                                        onHexTextFieldValueChange = { newValue ->
+                                            val processed = processHexInput(newValue.text, newValue.selection)
+
+                                            hexTextFieldValue = processed
+                                            if (processed.text.length > 1 && validateHex(processed.text)) {
+                                                try {
+                                                    val colorInt = if (processed.text.length == 4) {
+                                                        val hexValue = processed.text.substring(1)
+                                                        val expanded = "#${hexValue[0]}${hexValue[0]}${hexValue[1]}${hexValue[1]}${hexValue[2]}${hexValue[2]}"
+                                                        expanded.toColorInt()
+                                                    } else {
+                                                        processed.text.toColorInt()
+                                                    }
+                                                    selectedColor = Color(colorInt)
+                                                    brightness = selectedColor.getBrightness()
+                                                    saturation = selectedColor.getSaturation()
+                                                    opacity = selectedColor.alpha
+                                                    isValidHex = true
+                                                } catch (_: Exception) {
+                                                    isValidHex = false
+                                                }
+                                            } else if (processed.text == "#") {
+                                                isValidHex = false
+                                            } else {
+                                                isValidHex = false
+                                            }
+                                        }
+                                    )
+                                    ColorPaletteSection(
+                                        colorPalette = colorPalette,
+                                        selectedColor = selectedColor,
+                                        onColorClick = { color ->
+                                            selectedColor = color
+                                            brightness = color.getBrightness()
+                                            saturation = color.getSaturation()
+                                            opacity = color.alpha
+                                            val newHex = colorToHexString(color)
+                                            hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
+                                            isValidHex = true
+                                        }
+                                    )
+                                }
+                                ActionButtonsSection(
+                                    selectedColor = selectedColor,
+                                    isValidHex = isValidHex,
+                                    onCancel = onDismissRequest,
+                                    onApply = {
+                                        if (isValidHex) {
+                                            onColorSelected(selectedColor)
+                                            onDismissRequest()
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    } else {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(padding)
+                                .verticalScroll(scrollState),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                verticalArrangement = Arrangement.spacedBy(20.dp)
+                            ) {
+                                ColorWheelSection(
+                                    selectedColor = selectedColor,
+                                    brightness = brightness,
+                                    onColorSelected = { color ->
+                                        selectedColor = color
+                                        saturation = color.getSaturation()
+                                        brightness = color.getBrightness()
+                                        opacity = color.alpha
+                                        val newHex = colorToHexString(color)
+                                        hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
+                                        isValidHex = true
+                                    }
+                                )
+                                ColorPreviewSection(
+                                    selectedColor = selectedColor,
+                                    hexTextFieldValue = hexTextFieldValue,
+                                    isValidHex = isValidHex,
+                                    lightBackground = lightBackground,
+                                    darkBackground = darkBackground,
+                                    onHexTextFieldValueChange = { newValue ->
+                                        val processed = processHexInput(newValue.text, newValue.selection)
+
+                                        hexTextFieldValue = processed
+                                        if (processed.text.length > 1 && validateHex(processed.text)) {
+                                            try {
+                                                val colorInt = if (processed.text.length == 4) {
+                                                    val hexValue = processed.text.substring(1)
+                                                    val expanded = "#${hexValue[0]}${hexValue[0]}${hexValue[1]}${hexValue[1]}${hexValue[2]}${hexValue[2]}"
+                                                    expanded.toColorInt()
+                                                } else {
+                                                    processed.text.toColorInt()
+                                                }
+                                                selectedColor = Color(colorInt)
+                                                brightness = selectedColor.getBrightness()
+                                                saturation = selectedColor.getSaturation()
+                                                opacity = selectedColor.alpha
+                                                isValidHex = true
+                                            } catch (_: Exception) {
+                                                isValidHex = false
+                                            }
+                                        } else if (processed.text == "#") {
+                                            isValidHex = false
+                                        } else {
+                                            isValidHex = false
+                                        }
+                                    }
+                                )
+                                ColorAdjustmentsSection(
+                                    brightness = brightness,
+                                    saturation = saturation,
+                                    opacity = opacity,
+                                    selectedColor = selectedColor,
+                                    onBrightnessChange = {
+                                        brightness = it
+                                        selectedColor = adjustBrightness(selectedColor, it)
+                                        val newHex = colorToHexString(selectedColor)
+                                        hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
+                                    },
+                                    onSaturationChange = {
+                                        saturation = it
+                                        selectedColor = adjustSaturation(selectedColor, it)
+                                        val newHex = colorToHexString(selectedColor)
+                                        hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
+                                    },
+                                    onOpacityChange = {
+                                        opacity = it
+                                        selectedColor = adjustOpacity(selectedColor, it)
+                                        val newHex = colorToHexString(selectedColor)
+                                        hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
+                                    }
+                                )
+                                ColorPaletteSection(
+                                    colorPalette = colorPalette,
+                                    selectedColor = selectedColor,
+                                    onColorClick = { color ->
+                                        selectedColor = color
+                                        brightness = color.getBrightness()
+                                        saturation = color.getSaturation()
+                                        opacity = color.alpha
+                                        val newHex = colorToHexString(color)
+                                        hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
+                                        isValidHex = true
+                                    }
+                                )
+                                ActionButtonsSection(
+                                    selectedColor = selectedColor,
+                                    isValidHex = isValidHex,
+                                    onCancel = onDismissRequest,
+                                    onApply = {
+                                        if (isValidHex) {
+                                            onColorSelected(selectedColor)
+                                            onDismissRequest()
+                                        }
+                                    }
+                                )
+
+                                Spacer(modifier = Modifier.height(4.dp))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun colorToHexString(color: Color): String {
+    return if (color.alpha == 1f) {
+        String.format("#%06X", color.toArgb() and 0xFFFFFF)
+    } else {
+        String.format("#%08X", color.toArgb())
+    }
+}
+
+private fun processHexInput(input: String, selection: TextRange): TextFieldValue {
+    var processed = input.uppercase()
+    var newSelection = selection
+    if (!processed.startsWith("#")) {
+        processed = "#$processed"
+        newSelection = if (selection.start == 0) {
+            TextRange(1, 1)
+        } else {
+            TextRange(selection.start + 1, selection.end + 1)
+        }
+    }
+    val filtered = StringBuilder()
+    val originalToFilteredMapping = mutableListOf<Int>()
+
+    for (i in processed.indices) {
+        val char = processed[i]
+        if (i == 0 && char == '#') {
+            filtered.append('#')
+            originalToFilteredMapping.add(filtered.length - 1)
+        } else if (char.isDigit() || char in 'A'..'F') {
+            filtered.append(char)
+            originalToFilteredMapping.add(filtered.length - 1)
+        } else {
+            originalToFilteredMapping.add(-1)
+        }
+    }
+    if (filtered.length > 9) {
+        filtered.length - 9
+        filtered.delete(9, filtered.length)
+        for (i in originalToFilteredMapping.indices) {
+            if (originalToFilteredMapping[i] >= 9) {
+                originalToFilteredMapping[i] = -1
+            }
+        }
+    }
+    val newStart = calculateNewCursorPosition(newSelection.start, originalToFilteredMapping)
+    val newEnd = calculateNewCursorPosition(newSelection.end, originalToFilteredMapping)
+    val finalStart = newStart.coerceIn(1, filtered.length)
+    val finalEnd = newEnd.coerceIn(1, filtered.length)
+
+    return TextFieldValue(filtered.toString(), selection = TextRange(finalStart, finalEnd))
+}
+private fun calculateNewCursorPosition(
+    originalPos: Int,
+    mapping: List<Int>
+): Int {
+    if (originalPos >= mapping.size) {
+        return mapping.lastOrNull { it != -1 }?.plus(1) ?: 1
+    }
+    if (mapping[originalPos] != -1) {
+        return mapping[originalPos] + 1
+    }
+    for (i in originalPos - 1 downTo 0) {
+        if (mapping[i] != -1) {
+            return mapping[i] + 1
+        }
+    }
+    for (i in originalPos + 1 until mapping.size) {
+        if (mapping[i] != -1) {
+            return mapping[i] + 1
+        }
+    }
+    return 1
+}
+
+fun updateColorFromOffset(
+    offset: Offset,
+    size: IntSize,
+    brightness: Float,
+    onColorSelected: (Color) -> Unit
+) {
+    val radius = min(size.width, size.height) / 2f
+    val center = Offset(size.width / 2f, size.height / 2f)
+    val dx = offset.x - center.x
+    val dy = offset.y - center.y
+    val newAngle = ((atan2(dy, dx) * 180f / PI.toFloat() + 360f) % 360f)
+    val distance = sqrt(dx * dx + dy * dy)
+    val newSaturation = (distance / radius).coerceIn(0f, 1f)
+    val color = Color.hsv(newAngle, newSaturation, brightness)
+    onColorSelected(color)
+}
+fun Color.getBrightness(): Float {
+    val hsv = FloatArray(3)
+    AndroidColor.colorToHSV(this.toArgb(), hsv)
+    return hsv[2]
+}
+
+fun Color.getSaturation(): Float {
+    val hsv = FloatArray(3)
+    AndroidColor.colorToHSV(this.toArgb(), hsv)
+    return hsv[1]
+}
+
+fun adjustBrightness(color: Color, brightness: Float): Color {
+    val hsv = FloatArray(3)
+    AndroidColor.colorToHSV(color.toArgb(), hsv)
+    hsv[2] = brightness.coerceIn(0f, 1f)
+    return Color.hsv(hsv[0], hsv[1], hsv[2]).copy(alpha = color.alpha)
+}
+
+fun adjustSaturation(color: Color, saturation: Float): Color {
+    val hsv = FloatArray(3)
+    AndroidColor.colorToHSV(color.toArgb(), hsv)
+    hsv[1] = saturation.coerceIn(0f, 1f)
+    return Color.hsv(hsv[0], hsv[1], hsv[2]).copy(alpha = color.alpha)
+}
+
+fun adjustOpacity(color: Color, opacity: Float): Color {
+    return color.copy(alpha = opacity.coerceIn(0f, 1f))
+}
+fun validateHex(hex: String): Boolean {
+    if (hex.isEmpty() || !hex.startsWith("#")) return false
+    if (hex.length != 4 && hex.length != 7 && hex.length != 9) return false
+    for (i in 1 until hex.length) {
+        val char = hex[i].uppercaseChar()
+        if (!(char in '0'..'9' || char in 'A'..'F')) {
+            return false
+        }
+    }
+
+    return try {
+        if (hex.length == 4) {
+            val hexValue = hex.substring(1)
+            val expanded = "#${hexValue[0]}${hexValue[0]}${hexValue[1]}${hexValue[1]}${hexValue[2]}${hexValue[2]}"
+            expanded.toColorInt()
+        } else {
+            hex.toColorInt()
+        }
+        true
+    } catch (_: IllegalArgumentException) {
+        false
+    } catch (_: NumberFormatException) {
+        false
+    }
+}

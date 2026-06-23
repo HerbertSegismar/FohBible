@@ -10,7 +10,6 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
@@ -102,7 +101,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         "nm9.jpg", "nm10.jpg", "nm11.jpg", "nm12.jpg", "nm13.jpg", "nm14.jpg",
         "om1.jpg", "om2.jpg", "om3.jpg", "om4.jpg", "om5.jpg"
     )
-    //video editor
     var videoCanvasNotes = mutableStateListOf<CanvasNote>()
     var videoSelectedNoteIds by mutableStateOf<Set<String>>(emptySet())
     var videoSelectedNoteId by mutableStateOf<String?>(null)
@@ -428,7 +426,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 rotation = rotation,
                 scaleX = scaleX,
                 scaleY = scaleY,
-                // Route the color based on the element type
                 textColor = if (isTextElement) color else current.textColor,
                 backgroundColor = if (!isTextElement) color else current.backgroundColor,
                 shadowColor = shadowColor,

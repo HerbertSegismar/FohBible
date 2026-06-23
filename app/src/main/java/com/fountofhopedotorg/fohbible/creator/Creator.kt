@@ -35,7 +35,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.fountofhopedotorg.fohbible.composables.ColorWheelDialog
+import com.fountofhopedotorg.fohbible.color_wheel.ColorWheelDialog
 import com.fountofhopedotorg.fohbible.data.CanvasNote
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.ThemeColors
@@ -280,7 +280,6 @@ fun CreatorScreen() {
                     .fillMaxHeight()
                     .padding(top = 10.dp)
             ) {
-                // ----- CHANGED -----
                 CanvasElementsPanel(
                     notes = viewModel.canvasNotes,
                     selectedNoteIds = selectedNoteIds,
@@ -487,7 +486,6 @@ fun CreatorScreen() {
 
                     Spacer(Modifier.height(4.dp))
 
-                    // ----- CHANGED -----
                     CanvasElementsPanel(
                         notes = viewModel.canvasNotes,
                         selectedNoteIds = selectedNoteIds,

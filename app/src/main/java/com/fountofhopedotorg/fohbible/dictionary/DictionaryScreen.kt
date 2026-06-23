@@ -32,9 +32,9 @@ import com.fountofhopedotorg.fohbible.data.BibleData
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.data.Testament
-import com.fountofhopedotorg.fohbible.functions.buildDefinitionContent
-import com.fountofhopedotorg.fohbible.functions.getDefinitionOrClosest
-import com.fountofhopedotorg.fohbible.functions.parseVerseLink
+import com.fountofhopedotorg.fohbible.modal_functions.buildDefinitionContent
+import com.fountofhopedotorg.fohbible.modal_functions.getDefinitionOrClosest
+import com.fountofhopedotorg.fohbible.modal_functions.parseVerseLink
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.modals.InteractiveModal
 import com.fountofhopedotorg.fohbible.utils.Fonts
@@ -53,8 +53,6 @@ fun DictionaryScreen(
     val scope = rememberCoroutineScope()
 
     val keyboardController = LocalSoftwareKeyboardController.current
-
-    // Persist search state across configuration changes (and within the same app session)
     var searchWord by rememberSaveable { mutableStateOf("") }
     var resultTitle by rememberSaveable { mutableStateOf("") }
     var resultContent by rememberSaveable { mutableStateOf("") }
@@ -185,7 +183,6 @@ fun DictionaryScreen(
 
         Spacer(Modifier.height(12.dp))
 
-        // Dictionary selector row with fast‑forward cycle button
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
@@ -198,7 +195,6 @@ fun DictionaryScreen(
                 )
             }
 
-            // Cycle to the next dictionary in the same language group
             if (dictionaries.size > 1) {
                 Spacer(modifier = Modifier.size(2.dp))
                 val currentDictIndex = dictionaries.indexOf(selectedDictionary)
@@ -210,7 +206,6 @@ fun DictionaryScreen(
                 IconButton(
                     onClick = {
                         viewModel.selectedPrimaryDictionary = nextDict
-                        // LaunchedEffect(selectedDictionary) will automatically re‑fetch
                     },
                     modifier = Modifier.size(28.dp).padding(start = 10.dp)
                 ) {
@@ -222,7 +217,6 @@ fun DictionaryScreen(
                 }
             }
 
-            // DropdownMenu is still inside a Box to anchor correctly
             Box {
                 DropdownMenu(
                     expanded = dictionaryDropdownExpanded,
@@ -241,7 +235,6 @@ fun DictionaryScreen(
                             onClick = {
                                 dictionaryDropdownExpanded = false
                                 viewModel.selectedPrimaryDictionary = dictKey
-                                // Auto‑fetch happens via LaunchedEffect(selectedDictionary)
                             }
                         )
                     }

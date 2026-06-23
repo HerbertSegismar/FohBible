@@ -41,7 +41,7 @@ import com.fountofhopedotorg.fohbible.data.ThemeColors
 
 @Composable
 fun CanvasElementItem(
-    notes: List<CanvasNote>,          // ← passed list instead of viewModel
+    notes: List<CanvasNote>,
     note: CanvasNote,
     originalIndex: Int,
     isSelected: Boolean,
@@ -63,7 +63,7 @@ fun CanvasElementItem(
     onLockToggle: () -> Unit,
     onDuplicate: () -> Unit,
     onDelete: () -> Unit,
-    onReorder: (Int, Int) -> Unit,   // ← callback for reorder
+    onReorder: (Int, Int) -> Unit,
     themeColors: ThemeColors,
     modifier: Modifier = Modifier
 ) {
@@ -119,7 +119,7 @@ fun CanvasElementItem(
             Spacer(Modifier.width(8.dp))
 
             Text(
-                text = getElementDisplayName(note, originalIndex, notes),  // use passed notes
+                text = getElementDisplayName(note, originalIndex, notes),
                 modifier = Modifier
                     .weight(1f)
                     .clickable(
@@ -134,7 +134,7 @@ fun CanvasElementItem(
                 originalIndex = originalIndex,
                 isUpEnabled = isUpEnabled,
                 isDownEnabled = isDownEnabled,
-                onReorder = onReorder,                 // use passed callback
+                onReorder = onReorder,
                 primaryColor = themeColors.primary
             )
             IconButton(onClick = onVisibilityToggle, modifier = Modifier.size(28.dp)) {

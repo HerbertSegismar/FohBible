@@ -56,10 +56,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.fountofhopedotorg.fohbible.composables.ColorWheelDialog
+import com.fountofhopedotorg.fohbible.color_wheel.ColorWheelDialog
 import com.fountofhopedotorg.fohbible.creator.CanvasArea
 import com.fountofhopedotorg.fohbible.creator.CombinedToolbarSection
+import com.fountofhopedotorg.fohbible.creator.CustomPolygonDialog
 import com.fountofhopedotorg.fohbible.creator.EditNoteDialog
+import com.fountofhopedotorg.fohbible.creator.EditPropertiesDialog
 import com.fountofhopedotorg.fohbible.creator.GroupDialog
 import com.fountofhopedotorg.fohbible.creator.RenameDialog
 import com.fountofhopedotorg.fohbible.creator.getElementDisplayName
@@ -90,7 +92,6 @@ fun VideoEditorScreen() {
     var showCanvasElementsTree by rememberSaveable { mutableStateOf(true) }
     var dragGroupDelta by remember { mutableStateOf(Offset.Zero) }
 
-    // Animation state
     var isPlayingAnimation by remember { mutableStateOf(false) }
     var animationCurrentTimeMs by remember { mutableLongStateOf(0L) }
     var animatingNoteId by remember { mutableStateOf<String?>(null) }
@@ -106,7 +107,6 @@ fun VideoEditorScreen() {
             .toSet()
     }
 
-    // ---- Helper functions for selection and canvas interaction ----
     fun toggleGroupSelection(note: CanvasNote) {
         val groupId = note.groupId
         if (groupId != null) {
@@ -190,7 +190,6 @@ fun VideoEditorScreen() {
 
     val mainScrollState = rememberScrollState()
 
-    // ---- Animation loop ----
     LaunchedEffect(isPlayingAnimation, animatingNoteId) {
         if (!isPlayingAnimation || animatingNoteId == null) return@LaunchedEffect
 
@@ -246,7 +245,6 @@ fun VideoEditorScreen() {
             delay(16.milliseconds)
         }
 
-        // Reset note to original state when animation stops
         if (!isPlayingAnimation && originalNoteState != null) {
             val orig = originalNoteState!!
             val idx = viewModel.videoCanvasNotes.indexOfFirst { it.id == orig.id }
@@ -263,10 +261,8 @@ fun VideoEditorScreen() {
         }
     }
 
-    // ---- Layout ----
     if (isLandscape) {
         Row(modifier = Modifier.fillMaxSize()) {
-            // Left column: toolbar + canvas
             Column(
                 modifier = Modifier
                     .weight(0.6f)
@@ -353,13 +349,12 @@ fun VideoEditorScreen() {
                         onProportionalToggle = onProportionalToggle
                     )
 
-                    // Overlay while animation is playing (block input)
                     if (isPlayingAnimation) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(Color.Black.copy(alpha = 0.3f))
-                                .pointerInput(Unit) {},  // consume all touch events
+                                .pointerInput(Unit) {},
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -374,14 +369,12 @@ fun VideoEditorScreen() {
 
             Spacer(modifier = Modifier.size(8.dp))
 
-            // Right column: elements panel and toolbar buttons
             Column(
                 modifier = Modifier
                     .weight(0.4f)
                     .fillMaxHeight()
                     .padding(top = 10.dp)
             ) {
-                // Toolbar buttons for animation
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -550,7 +543,6 @@ fun VideoEditorScreen() {
             }
         }
     } else {
-        // Portrait layout
         Row(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
@@ -600,7 +592,6 @@ fun VideoEditorScreen() {
                     .weight(1f)
                     .fillMaxHeight()
             ) {
-                // Animation toolbar row
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -840,8 +831,6 @@ fun VideoEditorScreen() {
         }
     }
 
-    // ---- Dialogs ----
-
     when (val dialog = viewModel.videoContentDialogType) {
         is VideoContentDialogType.Edit -> {
             EditNoteDialog(
@@ -982,7 +971,44 @@ fun VideoEditorScreen() {
         )
     }
 
-    if (viewModel.videoShowKeyframeDialog && viewModel.videoKeyframeTargetNoteId != null) {
+    if (viewModel.videoShowCustomPolygonDialog) {
+        CustomPolygonDialog(
+            initialSerializedPoints = viewModel.videoInitialPolygonString.takeIf { it.isNotEmpty() },
+            isLineMode = viewModel.videoInitialIsLineMode,
+            onDismiss = {
+                viewModel.videoShowCustomPolygonDialog = false
+                viewModel.videoPolygonNoteToEditId = null
+                viewModel.videoInitialPolygonString = ""
+                viewModel.videoInitialIsLineMode = false
+            },
+            onConfirm = { points, isLine ->
+                val serialized = points.joinToString(";") { node ->
+                    "${node.anchor.x},${node.anchor.y}:${node.handleIn.x},${node.handleIn.y}:${node.handleOut.x},${node.handleOut.y}"
+                }
+                val shapeType = if (isLine) "CustomLine" else "CustomPolygon"
+                val contentString = "Shape:$shapeType:$serialized"
+                if (viewModel.videoPolygonNoteToEditId != null) {
+                    viewModel.updateVideoNoteContent(viewModel.videoPolygonNoteToEditId!!, contentString)
+                    viewModel.videoSelectedNoteId = viewModel.videoPolygonNoteToEditId
+                } else {
+                    viewModel.addToVideoCanvas(
+                        CanvasNote(
+                            content = contentString,
+                            backgroundColor = getRandomColor(),
+                            width = 100f,
+                            height = 100f
+                        )
+                    )
+                }
+                viewModel.videoShowCustomPolygonDialog = false
+                viewModel.videoPolygonNoteToEditId = null
+                viewModel.videoInitialPolygonString = ""
+                viewModel.videoInitialIsLineMode = false
+            }
+        )
+    }
+
+if (viewModel.videoShowKeyframeDialog && viewModel.videoKeyframeTargetNoteId != null) {
         val targetNote = viewModel.videoCanvasNotes.find { it.id == viewModel.videoKeyframeTargetNoteId }
         KeyframeAnimationDialog(
             note = targetNote,
@@ -997,9 +1023,57 @@ fun VideoEditorScreen() {
             }
         )
     }
+
+    EditPropertiesDialog(
+        show = viewModel.videoShowEditPropertiesDialog,
+        noteId = viewModel.videoEditPropertiesNoteId,
+        initialX = viewModel.videoEditX,
+        initialY = viewModel.videoEditY,
+        initialScaleX = viewModel.videoEditScaleX,
+        initialScaleY = viewModel.videoEditScaleY,
+        initialRotation = viewModel.videoEditRotation,
+        initialColor = viewModel.videoEditColorForDialog,
+        proportionalEnabled = viewModel.proportionalEditing,
+        onProportionalToggle = { viewModel.proportionalEditing = it },
+        initialShadowColor = viewModel.videoEditShadowColorForDialog,
+        initialShadowOffsetX = viewModel.videoEditShadowOffsetX,
+        initialShadowOffsetY = viewModel.videoEditShadowOffsetY,
+        initialBorderThickness = viewModel.videoEditBorderThickness,
+        initialBorderColor = viewModel.videoEditBorderColorForDialog,
+        onDismiss = {
+            viewModel.videoShowEditPropertiesDialog = false
+            viewModel.videoEditPropertiesNoteId = null
+        },
+        onApply = { id, x, y, scaleX, scaleY, rot, color,
+                    shadowColor, shadowOffsetX, shadowOffsetY,
+                    borderThickness, borderColor ->
+            val currentNote = viewModel.videoCanvasNotes.find { it.id == id }
+            if (currentNote != null) {
+                val isText = !currentNote.content.startsWith("Shape:") && !currentNote.content.startsWith("Image:")
+                viewModel.applyAllVideoNoteProperties(
+                    id = id,
+                    x = x.toFloatOrNull() ?: currentNote.offset.x,
+                    y = y.toFloatOrNull() ?: currentNote.offset.y,
+                    width = currentNote.width,
+                    height = currentNote.height,
+                    rotation = rot.toFloatOrNull() ?: currentNote.rotation,
+                    scaleX = scaleX.toFloatOrNull()?.coerceIn(0.1f, 10f) ?: currentNote.scaleX,
+                    scaleY = scaleY.toFloatOrNull()?.coerceIn(0.1f, 10f) ?: currentNote.scaleY,
+                    color = color,
+                    isTextElement = isText,
+                    shadowColor = shadowColor,
+                    shadowOffsetX = shadowOffsetX,
+                    shadowOffsetY = shadowOffsetY,
+                    borderThickness = borderThickness,
+                    borderColor = borderColor
+                )
+            }
+            viewModel.videoShowEditPropertiesDialog = false
+            viewModel.videoEditPropertiesNoteId = null
+        }
+    )
 }
 
-// ---- Helper functions for animation ----
 
 private fun lerp(start: Float, stop: Float, fraction: Float): Float =
     start + (stop - start) * fraction
@@ -1019,7 +1093,6 @@ private fun findSurroundingKeyframes(
     return keyframes.last() to keyframes.last()
 }
 
-// ---- KeyframeAnimationDialog (unchanged) ----
 @Composable
 fun KeyframeAnimationDialog(
     note: CanvasNote?,
@@ -1131,7 +1204,7 @@ fun KeyframeAnimationDialog(
                     },
                     modifier = Modifier.align(Alignment.End)
                 ) {
-                    Text("Insert Keyframe")
+                    Text("Insert Keyframe", color = Color.White)
                 }
             }
         },

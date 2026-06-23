@@ -29,7 +29,7 @@ import kotlin.math.roundToInt
 @Composable
 fun CanvasArea(
     modifier: Modifier = Modifier,
-    notes: List<CanvasNote>,                      // ← reusable list
+    notes: List<CanvasNote>,
     selectedNoteIds: Set<String>,
     selectedNoteId: String?,
     selectedGroups: Set<String>,
@@ -67,7 +67,7 @@ fun CanvasArea(
                     drawContent()
                 }
         ) {
-            notes.forEach { note ->   // ← iterate over the passed list
+            notes.forEach { note ->
                 if (!note.isVisible) return@forEach
 
                 key(note.id) {

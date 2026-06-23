@@ -16,8 +16,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.fountofhopedotorg.fohbible.models.AppViewModel
-import com.fountofhopedotorg.fohbible.screens.MAX_ORB_COUNT
-import com.fountofhopedotorg.fohbible.screens.MIN_ORB_COUNT
+import com.fountofhopedotorg.fohbible.settings.MAX_ORB_COUNT
+import com.fountofhopedotorg.fohbible.settings.MIN_ORB_COUNT
 
 @Composable
 fun OrbsCountModal(

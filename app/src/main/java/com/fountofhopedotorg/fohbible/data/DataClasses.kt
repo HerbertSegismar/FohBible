@@ -328,6 +328,22 @@ data class BookUi(
     val totalChapters: Int
 )
 
+data class ChapterPagerConfig(
+    val passages: List<PassageSelection>,
+    val currentOffset: Int,
+    val pageCount: Int,
+    val hasPrev: Boolean,
+    val hasNext: Boolean
+)
+
+data class VersionModalColors(
+    val primary: Color,
+    val card: Color,
+    val text: Color,
+    val muted: Color,
+    val border: Color
+)
+
 data class SelectedWord(
     val verseNumber: Int,
     val start: Int,
