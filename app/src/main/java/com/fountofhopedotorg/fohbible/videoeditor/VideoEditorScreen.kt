@@ -3,6 +3,7 @@ package com.fountofhopedotorg.fohbible.videoeditor
 import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
@@ -22,25 +23,20 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Timeline
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -49,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
@@ -57,8 +54,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.color_wheel.ColorWheelDialog
-import com.fountofhopedotorg.fohbible.creator.CanvasArea
-import com.fountofhopedotorg.fohbible.creator.CombinedToolbarSection
 import com.fountofhopedotorg.fohbible.creator.CustomPolygonDialog
 import com.fountofhopedotorg.fohbible.creator.EditNoteDialog
 import com.fountofhopedotorg.fohbible.creator.EditPropertiesDialog
@@ -67,7 +62,6 @@ import com.fountofhopedotorg.fohbible.creator.RenameDialog
 import com.fountofhopedotorg.fohbible.creator.getElementDisplayName
 import com.fountofhopedotorg.fohbible.creator.getRandomColor
 import com.fountofhopedotorg.fohbible.creator.getSerializedPointsForShape
-import com.fountofhopedotorg.fohbible.data.CanvasKeyframe
 import com.fountofhopedotorg.fohbible.data.CanvasNote
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.ThemeColors
@@ -94,8 +88,17 @@ fun VideoEditorScreen() {
 
     var isPlayingAnimation by remember { mutableStateOf(false) }
     var animationCurrentTimeMs by remember { mutableLongStateOf(0L) }
-    var animatingNoteId by remember { mutableStateOf<String?>(null) }
-    var originalNoteState by remember { mutableStateOf<CanvasNote?>(null) }
+    var originalNoteStates by remember { mutableStateOf<Map<String, CanvasNote>>(emptyMap()) }
+
+    var isRecording by remember { mutableStateOf(false) }
+    val encoder = remember { mutableStateOf<ComposeVideoEncoder?>(null) }
+    var lastCaptureTimeMs by remember { mutableLongStateOf(0L) }
+    var hasCapturedFirstFrame by remember { mutableStateOf(false) }
+
+    var exportProgress by remember { mutableFloatStateOf(0f) }
+    var recordingMaxTimestamp by remember { mutableLongStateOf(0L) }
+
+    val cancelExport: () -> Unit = remember { { isPlayingAnimation = false } }
 
     val notesGrouped = remember(viewModel.videoCanvasNotes) {
         viewModel.videoCanvasNotes.groupBy { it.groupId }
@@ -106,6 +109,12 @@ fun VideoEditorScreen() {
             .map { it.groupId!! }
             .toSet()
     }
+    val hasAnyKeyframes by remember {
+        derivedStateOf {
+            viewModel.videoCanvasNotes.any { it.keyframes.isNotEmpty() }
+        }
+    }
+    val enablePlayStop = hasAnyKeyframes || isPlayingAnimation
 
     fun toggleGroupSelection(note: CanvasNote) {
         val groupId = note.groupId
@@ -189,47 +198,82 @@ fun VideoEditorScreen() {
     }
 
     val mainScrollState = rememberScrollState()
-
-    LaunchedEffect(isPlayingAnimation, animatingNoteId) {
-        if (!isPlayingAnimation || animatingNoteId == null) return@LaunchedEffect
-
-        val note = viewModel.videoCanvasNotes.firstOrNull { it.id == animatingNoteId }
-        if (note == null || note.keyframes.isEmpty()) {
+    val onSaveVideo: () -> Unit = remember {
+        {
+            if (viewModel.videoCanvasNotes.isEmpty()) {
+                Toast.makeText(context, "Canvas is empty", Toast.LENGTH_SHORT).show()
+                return@remember
+            }
             isPlayingAnimation = false
+            isRecording = true
+            encoder.value = null
+            lastCaptureTimeMs = 0L
+            hasCapturedFirstFrame = false
+            exportProgress = 0f
+            recordingMaxTimestamp = 0L
+            isPlayingAnimation = true
+        }
+    }
+    LaunchedEffect(isPlayingAnimation) {
+        if (!isPlayingAnimation) {
+            if (originalNoteStates.isNotEmpty()) {
+                viewModel.videoCanvasNotes.clear()
+                viewModel.videoCanvasNotes.addAll(originalNoteStates.values.toList())
+                originalNoteStates = emptyMap()
+            }
+            encoder.value?.let {
+                it.releaseAndDiscard()
+                encoder.value = null
+            }
+            isRecording = false
             return@LaunchedEffect
         }
 
-        val sortedKeyframes = note.keyframes.sortedBy { it.timestampMs }
-        if (sortedKeyframes.isEmpty()) {
-            isPlayingAnimation = false
-            return@LaunchedEffect
+        val keyframedNotes = viewModel.videoCanvasNotes.filter { it.keyframes.isNotEmpty() }
+        val maxTimestamp = if (keyframedNotes.isNotEmpty()) {
+            keyframedNotes.maxOf { note -> note.keyframes.maxOfOrNull { it.timestampMs } ?: 0L }
+        } else {
+            if (isRecording) 2000L else {
+                isPlayingAnimation = false
+                return@LaunchedEffect
+            }
         }
 
-        val lastTimestamp = sortedKeyframes.last().timestampMs
+        if (isRecording) {
+            recordingMaxTimestamp = maxTimestamp
+            exportProgress = 0f
+            while (graphicsLayer.size.width == 0) {
+                delay(16.milliseconds)
+            }
+            val width = graphicsLayer.size.width
+            val height = graphicsLayer.size.height
+            encoder.value = ComposeVideoEncoder(context, width, height, frameRate = 30, bitRate = 4_000_000)
+            originalNoteStates = viewModel.videoCanvasNotes.associateBy { it.id }
+            animationCurrentTimeMs = 0L
+        }
 
         while (isActive && isPlayingAnimation) {
             val currentMs = animationCurrentTimeMs
-            val noteNow = viewModel.videoCanvasNotes.firstOrNull { it.id == animatingNoteId }
-            if (noteNow == null) {
-                isPlayingAnimation = false
-                break
-            }
 
-            val (kfPrev, kfNext) = findSurroundingKeyframes(sortedKeyframes, currentMs)
-            val progress = if (kfNext != null && kfNext.timestampMs != kfPrev!!.timestampMs) {
-                ((currentMs - kfPrev.timestampMs).toFloat() /
-                        (kfNext.timestampMs - kfPrev.timestampMs)).coerceIn(0f, 1f)
-            } else 0f
+            val snapshot = viewModel.videoCanvasNotes.toList()
+            for (i in snapshot.indices) {
+                val note = snapshot[i]
+                if (note.keyframes.isEmpty()) continue
 
-            val newX = lerp(kfPrev?.x ?: noteNow.offset.x, kfNext?.x ?: noteNow.offset.x, progress)
-            val newY = lerp(kfPrev?.y ?: noteNow.offset.y, kfNext?.y ?: noteNow.offset.y, progress)
-            val newScaleX = lerp(kfPrev?.scaleX ?: noteNow.scaleX, kfNext?.scaleX ?: noteNow.scaleX, progress)
-            val newScaleY = lerp(kfPrev?.scaleY ?: noteNow.scaleY, kfNext?.scaleY ?: noteNow.scaleY, progress)
-            val newRotation = lerp(kfPrev?.rotation ?: noteNow.rotation, kfNext?.rotation ?: noteNow.rotation, progress)
+                val sortedKeyframes = note.keyframes.sortedBy { it.timestampMs }
+                val (kfPrev, kfNext) = findSurroundingKeyframes(sortedKeyframes, currentMs)
+                val progress = if (kfNext != null && kfPrev != null && kfNext.timestampMs != kfPrev.timestampMs) {
+                    ((currentMs - kfPrev.timestampMs).toFloat() /
+                            (kfNext.timestampMs - kfPrev.timestampMs)).coerceIn(0f, 1f)
+                } else 0f
 
-            val idx = viewModel.videoCanvasNotes.indexOfFirst { it.id == animatingNoteId }
-            if (idx != -1) {
-                viewModel.videoCanvasNotes[idx] = viewModel.videoCanvasNotes[idx].copy(
+                val newX = lerp(kfPrev?.x ?: note.offset.x, kfNext?.x ?: note.offset.x, progress)
+                val newY = lerp(kfPrev?.y ?: note.offset.y, kfNext?.y ?: note.offset.y, progress)
+                val newScaleX = lerp(kfPrev?.scaleX ?: note.scaleX, kfNext?.scaleX ?: note.scaleX, progress)
+                val newScaleY = lerp(kfPrev?.scaleY ?: note.scaleY, kfNext?.scaleY ?: note.scaleY, progress)
+                val newRotation = lerp(kfPrev?.rotation ?: note.rotation, kfNext?.rotation ?: note.rotation, progress)
+
+                viewModel.videoCanvasNotes[i] = note.copy(
                     offset = Offset(newX, newY),
                     scaleX = newScaleX,
                     scaleY = newScaleY,
@@ -237,27 +281,51 @@ fun VideoEditorScreen() {
                 )
             }
 
+            if (isRecording) {
+                val enc = encoder.value
+                if (enc != null) {
+                    val frameIntervalMs = 1000L / 30
+                    if (currentMs - lastCaptureTimeMs >= frameIntervalMs || !hasCapturedFirstFrame) {
+                        val bitmap = graphicsLayer.toImageBitmap().asAndroidBitmap()
+                        enc.addFrame(bitmap)
+                        lastCaptureTimeMs = currentMs
+                        hasCapturedFirstFrame = true
+                    }
+                }
+                exportProgress = if (recordingMaxTimestamp > 0) {
+                    (currentMs.toFloat() / recordingMaxTimestamp.toFloat()).coerceIn(0f, 1f)
+                } else {
+                    (currentMs.toFloat() / 2000f).coerceIn(0f, 1f)
+                }
+            }
+
             animationCurrentTimeMs += 16
-            if (animationCurrentTimeMs > lastTimestamp + 500) {
+            if (animationCurrentTimeMs > maxTimestamp + 500) {
                 isPlayingAnimation = false
                 break
             }
             delay(16.milliseconds)
         }
 
-        if (!isPlayingAnimation && originalNoteState != null) {
-            val orig = originalNoteState!!
-            val idx = viewModel.videoCanvasNotes.indexOfFirst { it.id == orig.id }
-            if (idx != -1) {
-                viewModel.videoCanvasNotes[idx] = viewModel.videoCanvasNotes[idx].copy(
-                    offset = orig.offset,
-                    scaleX = orig.scaleX,
-                    scaleY = orig.scaleY,
-                    rotation = orig.rotation
-                )
+        if (isRecording) {
+            exportProgress = 1f
+            val enc = encoder.value
+            if (enc != null) {
+                val fileName = "VideoEditor_${System.currentTimeMillis()}"
+                val savedPath = enc.releaseAndSaveToGallery(fileName)
+                if (savedPath != null) {
+                    Toast.makeText(context, "Video saved", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(context, "Failed to save video", Toast.LENGTH_SHORT).show()
+                }
+                encoder.value = null
             }
-            originalNoteState = null
-            animatingNoteId = null
+            isRecording = false
+            if (originalNoteStates.isNotEmpty()) {
+                viewModel.videoCanvasNotes.clear()
+                viewModel.videoCanvasNotes.addAll(originalNoteStates.values.toList())
+                originalNoteStates = emptyMap()
+            }
         }
     }
 
@@ -268,7 +336,7 @@ fun VideoEditorScreen() {
                     .weight(0.6f)
                     .fillMaxHeight()
             ) {
-                CombinedToolbarSection(
+                ToolbarSection(
                     onAddShape = { shape ->
                         val color = getRandomColor()
                         viewModel.addToVideoCanvas(
@@ -303,14 +371,15 @@ fun VideoEditorScreen() {
                     },
                     onChooseFromGallery = { imagePickerLauncher.launch("image/*") },
                     graphicsLayer = graphicsLayer,
-                    isLandscape = true
+                    isLandscape = true,
+                    onSaveVideo = onSaveVideo
                 )
 
                 Box(modifier = Modifier
-                    .weight(1f).fillMaxSize()) {
-                    CanvasArea(
-                        modifier = Modifier
-                            .fillMaxSize(),
+                    .weight(1f)
+                    .fillMaxSize()) {
+                    VideoCanvasArea(
+                        modifier = Modifier.fillMaxSize(),
                         notes = viewModel.videoCanvasNotes,
                         selectedNoteIds = viewModel.videoSelectedNoteIds,
                         selectedNoteId = viewModel.videoSelectedNoteId,
@@ -358,7 +427,7 @@ fun VideoEditorScreen() {
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                "Playing Animation…",
+                                if (isRecording) "Exporting Video…" else "Playing Animation…",
                                 color = Color.White,
                                 style = MaterialTheme.typography.titleMedium
                             )
@@ -383,7 +452,6 @@ fun VideoEditorScreen() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     val selectedNote = viewModel.videoCanvasNotes.firstOrNull { it.id == viewModel.videoSelectedNoteId }
-                    val hasKeyframes = selectedNote?.keyframes?.isNotEmpty() == true
 
                     IconButton(
                         onClick = {
@@ -407,26 +475,27 @@ fun VideoEditorScreen() {
                     }
 
                     Spacer(Modifier.width(4.dp))
-
                     IconButton(
                         onClick = {
                             if (isPlayingAnimation) {
                                 isPlayingAnimation = false
                             } else {
-                                selectedNote?.let { note ->
-                                    originalNoteState = note.copy()
-                                    animatingNoteId = note.id
-                                    animationCurrentTimeMs = 0L
-                                    isPlayingAnimation = true
-                                }
+                                originalNoteStates = viewModel.videoCanvasNotes
+                                    .filter { it.keyframes.isNotEmpty() }
+                                    .associateBy { it.id }
+                                    .mapValues { it.value.copy() }
+                                animationCurrentTimeMs = 0L
+                                isPlayingAnimation = true
                             }
                         },
-                        enabled = viewModel.videoSelectedNoteId != null && (hasKeyframes || isPlayingAnimation)
+                        enabled = enablePlayStop
                     ) {
                         Icon(
                             imageVector = if (isPlayingAnimation) Icons.Default.Stop else Icons.Default.PlayArrow,
-                            contentDescription = if (isPlayingAnimation) "Stop Animation" else "Play Animation",
-                            tint = if (isPlayingAnimation) Color.Red else MaterialTheme.colorScheme.primary
+                            contentDescription = if (isPlayingAnimation) "Stop Animation" else "Play All Animations",
+                            tint = if (isPlayingAnimation) Color.Red
+                            else if (enablePlayStop) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                         )
                     }
                 }
@@ -543,13 +612,14 @@ fun VideoEditorScreen() {
             }
         }
     } else {
+        // Portrait layout
         Row(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
                     .width(40.dp)
                     .fillMaxHeight()
             ) {
-                CombinedToolbarSection(
+                ToolbarSection(
                     onAddShape = { shape ->
                         val color = getRandomColor()
                         viewModel.addToVideoCanvas(
@@ -584,7 +654,8 @@ fun VideoEditorScreen() {
                     },
                     onChooseFromGallery = { imagePickerLauncher.launch("image/*") },
                     graphicsLayer = graphicsLayer,
-                    isLandscape = false
+                    isLandscape = false,
+                    onSaveVideo = onSaveVideo
                 )
             }
             Column(
@@ -600,7 +671,6 @@ fun VideoEditorScreen() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     val selectedNote = viewModel.videoCanvasNotes.firstOrNull { it.id == viewModel.videoSelectedNoteId }
-                    val hasKeyframes = selectedNote?.keyframes?.isNotEmpty() == true
 
                     IconButton(
                         onClick = {
@@ -624,26 +694,27 @@ fun VideoEditorScreen() {
                     }
 
                     Spacer(Modifier.width(4.dp))
-
                     IconButton(
                         onClick = {
                             if (isPlayingAnimation) {
                                 isPlayingAnimation = false
                             } else {
-                                selectedNote?.let { note ->
-                                    originalNoteState = note.copy()
-                                    animatingNoteId = note.id
-                                    animationCurrentTimeMs = 0L
-                                    isPlayingAnimation = true
-                                }
+                                originalNoteStates = viewModel.videoCanvasNotes
+                                    .filter { it.keyframes.isNotEmpty() }
+                                    .associateBy { it.id }
+                                    .mapValues { it.value.copy() }
+                                animationCurrentTimeMs = 0L
+                                isPlayingAnimation = true
                             }
                         },
-                        enabled = viewModel.videoSelectedNoteId != null && (hasKeyframes || isPlayingAnimation)
+                        enabled = enablePlayStop
                     ) {
                         Icon(
                             imageVector = if (isPlayingAnimation) Icons.Default.Stop else Icons.Default.PlayArrow,
-                            contentDescription = if (isPlayingAnimation) "Stop Animation" else "Play Animation",
-                            tint = if (isPlayingAnimation) Color.Red else MaterialTheme.colorScheme.primary
+                            contentDescription = if (isPlayingAnimation) "Stop Animation" else "Play All Animations",
+                            tint = if (isPlayingAnimation) Color.Red
+                            else if (enablePlayStop) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                         )
                     }
                 }
@@ -655,7 +726,7 @@ fun VideoEditorScreen() {
                         .verticalScroll(mainScrollState)
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
-                        CanvasArea(
+                        VideoCanvasArea(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(520.dp),
@@ -706,7 +777,7 @@ fun VideoEditorScreen() {
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    "Playing Animation…",
+                                    if (isRecording) "Exporting Video…" else "Playing Animation…",
                                     color = Color.White,
                                     style = MaterialTheme.typography.titleMedium
                                 )
@@ -1008,7 +1079,7 @@ fun VideoEditorScreen() {
         )
     }
 
-if (viewModel.videoShowKeyframeDialog && viewModel.videoKeyframeTargetNoteId != null) {
+    if (viewModel.videoShowKeyframeDialog && viewModel.videoKeyframeTargetNoteId != null) {
         val targetNote = viewModel.videoCanvasNotes.find { it.id == viewModel.videoKeyframeTargetNoteId }
         KeyframeAnimationDialog(
             note = targetNote,
@@ -1072,151 +1143,11 @@ if (viewModel.videoShowKeyframeDialog && viewModel.videoKeyframeTargetNoteId != 
             viewModel.videoEditPropertiesNoteId = null
         }
     )
-}
 
-
-private fun lerp(start: Float, stop: Float, fraction: Float): Float =
-    start + (stop - start) * fraction
-
-private fun findSurroundingKeyframes(
-    keyframes: List<CanvasKeyframe>,
-    currentMs: Long
-): Pair<CanvasKeyframe?, CanvasKeyframe?> {
-    if (keyframes.isEmpty()) return null to null
-    if (currentMs <= keyframes.first().timestampMs) return keyframes.first() to keyframes.first()
-    if (currentMs >= keyframes.last().timestampMs) return keyframes.last() to keyframes.last()
-    for (i in 0 until keyframes.size - 1) {
-        if (currentMs in keyframes[i].timestampMs..keyframes[i + 1].timestampMs) {
-            return keyframes[i] to keyframes[i + 1]
-        }
+    if (isRecording) {
+        ExportDialog(
+            progress = exportProgress,
+            onCancelRequested = cancelExport
+        )
     }
-    return keyframes.last() to keyframes.last()
-}
-
-@Composable
-fun KeyframeAnimationDialog(
-    note: CanvasNote?,
-    onDismiss: () -> Unit,
-    onSaveKeyframes: (String, List<CanvasKeyframe>) -> Unit
-) {
-    if (note == null) return
-
-    val localKeyframes = remember(note.keyframes) { mutableStateListOf(*note.keyframes.toTypedArray()) }
-
-    var timeInput by remember { mutableStateOf("") }
-    var xInput by remember { mutableStateOf(note.offset.x.toString()) }
-    var yInput by remember { mutableStateOf(note.offset.y.toString()) }
-    var scaleXInput by remember { mutableStateOf(note.scaleX.toString()) }
-    var scaleYInput by remember { mutableStateOf(note.scaleY.toString()) }
-    var rotationInput by remember { mutableStateOf(note.rotation.toString()) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(text = "Keyframe Editor: ${note.content.take(15)}...") },
-        text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(text = "Existing Keyframes", style = MaterialTheme.typography.titleSmall)
-                if (localKeyframes.isEmpty()) {
-                    Text(text = "No keyframes added yet.", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
-                } else {
-                    localKeyframes.sortedBy { it.timestampMs }.forEach { kf ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "${kf.timestampMs}ms -> Pos: (${kf.x?.toInt()}, ${kf.y?.toInt()}) | Scale: (${kf.scaleX}, ${kf.scaleY}) | Rot: ${kf.rotation}°",
-                                style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.weight(1f)
-                            )
-                            IconButton(onClick = { localKeyframes.remove(kf) }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete Keyframe", tint = Color.Red)
-                            }
-                        }
-                    }
-                }
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                Text(text = "Add / Overwrite Keyframe", style = MaterialTheme.typography.titleSmall)
-
-                OutlinedTextField(
-                    value = timeInput,
-                    onValueChange = { timeInput = it },
-                    label = { Text("Timestamp (ms)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = xInput,
-                        onValueChange = { xInput = it },
-                        label = { Text("X") },
-                        modifier = Modifier.weight(1f)
-                    )
-                    OutlinedTextField(
-                        value = yInput,
-                        onValueChange = { yInput = it },
-                        label = { Text("Y") },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = scaleXInput,
-                        onValueChange = { scaleXInput = it },
-                        label = { Text("Scale X") },
-                        modifier = Modifier.weight(1f)
-                    )
-                    OutlinedTextField(
-                        value = scaleYInput,
-                        onValueChange = { scaleYInput = it },
-                        label = { Text("Scale Y") },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                OutlinedTextField(
-                    value = rotationInput,
-                    onValueChange = { rotationInput = it },
-                    label = { Text("Rotation (Degrees)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Button(
-                    onClick = {
-                        val t = timeInput.toLongOrNull() ?: 0L
-                        val x = xInput.toFloatOrNull() ?: note.offset.x
-                        val y = yInput.toFloatOrNull() ?: note.offset.y
-                        val sx = scaleXInput.toFloatOrNull() ?: note.scaleX
-                        val sy = scaleYInput.toFloatOrNull() ?: note.scaleY
-                        val rot = rotationInput.toFloatOrNull() ?: note.rotation
-
-                        localKeyframes.removeAll { it.timestampMs == t }
-                        localKeyframes.add(CanvasKeyframe(t, x, y, sx, sy, rot))
-                        timeInput = ""
-                    },
-                    modifier = Modifier.align(Alignment.End)
-                ) {
-                    Text("Insert Keyframe", color = Color.White)
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onSaveKeyframes(note.id, localKeyframes.sortedBy { it.timestampMs }) }) {
-                Text("Save Changes")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
 }
