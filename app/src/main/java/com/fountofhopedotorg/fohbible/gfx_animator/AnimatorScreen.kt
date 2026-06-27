@@ -8,17 +8,40 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
@@ -30,13 +53,20 @@ import com.fountofhopedotorg.fohbible.color_wheel.ColorWheelDialog
 import com.fountofhopedotorg.fohbible.data.CanvasNote
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.ThemeColors
-import com.fountofhopedotorg.fohbible.gfx_creator.*
-import com.fountofhopedotorg.fohbible.models.AppViewModel
+import com.fountofhopedotorg.fohbible.gfx_creator.CustomPolygonDialog
+import com.fountofhopedotorg.fohbible.gfx_creator.EditPropertiesDialog
+import com.fountofhopedotorg.fohbible.gfx_creator.GroupDialog
+import com.fountofhopedotorg.fohbible.gfx_creator.RenameDialog
+import com.fountofhopedotorg.fohbible.gfx_creator.getElementDisplayName
+import com.fountofhopedotorg.fohbible.gfx_creator.getRandomColor
+import com.fountofhopedotorg.fohbible.gfx_creator.getSerializedPointsForShape
 import com.fountofhopedotorg.fohbible.models.AnimatorDialogType
+import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.theme.LocalAppTheme
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlin.math.min
 import kotlin.time.Duration.Companion.microseconds
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -46,6 +76,11 @@ fun AnimatorScreen() {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val canvasWidthPx = if (isLandscape) 1920 else 1080
+    val canvasHeightPx = if (isLandscape) 1080 else 1920
+    val density = LocalDensity.current
+    val canvasWidthDp = with(density) { canvasWidthPx.toDp() }
+    val canvasHeightDp = with(density) { canvasHeightPx.toDp() }
 
     val viewModel: AppViewModel = viewModel()
     val graphicsLayer = rememberGraphicsLayer()
@@ -66,10 +101,9 @@ fun AnimatorScreen() {
     var exportProgress by remember { mutableFloatStateOf(0f) }
     var recordingMaxTimestamp by remember { mutableLongStateOf(0L) }
 
-    // MP4 settings dialog state
     var showMp4SettingsDialog by remember { mutableStateOf(false) }
-    var selectedFrameRate by remember { mutableIntStateOf(30) }     // default 30 fps
-    var selectedBitRateMbps by remember { mutableIntStateOf(20) }   // 20 Mbps
+    var selectedFrameRate by remember { mutableIntStateOf(30) }
+    var selectedBitRateMbps by remember { mutableIntStateOf(20) }
 
     val cancelExport: () -> Unit = remember { { isPlayingAnimation = false } }
 
@@ -118,7 +152,6 @@ fun AnimatorScreen() {
     }
     val enablePlayStop = hasAnyKeyframes || isPlayingAnimation
 
-    // Group / selection helpers
     fun toggleGroupSelection(note: CanvasNote) {
         val groupId = note.groupId
         if (groupId != null) {
@@ -213,7 +246,6 @@ fun AnimatorScreen() {
 
     val mainScrollState = rememberScrollState()
 
-    // Opens the MP4 settings dialog instead of starting recording immediately
     val onSaveVideo: () -> Unit = remember {
         {
             if (viewModel.animatorCanvasNotes.isEmpty()) {
@@ -366,88 +398,104 @@ fun AnimatorScreen() {
     }
 
     if (isLandscape) {
-        // Landscape: toolbar as a full‑width row at the bottom,
-        // canvas and elements tree together in a row above.
         Column(modifier = Modifier.fillMaxSize()) {
-            // Top row: canvas (left) and elements panel (right)
             Row(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
             ) {
-                // Canvas area
                 Box(
                     modifier = Modifier
-                        .weight(1f)
+                        .weight(1.7f)
                         .fillMaxHeight()
-                        .padding(2.dp)
                 ) {
-                    VideoCanvasArea(
-                        modifier = Modifier.fillMaxSize(),
-                        notes = viewModel.animatorCanvasNotes,
-                        selectedNoteIds = viewModel.animatorSelectedNoteIds,
-                        selectedNoteId = viewModel.animatorSelectedNoteId,
-                        selectedGroups = selectedGroups,
-                        dragGroupDelta = dragGroupDelta,
-                        onGroupDragDeltaChange = { dragGroupDelta = it },
-                        onCanvasNoteTap = { onCanvasNoteTap(it) },
-                        onNoteUpdatePosition = { note, offset, w, h, rotation ->
-                            viewModel.updateAnimatorNoteProperties(
-                                id = note.id,
-                                x = offset.x,
-                                y = offset.y,
-                                width = w,
-                                height = h,
-                                rotation = rotation
-                            )
-                        },
-                        onColorPickerRequested = {
-                            viewModel.animatorNoteToColorEditId = it
-                            viewModel.animatorShowColorPicker = true
-                        },
-                        onDeleteRequested = {
-                            val idx = viewModel.animatorCanvasNotes.indexOfFirst { note -> note.id == it }
-                            if (idx != -1) viewModel.removeFromAnimatorCanvas(idx)
-                        },
-                        onClearSelection = {
-                            viewModel.animatorSelectedNoteIds = emptySet()
-                            viewModel.animatorSelectedNoteId = null
-                        },
-                        themeColors = themeColors,
-                        isDark = isDark,
-                        notesGrouped = notesGrouped,
-                        graphicsLayer = graphicsLayer,
-                        onNoteScaleChange = { id, sx, sy -> viewModel.updateAnimatorNoteScale(id, sx, sy) },
-                        proportionalEditing = viewModel.proportionalEditing,
-                        onProportionalToggle = onProportionalToggle
-                    )
+                    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                        val containerWidthDp = maxWidth
+                        val containerHeightDp = maxHeight
+                        val scale = min(
+                            containerWidthDp / canvasWidthDp,
+                            containerHeightDp / canvasHeightDp
+                        )
+                        val offsetXDp = (containerWidthDp - canvasWidthDp * scale) / 2
+                        val offsetYDp = (containerHeightDp - canvasHeightDp * scale) / 2
 
-                    if (isPlayingAnimation) {
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(24.dp)
-                                .background(Color.Black.copy(alpha = 0.3f))
-                                .pointerInput(Unit) {},
-                            contentAlignment = Alignment.Center
+                                .requiredSize(canvasWidthDp, canvasHeightDp)
+                                .graphicsLayer {
+                                    scaleX = scale
+                                    scaleY = scale
+                                    translationX = offsetXDp.toPx()
+                                    translationY = offsetYDp.toPx()
+                                }
                         ) {
-                            Text(
-                                if (isRecording) "Exporting Video…" else "Playing Animation…",
-                                color = Color.White,
-                                style = MaterialTheme.typography.titleMedium
+                            VideoCanvasArea(
+                                modifier = Modifier.fillMaxSize(),
+                                notes = viewModel.animatorCanvasNotes,
+                                selectedNoteIds = viewModel.animatorSelectedNoteIds,
+                                selectedNoteId = viewModel.animatorSelectedNoteId,
+                                selectedGroups = selectedGroups,
+                                dragGroupDelta = dragGroupDelta,
+                                onGroupDragDeltaChange = { dragGroupDelta = it },
+                                onCanvasNoteTap = { onCanvasNoteTap(it) },
+                                onNoteUpdatePosition = { note, offset, w, h, rotation ->
+                                    viewModel.updateAnimatorNoteProperties(
+                                        id = note.id,
+                                        x = offset.x,
+                                        y = offset.y,
+                                        width = w,
+                                        height = h,
+                                        rotation = rotation
+                                    )
+                                },
+                                onColorPickerRequested = {
+                                    viewModel.animatorNoteToColorEditId = it
+                                    viewModel.animatorShowColorPicker = true
+                                },
+                                onDeleteRequested = {
+                                    val idx = viewModel.animatorCanvasNotes.indexOfFirst { note -> note.id == it }
+                                    if (idx != -1) viewModel.removeFromAnimatorCanvas(idx)
+                                },
+                                onClearSelection = {
+                                    viewModel.animatorSelectedNoteIds = emptySet()
+                                    viewModel.animatorSelectedNoteId = null
+                                },
+                                themeColors = themeColors,
+                                isDark = isDark,
+                                notesGrouped = notesGrouped,
+                                graphicsLayer = graphicsLayer,
+                                onNoteScaleChange = { id, sx, sy -> viewModel.updateAnimatorNoteScale(id, sx, sy) },
+                                proportionalEditing = viewModel.proportionalEditing,
+                                onProportionalToggle = onProportionalToggle
                             )
+
+                            if (isPlayingAnimation) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(24.dp)
+                                        .background(Color.Black.copy(alpha = 0.3f))
+                                        .pointerInput(Unit) {},
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        if (isRecording) "Exporting Video…" else "Playing Animation…",
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+                                }
+                            }
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(2.dp))
 
-                // Elements panel (right side)
                 Column(
                     modifier = Modifier
-                        .weight(0.6f)
+                        .weight(0.8f)
                         .fillMaxHeight()
-                        .padding(top = 10.dp)
+                        .padding(top = 20.dp)
                 ) {
                     VideoCanvasElementsPanel(
                         notes = viewModel.animatorCanvasNotes,
@@ -561,7 +609,6 @@ fun AnimatorScreen() {
                 }
             }
 
-            // Full‑width toolbar row at the bottom
             ToolbarSection(
                 onAddShape = { shape ->
                     val color = getRandomColor()
@@ -606,7 +653,8 @@ fun AnimatorScreen() {
             )
         }
     } else {
-        Row(modifier = Modifier.fillMaxSize()) {
+        Row(modifier = Modifier.fillMaxSize().padding(top = 20.dp)) {
+
             Column(
                 modifier = Modifier
                     .width(40.dp)
@@ -655,22 +703,38 @@ fun AnimatorScreen() {
                     enablePlayStop = enablePlayStop
                 )
             }
+
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
             ) {
-                Column(
+                BoxWithConstraints(
                     modifier = Modifier
-                        .fillMaxWidth(0.99f)
-                        .weight(1f)
-                        .verticalScroll(mainScrollState)
+                        .fillMaxWidth()
+                        .weight(0.7f)
                 ) {
-                    Box(modifier = Modifier.fillMaxSize()) {
+                    val containerWidthDp = maxWidth
+                    val containerHeightDp = maxHeight
+                    val scale = min(
+                        containerWidthDp / canvasWidthDp,
+                        containerHeightDp / canvasHeightDp
+                    )
+                    val offsetXDp = (containerWidthDp - canvasWidthDp * scale) / 2
+                    val offsetYDp = (containerHeightDp - canvasHeightDp * scale) / 2
+
+                    Box(
+                        modifier = Modifier
+                            .requiredSize(canvasWidthDp, canvasHeightDp)
+                            .graphicsLayer {
+                                scaleX = scale
+                                scaleY = scale
+                                translationX = offsetXDp.toPx()
+                                translationY = offsetYDp.toPx()
+                            }
+                    ) {
                         VideoCanvasArea(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(520.dp),
+                            modifier = Modifier.fillMaxSize(),
                             notes = viewModel.animatorCanvasNotes,
                             selectedNoteIds = viewModel.animatorSelectedNoteIds,
                             selectedNoteId = viewModel.animatorSelectedNoteId,
@@ -725,9 +789,16 @@ fun AnimatorScreen() {
                             }
                         }
                     }
+                }
 
-                    Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(4.dp))
 
+                Column(
+                    modifier = Modifier
+                        .weight(0.25f)
+                        .fillMaxWidth()
+                        .verticalScroll(mainScrollState)
+                ) {
                     VideoCanvasElementsPanel(
                         notes = viewModel.animatorCanvasNotes,
                         onReorder = { from, to ->
@@ -843,7 +914,6 @@ fun AnimatorScreen() {
         }
     }
 
-    // ========== Dialogs ==========
     when (val dialog = viewModel.animatorDialogType) {
         is AnimatorDialogType.Edit -> {
             AnimatorEditNoteDialog(
@@ -1034,7 +1104,7 @@ fun AnimatorScreen() {
                 viewModel.animatorShowKeyframeDialog = false
                 viewModel.animatorKeyframeTargetNoteId = null
             },
-            timeMultiplier = 1f   // 1:1 mapping
+            timeMultiplier = 1f
         )
     }
 
