@@ -72,11 +72,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.fountofhopedotorg.fohbible.modal_functions.ColorOptionItem
+import com.fountofhopedotorg.fohbible.modals.ColorOptionItem
 import com.fountofhopedotorg.fohbible.models.AppViewModel
-import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
-import com.fountofhopedotorg.fohbible.ui.theme.PredefinedColorThemes
-import com.fountofhopedotorg.fohbible.ui.theme.ThemeManager.primaryColor
+import com.fountofhopedotorg.fohbible.theme.LocalAppTheme
+import com.fountofhopedotorg.fohbible.theme.PredefinedColorThemes
+import com.fountofhopedotorg.fohbible.theme.ThemeManager.primaryColor
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.min

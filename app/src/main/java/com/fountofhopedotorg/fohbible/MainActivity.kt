@@ -80,7 +80,7 @@ import com.fountofhopedotorg.fohbible.modals.VersionSelectionModal
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.data.BibleVersionInfo
 import com.fountofhopedotorg.fohbible.data.BibleVersionInfoRepository
-import com.fountofhopedotorg.fohbible.creator.CreatorScreen
+import com.fountofhopedotorg.fohbible.gfx_creator.CreatorScreen
 import com.fountofhopedotorg.fohbible.dictionary.DictionaryScreen
 import com.fountofhopedotorg.fohbible.learn.LearnGreekScreen
 import com.fountofhopedotorg.fohbible.learn.LearnHebrewScreen
@@ -93,12 +93,12 @@ import com.fountofhopedotorg.fohbible.reader.ReaderAppBar
 import com.fountofhopedotorg.fohbible.reader.ReaderScreen
 import com.fountofhopedotorg.fohbible.search.SearchScreen
 import com.fountofhopedotorg.fohbible.settings.SettingsScreen
-import com.fountofhopedotorg.fohbible.ui.theme.DefaultPrimaryColor
-import com.fountofhopedotorg.fohbible.ui.theme.FohBibleTheme
-import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
-import com.fountofhopedotorg.fohbible.ui.theme.ThemeManager
+import com.fountofhopedotorg.fohbible.theme.DefaultPrimaryColor
+import com.fountofhopedotorg.fohbible.theme.FohBibleTheme
+import com.fountofhopedotorg.fohbible.theme.LocalAppTheme
+import com.fountofhopedotorg.fohbible.theme.ThemeManager
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
-import com.fountofhopedotorg.fohbible.videoeditor.VideoEditorScreen
+import com.fountofhopedotorg.fohbible.gfx_animator.AnimatorScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
@@ -405,7 +405,8 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                 contentWindowInsets = WindowInsets(hInset, vInset, hInset, vInset),
                 topBar = {
                     if ((currentScreen !is Screen.Reader || !viewModel.isReaderFullScreen) &&
-                        (currentScreen !is Screen.Creator || !viewModel.isGraphicalFullScreen)) {
+                        (currentScreen !is Screen.Creator || !viewModel.isCreatorFullScreen) &&
+                        (currentScreen !is Screen.Animator || !viewModel.isAnimatorFullScreen)) {
                         Surface(
                             modifier = Modifier.padding(horizontal = hInset),
                             color = Color.Transparent
@@ -477,12 +478,12 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 }
                             },
                             databaseHelper = dbHelper,
-                            onCreateSermonMaterialsClick = { viewModel.navigateTo(Screen.Creator) },
+                            onOpenCreatorClick = { viewModel.navigateTo(Screen.Creator) },
                             onTakeBibleQuizClick = { viewModel.navigateTo(Screen.Quiz) },
                             onLearnHebrewClick = {viewModel.navigateTo(Screen.LearnHebrew)},
                             onLearnGreekClick = {viewModel.navigateTo(Screen.LearnGreek)},
                             onOpenDictionaryClick = { viewModel.navigateTo(Screen.Dictionary) },
-                            onOpenVideoEditorClick = { viewModel.navigateTo(Screen.VideoEditor) }
+                            onOpenAnimatorClick = { viewModel.navigateTo(Screen.Animator) }
                         )
                         is Screen.Reader -> {
                             val passage = currentScreen.passage ?: viewModel.primaryPassage
@@ -542,7 +543,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 viewModel.navigateTo(Screen.Reader(passage))
                             }
                         )
-                        Screen.VideoEditor -> VideoEditorScreen()
+                        Screen.Animator -> AnimatorScreen()
                     }
                     if (viewModel.showNavigationModal) {
                         NavigationModal(
@@ -805,7 +806,7 @@ sealed class Screen {
     object LearnHebrew : Screen()
     object LearnGreek : Screen()
     object Dictionary : Screen()
-    object VideoEditor : Screen()
+    object Animator : Screen()
 }
 
 private fun copyUriToInternalStorage(context: Context, sourceUri: Uri): String? {

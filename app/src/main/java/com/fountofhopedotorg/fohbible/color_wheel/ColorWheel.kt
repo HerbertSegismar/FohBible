@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.graphics.toColorInt
-import com.fountofhopedotorg.fohbible.ui.theme.ThemeManager
+import com.fountofhopedotorg.fohbible.theme.ThemeManager
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.min

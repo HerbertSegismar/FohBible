@@ -63,8 +63,8 @@ import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.modals.FontModal
 import com.fountofhopedotorg.fohbible.modals.OrbsCountModal
 import com.fountofhopedotorg.fohbible.models.AppViewModel
-import com.fountofhopedotorg.fohbible.ui.theme.DefaultPrimaryColor
-import com.fountofhopedotorg.fohbible.ui.theme.PredefinedColorThemes
+import com.fountofhopedotorg.fohbible.theme.DefaultPrimaryColor
+import com.fountofhopedotorg.fohbible.theme.PredefinedColorThemes
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
 import com.fountofhopedotorg.fohbible.utils.availableFontFamilies
 

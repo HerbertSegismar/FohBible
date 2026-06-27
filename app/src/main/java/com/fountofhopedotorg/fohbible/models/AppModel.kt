@@ -15,7 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.fountofhopedotorg.fohbible.Screen
-import com.fountofhopedotorg.fohbible.creator.getElementDisplayName
+import com.fountofhopedotorg.fohbible.gfx_creator.getElementDisplayName
 import com.fountofhopedotorg.fohbible.data.BibleData
 import com.fountofhopedotorg.fohbible.data.CanvasKeyframe
 import com.fountofhopedotorg.fohbible.data.CanvasNote
@@ -33,13 +33,13 @@ import java.util.UUID
 @Stable
 class AppViewModel(application: Application) : AndroidViewModel(application) {
     var canvasNotes = mutableStateListOf<CanvasNote>()
-    var videoKeyframeTargetNoteId: String? by mutableStateOf(null)
-    var videoShowKeyframeDialog: Boolean by mutableStateOf(false)
+    var animatorKeyframeTargetNoteId: String? by mutableStateOf(null)
+    var animatorShowKeyframeDialog: Boolean by mutableStateOf(false)
 
-    fun updateVideoNoteKeyframes(noteId: String, keyframes: List<CanvasKeyframe>) {
-        val index = videoCanvasNotes.indexOfFirst { it.id == noteId }
+    fun updateAnimatorNoteKeyframes(noteId: String, keyframes: List<CanvasKeyframe>) {
+        val index = animatorCanvasNotes.indexOfFirst { it.id == noteId }
         if (index != -1) {
-            videoCanvasNotes[index] = videoCanvasNotes[index].copy(keyframes = keyframes)
+            animatorCanvasNotes[index] = animatorCanvasNotes[index].copy(keyframes = keyframes)
         }
     }
 
@@ -101,42 +101,41 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         "nm9.jpg", "nm10.jpg", "nm11.jpg", "nm12.jpg", "nm13.jpg", "nm14.jpg",
         "om1.jpg", "om2.jpg", "om3.jpg", "om4.jpg", "om5.jpg"
     )
-    var videoCanvasNotes = mutableStateListOf<CanvasNote>()
-    var videoSelectedNoteIds by mutableStateOf<Set<String>>(emptySet())
-    var videoSelectedNoteId by mutableStateOf<String?>(null)
-    var videoShowGroupDialog by mutableStateOf(false)
-    var videoGroupName by mutableStateOf("")
-    val videoGroupNames = mutableStateMapOf<String, String>()
-    var videoGroupToRenameId by mutableStateOf<String?>(null)
-    var videoGroupRenameText by mutableStateOf("")
-    var videoNoteToRenameId by mutableStateOf<String?>(null)
-    var videoRenameText by mutableStateOf("")
-    var videoShowColorPicker by mutableStateOf(false)
-    var videoNoteToColorEditId by mutableStateOf<String?>(null)
-    var videoShowCustomPolygonDialog by mutableStateOf(false)
-    var videoPolygonNoteToEditId by mutableStateOf<String?>(null)
-    var videoInitialPolygonString by mutableStateOf("")
-    var videoInitialIsLineMode by mutableStateOf(false)
-    var videoShowEditPropertiesDialog by mutableStateOf(false)
-    var videoEditPropertiesNoteId by mutableStateOf<String?>(null)
-    var videoEditX by mutableStateOf("")
-    var videoEditY by mutableStateOf("")
-    var videoEditScaleX by mutableStateOf("")
-    var videoEditScaleY by mutableStateOf("")
-    var videoEditRotation by mutableStateOf("")
-    var videoEditColorForDialog by mutableStateOf(Color.White)
-    var videoEditShadowColorForDialog by mutableStateOf<Color?>(null)
-    var videoEditShadowOffsetX by mutableFloatStateOf(0f)
-    var videoEditShadowOffsetY by mutableFloatStateOf(0f)
-    var videoEditBorderThickness by mutableFloatStateOf(0f)
-    var videoEditBorderColorForDialog by mutableStateOf<Color?>(null)
-    var videoSelectedInputMode by mutableStateOf("Add SVG")
-    var videoContentDialogType by mutableStateOf<VideoContentDialogType?>(null)
-    var videoIsGraphicalFullScreen by mutableStateOf(false)
-    // video editor ends
+    var animatorCanvasNotes = mutableStateListOf<CanvasNote>()
+    var animatorSelectedNoteIds by mutableStateOf<Set<String>>(emptySet())
+    var animatorSelectedNoteId by mutableStateOf<String?>(null)
+    var animatorShowGroupDialog by mutableStateOf(false)
+    var animatorGroupName by mutableStateOf("")
+    val animatorGroupNames = mutableStateMapOf<String, String>()
+    var animatorGroupToRenameId by mutableStateOf<String?>(null)
+    var animatorGroupRenameText by mutableStateOf("")
+    var animatorNoteToRenameId by mutableStateOf<String?>(null)
+    var animatorRenameText by mutableStateOf("")
+    var animatorShowColorPicker by mutableStateOf(false)
+    var animatorNoteToColorEditId by mutableStateOf<String?>(null)
+    var animatorShowCustomPolygonDialog by mutableStateOf(false)
+    var animatorPolygonNoteToEditId by mutableStateOf<String?>(null)
+    var animatorInitialPolygonString by mutableStateOf("")
+    var animatorInitialIsLineMode by mutableStateOf(false)
+    var animatorShowEditPropertiesDialog by mutableStateOf(false)
+    var animatorEditPropertiesNoteId by mutableStateOf<String?>(null)
+    var animatorEditX by mutableStateOf("")
+    var animatorEditY by mutableStateOf("")
+    var animatorEditScaleX by mutableStateOf("")
+    var animatorEditScaleY by mutableStateOf("")
+    var animatorEditRotation by mutableStateOf("")
+    var animatorEditColorForDialog by mutableStateOf(Color.White)
+    var animatorEditShadowColorForDialog by mutableStateOf<Color?>(null)
+    var animatorEditShadowOffsetX by mutableFloatStateOf(0f)
+    var animatorEditShadowOffsetY by mutableFloatStateOf(0f)
+    var animatorEditBorderThickness by mutableFloatStateOf(0f)
+    var animatorEditBorderColorForDialog by mutableStateOf<Color?>(null)
+    var animatorSelectedInputMode by mutableStateOf("Add SVG")
+    var animatorDialogType by mutableStateOf<AnimatorDialogType?>(null)
+    var isAnimatorFullScreen by mutableStateOf(false)
     var proportionalEditing by mutableStateOf(true)
     var showSaveMenu by mutableStateOf(false)
-    var isGraphicalFullScreen by mutableStateOf(false)
+    var isCreatorFullScreen by mutableStateOf(false)
     var disabledVersions by mutableStateOf<Set<String>>(emptySet())
     var versionInfoForDialog by mutableStateOf("")
     var showVersionInfoDialog by mutableStateOf(false)
@@ -436,96 +435,96 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             )
         }
     }
-    //video editor functions
-    fun addToVideoCanvas(note: CanvasNote) {
-        videoCanvasNotes.add(note.copy(id = UUID.randomUUID().toString()))
+
+    fun addToAnimatorCanvas(note: CanvasNote) {
+        animatorCanvasNotes.add(note.copy(id = UUID.randomUUID().toString()))
     }
 
-    fun removeFromVideoCanvas(index: Int) {
-        if (index in videoCanvasNotes.indices) videoCanvasNotes.removeAt(index)
+    fun removeFromAnimatorCanvas(index: Int) {
+        if (index in animatorCanvasNotes.indices) animatorCanvasNotes.removeAt(index)
     }
 
-    fun updateVideoNoteColor(id: String, color: Color) {
-        videoCanvasNotes.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let {
-            videoCanvasNotes[it] = videoCanvasNotes[it].copy(backgroundColor = color)
+    fun updateAnimatorNoteColor(id: String, color: Color) {
+        animatorCanvasNotes.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let {
+            animatorCanvasNotes[it] = animatorCanvasNotes[it].copy(backgroundColor = color)
         }
     }
 
-    fun updateVideoNoteTextColor(noteId: String, color: Color) {
-        videoCanvasNotes.indexOfFirst { it.id == noteId }.takeIf { it != -1 }?.let {
-            videoCanvasNotes[it] = videoCanvasNotes[it].copy(textColor = color)
+    fun updateAnimatorNoteTextColor(noteId: String, color: Color) {
+        animatorCanvasNotes.indexOfFirst { it.id == noteId }.takeIf { it != -1 }?.let {
+            animatorCanvasNotes[it] = animatorCanvasNotes[it].copy(textColor = color)
         }
     }
 
-    fun updateVideoNoteProperties(id: String, x: Float, y: Float, width: Float, height: Float, rotation: Float) {
-        videoCanvasNotes.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let {
-            videoCanvasNotes[it] = videoCanvasNotes[it].copy(
+    fun updateAnimatorNoteProperties(id: String, x: Float, y: Float, width: Float, height: Float, rotation: Float) {
+        animatorCanvasNotes.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let {
+            animatorCanvasNotes[it] = animatorCanvasNotes[it].copy(
                 offset = Offset(x, y), width = width, height = height, rotation = rotation
             )
         }
     }
 
-    fun updateVideoNoteScale(id: String, scaleX: Float, scaleY: Float) {
-        videoCanvasNotes.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let {
-            videoCanvasNotes[it] = videoCanvasNotes[it].copy(scaleX = scaleX, scaleY = scaleY)
+    fun updateAnimatorNoteScale(id: String, scaleX: Float, scaleY: Float) {
+        animatorCanvasNotes.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let {
+            animatorCanvasNotes[it] = animatorCanvasNotes[it].copy(scaleX = scaleX, scaleY = scaleY)
         }
     }
 
-    fun updateVideoNoteContent(id: String, newContent: String) {
-        videoCanvasNotes.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let {
-            videoCanvasNotes[it] = videoCanvasNotes[it].copy(content = newContent)
+    fun updateAnimatorNoteContent(id: String, newContent: String) {
+        animatorCanvasNotes.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let {
+            animatorCanvasNotes[it] = animatorCanvasNotes[it].copy(content = newContent)
         }
     }
 
-    fun toggleVideoVisibility(noteId: String) {
-        videoCanvasNotes.indexOfFirst { it.id == noteId }.takeIf { it != -1 }?.let {
-            videoCanvasNotes[it] = videoCanvasNotes[it].copy(isVisible = !videoCanvasNotes[it].isVisible)
+    fun toggleAnimatorVisibility(noteId: String) {
+        animatorCanvasNotes.indexOfFirst { it.id == noteId }.takeIf { it != -1 }?.let {
+            animatorCanvasNotes[it] = animatorCanvasNotes[it].copy(isVisible = !animatorCanvasNotes[it].isVisible)
         }
     }
 
-    fun toggleVideoLock(noteId: String) {
-        videoCanvasNotes.indexOfFirst { it.id == noteId }.takeIf { it != -1 }?.let {
-            videoCanvasNotes[it] = videoCanvasNotes[it].copy(isLocked = !videoCanvasNotes[it].isLocked)
+    fun toggleAnimatorLock(noteId: String) {
+        animatorCanvasNotes.indexOfFirst { it.id == noteId }.takeIf { it != -1 }?.let {
+            animatorCanvasNotes[it] = animatorCanvasNotes[it].copy(isLocked = !animatorCanvasNotes[it].isLocked)
         }
     }
 
-    fun renameVideoCanvasNote(noteId: String, newName: String) {
-        videoCanvasNotes.indexOfFirst { it.id == noteId }.takeIf { it != -1 }?.let {
-            videoCanvasNotes[it] = videoCanvasNotes[it].copy(customName = newName.trim())
+    fun renameAnimatorCanvasNote(noteId: String, newName: String) {
+        animatorCanvasNotes.indexOfFirst { it.id == noteId }.takeIf { it != -1 }?.let {
+            animatorCanvasNotes[it] = animatorCanvasNotes[it].copy(customName = newName.trim())
         }
     }
 
-    fun renameVideoGroup(groupId: String, newName: String) {
-        videoGroupNames[groupId] = newName
+    fun renameAnimatorGroup(groupId: String, newName: String) {
+        animatorGroupNames[groupId] = newName
     }
 
-    fun createVideoGroup(noteIds: List<String>) {
+    fun createAnimatorGroup(noteIds: List<String>) {
         if (noteIds.size < 2) return
         val groupId = "vid_group_${UUID.randomUUID().toString().take(8)}"
-        val grouped = videoCanvasNotes.filter { it.id in noteIds }.mapIndexed { _, note ->
+        val grouped = animatorCanvasNotes.filter { it.id in noteIds }.mapIndexed { _, note ->
             note.copy(groupId = groupId)
         }
-        videoCanvasNotes.removeAll { it.id in noteIds }
-        videoCanvasNotes.addAll(0, grouped)
+        animatorCanvasNotes.removeAll { it.id in noteIds }
+        animatorCanvasNotes.addAll(0, grouped)
     }
 
-    fun ungroupVideoNotes(noteIds: Set<String>) {
-        for (i in videoCanvasNotes.indices) {
-            if (videoCanvasNotes[i].id in noteIds) {
-                videoCanvasNotes[i] = videoCanvasNotes[i].copy(groupId = null)
+    fun ungroupAnimatorNotes(noteIds: Set<String>) {
+        for (i in animatorCanvasNotes.indices) {
+            if (animatorCanvasNotes[i].id in noteIds) {
+                animatorCanvasNotes[i] = animatorCanvasNotes[i].copy(groupId = null)
             }
         }
     }
 
-    fun applyAllVideoNoteProperties(
+    fun applyAllAnimatorNoteProperties(
         id: String, x: Float, y: Float, width: Float, height: Float, rotation: Float,
         scaleX: Float, scaleY: Float, color: Color, isTextElement: Boolean,
         shadowColor: Color?, shadowOffsetX: Float, shadowOffsetY: Float,
         borderThickness: Float, borderColor: Color?
     ) {
-        videoCanvasNotes.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let {
-            val current = videoCanvasNotes[it]
-            videoCanvasNotes[it] = current.copy(
+        animatorCanvasNotes.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let {
+            val current = animatorCanvasNotes[it]
+            animatorCanvasNotes[it] = current.copy(
                 offset = Offset(x, y), width = width, height = height, rotation = rotation,
                 scaleX = scaleX, scaleY = scaleY,
                 textColor = if (isTextElement) color else current.textColor,
@@ -536,9 +535,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun reorderVideoCanvasNotes(from: Int, to: Int) {
-        if (from == to || from !in videoCanvasNotes.indices || to !in videoCanvasNotes.indices) return
-        val item = videoCanvasNotes.removeAt(from)
-        videoCanvasNotes.add(to, item)
+    fun reorderAnimatorCanvasNotes(from: Int, to: Int) {
+        if (from == to || from !in animatorCanvasNotes.indices || to !in animatorCanvasNotes.indices) return
+        val item = animatorCanvasNotes.removeAt(from)
+        animatorCanvasNotes.add(to, item)
     }
 }

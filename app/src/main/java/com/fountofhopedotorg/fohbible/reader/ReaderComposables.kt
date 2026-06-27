@@ -99,7 +99,7 @@ import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.data.Verse
 import com.fountofhopedotorg.fohbible.data.VerseContent
 import com.fountofhopedotorg.fohbible.models.AppViewModel
-import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
+import com.fountofhopedotorg.fohbible.theme.LocalAppTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay

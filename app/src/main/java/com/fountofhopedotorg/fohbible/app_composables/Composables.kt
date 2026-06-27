@@ -83,7 +83,7 @@ import com.fountofhopedotorg.fohbible.color_wheel.ColorPickerRow
 import com.fountofhopedotorg.fohbible.color_wheel.ColorWheelDialog
 import com.fountofhopedotorg.fohbible.modals.FontModal
 import com.fountofhopedotorg.fohbible.models.AppViewModel
-import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
+import com.fountofhopedotorg.fohbible.theme.LocalAppTheme
 import kotlinx.coroutines.flow.collectLatest
 
 @Composable
@@ -393,12 +393,12 @@ fun HomeAppBar(
         is Screen.Notes -> "Notes"
         is Screen.Settings -> "Settings"
         is Screen.Search -> "Search"
-        is Screen.Creator -> "Creator"
+        is Screen.Creator -> "Graphics Creator"
         is Screen.Quiz -> "Quiz"
         is Screen.LearnHebrew -> "Learn Hebrew"
         is Screen.LearnGreek -> "Learn Greek"
         is Screen.Dictionary -> "Dictionary"
-        is Screen.VideoEditor -> "Video Editor"
+        is Screen.Animator -> "Graphics Animator"
     }
     TopAppBar(
         title = { Text(text = screenTitle, color = viewModel.headerButtonsColor, fontWeight = FontWeight.Bold, modifier = Modifier

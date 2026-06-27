@@ -65,7 +65,7 @@ import com.fountofhopedotorg.fohbible.data.isBookScope
 import com.fountofhopedotorg.fohbible.data.scopeColors
 import com.fountofhopedotorg.fohbible.modals.VersionSelectionModal
 import com.fountofhopedotorg.fohbible.models.AppViewModel
-import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
+import com.fountofhopedotorg.fohbible.theme.LocalAppTheme
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import kotlinx.coroutines.Dispatchers

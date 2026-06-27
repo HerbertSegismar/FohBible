@@ -70,7 +70,7 @@ import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.data.Verse
 import com.fountofhopedotorg.fohbible.data.VerseContent
 import com.fountofhopedotorg.fohbible.data.getVersesWithSubheadings
-import com.fountofhopedotorg.fohbible.modal_functions.ColorSplashCanvas
+import com.fountofhopedotorg.fohbible.modals.ColorSplashCanvas
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.app_composables.FloatingOrbsBackground
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor

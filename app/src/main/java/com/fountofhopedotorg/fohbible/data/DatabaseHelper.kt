@@ -6,7 +6,7 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import com.fountofhopedotorg.fohbible.modal_functions.customDistance
+import com.fountofhopedotorg.fohbible.modals.customDistance
 import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
 import java.io.File
 import java.io.FileOutputStream

@@ -42,7 +42,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.data.Drop
 import com.fountofhopedotorg.fohbible.data.Overlay
 import com.fountofhopedotorg.fohbible.models.AppViewModel
-import com.fountofhopedotorg.fohbible.ui.theme.DefaultPrimaryColor
+import com.fountofhopedotorg.fohbible.theme.DefaultPrimaryColor
 import com.fountofhopedotorg.fohbible.utils.Fonts
 import com.fountofhopedotorg.fohbible.utils.getFontFamily
 import kotlinx.coroutines.CoroutineScope

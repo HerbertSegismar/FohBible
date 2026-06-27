@@ -32,9 +32,9 @@ import com.fountofhopedotorg.fohbible.data.BibleData
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.data.Testament
-import com.fountofhopedotorg.fohbible.modal_functions.buildDefinitionContent
-import com.fountofhopedotorg.fohbible.modal_functions.getDefinitionOrClosest
-import com.fountofhopedotorg.fohbible.modal_functions.parseVerseLink
+import com.fountofhopedotorg.fohbible.modals.buildDefinitionContent
+import com.fountofhopedotorg.fohbible.modals.getDefinitionOrClosest
+import com.fountofhopedotorg.fohbible.modals.parseVerseLink
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.modals.InteractiveModal
 import com.fountofhopedotorg.fohbible.utils.Fonts

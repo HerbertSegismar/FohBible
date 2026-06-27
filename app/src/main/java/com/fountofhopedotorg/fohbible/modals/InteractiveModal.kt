@@ -87,15 +87,6 @@ import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.data.ProcessedVerse
 import com.fountofhopedotorg.fohbible.data.Testament
 import com.fountofhopedotorg.fohbible.data.ThemeColors
-import com.fountofhopedotorg.fohbible.modal_functions.buildDefinitionContent
-import com.fountofhopedotorg.fohbible.modal_functions.cleanDefinition
-import com.fountofhopedotorg.fohbible.modal_functions.fetchVerses
-import com.fountofhopedotorg.fohbible.modal_functions.getDefinitionOrClosest
-import com.fountofhopedotorg.fohbible.modal_functions.getLanguageForDictionary
-import com.fountofhopedotorg.fohbible.modal_functions.getVerseCommentaries
-import com.fountofhopedotorg.fohbible.modal_functions.parseVerseLink
-import com.fountofhopedotorg.fohbible.modal_functions.prepareStrongContent
-import com.fountofhopedotorg.fohbible.modal_functions.sanitizeHtmlContent
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.utils.Fonts
 import com.fountofhopedotorg.fohbible.utils.InteractiveModalUtils.crossReferenceDatabaseDisplayNames

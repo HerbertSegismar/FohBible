@@ -94,12 +94,12 @@ fun HomeScreen(
     onNavigateToReader: (PassageSelection) -> Unit,
     onNavigateToScreen: (Screen) -> Unit,
     databaseHelper: DatabaseHelper? = null,
-    onCreateSermonMaterialsClick: () -> Unit = {},
+    onOpenCreatorClick: () -> Unit = {},
     onTakeBibleQuizClick: () -> Unit,
     onLearnHebrewClick: () -> Unit,
     onLearnGreekClick: () -> Unit,
     onOpenDictionaryClick: () -> Unit = {},
-    onOpenVideoEditorClick: () -> Unit = {}
+    onOpenAnimatorClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -221,12 +221,12 @@ fun HomeScreen(
         item {
             Spacer(Modifier.height(16.dp))
             UsefulSpaceGrid(
-                onCreateSermonMaterialsClick = onCreateSermonMaterialsClick,
+                onCreateSermonMaterialsClick = onOpenCreatorClick,
                 onTakeBibleQuizClick = onTakeBibleQuizClick,
                 onLearnHebrewClick = onLearnHebrewClick,
                 onLearnGreekClick = onLearnGreekClick,
                 onOpenDictionaryClick = onOpenDictionaryClick,
-                onOpenVideoEditorClick = onOpenVideoEditorClick
+                onOpenVideoEditorClick = onOpenAnimatorClick
             )
         }
 

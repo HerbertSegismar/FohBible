@@ -52,7 +52,7 @@ import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.data.Verse
 import com.fountofhopedotorg.fohbible.models.AppViewModel
-import com.fountofhopedotorg.fohbible.ui.theme.LocalAppTheme
+import com.fountofhopedotorg.fohbible.theme.LocalAppTheme
 import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
 
 @Composable

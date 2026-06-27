@@ -11,7 +11,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.unit.TextUnit
 import com.fountofhopedotorg.fohbible.MainActivity
-import com.fountofhopedotorg.fohbible.ui.theme.DefaultPrimaryColor
+import com.fountofhopedotorg.fohbible.theme.DefaultPrimaryColor
 import java.util.UUID
 
 data class PassageSelection(
@@ -374,11 +374,12 @@ data class CrownStructure(val vinePath: Path, val thornsPath: Path)
 
 data class CanvasKeyframe(
     val timestampMs: Long,
-    val x: Float?,
-    val y: Float?,
-    val scaleX: Float?,
-    val scaleY: Float?,
-    val rotation: Float?
+    val x: Float? = null,
+    val y: Float? = null,
+    val scaleX: Float? = null,
+    val scaleY: Float? = null,
+    val rotation: Float? = null,
+    val color: Color? = null
 )
 
 sealed class DisplayItem {
