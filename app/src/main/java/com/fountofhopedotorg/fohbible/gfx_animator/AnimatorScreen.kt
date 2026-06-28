@@ -52,6 +52,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.color_wheel.ColorWheelDialog
 import com.fountofhopedotorg.fohbible.data.CanvasNote
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
+import com.fountofhopedotorg.fohbible.data.GradientConfig
 import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.gfx_creator.CustomPolygonDialog
 import com.fountofhopedotorg.fohbible.gfx_creator.EditPropertiesDialog
@@ -429,7 +430,7 @@ fun AnimatorScreen() {
                                     translationY = offsetYDp.toPx()
                                 }
                         ) {
-                            VideoCanvasArea(
+                            AnimatorCanvasArea(
                                 modifier = Modifier.fillMaxSize(),
                                 notes = viewModel.animatorCanvasNotes,
                                 selectedNoteIds = viewModel.animatorSelectedNoteIds,
@@ -497,7 +498,7 @@ fun AnimatorScreen() {
                         .fillMaxHeight()
                         .padding(top = 20.dp)
                 ) {
-                    VideoCanvasElementsPanel(
+                    AnimatorCanvasElementsPanel(
                         notes = viewModel.animatorCanvasNotes,
                         onReorder = { from, to ->
                             viewModel.reorderAnimatorCanvasNotes(from, to)
@@ -604,7 +605,8 @@ fun AnimatorScreen() {
                         onRenameGroup = { groupId, currentName ->
                             viewModel.animatorGroupToRenameId = groupId
                             viewModel.animatorGroupRenameText = currentName
-                        }
+                        },
+                        gradientConfigs = viewModel.animatorGradientPairs,
                     )
                 }
             }
@@ -733,7 +735,7 @@ fun AnimatorScreen() {
                                 translationY = offsetYDp.toPx()
                             }
                     ) {
-                        VideoCanvasArea(
+                        AnimatorCanvasArea(
                             modifier = Modifier.fillMaxSize(),
                             notes = viewModel.animatorCanvasNotes,
                             selectedNoteIds = viewModel.animatorSelectedNoteIds,
@@ -799,7 +801,7 @@ fun AnimatorScreen() {
                         .fillMaxWidth()
                         .verticalScroll(mainScrollState)
                 ) {
-                    VideoCanvasElementsPanel(
+                    AnimatorCanvasElementsPanel(
                         notes = viewModel.animatorCanvasNotes,
                         onReorder = { from, to ->
                             viewModel.reorderAnimatorCanvasNotes(from, to)
@@ -906,7 +908,8 @@ fun AnimatorScreen() {
                         onRenameGroup = { groupId, currentName ->
                             viewModel.animatorGroupToRenameId = groupId
                             viewModel.animatorGroupRenameText = currentName
-                        }
+                        },
+                        gradientConfigs = viewModel.animatorGradientPairs,
                     )
                     Spacer(Modifier.height(16.dp))
                 }
@@ -1029,13 +1032,9 @@ fun AnimatorScreen() {
 
     if (viewModel.animatorShowColorPicker && viewModel.animatorNoteToColorEditId != null) {
         val targetNote = viewModel.animatorCanvasNotes.find { it.id == viewModel.animatorNoteToColorEditId }
-        val initialColor = when {
-            targetNote == null -> Color.White
-            targetNote.content.startsWith("Shape:") || targetNote.content.startsWith("Image:") -> targetNote.backgroundColor
-            else -> targetNote.textColor ?: Color.Black
-        }
 
         val isShape = targetNote?.content?.startsWith("Shape:") == true
+        val existingGradient = viewModel.animatorGradientPairs[viewModel.animatorNoteToColorEditId]
 
         ColorWheelDialog(
             onDismissRequest = {
@@ -1043,26 +1042,33 @@ fun AnimatorScreen() {
                 viewModel.animatorNoteToColorEditId = null
             },
             onColorSelected = { color ->
-                val note = viewModel.animatorCanvasNotes.find { it.id == viewModel.animatorNoteToColorEditId }
-                if (note != null && !note.content.startsWith("Shape:") && !note.content.startsWith("Image:")) {
-                    viewModel.updateAnimatorNoteTextColor(viewModel.animatorNoteToColorEditId!!, color)
+                val noteId = viewModel.animatorNoteToColorEditId!!
+                viewModel.animatorGradientPairs.remove(noteId)
+                if (isShape) {
+                    viewModel.updateAnimatorNoteColor(noteId, color)
                 } else {
-                    viewModel.updateAnimatorNoteColor(viewModel.animatorNoteToColorEditId!!, color)
+                    viewModel.updateAnimatorNoteTextColor(noteId, color)
                 }
                 viewModel.animatorShowColorPicker = false
                 viewModel.animatorNoteToColorEditId = null
             },
-            initialColor = initialColor,
+            initialColor = targetNote?.backgroundColor ?: Color.White,
             enableGradient = isShape,
             onGradientSelected = if (isShape) {
-                { startColor, endColor, _, _ ->
+                { startColor, endColor, startOffset, endOffset ->
                     val noteId = viewModel.animatorNoteToColorEditId!!
-                    viewModel.animatorGradientPairs[noteId] = startColor to endColor
+                    viewModel.animatorGradientPairs[noteId] = GradientConfig(
+                        startColor = startColor,
+                        endColor = endColor,
+                        startOffset = startOffset,
+                        endOffset = endOffset
+                    )
                     viewModel.updateAnimatorNoteColor(noteId, startColor)
                     viewModel.animatorShowColorPicker = false
                     viewModel.animatorNoteToColorEditId = null
                 }
-            } else null
+            } else null,
+            initialGradientConfig = existingGradient
         )
     }
 

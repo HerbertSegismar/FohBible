@@ -20,6 +20,7 @@ import com.fountofhopedotorg.fohbible.data.BibleData
 import com.fountofhopedotorg.fohbible.data.CanvasKeyframe
 import com.fountofhopedotorg.fohbible.data.CanvasNote
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
+import com.fountofhopedotorg.fohbible.data.GradientConfig
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.data.Testament
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
@@ -102,7 +103,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         "om1.jpg", "om2.jpg", "om3.jpg", "om4.jpg", "om5.jpg"
     )
 
-    val animatorGradientPairs = mutableStateMapOf<String, Pair<Color, Color>>()
+    val animatorGradientPairs = mutableStateMapOf<String, GradientConfig>()
     var animatorCanvasNotes = mutableStateListOf<CanvasNote>()
     var animatorSelectedNoteIds by mutableStateOf<Set<String>>(emptySet())
     var animatorSelectedNoteId by mutableStateOf<String?>(null)

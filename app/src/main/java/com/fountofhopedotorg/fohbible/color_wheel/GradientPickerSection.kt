@@ -52,8 +52,8 @@ fun GradientPickerSection(
     var boxSizePx by remember { mutableStateOf(IntSize.Zero) }
     val density = LocalDensity.current
 
-    val activeSizeDp = 48.dp
-    val inactiveSizeDp = 32.dp
+    val activeSizeDp = 32.dp
+    val inactiveSizeDp = 24.dp
 
     Box(
         modifier = modifier
@@ -125,7 +125,7 @@ fun GradientPickerSection(
                         .offset { IntOffset(endPos.x.roundToInt(), endPos.y.roundToInt()) }
                         .size(endSizeDp)
                         .clip(CircleShape)
-                        .background(startColor)   // swapped to contrast with gradient end
+                        .background(startColor)
                         .border(
                             width = 2.dp,
                             color = if (isEndActive) MaterialTheme.colorScheme.primary

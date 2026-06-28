@@ -42,11 +42,13 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawStyle
@@ -68,6 +70,7 @@ import androidx.core.net.toUri
 import coil.compose.AsyncImage
 import com.fountofhopedotorg.fohbible.data.BezierNodeData
 import com.fountofhopedotorg.fohbible.data.CanvasNote
+import com.fountofhopedotorg.fohbible.data.GradientConfig
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.absoluteValue
@@ -94,7 +97,12 @@ fun ShapeSelectionCard(
 }
 
 @Composable
-fun HexagonShape(modifier: Modifier = Modifier, color: Color = getRandomColor().copy(0.4f), drawStyle: DrawStyle = Fill) {
+fun HexagonShape(
+    modifier: Modifier = Modifier,
+    color: Color = getRandomColor().copy(0.4f),
+    drawStyle: DrawStyle = Fill,
+    gradientConfig: GradientConfig? = null
+) {
     Canvas(modifier = modifier) {
         val path = Path()
         val sides = 6
@@ -110,12 +118,24 @@ fun HexagonShape(modifier: Modifier = Modifier, color: Color = getRandomColor().
             if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
         path.close()
-        drawPath(path = path, color = color, style = drawStyle)
+        val brush = gradientConfig?.let {
+            Brush.linearGradient(
+                start = Offset(it.startOffset.x * size.width, it.startOffset.y * size.height),
+                end = Offset(it.endOffset.x * size.width, it.endOffset.y * size.height),
+                colors = listOf(it.startColor, it.endColor)
+            )
+        }
+        drawPath(path = path, brush = brush ?: SolidColor(color), style = drawStyle)
     }
 }
 
 @Composable
-fun OctagonShape(modifier: Modifier = Modifier, color: Color = getRandomColor().copy(0.4f), drawStyle: DrawStyle = Fill) {
+fun OctagonShape(
+    modifier: Modifier = Modifier,
+    color: Color = getRandomColor().copy(0.4f),
+    drawStyle: DrawStyle = Fill,
+    gradientConfig: GradientConfig? = null
+) {
     Canvas(modifier = modifier) {
         val path = Path()
         val sides = 8
@@ -131,12 +151,24 @@ fun OctagonShape(modifier: Modifier = Modifier, color: Color = getRandomColor().
             if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
         path.close()
-        drawPath(path = path, color = color, style = drawStyle)
+        val brush = gradientConfig?.let {
+            Brush.linearGradient(
+                start = Offset(it.startOffset.x * size.width, it.startOffset.y * size.height),
+                end = Offset(it.endOffset.x * size.width, it.endOffset.y * size.height),
+                colors = listOf(it.startColor, it.endColor)
+            )
+        }
+        drawPath(path = path, brush = brush ?: SolidColor(color), style = drawStyle)
     }
 }
 
 @Composable
-fun StarShape(modifier: Modifier = Modifier, color: Color = getRandomColor().copy(0.4f),  drawStyle: DrawStyle = Fill) {
+fun StarShape(
+    modifier: Modifier = Modifier,
+    color: Color = getRandomColor().copy(0.4f),
+    drawStyle: DrawStyle = Fill,
+    gradientConfig: GradientConfig? = null
+) {
     Canvas(modifier = modifier) {
         val path = Path()
         val points = 5
@@ -154,7 +186,14 @@ fun StarShape(modifier: Modifier = Modifier, color: Color = getRandomColor().cop
             if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
         path.close()
-        drawPath(path = path, color = color, style = drawStyle)
+        val brush = gradientConfig?.let {
+            Brush.linearGradient(
+                start = Offset(it.startOffset.x * size.width, it.startOffset.y * size.height),
+                end = Offset(it.endOffset.x * size.width, it.endOffset.y * size.height),
+                colors = listOf(it.startColor, it.endColor)
+            )
+        }
+        drawPath(path = path, brush = brush ?: SolidColor(color), style = drawStyle)
     }
 }
 
@@ -162,7 +201,8 @@ fun StarShape(modifier: Modifier = Modifier, color: Color = getRandomColor().cop
 fun DiamondShape(
     modifier: Modifier = Modifier,
     color: Color = getRandomColor().copy(0.4f),
-    drawStyle: DrawStyle = Fill
+    drawStyle: DrawStyle = Fill,
+    gradientConfig: GradientConfig? = null
 ) {
     Canvas(modifier = modifier) {
         val path = Path()
@@ -174,9 +214,16 @@ fun DiamondShape(
         path.quadraticTo(w * 0.68f, h * 0.68f, w / 2f, h)
         path.quadraticTo(w * 0.32f, h * 0.68f, 0f, h / 2f)
         path.quadraticTo(w * 0.32f, h * 0.32f, w / 2f, 0f)
-
         path.close()
-        drawPath(path = path, color = color, style = drawStyle)
+
+        val brush = gradientConfig?.let {
+            Brush.linearGradient(
+                start = Offset(it.startOffset.x * size.width, it.startOffset.y * size.height),
+                end = Offset(it.endOffset.x * size.width, it.endOffset.y * size.height),
+                colors = listOf(it.startColor, it.endColor)
+            )
+        }
+        drawPath(path = path, brush = brush ?: SolidColor(color), style = drawStyle)
     }
 }
 
@@ -184,7 +231,8 @@ fun DiamondShape(
 fun MoonShape(
     modifier: Modifier = Modifier,
     color: Color = getRandomColor().copy(0.4f),
-    drawStyle: DrawStyle = Fill
+    drawStyle: DrawStyle = Fill,
+    gradientConfig: GradientConfig? = null
 ) {
     Canvas(modifier = modifier) {
         val w = size.width
@@ -192,7 +240,6 @@ fun MoonShape(
         val moonPath = Path().apply {
             addOval(Rect(0f, 0f, w, h))
         }
-
         val cutterPath = Path().apply {
             addOval(Rect(w * 0.35f, -h * 0.05f, w * 1.35f, h * 1.05f))
         }
@@ -201,8 +248,14 @@ fun MoonShape(
             path1 = moonPath,
             path2 = cutterPath
         )
-
-        drawPath(path = crescentPath, color = color, style = drawStyle)
+        val brush = gradientConfig?.let {
+            Brush.linearGradient(
+                start = Offset(it.startOffset.x * size.width, it.startOffset.y * size.height),
+                end = Offset(it.endOffset.x * size.width, it.endOffset.y * size.height),
+                colors = listOf(it.startColor, it.endColor)
+            )
+        }
+        drawPath(path = crescentPath, brush = brush ?: SolidColor(color), style = drawStyle)
     }
 }
 
@@ -210,51 +263,44 @@ fun MoonShape(
 fun CrossShape(
     modifier: Modifier = Modifier,
     color: Color = getRandomColor().copy(0.4f),
-    drawStyle: DrawStyle = Fill
+    drawStyle: DrawStyle = Fill,
+    gradientConfig: GradientConfig? = null
 ) {
     Canvas(modifier = modifier) {
         val path = Path()
         val w = size.width
         val h = size.height
 
-        // Top wing (pointed)
         path.moveTo(w * 0.38f, h * 0.05f)
-        path.lineTo(w * 0.50f, 0f) // Top point
+        path.lineTo(w * 0.50f, 0f)
         path.lineTo(w * 0.62f, h * 0.05f)
-
-        // Inner corner top-right
         path.lineTo(w * 0.60f, h * 0.21f)
         path.quadraticTo(w * 0.60f, h * 0.28f, w * 0.68f, h * 0.28f)
-
-        // Right wing (pointed)
         path.lineTo(w * 0.9f, h * 0.24f)
-        path.lineTo(w * 0.98f, h * 0.35f) // Right point
+        path.lineTo(w * 0.98f, h * 0.35f)
         path.lineTo(w * 0.9f, h * 0.46f)
-
-        // Inner corner bottom-right
         path.lineTo(w * 0.68f, h * 0.42f)
         path.quadraticTo(w * 0.60f, h * 0.42f, w * 0.60f, h * 0.52f)
-
-        // Bottom wing (pointed)
         path.lineTo(w * 0.62f, h * 0.95f)
-        path.lineTo(w * 0.50f, h) // Bottom point
+        path.lineTo(w * 0.50f, h)
         path.lineTo(w * 0.38f, h * 0.95f)
-
-        // Inner corner bottom-left
         path.lineTo(w * 0.40f, h * 0.52f)
         path.quadraticTo(w * 0.40f, h * 0.42f, w * 0.32f, h * 0.42f)
-
-        // Left wing (pointed)
         path.lineTo(w * 0.1f, h * 0.46f)
-        path.lineTo(w * 0.02f, h * 0.35f) // Left point
+        path.lineTo(w * 0.02f, h * 0.35f)
         path.lineTo(w * 0.1f, h * 0.24f)
-
-        // Inner corner top-left
         path.lineTo(w * 0.32f, h * 0.28f)
         path.quadraticTo(w * 0.40f, h * 0.28f, w * 0.40f, h * 0.21f)
-
         path.close()
-        drawPath(path = path, color = color, style = drawStyle)
+
+        val brush = gradientConfig?.let {
+            Brush.linearGradient(
+                start = Offset(it.startOffset.x * size.width, it.startOffset.y * size.height),
+                end = Offset(it.endOffset.x * size.width, it.endOffset.y * size.height),
+                colors = listOf(it.startColor, it.endColor)
+            )
+        }
+        drawPath(path = path, brush = brush ?: SolidColor(color), style = drawStyle)
     }
 }
 
@@ -263,14 +309,14 @@ fun GearShape(
     modifier: Modifier = Modifier,
     color: Color = getRandomColor().copy(0.4f),
     teethCount: Int = 8,
-    drawStyle: DrawStyle = Fill
+    drawStyle: DrawStyle = Fill,
+    gradientConfig: GradientConfig? = null
 ) {
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
         val cx = w / 2f
         val cy = h / 2f
-
         val rOuter = minOf(w, h) / 2f
         val rInner = rOuter * 0.7f
         val rHole = rOuter * 0.25f
@@ -300,18 +346,22 @@ fun GearShape(
             }
             close()
         }
-
         val holePath = Path().apply {
             addOval(Rect(cx - rHole, cy - rHole, cx + rHole, cy + rHole))
         }
-
         val finalPath = Path.combine(
             operation = PathOperation.Difference,
             path1 = gearPath,
             path2 = holePath
         )
-
-        drawPath(path = finalPath, color = color, style = drawStyle)
+        val brush = gradientConfig?.let {
+            Brush.linearGradient(
+                start = Offset(it.startOffset.x * size.width, it.startOffset.y * size.height),
+                end = Offset(it.endOffset.x * size.width, it.endOffset.y * size.height),
+                colors = listOf(it.startColor, it.endColor)
+            )
+        }
+        drawPath(path = finalPath, brush = brush ?: SolidColor(color), style = drawStyle)
     }
 }
 
@@ -320,7 +370,8 @@ fun DavidStarShape(
     modifier: Modifier = Modifier,
     color: Color = getRandomColor().copy(0.4f),
     curveFactor: Float = 0.85f,
-    drawStyle: DrawStyle = Fill
+    drawStyle: DrawStyle = Fill,
+    gradientConfig: GradientConfig? = null
 ) {
     Canvas(modifier = modifier) {
         val w = size.width
@@ -334,15 +385,12 @@ fun DavidStarShape(
             val angleDeg = -90f + (i * 30f)
             val angleRad = (angleDeg * PI / 180f).toFloat()
             val radius = if (i % 2 == 0) rOuter else rInner
-
             Offset(
                 x = cx + radius * cos(angleRad),
                 y = cy + radius * sin(angleRad)
             )
         }
-
         path.moveTo(vertices[0].x, vertices[0].y)
-
         for (i in 0 until 12) {
             val startPoint = vertices[i]
             val endPoint = vertices[(i + 1) % 12]
@@ -350,60 +398,59 @@ fun DavidStarShape(
             val midY = (startPoint.y + endPoint.y) / 2f
             val controlX = cx + (midX - cx) * curveFactor
             val controlY = cy + (midY - cy) * curveFactor
-
             path.quadraticTo(
                 x1 = controlX, y1 = controlY,
                 x2 = endPoint.x, y2 = endPoint.y
             )
         }
-
         path.close()
-        drawPath(path = path, color = color, style = drawStyle)
+        val brush = gradientConfig?.let {
+            Brush.linearGradient(
+                start = Offset(it.startOffset.x * size.width, it.startOffset.y * size.height),
+                end = Offset(it.endOffset.x * size.width, it.endOffset.y * size.height),
+                colors = listOf(it.startColor, it.endColor)
+            )
+        }
+        drawPath(path = path, brush = brush ?: SolidColor(color), style = drawStyle)
     }
 }
 
 @Composable
-fun HeartShape(modifier: Modifier = Modifier, color: Color = getRandomColor().copy(0.4f), drawStyle: DrawStyle = Fill) {
+fun HeartShape(
+    modifier: Modifier = Modifier,
+    color: Color = getRandomColor().copy(0.4f),
+    drawStyle: DrawStyle = Fill,
+    gradientConfig: GradientConfig? = null
+) {
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
-
         val path = Path().apply {
             moveTo(w * 0.5f, h * 0.32f)
-
-            cubicTo(
-                w * 0.32f, h * 0.08f,
-                w * 0.06f, h * 0.16f,
-                w * 0.06f, h * 0.44f
-            )
-
-            cubicTo(
-                w * 0.06f, h * 0.64f,
-                w * 0.36f, h * 0.80f,
-                w * 0.5f, h * 0.96f
-            )
-
-            cubicTo(
-                w * 0.64f, h * 0.80f,
-                w * 0.94f, h * 0.64f,
-                w * 0.94f, h * 0.44f
-            )
-
-            cubicTo(
-                w * 0.94f, h * 0.16f,
-                w * 0.68f, h * 0.08f,
-                w * 0.5f, h * 0.32f
-            )
-
+            cubicTo(w * 0.32f, h * 0.08f, w * 0.06f, h * 0.16f, w * 0.06f, h * 0.44f)
+            cubicTo(w * 0.06f, h * 0.64f, w * 0.36f, h * 0.80f, w * 0.5f, h * 0.96f)
+            cubicTo(w * 0.64f, h * 0.80f, w * 0.94f, h * 0.64f, w * 0.94f, h * 0.44f)
+            cubicTo(w * 0.94f, h * 0.16f, w * 0.68f, h * 0.08f, w * 0.5f, h * 0.32f)
             close()
         }
-
-        drawPath(path = path, color = color, style = drawStyle)
+        val brush = gradientConfig?.let {
+            Brush.linearGradient(
+                start = Offset(it.startOffset.x * size.width, it.startOffset.y * size.height),
+                end = Offset(it.endOffset.x * size.width, it.endOffset.y * size.height),
+                colors = listOf(it.startColor, it.endColor)
+            )
+        }
+        drawPath(path = path, brush = brush ?: SolidColor(color), style = drawStyle)
     }
 }
 
 @Composable
-fun ArrowRightShape(modifier: Modifier = Modifier, color: Color = getRandomColor().copy(0.4f), drawStyle: DrawStyle = Fill) {
+fun ArrowRightShape(
+    modifier: Modifier = Modifier,
+    color: Color = getRandomColor().copy(0.4f),
+    drawStyle: DrawStyle = Fill,
+    gradientConfig: GradientConfig? = null
+) {
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
@@ -417,7 +464,15 @@ fun ArrowRightShape(modifier: Modifier = Modifier, color: Color = getRandomColor
         path.lineTo(w - headWidth, h * 0.7f)
         path.lineTo(0f, h * 0.7f)
         path.close()
-        drawPath(path = path, color = color, style = drawStyle)
+
+        val brush = gradientConfig?.let {
+            Brush.linearGradient(
+                start = Offset(it.startOffset.x * size.width, it.startOffset.y * size.height),
+                end = Offset(it.endOffset.x * size.width, it.endOffset.y * size.height),
+                colors = listOf(it.startColor, it.endColor)
+            )
+        }
+        drawPath(path = path, brush = brush ?: SolidColor(color), style = drawStyle)
     }
 }
 
@@ -425,10 +480,18 @@ fun ArrowRightShape(modifier: Modifier = Modifier, color: Color = getRandomColor
 fun SquareShape(
     modifier: Modifier = Modifier,
     color: Color = getRandomColor().copy(0.4f),
-    drawStyle: DrawStyle = Fill
+    drawStyle: DrawStyle = Fill,
+    gradientConfig: GradientConfig? = null
 ) {
     Canvas(modifier = modifier) {
-        drawRect(color = color, style = drawStyle)
+        val brush = gradientConfig?.let {
+            Brush.linearGradient(
+                start = Offset(it.startOffset.x * size.width, it.startOffset.y * size.height),
+                end = Offset(it.endOffset.x * size.width, it.endOffset.y * size.height),
+                colors = listOf(it.startColor, it.endColor)
+            )
+        }
+        drawRect(brush = brush ?: SolidColor(color), style = drawStyle)
     }
 }
 
@@ -436,10 +499,18 @@ fun SquareShape(
 fun CircleShape(
     modifier: Modifier = Modifier,
     color: Color = getRandomColor().copy(0.4f),
-    drawStyle: DrawStyle = Fill
+    drawStyle: DrawStyle = Fill,
+    gradientConfig: GradientConfig? = null
 ) {
     Canvas(modifier = modifier) {
-        drawCircle(color = color, style = drawStyle)
+        val brush = gradientConfig?.let {
+            Brush.linearGradient(
+                start = Offset(it.startOffset.x * size.width, it.startOffset.y * size.height),
+                end = Offset(it.endOffset.x * size.width, it.endOffset.y * size.height),
+                colors = listOf(it.startColor, it.endColor)
+            )
+        }
+        drawCircle(brush = brush ?: SolidColor(color), style = drawStyle)
     }
 }
 
@@ -447,7 +518,8 @@ fun CircleShape(
 fun TriangleShape(
     modifier: Modifier = Modifier,
     color: Color = getRandomColor().copy(0.4f),
-    drawStyle: DrawStyle = Fill
+    drawStyle: DrawStyle = Fill,
+    gradientConfig: GradientConfig? = null
 ) {
     Canvas(modifier = modifier) {
         val trianglePath = Path().apply {
@@ -456,7 +528,14 @@ fun TriangleShape(
             lineTo(0f, size.height)
             close()
         }
-        drawPath(path = trianglePath, color = color, style = drawStyle)
+        val brush = gradientConfig?.let {
+            Brush.linearGradient(
+                start = Offset(it.startOffset.x * size.width, it.startOffset.y * size.height),
+                end = Offset(it.endOffset.x * size.width, it.endOffset.y * size.height),
+                colors = listOf(it.startColor, it.endColor)
+            )
+        }
+        drawPath(path = trianglePath, brush = brush ?: SolidColor(color), style = drawStyle)
     }
 }
 
@@ -465,10 +544,18 @@ fun LineShape(
     modifier: Modifier = Modifier,
     color: Color = getRandomColor().copy(0.4f),
     strokeWidth: Float = 8f,
+    gradientConfig: GradientConfig? = null
 ) {
     Canvas(modifier = modifier) {
+        val brush = gradientConfig?.let {
+            Brush.linearGradient(
+                start = Offset(it.startOffset.x * size.width, it.startOffset.y * size.height),
+                end = Offset(it.endOffset.x * size.width, it.endOffset.y * size.height),
+                colors = listOf(it.startColor, it.endColor)
+            )
+        }
         drawLine(
-            color = color,
+            brush = brush ?: SolidColor(color),
             start = Offset(0f, size.height / 2),
             end = Offset(size.width, size.height / 2),
             strokeWidth = strokeWidth,
@@ -481,7 +568,8 @@ fun LineShape(
 fun ThornCrownShape(
     modifier: Modifier = Modifier,
     thornColor: Color = getRandomColor().copy(0.4f),
-    seed: Long = 42
+    seed: Long = 42,
+    gradientConfig: GradientConfig? = null
 ) {
     Spacer(
         modifier = modifier.drawWithCache {
@@ -489,6 +577,7 @@ fun ThornCrownShape(
 
             onDrawBehind {
                 val strokeWidthScale = size.minDimension / 938f
+                // Vine always uses solid color
                 drawPath(
                     path = crownPaths.vinePath,
                     color = thornColor,
@@ -498,9 +587,17 @@ fun ThornCrownShape(
                         join = StrokeJoin.Round
                     )
                 )
+                // Thorns fill may be gradient
+                val thornBrush = gradientConfig?.let {
+                    Brush.linearGradient(
+                        start = Offset(it.startOffset.x * size.width, it.startOffset.y * size.height),
+                        end = Offset(it.endOffset.x * size.width, it.endOffset.y * size.height),
+                        colors = listOf(it.startColor, it.endColor)
+                    )
+                }
                 drawPath(
                     path = crownPaths.thornsPath,
-                    color = thornColor,
+                    brush = thornBrush ?: SolidColor(thornColor),
                     style = Fill
                 )
             }
@@ -513,7 +610,8 @@ fun PolygonShape(
     points: List<Offset>,
     modifier: Modifier = Modifier,
     color: Color = getRandomColor().copy(0.8f),
-    drawStyle: DrawStyle = Fill
+    drawStyle: DrawStyle = Fill,
+    gradientConfig: GradientConfig? = null
 ) {
     Canvas(modifier = modifier) {
         if (points.isEmpty()) return@Canvas
@@ -525,8 +623,14 @@ fun PolygonShape(
             }
             close()
         }
-
-        drawPath(path = path, color = color, style = drawStyle)
+        val brush = gradientConfig?.let {
+            Brush.linearGradient(
+                start = Offset(it.startOffset.x * size.width, it.startOffset.y * size.height),
+                end = Offset(it.endOffset.x * size.width, it.endOffset.y * size.height),
+                colors = listOf(it.startColor, it.endColor)
+            )
+        }
+        drawPath(path = path, brush = brush ?: SolidColor(color), style = drawStyle)
     }
 }
 
@@ -536,7 +640,8 @@ fun BezierPolygonShape(
     modifier: Modifier = Modifier,
     color: Color = getRandomColor().copy(0.8f),
     closed: Boolean = true,
-    drawStyle: DrawStyle = if (closed) Fill else Stroke(width = 4f)
+    drawStyle: DrawStyle = if (closed) Fill else Stroke(width = 4f),
+    gradientConfig: GradientConfig? = null
 ) {
     Canvas(modifier = modifier) {
         if (nodes.isEmpty()) return@Canvas
@@ -562,11 +667,14 @@ fun BezierPolygonShape(
                 close()
             }
         }
-        if (closed) {
-            drawPath(path, color = color)
-        } else {
-            drawPath(path, color = color, style = drawStyle)
+        val brush = gradientConfig?.let {
+            Brush.linearGradient(
+                start = Offset(it.startOffset.x * size.width, it.startOffset.y * size.height),
+                end = Offset(it.endOffset.x * size.width, it.endOffset.y * size.height),
+                colors = listOf(it.startColor, it.endColor)
+            )
         }
+        drawPath(path = path, brush = brush ?: SolidColor(color), style = drawStyle)
     }
 }
 
@@ -581,7 +689,8 @@ fun CanvasSvgItem(
     onColorPickerRequested: () -> Unit,
     onDeleteRequested: () -> Unit,
     proportionalEditing: Boolean,
-    onProportionalToggle: () -> Unit
+    onProportionalToggle: () -> Unit,
+    gradientConfig: GradientConfig? = null
 ) {
     val density = LocalDensity.current.density
     val latestProportional by rememberUpdatedState(proportionalEditing)
@@ -758,28 +867,28 @@ fun CanvasSvgItem(
                 }
                 val mainModifier = Modifier.fillMaxSize()
                 when {
-                    note.content == "Shape: Square" -> SquareShape(mainModifier, note.backgroundColor)
-                    note.content == "Shape: Circle" -> CircleShape(mainModifier, note.backgroundColor)
-                    note.content == "Shape: Triangle" -> TriangleShape(mainModifier, note.backgroundColor)
-                    note.content == "Shape: Line" -> LineShape(mainModifier, note.backgroundColor)
+                    note.content == "Shape: Square" -> SquareShape(mainModifier, note.backgroundColor, gradientConfig = gradientConfig)
+                    note.content == "Shape: Circle" -> CircleShape(mainModifier, note.backgroundColor, gradientConfig = gradientConfig)
+                    note.content == "Shape: Triangle" -> TriangleShape(mainModifier, note.backgroundColor, gradientConfig = gradientConfig)
+                    note.content == "Shape: Line" -> LineShape(mainModifier, note.backgroundColor, gradientConfig = gradientConfig)
                     note.content == "Shape: Pentagon" -> {
                         val pentagonPoints = listOf(
                             Offset(0.5f, 0f), Offset(1f, 0.4f),
                             Offset(0.8f, 1f), Offset(0.2f, 1f), Offset(0f, 0.4f)
                         )
-                        PolygonShape(pentagonPoints, mainModifier, note.backgroundColor)
+                        PolygonShape(pentagonPoints, mainModifier, note.backgroundColor, gradientConfig = gradientConfig)
                     }
-                    note.content == "Shape: Hexagon" -> HexagonShape(mainModifier, note.backgroundColor)
-                    note.content == "Shape: Star" -> StarShape(mainModifier, note.backgroundColor)
-                    note.content == "Shape: Diamond" -> DiamondShape(mainModifier, note.backgroundColor)
-                    note.content == "Shape: Heart" -> HeartShape(mainModifier, note.backgroundColor)
-                    note.content == "Shape: ArrowRight" -> ArrowRightShape(mainModifier, note.backgroundColor)
-                    note.content == "Shape: Octagon" -> OctagonShape(mainModifier, note.backgroundColor)
-                    note.content == "Shape: Cross" -> CrossShape(mainModifier, note.backgroundColor)
-                    note.content == "Shape: ThornCrown" -> ThornCrownShape(mainModifier, note.backgroundColor)
-                    note.content == "Shape: Moon" -> MoonShape(mainModifier, note.backgroundColor)
-                    note.content == "Shape: DavidStar" -> DavidStarShape(mainModifier, note.backgroundColor)
-                    note.content == "Shape: Gear" -> GearShape(mainModifier, note.backgroundColor)
+                    note.content == "Shape: Hexagon" -> HexagonShape(mainModifier, note.backgroundColor, gradientConfig = gradientConfig)
+                    note.content == "Shape: Star" -> StarShape(mainModifier, note.backgroundColor, gradientConfig = gradientConfig)
+                    note.content == "Shape: Diamond" -> DiamondShape(mainModifier, note.backgroundColor, gradientConfig = gradientConfig)
+                    note.content == "Shape: Heart" -> HeartShape(mainModifier, note.backgroundColor, gradientConfig = gradientConfig)
+                    note.content == "Shape: ArrowRight" -> ArrowRightShape(mainModifier, note.backgroundColor, gradientConfig = gradientConfig)
+                    note.content == "Shape: Octagon" -> OctagonShape(mainModifier, note.backgroundColor, gradientConfig = gradientConfig)
+                    note.content == "Shape: Cross" -> CrossShape(mainModifier, note.backgroundColor, gradientConfig = gradientConfig)
+                    note.content == "Shape: ThornCrown" -> ThornCrownShape(mainModifier, note.backgroundColor, gradientConfig = gradientConfig)
+                    note.content == "Shape: Moon" -> MoonShape(mainModifier, note.backgroundColor, gradientConfig = gradientConfig)
+                    note.content == "Shape: DavidStar" -> DavidStarShape(mainModifier, note.backgroundColor, gradientConfig = gradientConfig)
+                    note.content == "Shape: Gear" -> GearShape(mainModifier, note.backgroundColor, gradientConfig = gradientConfig)
                     parsedData != null -> {
                         BezierPolygonShape(
                             nodes = parsedData.first,
@@ -1590,7 +1699,8 @@ fun CustomPathPreview(
     pointsData: String,
     isClosed: Boolean,
     color: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    gradientConfig: GradientConfig? = null
 ) {
     Canvas(modifier = modifier) {
         val w = size.width
@@ -1687,16 +1797,31 @@ fun CustomPathPreview(
 
                 path.close()
 
-                drawPath(path = path, color = color, style = Fill)
+                val brush = gradientConfig?.let {
+                    Brush.linearGradient(
+                        start = Offset(it.startOffset.x * w, it.startOffset.y * h),
+                        end = Offset(it.endOffset.x * w, it.endOffset.y * h),
+                        colors = listOf(it.startColor, it.endColor)
+                    )
+                }
+
+                drawPath(path = path, brush = brush ?: SolidColor(color), style = Fill)
                 drawPath(
                     path = path,
                     color = color.copy(alpha = 0.8f),
                     style = Stroke(width = 1.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
                 )
             } else {
+                val brush = gradientConfig?.let {
+                    Brush.linearGradient(
+                        start = Offset(it.startOffset.x * w, it.startOffset.y * h),
+                        end = Offset(it.endOffset.x * w, it.endOffset.y * h),
+                        colors = listOf(it.startColor, it.endColor)
+                    )
+                }
                 drawPath(
                     path = path,
-                    color = color,
+                    brush = brush ?: SolidColor(color),
                     style = Stroke(width = 0.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
                 )
             }

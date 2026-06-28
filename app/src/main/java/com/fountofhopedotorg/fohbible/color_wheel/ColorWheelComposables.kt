@@ -58,6 +58,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -327,9 +328,14 @@ fun ColorPreviewSection(
     lightBackground: Color,
     darkBackground: Color,
     isSolidColor: Boolean,
+    startColor: Color = selectedColor,
+    endColor: Color = selectedColor,
+    startOffset: Offset = Offset(0f, 0f),
+    endOffset: Offset = Offset(1f, 1f),
     onSolidColorToggle: (Boolean) -> Unit,
     onHexTextFieldValueChange: (TextFieldValue) -> Unit
 ) {
+
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -346,7 +352,7 @@ fun ColorPreviewSection(
                     Icons.Filled.CheckCircle,
                     contentDescription = "Selected Color",
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(18.dp),
                 )
                 Text(
                     text = "Selected Color",
@@ -382,11 +388,18 @@ fun ColorPreviewSection(
                 modifier = Modifier
                     .size(30.dp)
                     .clip(CircleShape)
-                    .background(selectedColor)
                     .border(
                         2.dp,
                         MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
                         CircleShape
+                    )
+                    .backgroundWithGradient(
+                        isSolidColor = isSolidColor,
+                        solidColor = selectedColor,
+                        startColor = startColor,
+                        endColor = endColor,
+                        startOffset = startOffset,
+                        endOffset = endOffset
                     )
             )
 
@@ -424,7 +437,6 @@ fun ColorPreviewSection(
                 }
             }
 
-            // Preview chips (Light/Dark)
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -437,7 +449,19 @@ fun ColorPreviewSection(
                         .border(1.dp, Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(8.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Box(modifier = Modifier.size(20.dp).clip(CircleShape).background(selectedColor))
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clip(CircleShape)
+                            .backgroundWithGradient(
+                                isSolidColor = isSolidColor,
+                                solidColor = selectedColor,
+                                startColor = startColor,
+                                endColor = endColor,
+                                startOffset = startOffset,
+                                endOffset = endOffset
+                            )
+                    )
                 }
                 Text(text = "Light", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -454,13 +478,52 @@ fun ColorPreviewSection(
                         .border(1.dp, Color.DarkGray.copy(alpha = 0.3f), RoundedCornerShape(8.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Box(modifier = Modifier.size(20.dp).clip(CircleShape).background(selectedColor))
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clip(CircleShape)
+                            .backgroundWithGradient(
+                                isSolidColor = isSolidColor,
+                                solidColor = selectedColor,
+                                startColor = startColor,
+                                endColor = endColor,
+                                startOffset = startOffset,
+                                endOffset = endOffset
+                            )
+                    )
                 }
                 Text(text = "Dark", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
 }
+
+private fun Modifier.backgroundWithGradient(
+    isSolidColor: Boolean,
+    solidColor: Color,
+    startColor: Color,
+    endColor: Color,
+    startOffset: Offset,
+    endOffset: Offset
+): Modifier = this.then(
+    if (isSolidColor) {
+        Modifier.background(solidColor)
+    } else {
+        Modifier.drawBehind {
+            val widthPx = size.width
+            val heightPx = size.height
+            val startPx = Offset(startOffset.x * widthPx, startOffset.y * heightPx)
+            val endPx = Offset(endOffset.x * widthPx, endOffset.y * heightPx)
+            drawRect(
+                brush = Brush.linearGradient(
+                    start = startPx,
+                    end = endPx,
+                    colors = listOf(startColor, endColor)
+                )
+            )
+        }
+    }
+)
 
 @Composable
 fun ColorAdjustmentsSection(
@@ -472,18 +535,16 @@ fun ColorAdjustmentsSection(
     onSaturationChange: (Float) -> Unit,
     onOpacityChange: (Float) -> Unit
 ) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
+    Column {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Icon(
-                Icons.Filled.Tune,
+                imageVector = Icons.Filled.Tune,
                 contentDescription = "Adjustments",
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(20.dp)
             )
             Text(
                 text = "Color Adjustments",
@@ -493,16 +554,17 @@ fun ColorAdjustmentsSection(
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.BrightnessMedium,
                     contentDescription = "Brightness",
-                    tint = MaterialTheme.colorScheme.secondary
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(20.dp)
                 )
                 CustomSlider(
                     value = brightness,
@@ -522,12 +584,13 @@ fun ColorAdjustmentsSection(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Tonality,
                     contentDescription = "Saturation",
-                    tint = MaterialTheme.colorScheme.secondary
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(20.dp)
                 )
                 CustomSlider(
                     value = saturation,
@@ -547,12 +610,13 @@ fun ColorAdjustmentsSection(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Opacity,
                     contentDescription = "Opacity",
-                    tint = MaterialTheme.colorScheme.secondary
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(20.dp)
                 )
                 CustomSlider(
                     value = opacity,

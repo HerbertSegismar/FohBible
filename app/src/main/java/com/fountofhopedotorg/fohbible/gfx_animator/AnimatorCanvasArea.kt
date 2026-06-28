@@ -24,12 +24,14 @@ import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.data.CanvasNote
 import com.fountofhopedotorg.fohbible.data.ThemeColors
+import com.fountofhopedotorg.fohbible.models.AppViewModel
 import kotlin.math.roundToInt
 
 @Composable
-fun VideoCanvasArea(
+fun AnimatorCanvasArea(
     modifier: Modifier = Modifier,
     notes: List<CanvasNote>,
     selectedNoteIds: Set<String>,
@@ -50,6 +52,7 @@ fun VideoCanvasArea(
     proportionalEditing: Boolean,
     onProportionalToggle: () -> Unit,
 ) {
+    val viewModel: AppViewModel = viewModel()
     Box(
         modifier = modifier
             .clipToBounds()
@@ -88,6 +91,7 @@ fun VideoCanvasArea(
                         when {
                             note.content.startsWith("Shape:") -> CanvasSvgItem(
                                 note = note,
+                                gradientConfig = viewModel.animatorGradientPairs[note.id],
                                 isSelected = isItemSelected,
                                 isLocked = note.isLocked,
                                 onSelect = { if (!note.isLocked) onCanvasNoteTap(note) },

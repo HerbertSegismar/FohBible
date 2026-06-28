@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.graphics.toColorInt
+import com.fountofhopedotorg.fohbible.data.GradientConfig
 import com.fountofhopedotorg.fohbible.theme.ThemeManager
 import kotlin.math.PI
 import kotlin.math.atan2
@@ -33,9 +34,9 @@ fun ColorWheelDialog(
     onColorSelected: (Color) -> Unit,
     initialColor: Color = ThemeManager.primaryColor,
     enableGradient: Boolean = false,
-    onGradientSelected: ((Color, Color, Offset, Offset) -> Unit)? = null
+    onGradientSelected: ((Color, Color, Offset, Offset) -> Unit)? = null,
+    initialGradientConfig: GradientConfig? = null
 ) {
-    var selectedColor by remember { mutableStateOf(initialColor) }
     var brightness by remember { mutableFloatStateOf(initialColor.getBrightness()) }
     var saturation by remember { mutableFloatStateOf(initialColor.getSaturation()) }
     var opacity by remember { mutableFloatStateOf(initialColor.alpha) }
@@ -45,25 +46,48 @@ fun ColorWheelDialog(
     }
     var isValidHex by remember { mutableStateOf(true) }
 
-    // ----- Gradient state -----
     val gradientEnabled = enableGradient && onGradientSelected != null
-    var gradientStartColor by remember { mutableStateOf(initialColor) }
-    var gradientEndColor by remember { mutableStateOf(Color.White) }
-    var gradientStartOffset by remember { mutableStateOf(Offset(0.2f, 0.5f)) }
-    var gradientEndOffset by remember { mutableStateOf(Offset(0.8f, 0.5f)) }
-    var activeGradientButton by remember { mutableStateOf<GradientButton?>(null) }
+    var isSolidColor by remember {
+        mutableStateOf(initialGradientConfig == null)
+    }
 
-    // Tracks whether the solid color toggle is active in the gradient section
-    var isSolidColor by remember { mutableStateOf(true) }
+    var gradientStartColor by remember {
+        mutableStateOf(initialGradientConfig?.startColor ?: initialColor)
+    }
+    var gradientEndColor by remember {
+        mutableStateOf(initialGradientConfig?.endColor ?: Color.White)
+    }
+    var gradientStartOffset by remember {
+        mutableStateOf(initialGradientConfig?.startOffset ?: Offset(0.2f, 0.5f))
+    }
+    var gradientEndOffset by remember {
+        mutableStateOf(initialGradientConfig?.endOffset ?: Offset(0.8f, 0.5f))
+    }
 
-    // Helper to update the currently active color (gradient button or main)
+    var activeGradientButton by remember {
+        mutableStateOf(
+            if (initialGradientConfig != null) GradientButton.START else null
+        )
+    }
+
+    var selectedColor by remember {
+        val initial = when (activeGradientButton) {
+            GradientButton.START -> gradientStartColor
+            GradientButton.END   -> gradientEndColor
+            null                 -> initialColor
+        }
+        mutableStateOf(initial)
+    }
+
     fun updateColor(newColor: Color) {
-        selectedColor = newColor
         when (activeGradientButton) {
             GradientButton.START -> gradientStartColor = newColor
             GradientButton.END   -> gradientEndColor = newColor
-            null -> {} // main color only
+            null -> {
+                gradientStartColor = newColor
+            }
         }
+        selectedColor = newColor
         brightness = newColor.getBrightness()
         saturation = newColor.getSaturation()
         opacity = newColor.alpha
@@ -71,7 +95,6 @@ fun ColorWheelDialog(
         hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
         isValidHex = true
     }
-    // ----- End gradient state -----
 
     val lightBackground = Color.White
     val darkBackground = Color.Black
@@ -141,7 +164,7 @@ fun ColorWheelDialog(
                             }
                             Column(
                                 modifier = Modifier.weight(0.32f),
-                                verticalArrangement = Arrangement.spacedBy(20.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 ColorAdjustmentsSection(
@@ -162,6 +185,26 @@ fun ColorWheelDialog(
                                         updateColor(adjustOpacity(selectedColor, it))
                                     }
                                 )
+                                if (gradientEnabled) {
+                                    GradientPickerSection(
+                                        startColor = gradientStartColor,
+                                        endColor = gradientEndColor,
+                                        startOffset = gradientStartOffset,
+                                        endOffset = gradientEndOffset,
+                                        isSolidColor = isSolidColor,
+                                        onStartOffsetChange = { gradientStartOffset = it },
+                                        onEndOffsetChange = { gradientEndOffset = it },
+                                        onButtonClick = { button ->
+                                            activeGradientButton = button
+                                            updateColor(
+                                                if (button == GradientButton.START) gradientStartColor
+                                                else gradientEndColor
+                                            )
+                                        },
+                                        activeButton = activeGradientButton,
+                                        modifier = Modifier.size(155.dp)
+                                    )
+                                }
                             }
                             Column(
                                 modifier = Modifier
@@ -175,11 +218,22 @@ fun ColorWheelDialog(
                                     ColorPreviewSection(
                                         selectedColor = selectedColor,
                                         isSolidColor = isSolidColor,
-                                        onSolidColorToggle = { isSolidColor = it },
+                                        onSolidColorToggle = {
+                                            isSolidColor = it
+                                            activeGradientButton = if (it) {
+                                                null
+                                            } else {
+                                                GradientButton.START
+                                            }
+                                        },
                                         hexTextFieldValue = hexTextFieldValue,
                                         isValidHex = isValidHex,
                                         lightBackground = lightBackground,
                                         darkBackground = darkBackground,
+                                        startColor = gradientStartColor,
+                                        endColor = gradientEndColor,
+                                        startOffset = gradientStartOffset,
+                                        endOffset = gradientEndOffset,
                                         onHexTextFieldValueChange = { newValue ->
                                             val processed = processHexInput(newValue.text, newValue.selection)
                                             hexTextFieldValue = processed
@@ -208,28 +262,6 @@ fun ColorWheelDialog(
                                         selectedColor = selectedColor,
                                         onColorClick = { color -> updateColor(color) }
                                     )
-
-                                    // --- Gradient section (landscape) ---
-                                    if (gradientEnabled) {
-                                        GradientPickerSection(
-                                            startColor = gradientStartColor,
-                                            endColor = gradientEndColor,
-                                            startOffset = gradientStartOffset,
-                                            endOffset = gradientEndOffset,
-                                            isSolidColor = isSolidColor,
-                                            onStartOffsetChange = { gradientStartOffset = it },
-                                            onEndOffsetChange = { gradientEndOffset = it },
-                                            onButtonClick = { button ->
-                                                activeGradientButton = button
-                                                updateColor(
-                                                    if (button == GradientButton.START) gradientStartColor
-                                                    else gradientEndColor
-                                                )
-                                            },
-                                            activeButton = activeGradientButton,
-                                            modifier = Modifier.padding(top = 12.dp)
-                                        )
-                                    }
                                 }
                                 ActionButtonsSection(
                                     selectedColor = selectedColor,
@@ -245,7 +277,6 @@ fun ColorWheelDialog(
                                             )
                                             onDismissRequest()
                                         } else if (isValidHex) {
-                                            // Fallback to solid color if hex is valid or solid mode is active
                                             onColorSelected(selectedColor)
                                             onDismissRequest()
                                         }
@@ -254,7 +285,6 @@ fun ColorWheelDialog(
                             }
                         }
                     } else {
-                        // Portrait layout
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -276,11 +306,22 @@ fun ColorWheelDialog(
                                 ColorPreviewSection(
                                     selectedColor = selectedColor,
                                     isSolidColor = isSolidColor,
-                                    onSolidColorToggle = { isSolidColor = it },
+                                    onSolidColorToggle = {
+                                        isSolidColor = it
+                                        activeGradientButton = if (it) {
+                                            null
+                                        } else {
+                                            GradientButton.START
+                                        }
+                                    },
                                     hexTextFieldValue = hexTextFieldValue,
                                     isValidHex = isValidHex,
                                     lightBackground = lightBackground,
                                     darkBackground = darkBackground,
+                                    startColor = gradientStartColor,
+                                    endColor = gradientEndColor,
+                                    startOffset = gradientStartOffset,
+                                    endOffset = gradientEndOffset,
                                     onHexTextFieldValueChange = { newValue ->
                                         val processed = processHexInput(newValue.text, newValue.selection)
                                         hexTextFieldValue = processed
@@ -328,7 +369,6 @@ fun ColorWheelDialog(
                                     onColorClick = { color -> updateColor(color) }
                                 )
 
-                                // --- Gradient section (portrait) ---
                                 if (gradientEnabled) {
                                     GradientPickerSection(
                                         startColor = gradientStartColor,
@@ -364,7 +404,6 @@ fun ColorWheelDialog(
                                             )
                                             onDismissRequest()
                                         } else if (isValidHex) {
-                                            // Fallback to solid color if hex is valid or solid mode is active
                                             onColorSelected(selectedColor)
                                             onDismissRequest()
                                         }

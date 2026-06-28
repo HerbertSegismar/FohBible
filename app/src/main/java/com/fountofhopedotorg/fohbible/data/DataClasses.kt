@@ -382,6 +382,13 @@ data class CanvasKeyframe(
     val color: Color? = null
 )
 
+data class GradientConfig(
+    val startColor: Color,
+    val endColor: Color,
+    val startOffset: Offset,
+    val endOffset: Offset
+)
+
 sealed class DisplayItem {
     data class GroupHeader(
         val groupId: String,

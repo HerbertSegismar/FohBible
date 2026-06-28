@@ -87,6 +87,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.data.CanvasNote
 import com.fountofhopedotorg.fohbible.data.DisplayItem
+import com.fountofhopedotorg.fohbible.data.GradientConfig
 import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.gfx_creator.ArrowRightShape
 import com.fountofhopedotorg.fohbible.gfx_creator.CircleShape
@@ -117,7 +118,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 @Composable
-fun VideoCanvasElementsPanel(
+fun AnimatorCanvasElementsPanel(
     notes: List<CanvasNote>,
     selectedNoteIds: Set<String>,
     selectedNoteId: String?,
@@ -143,6 +144,7 @@ fun VideoCanvasElementsPanel(
     groupNames: Map<String, String> = emptyMap(),
     onRenameGroup: ((groupId: String, currentName: String) -> Unit)? = null,
     onAnimateKeyframes: ((CanvasNote) -> Unit)? = null,
+    gradientConfigs: Map<String, GradientConfig> = emptyMap()
 ) {
     val groupedNotes = notes.groupBy { it.groupId }
     val expandedGroups = remember { mutableStateMapOf<String, Boolean>() }
@@ -265,7 +267,7 @@ fun VideoCanvasElementsPanel(
                                                         (it.id == selectedNoteId || selectedNoteIds.contains(it.id))
                                             }
 
-                                    VideoGroupHeaderRow(
+                                    AnimatorGroupHeaderRow(
                                         groupName = displayItem.groupName,
                                         isExpanded = displayItem.isExpanded,
                                         isSelected = isGroupSelected,
@@ -280,6 +282,7 @@ fun VideoCanvasElementsPanel(
 
                                 is DisplayItem.NoteItem -> {
                                     val note = displayItem.note
+                                    val gradConfig = gradientConfigs[note.id]
                                     val originalIndex = displayItem.originalIndex
                                     val isGrouped = displayItem.isGrouped
                                     val groupId = displayItem.groupId
@@ -300,7 +303,7 @@ fun VideoCanvasElementsPanel(
                                         val isUpEnabled = bounds != null && displayIndex > bounds.first
                                         val isDownEnabled = bounds != null && displayIndex < bounds.second
 
-                                        VideoCanvasElementItem(
+                                        AnimatorCanvasElementItem(
                                             notes = notes,
                                             onReorder = onReorder,
                                             note = note,
@@ -362,6 +365,7 @@ fun VideoCanvasElementsPanel(
                                             onDuplicate = { onDuplicate(note) },
                                             onDelete = { onDelete(note) },
                                             themeColors = themeColors,
+                                            gradientConfig = gradConfig,
                                             modifier = itemModifier
                                         )
                                     }
@@ -413,7 +417,8 @@ fun VideoCanvasElementsPanel(
 }
 
 @Composable
-fun VideoCanvasElementItem(
+fun AnimatorCanvasElementItem(
+    modifier: Modifier = Modifier,
     notes: List<CanvasNote>,
     note: CanvasNote,
     originalIndex: Int,
@@ -438,7 +443,7 @@ fun VideoCanvasElementItem(
     onDelete: () -> Unit,
     onReorder: (Int, Int) -> Unit,
     themeColors: ThemeColors,
-    modifier: Modifier = Modifier
+    gradientConfig: GradientConfig? = null,
 ) {
 
     Box(
@@ -486,7 +491,7 @@ fun VideoCanvasElementItem(
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                NoteThumbnail(note, themeColors)
+                NoteThumbnail(note, themeColors, gradientConfig)
             }
 
             Spacer(Modifier.width(8.dp))
@@ -561,7 +566,7 @@ fun VideoCanvasElementItem(
 }
 
 @Composable
-private fun VideoGroupHeaderRow(
+private fun AnimatorGroupHeaderRow(
     groupName: String,
     isExpanded: Boolean,
     isSelected: Boolean,
