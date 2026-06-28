@@ -101,6 +101,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         "nm9.jpg", "nm10.jpg", "nm11.jpg", "nm12.jpg", "nm13.jpg", "nm14.jpg",
         "om1.jpg", "om2.jpg", "om3.jpg", "om4.jpg", "om5.jpg"
     )
+
+    val animatorGradientPairs = mutableStateMapOf<String, Pair<Color, Color>>()
     var animatorCanvasNotes = mutableStateListOf<CanvasNote>()
     var animatorSelectedNoteIds by mutableStateOf<Set<String>>(emptySet())
     var animatorSelectedNoteId by mutableStateOf<String?>(null)

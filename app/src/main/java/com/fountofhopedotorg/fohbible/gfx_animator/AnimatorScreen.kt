@@ -1035,6 +1035,8 @@ fun AnimatorScreen() {
             else -> targetNote.textColor ?: Color.Black
         }
 
+        val isShape = targetNote?.content?.startsWith("Shape:") == true
+
         ColorWheelDialog(
             onDismissRequest = {
                 viewModel.animatorShowColorPicker = false
@@ -1050,7 +1052,17 @@ fun AnimatorScreen() {
                 viewModel.animatorShowColorPicker = false
                 viewModel.animatorNoteToColorEditId = null
             },
-            initialColor = initialColor
+            initialColor = initialColor,
+            enableGradient = isShape,
+            onGradientSelected = if (isShape) {
+                { startColor, endColor, _, _ ->
+                    val noteId = viewModel.animatorNoteToColorEditId!!
+                    viewModel.animatorGradientPairs[noteId] = startColor to endColor
+                    viewModel.updateAnimatorNoteColor(noteId, startColor)
+                    viewModel.animatorShowColorPicker = false
+                    viewModel.animatorNoteToColorEditId = null
+                }
+            } else null
         )
     }
 

@@ -40,6 +40,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -324,29 +326,53 @@ fun ColorPreviewSection(
     isValidHex: Boolean,
     lightBackground: Color,
     darkBackground: Color,
+    isSolidColor: Boolean,
+    onSolidColorToggle: (Boolean) -> Unit,
     onHexTextFieldValueChange: (TextFieldValue) -> Unit
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Row(
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Icon(
-                Icons.Filled.CheckCircle,
-                contentDescription = "Selected Color",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(18.dp)
-            )
-            Text(
-                text = "Selected Color",
-                style = MaterialTheme.typography.titleSmall.copy(
-                    fontWeight = FontWeight.SemiBold
-                ),
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    Icons.Filled.CheckCircle,
+                    contentDescription = "Selected Color",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = "Selected Color",
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Solid",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Checkbox(
+                    checked = isSolidColor,
+                    onCheckedChange = onSolidColorToggle,
+                    modifier = Modifier.size(24.dp),
+                    colors = CheckboxDefaults.colors(checkmarkColor = Color.White)
+                )
+            }
         }
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -397,6 +423,8 @@ fun ColorPreviewSection(
                     )
                 }
             }
+
+            // Preview chips (Light/Dark)
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -406,22 +434,12 @@ fun ColorPreviewSection(
                         .size(32.dp)
                         .clip(RoundedCornerShape(8.dp))
                         .background(lightBackground)
-                        .border(1.dp, Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                        .clickable { },
+                        .border(1.dp, Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(8.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(20.dp)
-                            .clip(CircleShape)
-                            .background(selectedColor)
-                    )
+                    Box(modifier = Modifier.size(20.dp).clip(CircleShape).background(selectedColor))
                 }
-                Text(
-                    text = "Light",
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text(text = "Light", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
             Column(
@@ -433,22 +451,12 @@ fun ColorPreviewSection(
                         .size(32.dp)
                         .clip(RoundedCornerShape(8.dp))
                         .background(darkBackground)
-                        .border(1.dp, Color.DarkGray.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                        .clickable { },
+                        .border(1.dp, Color.DarkGray.copy(alpha = 0.3f), RoundedCornerShape(8.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(20.dp)
-                            .clip(CircleShape)
-                            .background(selectedColor)
-                    )
+                    Box(modifier = Modifier.size(20.dp).clip(CircleShape).background(selectedColor))
                 }
-                Text(
-                    text = "Dark",
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text(text = "Dark", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

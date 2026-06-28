@@ -1,28 +1,12 @@
 package com.fountofhopedotorg.fohbible.color_wheel
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import android.content.res.Configuration
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -31,6 +15,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -40,15 +25,15 @@ import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.min
 import kotlin.math.sqrt
-import android.content.res.Configuration
-import androidx.compose.ui.unit.IntSize
 import android.graphics.Color as AndroidColor
 
 @Composable
 fun ColorWheelDialog(
     onDismissRequest: () -> Unit,
     onColorSelected: (Color) -> Unit,
-    initialColor: Color = ThemeManager.primaryColor
+    initialColor: Color = ThemeManager.primaryColor,
+    enableGradient: Boolean = false,
+    onGradientSelected: ((Color, Color, Offset, Offset) -> Unit)? = null
 ) {
     var selectedColor by remember { mutableStateOf(initialColor) }
     var brightness by remember { mutableFloatStateOf(initialColor.getBrightness()) }
@@ -59,6 +44,34 @@ fun ColorWheelDialog(
         mutableStateOf(TextFieldValue(initialHex, selection = TextRange(initialHex.length)))
     }
     var isValidHex by remember { mutableStateOf(true) }
+
+    // ----- Gradient state -----
+    val gradientEnabled = enableGradient && onGradientSelected != null
+    var gradientStartColor by remember { mutableStateOf(initialColor) }
+    var gradientEndColor by remember { mutableStateOf(Color.White) }
+    var gradientStartOffset by remember { mutableStateOf(Offset(0.2f, 0.5f)) }
+    var gradientEndOffset by remember { mutableStateOf(Offset(0.8f, 0.5f)) }
+    var activeGradientButton by remember { mutableStateOf<GradientButton?>(null) }
+
+    // Tracks whether the solid color toggle is active in the gradient section
+    var isSolidColor by remember { mutableStateOf(true) }
+
+    // Helper to update the currently active color (gradient button or main)
+    fun updateColor(newColor: Color) {
+        selectedColor = newColor
+        when (activeGradientButton) {
+            GradientButton.START -> gradientStartColor = newColor
+            GradientButton.END   -> gradientEndColor = newColor
+            null -> {} // main color only
+        }
+        brightness = newColor.getBrightness()
+        saturation = newColor.getSaturation()
+        opacity = newColor.alpha
+        val newHex = colorToHexString(newColor)
+        hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
+        isValidHex = true
+    }
+    // ----- End gradient state -----
 
     val lightBackground = Color.White
     val darkBackground = Color.Black
@@ -123,15 +136,7 @@ fun ColorWheelDialog(
                                 ColorWheelSection(
                                     selectedColor = selectedColor,
                                     brightness = brightness,
-                                    onColorSelected = { color ->
-                                        selectedColor = color
-                                        saturation = color.getSaturation()
-                                        brightness = color.getBrightness()
-                                        opacity = color.alpha
-                                        val newHex = colorToHexString(color)
-                                        hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
-                                        isValidHex = true
-                                    }
+                                    onColorSelected = { updateColor(it) }
                                 )
                             }
                             Column(
@@ -146,21 +151,15 @@ fun ColorWheelDialog(
                                     selectedColor = selectedColor,
                                     onBrightnessChange = {
                                         brightness = it
-                                        selectedColor = adjustBrightness(selectedColor, it)
-                                        val newHex = colorToHexString(selectedColor)
-                                        hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
+                                        updateColor(adjustBrightness(selectedColor, it))
                                     },
                                     onSaturationChange = {
                                         saturation = it
-                                        selectedColor = adjustSaturation(selectedColor, it)
-                                        val newHex = colorToHexString(selectedColor)
-                                        hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
+                                        updateColor(adjustSaturation(selectedColor, it))
                                     },
                                     onOpacityChange = {
                                         opacity = it
-                                        selectedColor = adjustOpacity(selectedColor, it)
-                                        val newHex = colorToHexString(selectedColor)
-                                        hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
+                                        updateColor(adjustOpacity(selectedColor, it))
                                     }
                                 )
                             }
@@ -175,13 +174,14 @@ fun ColorWheelDialog(
                                 ) {
                                     ColorPreviewSection(
                                         selectedColor = selectedColor,
+                                        isSolidColor = isSolidColor,
+                                        onSolidColorToggle = { isSolidColor = it },
                                         hexTextFieldValue = hexTextFieldValue,
                                         isValidHex = isValidHex,
                                         lightBackground = lightBackground,
                                         darkBackground = darkBackground,
                                         onHexTextFieldValueChange = { newValue ->
                                             val processed = processHexInput(newValue.text, newValue.selection)
-
                                             hexTextFieldValue = processed
                                             if (processed.text.length > 1 && validateHex(processed.text)) {
                                                 try {
@@ -192,11 +192,7 @@ fun ColorWheelDialog(
                                                     } else {
                                                         processed.text.toColorInt()
                                                     }
-                                                    selectedColor = Color(colorInt)
-                                                    brightness = selectedColor.getBrightness()
-                                                    saturation = selectedColor.getSaturation()
-                                                    opacity = selectedColor.alpha
-                                                    isValidHex = true
+                                                    updateColor(Color(colorInt))
                                                 } catch (_: Exception) {
                                                     isValidHex = false
                                                 }
@@ -210,23 +206,46 @@ fun ColorWheelDialog(
                                     ColorPaletteSection(
                                         colorPalette = colorPalette,
                                         selectedColor = selectedColor,
-                                        onColorClick = { color ->
-                                            selectedColor = color
-                                            brightness = color.getBrightness()
-                                            saturation = color.getSaturation()
-                                            opacity = color.alpha
-                                            val newHex = colorToHexString(color)
-                                            hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
-                                            isValidHex = true
-                                        }
+                                        onColorClick = { color -> updateColor(color) }
                                     )
+
+                                    // --- Gradient section (landscape) ---
+                                    if (gradientEnabled) {
+                                        GradientPickerSection(
+                                            startColor = gradientStartColor,
+                                            endColor = gradientEndColor,
+                                            startOffset = gradientStartOffset,
+                                            endOffset = gradientEndOffset,
+                                            isSolidColor = isSolidColor,
+                                            onStartOffsetChange = { gradientStartOffset = it },
+                                            onEndOffsetChange = { gradientEndOffset = it },
+                                            onButtonClick = { button ->
+                                                activeGradientButton = button
+                                                updateColor(
+                                                    if (button == GradientButton.START) gradientStartColor
+                                                    else gradientEndColor
+                                                )
+                                            },
+                                            activeButton = activeGradientButton,
+                                            modifier = Modifier.padding(top = 12.dp)
+                                        )
+                                    }
                                 }
                                 ActionButtonsSection(
                                     selectedColor = selectedColor,
                                     isValidHex = isValidHex,
                                     onCancel = onDismissRequest,
                                     onApply = {
-                                        if (isValidHex) {
+                                        if (gradientEnabled && !isSolidColor) {
+                                            onGradientSelected(
+                                                gradientStartColor,
+                                                gradientEndColor,
+                                                gradientStartOffset,
+                                                gradientEndOffset
+                                            )
+                                            onDismissRequest()
+                                        } else if (isValidHex) {
+                                            // Fallback to solid color if hex is valid or solid mode is active
                                             onColorSelected(selectedColor)
                                             onDismissRequest()
                                         }
@@ -235,6 +254,7 @@ fun ColorWheelDialog(
                             }
                         }
                     } else {
+                        // Portrait layout
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -251,25 +271,18 @@ fun ColorWheelDialog(
                                 ColorWheelSection(
                                     selectedColor = selectedColor,
                                     brightness = brightness,
-                                    onColorSelected = { color ->
-                                        selectedColor = color
-                                        saturation = color.getSaturation()
-                                        brightness = color.getBrightness()
-                                        opacity = color.alpha
-                                        val newHex = colorToHexString(color)
-                                        hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
-                                        isValidHex = true
-                                    }
+                                    onColorSelected = { updateColor(it) }
                                 )
                                 ColorPreviewSection(
                                     selectedColor = selectedColor,
+                                    isSolidColor = isSolidColor,
+                                    onSolidColorToggle = { isSolidColor = it },
                                     hexTextFieldValue = hexTextFieldValue,
                                     isValidHex = isValidHex,
                                     lightBackground = lightBackground,
                                     darkBackground = darkBackground,
                                     onHexTextFieldValueChange = { newValue ->
                                         val processed = processHexInput(newValue.text, newValue.selection)
-
                                         hexTextFieldValue = processed
                                         if (processed.text.length > 1 && validateHex(processed.text)) {
                                             try {
@@ -280,11 +293,7 @@ fun ColorWheelDialog(
                                                 } else {
                                                     processed.text.toColorInt()
                                                 }
-                                                selectedColor = Color(colorInt)
-                                                brightness = selectedColor.getBrightness()
-                                                saturation = selectedColor.getSaturation()
-                                                opacity = selectedColor.alpha
-                                                isValidHex = true
+                                                updateColor(Color(colorInt))
                                             } catch (_: Exception) {
                                                 isValidHex = false
                                             }
@@ -302,42 +311,60 @@ fun ColorWheelDialog(
                                     selectedColor = selectedColor,
                                     onBrightnessChange = {
                                         brightness = it
-                                        selectedColor = adjustBrightness(selectedColor, it)
-                                        val newHex = colorToHexString(selectedColor)
-                                        hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
+                                        updateColor(adjustBrightness(selectedColor, it))
                                     },
                                     onSaturationChange = {
                                         saturation = it
-                                        selectedColor = adjustSaturation(selectedColor, it)
-                                        val newHex = colorToHexString(selectedColor)
-                                        hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
+                                        updateColor(adjustSaturation(selectedColor, it))
                                     },
                                     onOpacityChange = {
                                         opacity = it
-                                        selectedColor = adjustOpacity(selectedColor, it)
-                                        val newHex = colorToHexString(selectedColor)
-                                        hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
+                                        updateColor(adjustOpacity(selectedColor, it))
                                     }
                                 )
                                 ColorPaletteSection(
                                     colorPalette = colorPalette,
                                     selectedColor = selectedColor,
-                                    onColorClick = { color ->
-                                        selectedColor = color
-                                        brightness = color.getBrightness()
-                                        saturation = color.getSaturation()
-                                        opacity = color.alpha
-                                        val newHex = colorToHexString(color)
-                                        hexTextFieldValue = TextFieldValue(newHex, selection = TextRange(newHex.length))
-                                        isValidHex = true
-                                    }
+                                    onColorClick = { color -> updateColor(color) }
                                 )
+
+                                // --- Gradient section (portrait) ---
+                                if (gradientEnabled) {
+                                    GradientPickerSection(
+                                        startColor = gradientStartColor,
+                                        endColor = gradientEndColor,
+                                        startOffset = gradientStartOffset,
+                                        endOffset = gradientEndOffset,
+                                        isSolidColor = isSolidColor,
+                                        onStartOffsetChange = { gradientStartOffset = it },
+                                        onEndOffsetChange = { gradientEndOffset = it },
+                                        onButtonClick = { button ->
+                                            activeGradientButton = button
+                                            updateColor(
+                                                if (button == GradientButton.START) gradientStartColor
+                                                else gradientEndColor
+                                            )
+                                        },
+                                        activeButton = activeGradientButton,
+                                        modifier = Modifier.padding(top = 12.dp)
+                                    )
+                                }
+
                                 ActionButtonsSection(
                                     selectedColor = selectedColor,
                                     isValidHex = isValidHex,
                                     onCancel = onDismissRequest,
                                     onApply = {
-                                        if (isValidHex) {
+                                        if (gradientEnabled && !isSolidColor) {
+                                            onGradientSelected(
+                                                gradientStartColor,
+                                                gradientEndColor,
+                                                gradientStartOffset,
+                                                gradientEndOffset
+                                            )
+                                            onDismissRequest()
+                                        } else if (isValidHex) {
+                                            // Fallback to solid color if hex is valid or solid mode is active
                                             onColorSelected(selectedColor)
                                             onDismissRequest()
                                         }
