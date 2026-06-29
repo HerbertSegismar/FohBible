@@ -372,6 +372,13 @@ data class Letter(
 
 data class CrownStructure(val vinePath: Path, val thornsPath: Path)
 
+data class GradientConfig(
+    val startColor: Color,
+    val endColor: Color,
+    val startOffset: Offset,
+    val endOffset: Offset
+)
+
 data class CanvasKeyframe(
     val timestampMs: Long,
     val x: Float? = null,
@@ -379,14 +386,8 @@ data class CanvasKeyframe(
     val scaleX: Float? = null,
     val scaleY: Float? = null,
     val rotation: Float? = null,
-    val color: Color? = null
-)
-
-data class GradientConfig(
-    val startColor: Color,
-    val endColor: Color,
-    val startOffset: Offset,
-    val endOffset: Offset
+    val color: Color? = null,
+    val gradientConfig: GradientConfig? = null
 )
 
 sealed class DisplayItem {

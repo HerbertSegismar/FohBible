@@ -11,11 +11,14 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
@@ -26,8 +29,40 @@ import androidx.compose.ui.window.DialogProperties
 import com.fountofhopedotorg.fohbible.color_wheel.ColorWheelDialog
 import com.fountofhopedotorg.fohbible.data.CanvasKeyframe
 import com.fountofhopedotorg.fohbible.data.CanvasNote
+import com.fountofhopedotorg.fohbible.data.GradientConfig
 import java.util.Locale
 import kotlin.math.roundToInt
+
+private val GradientConfigNullableSaver = Saver<GradientConfig?, String>(
+    save = { config ->
+        if (config != null) {
+            listOf(
+                config.startColor.toArgb(),
+                config.endColor.toArgb(),
+                config.startOffset.x,
+                config.startOffset.y,
+                config.endOffset.x,
+                config.endOffset.y
+            ).joinToString(",")
+        } else {
+            "NULL"
+        }
+    },
+    restore = { str ->
+        if (str == "NULL") {
+            null
+        } else {
+            val parts = str.split(",").map { it.toFloatOrNull() ?: 0f }
+            if (parts.size < 6) null
+            else GradientConfig(
+                startColor = Color(parts[0].toInt()),
+                endColor = Color(parts[1].toInt()),
+                startOffset = Offset(parts[2], parts[3]),
+                endOffset = Offset(parts[4], parts[5])
+            )
+        }
+    }
+)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -35,7 +70,8 @@ fun KeyframeAnimationDialog(
     note: CanvasNote?,
     onDismiss: () -> Unit,
     onSaveKeyframes: (String, List<CanvasKeyframe>) -> Unit,
-    timeMultiplier: Float
+    timeMultiplier: Float,
+    initialGradientConfig: GradientConfig? = null
 ) {
     if (note == null) return
 
@@ -52,10 +88,18 @@ fun KeyframeAnimationDialog(
         if (note.content.startsWith("Shape:") || note.content.startsWith("Image:")) note.backgroundColor
         else note.textColor ?: Color.Black
     }
-    var pickedColorArgb by rememberSaveable { mutableStateOf<Long?>(initialNoteColor.toArgb().toLong()) }
-    val pickedColor: Color? = pickedColorArgb?.let { Color(it.toInt()) }
+    var pickedColorArgb by rememberSaveable(initialNoteColor) {
+        mutableLongStateOf(initialNoteColor.toArgb().toLong())
+    }
+
+    var currentGradientConfig by rememberSaveable(
+        initialGradientConfig,
+        stateSaver = GradientConfigNullableSaver
+    ) { mutableStateOf(initialGradientConfig) }
+
     var showColorDialog by rememberSaveable { mutableStateOf(false) }
 
+    val pickedColor = Color(pickedColorArgb.toInt())
     var editingKeyframeTimestamp by rememberSaveable { mutableStateOf<Long?>(null) }
 
     fun storedToDisplay(storedMs: Long): Long = (storedMs / timeMultiplier).roundToInt().toLong()
@@ -76,7 +120,9 @@ fun KeyframeAnimationDialog(
         scaleXInput = kf.scaleX?.toString() ?: note.scaleX.toString()
         scaleYInput = kf.scaleY?.toString() ?: note.scaleY.toString()
         rotationInput = kf.rotation?.toString() ?: note.rotation.toString()
-        pickedColorArgb = kf.color?.toArgb()?.toLong()
+        val displayColor = kf.gradientConfig?.startColor ?: kf.color ?: initialNoteColor
+        pickedColorArgb = displayColor.toArgb().toLong()
+        currentGradientConfig = kf.gradientConfig
     }
 
     LaunchedEffect(Unit) {
@@ -90,8 +136,20 @@ fun KeyframeAnimationDialog(
                     scaleX = note.scaleX,
                     scaleY = note.scaleY,
                     rotation = note.rotation,
-                    color = initialNoteColor
+                    color = initialNoteColor,
+                    gradientConfig = null
                 )
+            )
+        }
+    }
+
+    LaunchedEffect(initialGradientConfig, initialNoteColor) {
+        val firstKf = localKeyframes.firstOrNull { it.timestampMs == displayToStored(0L) }
+        if (firstKf != null) {
+            val index = localKeyframes.indexOf(firstKf)
+            localKeyframes[index] = firstKf.copy(
+                color = initialGradientConfig?.startColor ?: initialNoteColor,
+                gradientConfig = initialGradientConfig
             )
         }
     }
@@ -181,19 +239,24 @@ fun KeyframeAnimationDialog(
                             else MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f)
                         )
                         .clickable {
-                            editingKeyframeTimestamp = kf.timestampMs
-                            populateFromKeyframe(kf)
+                            if (editingKeyframeTimestamp == kf.timestampMs) {
+                                editingKeyframeTimestamp = null
+                            } else {
+                                editingKeyframeTimestamp = kf.timestampMs
+                                populateFromKeyframe(kf)
+                            }
                         }
                         .padding(horizontal = 8.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                        if (kf.color != null) {
+                        val indicatorColor = kf.gradientConfig?.startColor ?: kf.color
+                        if (indicatorColor != null) {
                             Box(
                                 modifier = Modifier
                                     .size(10.dp)
-                                    .background(kf.color, CircleShape)
+                                    .background(indicatorColor, CircleShape)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                         }
@@ -329,22 +392,47 @@ fun KeyframeAnimationDialog(
                 .padding(vertical = 2.dp)
         ) {
             Text("Color", style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(40.dp))
+
             Box(
                 modifier = Modifier
-                    .size(24.dp)
+                    .size(28.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(pickedColor ?: Color.Transparent)
+                    .then(
+                        if (currentGradientConfig != null) {
+                            Modifier.background(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(
+                                        currentGradientConfig!!.startColor,
+                                        currentGradientConfig!!.endColor
+                                    ),
+                                    start = currentGradientConfig!!.startOffset,
+                                    end = currentGradientConfig!!.endOffset
+                                )
+                            )
+                        } else {
+                            Modifier.background(pickedColor)
+                        }
+                    )
                     .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
                     .clickable { showColorDialog = true }
             )
+
             if (showColorDialog) {
                 ColorWheelDialog(
                     onDismissRequest = { showColorDialog = false },
                     onColorSelected = { color ->
                         pickedColorArgb = color.toArgb().toLong()
+                        currentGradientConfig = null
                         showColorDialog = false
                     },
-                    initialColor = pickedColor ?: Color.White
+                    initialColor = pickedColor,
+                    enableGradient = true,
+                    onGradientSelected = { startColor, endColor, startOffset, endOffset ->
+                        currentGradientConfig = GradientConfig(startColor, endColor, startOffset, endOffset)
+                        pickedColorArgb = startColor.toArgb().toLong()
+                        showColorDialog = false
+                    },
+                    initialGradientConfig = currentGradientConfig
                 )
             }
         }
@@ -375,12 +463,14 @@ fun KeyframeAnimationDialog(
                     CanvasKeyframe(
                         timestampMs = storedMs,
                         x = x, y = y, scaleX = sx, scaleY = sy,
-                        rotation = rot, color = pickedColor
+                        rotation = rot,
+                        color = pickedColor,
+                        gradientConfig = currentGradientConfig
                     )
                 )
 
-                timeInput = ""
-                pickedColorArgb = initialNoteColor.toArgb().toLong()
+                val bumpedMs = (clampedDisplayMs + 10L).coerceAtMost(effectiveMaxMs)
+                timeInput = bumpedMs.toString()
             },
             modifier = modifier,
             colors = ButtonDefaults.buttonColors(

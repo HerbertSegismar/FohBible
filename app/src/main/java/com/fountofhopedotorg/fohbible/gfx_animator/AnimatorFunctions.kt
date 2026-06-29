@@ -1,7 +1,9 @@
 package com.fountofhopedotorg.fohbible.gfx_animator
 
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import com.fountofhopedotorg.fohbible.data.CanvasKeyframe
+import com.fountofhopedotorg.fohbible.data.GradientConfig
 
 
 fun lerp(start: Float, stop: Float, fraction: Float): Float =
@@ -30,4 +32,19 @@ fun findSurroundingKeyframes(
         }
     }
     return keyframes.last() to keyframes.last()
+}
+
+fun lerpGradient(a: GradientConfig, b: GradientConfig, fraction: Float): GradientConfig {
+    return GradientConfig(
+        startColor = lerpColor(a.startColor, b.startColor, fraction),
+        endColor = lerpColor(a.endColor, b.endColor, fraction),
+        startOffset = Offset(
+            lerp(a.startOffset.x, b.startOffset.x, fraction),
+            lerp(a.startOffset.y, b.startOffset.y, fraction)
+        ),
+        endOffset = Offset(
+            lerp(a.endOffset.x, b.endOffset.x, fraction),
+            lerp(a.endOffset.y, b.endOffset.y, fraction)
+        )
+    )
 }

@@ -55,7 +55,6 @@ import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.GradientConfig
 import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.gfx_creator.CustomPolygonDialog
-import com.fountofhopedotorg.fohbible.gfx_creator.EditPropertiesDialog
 import com.fountofhopedotorg.fohbible.gfx_creator.GroupDialog
 import com.fountofhopedotorg.fohbible.gfx_creator.RenameDialog
 import com.fountofhopedotorg.fohbible.gfx_creator.getElementDisplayName
@@ -351,9 +350,20 @@ fun AnimatorScreen() {
                         viewModel.updateAnimatorNoteColor(note.id, newColor)
                     }
                 }
+
+                val newGradient = if (kfPrev?.gradientConfig != null && kfNext?.gradientConfig != null) {
+                    lerpGradient(kfPrev.gradientConfig, kfNext.gradientConfig, progress)
+                } else kfNext?.gradientConfig ?: kfPrev?.gradientConfig
+                if (newGradient != null) {
+                    viewModel.animatorGradientPairs[note.id] = newGradient
+                } else {
+                    viewModel.animatorGradientPairs.remove(note.id)
+                }
             }
 
             if (isRecording) {
+                androidx.compose.runtime.withFrameNanos { }
+
                 val enc = encoder.value
                 if (enc != null) {
                     val bitmap = graphicsLayer.toImageBitmap().asAndroidBitmap()
@@ -373,7 +383,9 @@ fun AnimatorScreen() {
                 break
             }
 
-            delay(playbackStepUs.microseconds)
+            if (!isRecording) {
+                delay(playbackStepUs.microseconds)
+            }
         }
 
         if (isRecording) {
@@ -778,7 +790,8 @@ fun AnimatorScreen() {
                         if (isPlayingAnimation) {
                             Box(
                                 modifier = Modifier
-                                    .fillMaxSize()
+                                    .fillMaxWidth()
+                                    .height(24.dp)
                                     .background(Color.Black.copy(alpha = 0.3f))
                                     .pointerInput(Unit) {},
                                 contentAlignment = Alignment.Center
@@ -1111,6 +1124,7 @@ fun AnimatorScreen() {
 
     if (viewModel.animatorShowKeyframeDialog && viewModel.animatorKeyframeTargetNoteId != null) {
         val targetNote = viewModel.animatorCanvasNotes.find { it.id == viewModel.animatorKeyframeTargetNoteId }
+        val noteGradient = viewModel.animatorGradientPairs[viewModel.animatorKeyframeTargetNoteId]
         KeyframeAnimationDialog(
             note = targetNote,
             onDismiss = {
@@ -1122,11 +1136,14 @@ fun AnimatorScreen() {
                 viewModel.animatorShowKeyframeDialog = false
                 viewModel.animatorKeyframeTargetNoteId = null
             },
-            timeMultiplier = 1f
+            timeMultiplier = 1f,
+            initialGradientConfig = noteGradient
         )
     }
 
-    EditPropertiesDialog(
+    val existingGradient = viewModel.animatorGradientPairs[viewModel.animatorEditPropertiesNoteId]
+
+    AnimatorEditPropertiesDialog (
         show = viewModel.animatorShowEditPropertiesDialog,
         noteId = viewModel.animatorEditPropertiesNoteId,
         initialX = viewModel.animatorEditX,
@@ -1142,13 +1159,15 @@ fun AnimatorScreen() {
         initialShadowOffsetY = viewModel.animatorEditShadowOffsetY,
         initialBorderThickness = viewModel.animatorEditBorderThickness,
         initialBorderColor = viewModel.animatorEditBorderColorForDialog,
+        initialGradientConfig = existingGradient,
         onDismiss = {
             viewModel.animatorShowEditPropertiesDialog = false
             viewModel.animatorEditPropertiesNoteId = null
         },
         onApply = { id, x, y, scaleX, scaleY, rot, color,
                     shadowColor, shadowOffsetX, shadowOffsetY,
-                    borderThickness, borderColor ->
+                    borderThickness, borderColor,
+                    gradientConfig ->
             val currentNote = viewModel.animatorCanvasNotes.find { it.id == id }
             if (currentNote != null) {
                 val isText = !currentNote.content.startsWith("Shape:") && !currentNote.content.startsWith("Image:")
@@ -1169,6 +1188,12 @@ fun AnimatorScreen() {
                     borderThickness = borderThickness,
                     borderColor = borderColor
                 )
+                if (gradientConfig != null) {
+                    viewModel.animatorGradientPairs[id] = gradientConfig
+                    viewModel.updateAnimatorNoteColor(id, gradientConfig.startColor)
+                } else {
+                    viewModel.animatorGradientPairs.remove(id)
+                }
             }
             viewModel.animatorShowEditPropertiesDialog = false
             viewModel.animatorEditPropertiesNoteId = null
