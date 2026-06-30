@@ -36,7 +36,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.color_wheel.ColorWheelDialog
-import com.fountofhopedotorg.fohbible.data.CanvasNote
+import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.models.AppViewModel
@@ -44,7 +44,7 @@ import com.fountofhopedotorg.fohbible.theme.LocalAppTheme
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 
 sealed class ContentDialogType {
-    data class Edit(val noteId: String, val initialContent: String) : ContentDialogType()
+    data class Edit(val elementId: String, val initialContent: String) : ContentDialogType()
     object AddText : ContentDialogType()
     object FetchVerse : ContentDialogType()
 }
@@ -65,12 +65,12 @@ fun CreatorScreen() {
     val viewModel: AppViewModel = viewModel()
     val graphicsLayer = rememberGraphicsLayer()
 
-    var noteToRenameId by rememberSaveable { mutableStateOf<String?>(null) }
+    var elementToRenameId by rememberSaveable { mutableStateOf<String?>(null) }
     var renameText by rememberSaveable { mutableStateOf("") }
     var groupToRenameId by rememberSaveable { mutableStateOf<String?>(null) }
     var groupRenameText by rememberSaveable { mutableStateOf("") }
 
-    var selectedNoteIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var selectedElementIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var showGroupDialog by rememberSaveable { mutableStateOf(false) }
     var groupName by rememberSaveable { mutableStateOf("") }
     var showEditPropertiesDialog by rememberSaveable { mutableStateOf(false) }
@@ -79,17 +79,17 @@ fun CreatorScreen() {
     var editScaleX by rememberSaveable { mutableStateOf("") }
     var editScaleY by rememberSaveable { mutableStateOf("") }
     var editRotation by rememberSaveable { mutableStateOf("") }
-    var editPropertiesNoteId by rememberSaveable { mutableStateOf<String?>(null) }
+    var editPropertiesElementId by rememberSaveable { mutableStateOf<String?>(null) }
     var editColorForDialog by remember { mutableStateOf(Color.White) }
 
     var showCustomPolygonDialog by rememberSaveable { mutableStateOf(false) }
-    var selectedNoteId by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedElementId by rememberSaveable { mutableStateOf<String?>(null) }
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
-    var noteToColorEditId by rememberSaveable { mutableStateOf<String?>(null) }
+    var elementToColorEditId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedInputMode by rememberSaveable { mutableStateOf("Add SVG") }
     var contentDialogType by remember { mutableStateOf<ContentDialogType?>(null) }
     var showCanvasElementsTree by rememberSaveable { mutableStateOf(true) }
-    var polygonNoteToEditId by rememberSaveable { mutableStateOf<String?>(null) }
+    var polygonElementToEditId by rememberSaveable { mutableStateOf<String?>(null) }
     var initialPolygonString by rememberSaveable { mutableStateOf("") }
     var initialIsLineMode by rememberSaveable { mutableStateOf(false) }
     var dragGroupDelta by remember { mutableStateOf(Offset.Zero) }
@@ -103,7 +103,7 @@ fun CreatorScreen() {
     ) { uri: Uri? ->
         if (uri != null) {
             viewModel.addToCanvas(
-                CanvasNote(
+                CanvasElement(
                     content = "Image: $uri",
                     backgroundColor = Color.Transparent
                 )
@@ -135,55 +135,55 @@ fun CreatorScreen() {
     }
 
     val mainScrollState = rememberScrollState()
-    val notesGrouped = remember(viewModel.canvasNotes) {
-        viewModel.canvasNotes.groupBy { it.groupId }
+    val elementsGrouped = remember(viewModel.canvasElements) {
+        viewModel.canvasElements.groupBy { it.groupId }
     }
-    val selectedGroups = remember(selectedNoteIds, viewModel.canvasNotes) {
-        viewModel.canvasNotes
-            .filter { it.groupId != null && it.id in selectedNoteIds }
+    val selectedGroups = remember(selectedElementIds, viewModel.canvasElements) {
+        viewModel.canvasElements
+            .filter { it.groupId != null && it.id in selectedElementIds }
             .map { it.groupId!! }
             .toSet()
     }
 
-    fun toggleGroupSelection(note: CanvasNote) {
-        val groupId = note.groupId
+    fun toggleGroupSelection(element: CanvasElement) {
+        val groupId = element.groupId
         if (groupId != null) {
-            val groupNotes = viewModel.canvasNotes.filter { it.groupId == groupId }
-            val allIds = groupNotes.map { it.id }.toSet()
-            selectedNoteIds = if (selectedNoteIds.containsAll(allIds)) {
-                selectedNoteIds - allIds
+            val groupElements = viewModel.canvasElements.filter { it.groupId == groupId }
+            val allIds = groupElements.map { it.id }.toSet()
+            selectedElementIds = if (selectedElementIds.containsAll(allIds)) {
+                selectedElementIds - allIds
             } else {
-                selectedNoteIds + allIds
+                selectedElementIds + allIds
             }
         } else {
-            selectedNoteIds = if (selectedNoteIds.contains(note.id))
-                selectedNoteIds - note.id
+            selectedElementIds = if (selectedElementIds.contains(element.id))
+                selectedElementIds - element.id
             else
-                selectedNoteIds + note.id
+                selectedElementIds + element.id
         }
     }
 
-    fun onCanvasNoteTap(note: CanvasNote) {
-        val groupId = note.groupId
+    fun onCanvasElementTap(element: CanvasElement) {
+        val groupId = element.groupId
         if (groupId != null) {
-            val groupNotes = viewModel.canvasNotes.filter { it.groupId == groupId }
-            selectedNoteIds = groupNotes.map { it.id }.toSet()
-            selectedNoteId = note.id
+            val groupElements = viewModel.canvasElements.filter { it.groupId == groupId }
+            selectedElementIds = groupElements.map { it.id }.toSet()
+            selectedElementId = element.id
         } else {
-            selectedNoteIds = setOf(note.id)
-            selectedNoteId = note.id
+            selectedElementIds = setOf(element.id)
+            selectedElementId = element.id
         }
     }
 
-    fun onSingleSelect(note: CanvasNote) {
-        selectedNoteId = note.id
-        selectedNoteIds = emptySet()
+    fun onSingleSelect(element: CanvasElement) {
+        selectedElementId = element.id
+        selectedElementIds = emptySet()
     }
 
     fun onGroupHeaderTap(groupId: String) {
-        val members = viewModel.canvasNotes.filter { it.groupId == groupId }
-        selectedNoteIds = members.map { it.id }.toSet()
-        selectedNoteId = members.firstOrNull()?.id
+        val members = viewModel.canvasElements.filter { it.groupId == groupId }
+        selectedElementIds = members.map { it.id }.toSet()
+        selectedElementId = members.firstOrNull()?.id
     }
 
     if (isLandscape) {
@@ -201,16 +201,16 @@ fun CreatorScreen() {
                 ) {
                     CanvasArea(
                         modifier = Modifier.fillMaxSize(),
-                        notes = viewModel.canvasNotes,
-                        selectedNoteIds = selectedNoteIds,
-                        selectedNoteId = selectedNoteId,
+                        elements = viewModel.canvasElements,
+                        selectedElementIds = selectedElementIds,
+                        selectedElementId = selectedElementId,
                         selectedGroups = selectedGroups,
                         dragGroupDelta = dragGroupDelta,
                         onGroupDragDeltaChange = { dragGroupDelta = it },
-                        onCanvasNoteTap = { onCanvasNoteTap(it) },
-                        onNoteUpdatePosition = { note, offset, w, h, rotation ->
-                            viewModel.updateNoteProperties(
-                                id = note.id,
+                        onCanvasElementTap = { onCanvasElementTap(it) },
+                        onElementUpdatePosition = { element, offset, w, h, rotation ->
+                            viewModel.updateElementProperties(
+                                id = element.id,
                                 x = offset.x,
                                 y = offset.y,
                                 width = w,
@@ -219,22 +219,22 @@ fun CreatorScreen() {
                             )
                         },
                         onColorPickerRequested = {
-                            noteToColorEditId = it
+                            elementToColorEditId = it
                             showColorPicker = true
                         },
                         onDeleteRequested = {
-                            val idx = viewModel.canvasNotes.indexOfFirst { note -> note.id == it }
+                            val idx = viewModel.canvasElements.indexOfFirst { element -> element.id == it }
                             if (idx != -1) viewModel.removeFromCanvas(idx)
                         },
                         onClearSelection = {
-                            selectedNoteIds = emptySet()
-                            selectedNoteId = null
+                            selectedElementIds = emptySet()
+                            selectedElementId = null
                         },
                         themeColors = themeColors,
                         isDark = isDark,
-                        notesGrouped = notesGrouped,
+                        elementsGrouped = elementsGrouped,
                         graphicsLayer = graphicsLayer,
-                        onNoteScaleChange = { id, sx, sy -> viewModel.updateNoteScale(id, sx, sy) },
+                        onElementScaleChange = { id, sx, sy -> viewModel.updateElementScale(id, sx, sy) },
                         proportionalEditing = viewModel.proportionalEditing,
                         onProportionalToggle = onProportionalToggle
                     )
@@ -250,34 +250,34 @@ fun CreatorScreen() {
                         .padding(top = 10.dp)
                 ) {
                     CanvasElementsPanel(
-                        notes = viewModel.canvasNotes,
-                        selectedNoteIds = selectedNoteIds,
-                        selectedNoteId = selectedNoteId,
+                        elements = viewModel.canvasElements,
+                        selectedElementIds = selectedElementIds,
+                        selectedElementId = selectedElementId,
                         showTree = showCanvasElementsTree,
                         onToggleTree = { showCanvasElementsTree = !showCanvasElementsTree },
                         onSingleSelect = { onSingleSelect(it) },
                         onToggleGroupSelection = { toggleGroupSelection(it) },
                         onGroupHeaderTap = { onGroupHeaderTap(it) },
-                        onEditNote = { note ->
-                            contentDialogType = ContentDialogType.Edit(note.id, note.content)
+                        onEditElement = { element ->
+                            contentDialogType = ContentDialogType.Edit(element.id, element.content)
                         },
-                        onCustomPolygonEdit = { note ->
-                            val content = note.content.trim()
+                        onCustomPolygonEdit = { element ->
+                            val content = element.content.trim()
                             when {
                                 content.startsWith("Shape:CustomPolygon:") -> {
-                                    polygonNoteToEditId = note.id
+                                    polygonElementToEditId = element.id
                                     initialPolygonString = content.removePrefix("Shape:CustomPolygon:")
                                     initialIsLineMode = false
                                     showCustomPolygonDialog = true
                                 }
                                 content.startsWith("Shape:CustomLine:") -> {
-                                    polygonNoteToEditId = note.id
+                                    polygonElementToEditId = element.id
                                     initialPolygonString = content.removePrefix("Shape:CustomLine:")
                                     initialIsLineMode = true
                                     showCustomPolygonDialog = true
                                 }
                                 content.startsWith("Shape: Line") || content == "Shape: Line" -> {
-                                    polygonNoteToEditId = note.id
+                                    polygonElementToEditId = element.id
                                     initialPolygonString = getSerializedPointsForShape("Line")
                                     initialIsLineMode = true
                                     showCustomPolygonDialog = true
@@ -286,64 +286,64 @@ fun CreatorScreen() {
                                     val shapeType = content.removePrefix("Shape:").trim()
                                     val prefilledPoints = getSerializedPointsForShape(shapeType)
                                     if (prefilledPoints.isNotEmpty()) {
-                                        polygonNoteToEditId = note.id
+                                        polygonElementToEditId = element.id
                                         initialPolygonString = prefilledPoints
                                         initialIsLineMode = false
                                         showCustomPolygonDialog = true
                                     } else {
-                                        contentDialogType = ContentDialogType.Edit(note.id, content)
+                                        contentDialogType = ContentDialogType.Edit(element.id, content)
                                     }
                                 }
                             }
                         },
-                        onRename = { note ->
-                            noteToRenameId = note.id
+                        onRename = { element ->
+                            elementToRenameId = element.id
                             renameText = getElementDisplayName(
-                                note,
-                                viewModel.canvasNotes.indexOf(note),
-                                viewModel.canvasNotes
+                                element,
+                                viewModel.canvasElements.indexOf(element),
+                                viewModel.canvasElements
                             )
                         },
-                        onEditProperties = { note ->
-                            editPropertiesNoteId = note.id
-                            editX = note.offset.x.toString()
-                            editY = note.offset.y.toString()
-                            editScaleX = note.scaleX.toString()
-                            editScaleY = note.scaleY.toString()
-                            editRotation = note.rotation.toString()
-                            editColorForDialog = if (!note.content.startsWith("Shape:") && !note.content.startsWith("Image:"))
-                                note.textColor ?: Color.Black
+                        onEditProperties = { element ->
+                            editPropertiesElementId = element.id
+                            editX = element.offset.x.toString()
+                            editY = element.offset.y.toString()
+                            editScaleX = element.scaleX.toString()
+                            editScaleY = element.scaleY.toString()
+                            editRotation = element.rotation.toString()
+                            editColorForDialog = if (!element.content.startsWith("Shape:") && !element.content.startsWith("Image:"))
+                                element.textColor ?: Color.Black
                             else
-                                note.backgroundColor
-                            editShadowColorForDialog = note.shadowColor
-                            editShadowOffsetX = note.shadowOffsetX
-                            editShadowOffsetY = note.shadowOffsetY
-                            editBorderThickness = note.borderThickness
-                            editBorderColorForDialog = note.borderColor
+                                element.backgroundColor
+                            editShadowColorForDialog = element.shadowColor
+                            editShadowOffsetX = element.shadowOffsetX
+                            editShadowOffsetY = element.shadowOffsetY
+                            editBorderThickness = element.borderThickness
+                            editBorderColorForDialog = element.borderColor
                             showEditPropertiesDialog = true
                         },
                         onToggleVisibility = { viewModel.toggleVisibility(it) },
                         onToggleLock = { viewModel.toggleLock(it) },
-                        onDuplicate = { viewModel.addToCanvas(CanvasNote(content = it.content)) },
+                        onDuplicate = { viewModel.addToCanvas(CanvasElement(content = it.content)) },
                         onDelete = {
-                            val idx = viewModel.canvasNotes.indexOf(it)
+                            val idx = viewModel.canvasElements.indexOf(it)
                             if (idx != -1) viewModel.removeFromCanvas(idx)
-                            if (selectedNoteId == it.id) selectedNoteId = null
+                            if (selectedElementId == it.id) selectedElementId = null
                         },
                         onUngroup = { ids ->
-                            viewModel.ungroupNotes(ids)
-                            selectedNoteIds = emptySet()
+                            viewModel.ungroupElements(ids)
+                            selectedElementIds = emptySet()
                         },
                         onGroup = { name, ids ->
                             if (name.isNotBlank() && ids.isNotEmpty()) {
                                 viewModel.createGroup(ids)
-                                selectedNoteIds = emptySet()
+                                selectedElementIds = emptySet()
                                 showGroupDialog = false
                                 groupName = ""
                             }
                         },
-                        onClearSelection = { selectedNoteIds = emptySet() },
-                        onReorder = { from, to -> viewModel.reorderCanvasNotes(from, to) },
+                        onClearSelection = { selectedElementIds = emptySet() },
+                        onReorder = { from, to -> viewModel.reorderCanvasElements(from, to) },
                         themeColors = themeColors,
                         density = LocalDensity.current,
                         groupNames = viewModel.groupNames,
@@ -359,11 +359,11 @@ fun CreatorScreen() {
                 onAddShape = { shape ->
                     val color = getRandomColor()
                     viewModel.addToCanvas(
-                        CanvasNote(content = "Shape: $shape", backgroundColor = color, width = 100f, height = 100f)
+                        CanvasElement(content = "Shape: $shape", backgroundColor = color, width = 100f, height = 100f)
                     )
                 },
                 onCustomPolygon = {
-                    polygonNoteToEditId = null
+                    polygonElementToEditId = null
                     initialPolygonString = ""
                     initialIsLineMode = false
                     showCustomPolygonDialog = true
@@ -405,11 +405,11 @@ fun CreatorScreen() {
                     onAddShape = { shape ->
                         val color = getRandomColor()
                         viewModel.addToCanvas(
-                            CanvasNote(content = "Shape: $shape", backgroundColor = color, width = 100f, height = 100f)
+                            CanvasElement(content = "Shape: $shape", backgroundColor = color, width = 100f, height = 100f)
                         )
                     },
                     onCustomPolygon = {
-                        polygonNoteToEditId = null
+                        polygonElementToEditId = null
                         initialPolygonString = ""
                         initialIsLineMode = false
                         showCustomPolygonDialog = true
@@ -454,16 +454,16 @@ fun CreatorScreen() {
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(520.dp),
-                        notes = viewModel.canvasNotes,
-                        selectedNoteIds = selectedNoteIds,
-                        selectedNoteId = selectedNoteId,
+                        elements = viewModel.canvasElements,
+                        selectedElementIds = selectedElementIds,
+                        selectedElementId = selectedElementId,
                         selectedGroups = selectedGroups,
                         dragGroupDelta = dragGroupDelta,
                         onGroupDragDeltaChange = { dragGroupDelta = it },
-                        onCanvasNoteTap = { onCanvasNoteTap(it) },
-                        onNoteUpdatePosition = { note, offset, w, h, rotation ->
-                            viewModel.updateNoteProperties(
-                                id = note.id,
+                        onCanvasElementTap = { onCanvasElementTap(it) },
+                        onElementUpdatePosition = { element, offset, w, h, rotation ->
+                            viewModel.updateElementProperties(
+                                id = element.id,
                                 x = offset.x,
                                 y = offset.y,
                                 width = w,
@@ -471,22 +471,22 @@ fun CreatorScreen() {
                                 rotation = rotation
                             )
                         },
-                        onNoteScaleChange = { id, sx, sy -> viewModel.updateNoteScale(id, sx, sy) },
+                        onElementScaleChange = { id, sx, sy -> viewModel.updateElementScale(id, sx, sy) },
                         onColorPickerRequested = {
-                            noteToColorEditId = it
+                            elementToColorEditId = it
                             showColorPicker = true
                         },
                         onDeleteRequested = {
-                            val idx = viewModel.canvasNotes.indexOfFirst { note -> note.id == it }
+                            val idx = viewModel.canvasElements.indexOfFirst { element -> element.id == it }
                             if (idx != -1) viewModel.removeFromCanvas(idx)
                         },
                         onClearSelection = {
-                            selectedNoteIds = emptySet()
-                            selectedNoteId = null
+                            selectedElementIds = emptySet()
+                            selectedElementId = null
                         },
                         themeColors = themeColors,
                         isDark = isDark,
-                        notesGrouped = notesGrouped,
+                        elementsGrouped = elementsGrouped,
                         graphicsLayer = graphicsLayer,
                         proportionalEditing = viewModel.proportionalEditing,
                         onProportionalToggle = onProportionalToggle
@@ -495,36 +495,36 @@ fun CreatorScreen() {
                     Spacer(Modifier.height(4.dp))
 
                     CanvasElementsPanel(
-                        notes = viewModel.canvasNotes,
-                        selectedNoteIds = selectedNoteIds,
-                        selectedNoteId = selectedNoteId,
+                        elements = viewModel.canvasElements,
+                        selectedElementIds = selectedElementIds,
+                        selectedElementId = selectedElementId,
                         showTree = showCanvasElementsTree,
                         onToggleTree = { showCanvasElementsTree = !showCanvasElementsTree },
                         onSingleSelect = { onSingleSelect(it) },
                         onToggleGroupSelection = { toggleGroupSelection(it) },
                         onGroupHeaderTap = { onGroupHeaderTap(it) },
-                        onEditNote = { note ->
-                            contentDialogType = ContentDialogType.Edit(note.id, note.content)
+                        onEditElement = { element ->
+                            contentDialogType = ContentDialogType.Edit(element.id, element.content)
                         },
-                        onCustomPolygonEdit = { note ->
-                            val content = note.content.trim()
+                        onCustomPolygonEdit = { element ->
+                            val content = element.content.trim()
                             when {
                                 content.startsWith("Shape:CustomPolygon:") -> {
-                                    polygonNoteToEditId = note.id
+                                    polygonElementToEditId = element.id
                                     initialPolygonString =
                                         content.removePrefix("Shape:CustomPolygon:")
                                     initialIsLineMode = false
                                     showCustomPolygonDialog = true
                                 }
                                 content.startsWith("Shape:CustomLine:") -> {
-                                    polygonNoteToEditId = note.id
+                                    polygonElementToEditId = element.id
                                     initialPolygonString =
                                         content.removePrefix("Shape:CustomLine:")
                                     initialIsLineMode = true
                                     showCustomPolygonDialog = true
                                 }
                                 content.startsWith("Shape: Line") || content == "Shape: Line" -> {
-                                    polygonNoteToEditId = note.id
+                                    polygonElementToEditId = element.id
                                     initialPolygonString = getSerializedPointsForShape("Line")
                                     initialIsLineMode = true
                                     showCustomPolygonDialog = true
@@ -533,65 +533,65 @@ fun CreatorScreen() {
                                     val shapeType = content.removePrefix("Shape:").trim()
                                     val prefilledPoints = getSerializedPointsForShape(shapeType)
                                     if (prefilledPoints.isNotEmpty()) {
-                                        polygonNoteToEditId = note.id
+                                        polygonElementToEditId = element.id
                                         initialPolygonString = prefilledPoints
                                         initialIsLineMode = false
                                         showCustomPolygonDialog = true
                                     } else {
                                         contentDialogType =
-                                            ContentDialogType.Edit(note.id, content)
+                                            ContentDialogType.Edit(element.id, content)
                                     }
                                 }
                             }
                         },
-                        onRename = { note ->
-                            noteToRenameId = note.id
+                        onRename = { element ->
+                            elementToRenameId = element.id
                             renameText = getElementDisplayName(
-                                note,
-                                viewModel.canvasNotes.indexOf(note),
-                                viewModel.canvasNotes
+                                element,
+                                viewModel.canvasElements.indexOf(element),
+                                viewModel.canvasElements
                             )
                         },
-                        onEditProperties = { note ->
-                            editPropertiesNoteId = note.id
-                            editX = note.offset.x.toString()
-                            editY = note.offset.y.toString()
-                            editScaleX = note.scaleX.toString()
-                            editScaleY = note.scaleY.toString()
-                            editRotation = note.rotation.toString()
-                            editColorForDialog = if (!note.content.startsWith("Shape:") && !note.content.startsWith("Image:"))
-                                note.textColor ?: Color.Black
+                        onEditProperties = { element ->
+                            editPropertiesElementId = element.id
+                            editX = element.offset.x.toString()
+                            editY = element.offset.y.toString()
+                            editScaleX = element.scaleX.toString()
+                            editScaleY = element.scaleY.toString()
+                            editRotation = element.rotation.toString()
+                            editColorForDialog = if (!element.content.startsWith("Shape:") && !element.content.startsWith("Image:"))
+                                element.textColor ?: Color.Black
                             else
-                                note.backgroundColor
-                            editShadowColorForDialog = note.shadowColor
-                            editShadowOffsetX = note.shadowOffsetX
-                            editShadowOffsetY = note.shadowOffsetY
-                            editBorderThickness = note.borderThickness
-                            editBorderColorForDialog = note.borderColor
+                                element.backgroundColor
+                            editShadowColorForDialog = element.shadowColor
+                            editShadowOffsetX = element.shadowOffsetX
+                            editShadowOffsetY = element.shadowOffsetY
+                            editBorderThickness = element.borderThickness
+                            editBorderColorForDialog = element.borderColor
                             showEditPropertiesDialog = true
                         },
                         onToggleVisibility = { viewModel.toggleVisibility(it) },
                         onToggleLock = { viewModel.toggleLock(it) },
-                        onDuplicate = { viewModel.addToCanvas(CanvasNote(content = it.content)) },
+                        onDuplicate = { viewModel.addToCanvas(CanvasElement(content = it.content)) },
                         onDelete = {
-                            val idx = viewModel.canvasNotes.indexOf(it)
+                            val idx = viewModel.canvasElements.indexOf(it)
                             if (idx != -1) viewModel.removeFromCanvas(idx)
-                            if (selectedNoteId == it.id) selectedNoteId = null
+                            if (selectedElementId == it.id) selectedElementId = null
                         },
                         onUngroup = { ids ->
-                            viewModel.ungroupNotes(ids)
-                            selectedNoteIds = emptySet()
+                            viewModel.ungroupElements(ids)
+                            selectedElementIds = emptySet()
                         },
                         onGroup = { name, ids ->
                             if (name.isNotBlank() && ids.isNotEmpty()) {
                                 viewModel.createGroup(ids)
-                                selectedNoteIds = emptySet()
+                                selectedElementIds = emptySet()
                                 showGroupDialog = false
                                 groupName = ""
                             }
                         },
-                        onClearSelection = { selectedNoteIds = emptySet() },
-                        onReorder = { from, to -> viewModel.reorderCanvasNotes(from, to) },
+                        onClearSelection = { selectedElementIds = emptySet() },
+                        onReorder = { from, to -> viewModel.reorderCanvasElements(from, to) },
                         themeColors = themeColors,
                         density = LocalDensity.current,
                         groupNames = viewModel.groupNames,
@@ -608,14 +608,14 @@ fun CreatorScreen() {
 
     when (val dialog = contentDialogType) {
         is ContentDialogType.Edit -> {
-            EditNoteDialog(
-                noteId = dialog.noteId,
+            EditElementDialog(
+                elementId = dialog.elementId,
                 initialContent = dialog.initialContent,
                 onDismiss = { contentDialogType = null },
                 onSave = { id, newContent ->
-                    val index = viewModel.canvasNotes.indexOfFirst { it.id == id }
+                    val index = viewModel.canvasElements.indexOfFirst { it.id == id }
                     if (index != -1) {
-                        val old = viewModel.canvasNotes[index]
+                        val old = viewModel.canvasElements[index]
                         val updated = old.copy(content = newContent)
                         viewModel.removeFromCanvas(index)
                         viewModel.addToCanvas(updated)
@@ -625,15 +625,15 @@ fun CreatorScreen() {
             )
         }
         ContentDialogType.AddText -> {
-            EditNoteDialog(
-                noteId = null,
+            EditElementDialog(
+                elementId = null,
                 initialContent = "",
                 isNew = true,
                 onDismiss = { contentDialogType = null },
                 onSave = { _, newContent ->
                     if (newContent.isNotBlank()) {
                         viewModel.addToCanvas(
-                            CanvasNote(
+                            CanvasElement(
                                 content = newContent,
                                 textColor = getRandomColor()
                             )
@@ -644,8 +644,8 @@ fun CreatorScreen() {
             )
         }
         ContentDialogType.FetchVerse -> {
-            EditNoteDialog(
-                noteId = null,
+            EditElementDialog(
+                elementId = null,
                 initialContent = "",
                 isNew = true,
                 fetchMode = true,
@@ -657,7 +657,7 @@ fun CreatorScreen() {
                 onSave = { _, newContent ->
                     if (newContent.isNotBlank()) {
                         viewModel.addToCanvas(
-                            CanvasNote(
+                            CanvasElement(
                                 content = newContent,
                                 textColor = getRandomColor(),
                             )
@@ -671,24 +671,24 @@ fun CreatorScreen() {
     }
 
     RenameDialog(
-        noteId = noteToRenameId,
+        elementId = elementToRenameId,
         currentName = renameText,
         onDismiss = {
-            noteToRenameId = null
+            elementToRenameId = null
             renameText = ""
         },
         onConfirm = { id, newName ->
             if (newName.isNotBlank()) {
-                viewModel.renameCanvasNote(id, newName)
+                viewModel.renameCanvasElement(id, newName)
             }
-            noteToRenameId = null
+            elementToRenameId = null
             renameText = ""
         }
     )
 
     if (groupToRenameId != null) {
         RenameDialog(
-            noteId = groupToRenameId,
+            elementId = groupToRenameId,
             currentName = groupRenameText,
             title = "Rename Group",
             onDismiss = {
@@ -710,37 +710,37 @@ fun CreatorScreen() {
         initialName = groupName,
         onDismiss = { showGroupDialog = false },
         onConfirm = { name ->
-            if (name.isNotBlank() && selectedNoteIds.isNotEmpty()) {
-                viewModel.createGroup(selectedNoteIds.toList())
-                selectedNoteIds = emptySet()
+            if (name.isNotBlank() && selectedElementIds.isNotEmpty()) {
+                viewModel.createGroup(selectedElementIds.toList())
+                selectedElementIds = emptySet()
                 showGroupDialog = false
                 groupName = ""
             }
         }
     )
 
-    if (showColorPicker && noteToColorEditId != null) {
-        val targetNote = viewModel.canvasNotes.find { it.id == noteToColorEditId }
+    if (showColorPicker && elementToColorEditId != null) {
+        val targetElement = viewModel.canvasElements.find { it.id == elementToColorEditId }
         val initialColor = when {
-            targetNote == null -> Color.White
-            targetNote.content.startsWith("Shape:") || targetNote.content.startsWith("Image:") ->
-                targetNote.backgroundColor
-            else -> targetNote.textColor ?: Color.Black
+            targetElement == null -> Color.White
+            targetElement.content.startsWith("Shape:") || targetElement.content.startsWith("Image:") ->
+                targetElement.backgroundColor
+            else -> targetElement.textColor ?: Color.Black
         }
         ColorWheelDialog(
             onDismissRequest = {
                 showColorPicker = false
-                noteToColorEditId = null
+                elementToColorEditId = null
             },
             onColorSelected = { color ->
-                val note = viewModel.canvasNotes.find { it.id == noteToColorEditId }
-                if (note != null && !note.content.startsWith("Shape:") && !note.content.startsWith("Image:")) {
-                    viewModel.updateNoteTextColor(noteToColorEditId!!, color)
+                val element = viewModel.canvasElements.find { it.id == elementToColorEditId }
+                if (element != null && !element.content.startsWith("Shape:") && !element.content.startsWith("Image:")) {
+                    viewModel.updateElementTextColor(elementToColorEditId!!, color)
                 } else {
-                    viewModel.updateNoteColor(noteToColorEditId!!, color)
+                    viewModel.updateElementColor(elementToColorEditId!!, color)
                 }
                 showColorPicker = false
-                noteToColorEditId = null
+                elementToColorEditId = null
             },
             initialColor = initialColor
         )
@@ -752,7 +752,7 @@ fun CreatorScreen() {
             isLineMode = initialIsLineMode,
             onDismiss = {
                 showCustomPolygonDialog = false
-                polygonNoteToEditId = null
+                polygonElementToEditId = null
                 initialPolygonString = ""
                 initialIsLineMode = false
             },
@@ -762,12 +762,12 @@ fun CreatorScreen() {
                 }
                 val shapeType = if (isLine) "CustomLine" else "CustomPolygon"
                 val contentString = "Shape:$shapeType:$serialized"
-                if (polygonNoteToEditId != null) {
-                    viewModel.updateNoteContent(polygonNoteToEditId!!, contentString)
-                    selectedNoteId = polygonNoteToEditId
+                if (polygonElementToEditId != null) {
+                    viewModel.updateElementContent(polygonElementToEditId!!, contentString)
+                    selectedElementId = polygonElementToEditId
                 } else {
                     viewModel.addToCanvas(
-                        CanvasNote(
+                        CanvasElement(
                             content = contentString,
                             backgroundColor = getRandomColor(),
                             width = 100f,
@@ -776,7 +776,7 @@ fun CreatorScreen() {
                     )
                 }
                 showCustomPolygonDialog = false
-                polygonNoteToEditId = null
+                polygonElementToEditId = null
                 initialPolygonString = ""
                 initialIsLineMode = false
             }
@@ -785,7 +785,7 @@ fun CreatorScreen() {
 
     EditPropertiesDialog(
         show = showEditPropertiesDialog,
-        noteId = editPropertiesNoteId,
+        elementId = editPropertiesElementId,
         initialX = editX,
         initialY = editY,
         initialScaleX = editScaleX,
@@ -801,25 +801,25 @@ fun CreatorScreen() {
         initialBorderColor = editBorderColorForDialog,
         onDismiss = {
             showEditPropertiesDialog = false
-            editPropertiesNoteId = null
+            editPropertiesElementId = null
         },
         onApply = { id, x, y, scaleX, scaleY, rot, color,
                     shadowColor, shadowOffsetX, shadowOffsetY,
                     borderThickness, borderColor ->
 
-            val currentNote = viewModel.canvasNotes.find { it.id == id }
-            if (currentNote != null) {
-                val isText = !currentNote.content.startsWith("Shape:") && !currentNote.content.startsWith("Image:")
+            val currentElement = viewModel.canvasElements.find { it.id == id }
+            if (currentElement != null) {
+                val isText = !currentElement.content.startsWith("Shape:") && !currentElement.content.startsWith("Image:")
 
-                viewModel.applyAllNoteProperties(
+                viewModel.applyAllElementProperties(
                     id = id,
-                    x = x.toFloatOrNull() ?: currentNote.offset.x,
-                    y = y.toFloatOrNull() ?: currentNote.offset.y,
-                    width = currentNote.width,
-                    height = currentNote.height,
-                    rotation = rot.toFloatOrNull() ?: currentNote.rotation,
-                    scaleX = scaleX.toFloatOrNull()?.coerceIn(0.1f, 10f) ?: currentNote.scaleX,
-                    scaleY = scaleY.toFloatOrNull()?.coerceIn(0.1f, 10f) ?: currentNote.scaleY,
+                    x = x.toFloatOrNull() ?: currentElement.offset.x,
+                    y = y.toFloatOrNull() ?: currentElement.offset.y,
+                    width = currentElement.width,
+                    height = currentElement.height,
+                    rotation = rot.toFloatOrNull() ?: currentElement.rotation,
+                    scaleX = scaleX.toFloatOrNull()?.coerceIn(0.1f, 10f) ?: currentElement.scaleX,
+                    scaleY = scaleY.toFloatOrNull()?.coerceIn(0.1f, 10f) ?: currentElement.scaleY,
                     color = color,
                     isTextElement = isText,
                     shadowColor = shadowColor,
@@ -830,7 +830,7 @@ fun CreatorScreen() {
                 )
             }
             showEditPropertiesDialog = false
-            editPropertiesNoteId = null
+            editPropertiesElementId = null
         }
     )
 }

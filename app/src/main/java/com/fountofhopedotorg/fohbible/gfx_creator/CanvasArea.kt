@@ -20,28 +20,28 @@ import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import com.fountofhopedotorg.fohbible.data.CanvasNote
+import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.ThemeColors
 import kotlin.math.roundToInt
 
 @Composable
 fun CanvasArea(
     modifier: Modifier = Modifier,
-    notes: List<CanvasNote>,
-    selectedNoteIds: Set<String>,
-    selectedNoteId: String?,
+    elements: List<CanvasElement>,
+    selectedElementIds: Set<String>,
+    selectedElementId: String?,
     selectedGroups: Set<String>,
     dragGroupDelta: Offset,
     onGroupDragDeltaChange: (Offset) -> Unit,
-    onCanvasNoteTap: (CanvasNote) -> Unit,
-    onNoteUpdatePosition: (CanvasNote, Offset, Float, Float, Float) -> Unit,
-    onNoteScaleChange: (String, Float, Float) -> Unit,
+    onCanvasElementTap: (CanvasElement) -> Unit,
+    onElementUpdatePosition: (CanvasElement, Offset, Float, Float, Float) -> Unit,
+    onElementScaleChange: (String, Float, Float) -> Unit,
     onColorPickerRequested: (String) -> Unit,
     onDeleteRequested: (String) -> Unit,
     onClearSelection: () -> Unit,
     themeColors: ThemeColors,
     isDark: Boolean,
-    notesGrouped: Map<String?, List<CanvasNote>>,
+    elementsGrouped: Map<String?, List<CanvasElement>>,
     graphicsLayer: GraphicsLayer,
     proportionalEditing: Boolean,
     onProportionalToggle: () -> Unit,
@@ -65,13 +65,13 @@ fun CanvasArea(
                     drawContent()
                 }
         ) {
-            notes.forEach { note ->
-                if (!note.isVisible) return@forEach
+            elements.forEach { element ->
+                if (!element.isVisible) return@forEach
 
-                key(note.id) {
-                    val isInSelectedGroup = note.groupId in selectedGroups
-                    val isItemSelected = selectedNoteIds.contains(note.id) ||
-                            (selectedNoteId == note.id && selectedNoteIds.isEmpty())
+                key(element.id) {
+                    val isInSelectedGroup = element.groupId in selectedGroups
+                    val isItemSelected = selectedElementIds.contains(element.id) ||
+                            (selectedElementId == element.id && selectedElementIds.isEmpty())
                     Box(
                         modifier = if (isInSelectedGroup) {
                             Modifier.offset {
@@ -82,61 +82,61 @@ fun CanvasArea(
                         }
                     ) {
                         when {
-                            note.content.startsWith("Shape:") -> CanvasSvgItem(
-                                note = note,
+                            element.content.startsWith("Shape:") -> CanvasSvgItem(
+                                element = element,
                                 isSelected = isItemSelected,
-                                isLocked = note.isLocked,
-                                onSelect = { if (!note.isLocked) onCanvasNoteTap(note) },
+                                isLocked = element.isLocked,
+                                onSelect = { if (!element.isLocked) onCanvasElementTap(element) },
                                 onUpdatePosition = { offset, w, h, rot ->
                                     if (isInSelectedGroup) {
-                                        onGroupDragDeltaChange(offset - note.offset)
+                                        onGroupDragDeltaChange(offset - element.offset)
                                     } else {
-                                        onNoteUpdatePosition(note, offset, w, h, rot)
+                                        onElementUpdatePosition(element, offset, w, h, rot)
                                     }
                                 },
                                 onColorPickerRequested = {
-                                    if (!note.isLocked) onColorPickerRequested(note.id)
+                                    if (!element.isLocked) onColorPickerRequested(element.id)
                                 },
-                                onDeleteRequested = { onDeleteRequested(note.id) },
-                                onScaleChanged = { sx, sy -> onNoteScaleChange(note.id, sx, sy) },
+                                onDeleteRequested = { onDeleteRequested(element.id) },
+                                onScaleChanged = { sx, sy -> onElementScaleChange(element.id, sx, sy) },
                                 proportionalEditing = proportionalEditing,
                                 onProportionalToggle = onProportionalToggle
                             )
-                            note.content.startsWith("Image:") -> CanvasImageItem(
-                                note = note,
+                            element.content.startsWith("Image:") -> CanvasImageItem(
+                                element = element,
                                 isSelected = isItemSelected,
-                                isLocked = note.isLocked,
-                                onSelect = { if (!note.isLocked) onCanvasNoteTap(note) },
+                                isLocked = element.isLocked,
+                                onSelect = { if (!element.isLocked) onCanvasElementTap(element) },
                                 onUpdatePosition = { offset, w, h, rot ->
                                     if (isInSelectedGroup) {
-                                        onGroupDragDeltaChange(offset - note.offset)
+                                        onGroupDragDeltaChange(offset - element.offset)
                                     } else {
-                                        onNoteUpdatePosition(note, offset, w, h, rot)
+                                        onElementUpdatePosition(element, offset, w, h, rot)
                                     }
                                 },
-                                onColorPickerRequested = { onColorPickerRequested(note.id) },
-                                onDeleteRequested = { onDeleteRequested(note.id) },
-                                onScaleChanged = { sx, sy -> onNoteScaleChange(note.id, sx, sy) },
+                                onColorPickerRequested = { onColorPickerRequested(element.id) },
+                                onDeleteRequested = { onDeleteRequested(element.id) },
+                                onScaleChanged = { sx, sy -> onElementScaleChange(element.id, sx, sy) },
                                 proportionalEditing = proportionalEditing,
                                 onProportionalToggle = onProportionalToggle
                             )
                             else -> CanvasTextItem(
-                                note = note,
+                                element = element,
                                 isSelected = isItemSelected,
-                                isLocked = note.isLocked,
-                                onSelect = { if (!note.isLocked) onCanvasNoteTap(note) },
+                                isLocked = element.isLocked,
+                                onSelect = { if (!element.isLocked) onCanvasElementTap(element) },
                                 onUpdatePosition = { offset, w, h, rot ->
                                     if (isInSelectedGroup) {
-                                        onGroupDragDeltaChange(offset - note.offset)
+                                        onGroupDragDeltaChange(offset - element.offset)
                                     } else {
-                                        onNoteUpdatePosition(note, offset, w, h, rot)
+                                        onElementUpdatePosition(element, offset, w, h, rot)
                                     }
                                 },
                                 onColorPickerRequested = {
-                                    if (!note.isLocked) onColorPickerRequested(note.id)
+                                    if (!element.isLocked) onColorPickerRequested(element.id)
                                 },
-                                onDeleteRequested = { onDeleteRequested(note.id) },
-                                onScaleChanged = { sx, sy -> onNoteScaleChange(note.id, sx, sy) },
+                                onDeleteRequested = { onDeleteRequested(element.id) },
+                                onScaleChanged = { sx, sy -> onElementScaleChange(element.id, sx, sy) },
                                 proportionalEditing = proportionalEditing,
                                 onProportionalToggle = onProportionalToggle
                             )
@@ -146,8 +146,8 @@ fun CanvasArea(
             }
             Canvas(modifier = Modifier.fillMaxSize()) {
                 selectedGroups.forEach { groupId ->
-                    val groupNotes = notesGrouped[groupId] ?: return@forEach
-                    val bbox = getGroupBoundingBox(groupNotes) ?: return@forEach
+                    val groupElements = elementsGrouped[groupId] ?: return@forEach
+                    val bbox = getGroupBoundingBox(groupElements) ?: return@forEach
                     val left = bbox.minX + dragGroupDelta.x
                     val top = bbox.minY + dragGroupDelta.y
                     val right = bbox.maxX + dragGroupDelta.x

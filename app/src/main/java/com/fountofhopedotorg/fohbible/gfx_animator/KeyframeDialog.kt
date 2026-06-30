@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import com.fountofhopedotorg.fohbible.color_wheel.ColorWheelDialog
 import com.fountofhopedotorg.fohbible.data.CanvasKeyframe
-import com.fountofhopedotorg.fohbible.data.CanvasNote
+import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.GradientConfig
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -67,29 +67,29 @@ private val GradientConfigNullableSaver = Saver<GradientConfig?, String>(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun KeyframeAnimationDialog(
-    note: CanvasNote?,
+    element: CanvasElement?,
     onDismiss: () -> Unit,
     onSaveKeyframes: (String, List<CanvasKeyframe>) -> Unit,
     timeMultiplier: Float,
     initialGradientConfig: GradientConfig? = null
 ) {
-    if (note == null) return
+    if (element == null) return
 
-    val localKeyframes = remember(note.keyframes) { mutableStateListOf(*note.keyframes.toTypedArray()) }
+    val localKeyframes = remember(element.keyframes) { mutableStateListOf(*element.keyframes.toTypedArray()) }
 
     var timeInput by rememberSaveable { mutableStateOf("") }
-    var xInput by rememberSaveable { mutableStateOf(note.offset.x.toString()) }
-    var yInput by rememberSaveable { mutableStateOf(note.offset.y.toString()) }
-    var scaleXInput by rememberSaveable { mutableStateOf(note.scaleX.toString()) }
-    var scaleYInput by rememberSaveable { mutableStateOf(note.scaleY.toString()) }
-    var rotationInput by rememberSaveable { mutableStateOf(note.rotation.toString()) }
+    var xInput by rememberSaveable { mutableStateOf(element.offset.x.toString()) }
+    var yInput by rememberSaveable { mutableStateOf(element.offset.y.toString()) }
+    var scaleXInput by rememberSaveable { mutableStateOf(element.scaleX.toString()) }
+    var scaleYInput by rememberSaveable { mutableStateOf(element.scaleY.toString()) }
+    var rotationInput by rememberSaveable { mutableStateOf(element.rotation.toString()) }
 
-    val initialNoteColor: Color = remember(note) {
-        if (note.content.startsWith("Shape:") || note.content.startsWith("Image:")) note.backgroundColor
-        else note.textColor ?: Color.Black
+    val initialElementColor: Color = remember(element) {
+        if (element.content.startsWith("Shape:") || element.content.startsWith("Image:")) element.backgroundColor
+        else element.textColor ?: Color.Black
     }
-    var pickedColorArgb by rememberSaveable(initialNoteColor) {
-        mutableLongStateOf(initialNoteColor.toArgb().toLong())
+    var pickedColorArgb by rememberSaveable(initialElementColor) {
+        mutableLongStateOf(initialElementColor.toArgb().toLong())
     }
 
     var currentGradientConfig by rememberSaveable(
@@ -115,12 +115,12 @@ fun KeyframeAnimationDialog(
 
     fun populateFromKeyframe(kf: CanvasKeyframe) {
         timeInput = storedToDisplay(kf.timestampMs).toString()
-        xInput = kf.x?.toString() ?: note.offset.x.toString()
-        yInput = kf.y?.toString() ?: note.offset.y.toString()
-        scaleXInput = kf.scaleX?.toString() ?: note.scaleX.toString()
-        scaleYInput = kf.scaleY?.toString() ?: note.scaleY.toString()
-        rotationInput = kf.rotation?.toString() ?: note.rotation.toString()
-        val displayColor = kf.gradientConfig?.startColor ?: kf.color ?: initialNoteColor
+        xInput = kf.x?.toString() ?: element.offset.x.toString()
+        yInput = kf.y?.toString() ?: element.offset.y.toString()
+        scaleXInput = kf.scaleX?.toString() ?: element.scaleX.toString()
+        scaleYInput = kf.scaleY?.toString() ?: element.scaleY.toString()
+        rotationInput = kf.rotation?.toString() ?: element.rotation.toString()
+        val displayColor = kf.gradientConfig?.startColor ?: kf.color ?: initialElementColor
         pickedColorArgb = displayColor.toArgb().toLong()
         currentGradientConfig = kf.gradientConfig
     }
@@ -131,24 +131,24 @@ fun KeyframeAnimationDialog(
             localKeyframes.add(
                 CanvasKeyframe(
                     timestampMs = storedZero,
-                    x = note.offset.x,
-                    y = note.offset.y,
-                    scaleX = note.scaleX,
-                    scaleY = note.scaleY,
-                    rotation = note.rotation,
-                    color = initialNoteColor,
+                    x = element.offset.x,
+                    y = element.offset.y,
+                    scaleX = element.scaleX,
+                    scaleY = element.scaleY,
+                    rotation = element.rotation,
+                    color = initialElementColor,
                     gradientConfig = null
                 )
             )
         }
     }
 
-    LaunchedEffect(initialGradientConfig, initialNoteColor) {
+    LaunchedEffect(initialGradientConfig, initialElementColor) {
         val firstKf = localKeyframes.firstOrNull { it.timestampMs == displayToStored(0L) }
         if (firstKf != null) {
             val index = localKeyframes.indexOf(firstKf)
             localKeyframes[index] = firstKf.copy(
-                color = initialGradientConfig?.startColor ?: initialNoteColor,
+                color = initialGradientConfig?.startColor ?: initialElementColor,
                 gradientConfig = initialGradientConfig
             )
         }
@@ -446,11 +446,11 @@ fun KeyframeAnimationDialog(
                 val clampedDisplayMs = rawT.coerceIn(0L, effectiveMaxMs)
                 val storedMs = displayToStored(clampedDisplayMs)
 
-                val x = xInput.toFloatOrNull() ?: note.offset.x
-                val y = yInput.toFloatOrNull() ?: note.offset.y
-                val sx = scaleXInput.toFloatOrNull() ?: note.scaleX
-                val sy = scaleYInput.toFloatOrNull() ?: note.scaleY
-                val rot = rotationInput.toFloatOrNull() ?: note.rotation
+                val x = xInput.toFloatOrNull() ?: element.offset.x
+                val y = yInput.toFloatOrNull() ?: element.offset.y
+                val sx = scaleXInput.toFloatOrNull() ?: element.scaleX
+                val sy = scaleYInput.toFloatOrNull() ?: element.scaleY
+                val rot = rotationInput.toFloatOrNull() ?: element.rotation
 
                 if (editingKeyframeTimestamp != null) {
                     localKeyframes.removeAll { it.timestampMs == editingKeyframeTimestamp }
@@ -593,7 +593,7 @@ fun KeyframeAnimationDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSaveKeyframes(note.id, localKeyframes.sortedBy { it.timestampMs }) }) {
+            TextButton(onClick = { onSaveKeyframes(element.id, localKeyframes.sortedBy { it.timestampMs }) }) {
                 Text("Save")
             }
         },

@@ -85,7 +85,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.fountofhopedotorg.fohbible.data.CanvasNote
+import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.DisplayItem
 import com.fountofhopedotorg.fohbible.data.GradientConfig
 import com.fountofhopedotorg.fohbible.data.ThemeColors
@@ -99,7 +99,7 @@ import com.fountofhopedotorg.fohbible.gfx_creator.HeartShape
 import com.fountofhopedotorg.fohbible.gfx_creator.HexagonShape
 import com.fountofhopedotorg.fohbible.gfx_creator.LineShape
 import com.fountofhopedotorg.fohbible.gfx_creator.MoonShape
-import com.fountofhopedotorg.fohbible.gfx_creator.NoteThumbnail
+import com.fountofhopedotorg.fohbible.gfx_creator.ElementThumbnail
 import com.fountofhopedotorg.fohbible.gfx_creator.OctagonShape
 import com.fountofhopedotorg.fohbible.gfx_creator.PolygonShape
 import com.fountofhopedotorg.fohbible.gfx_creator.ReorderHandle
@@ -119,22 +119,22 @@ import kotlin.math.roundToInt
 
 @Composable
 fun AnimatorCanvasElementsPanel(
-    notes: List<CanvasNote>,
-    selectedNoteIds: Set<String>,
-    selectedNoteId: String?,
+    elements: List<CanvasElement>,
+    selectedElementIds: Set<String>,
+    selectedElementId: String?,
     showTree: Boolean,
     onToggleTree: () -> Unit,
-    onSingleSelect: (CanvasNote) -> Unit,
-    onToggleGroupSelection: (CanvasNote) -> Unit,
+    onSingleSelect: (CanvasElement) -> Unit,
+    onToggleGroupSelection: (CanvasElement) -> Unit,
     onGroupHeaderTap: (String) -> Unit,
-    onEditNote: (CanvasNote) -> Unit,
-    onCustomPolygonEdit: (CanvasNote) -> Unit,
-    onRename: (CanvasNote) -> Unit,
-    onEditProperties: (CanvasNote) -> Unit,
+    onEditElement: (CanvasElement) -> Unit,
+    onCustomPolygonEdit: (CanvasElement) -> Unit,
+    onRename: (CanvasElement) -> Unit,
+    onEditProperties: (CanvasElement) -> Unit,
     onToggleVisibility: (String) -> Unit,
     onToggleLock: (String) -> Unit,
-    onDuplicate: (CanvasNote) -> Unit,
-    onDelete: (CanvasNote) -> Unit,
+    onDuplicate: (CanvasElement) -> Unit,
+    onDelete: (CanvasElement) -> Unit,
     onUngroup: (Set<String>) -> Unit,
     onGroup: (String, List<String>) -> Unit,
     onClearSelection: () -> Unit,
@@ -143,16 +143,16 @@ fun AnimatorCanvasElementsPanel(
     density: Density,
     groupNames: Map<String, String> = emptyMap(),
     onRenameGroup: ((groupId: String, currentName: String) -> Unit)? = null,
-    onAnimateKeyframes: ((CanvasNote) -> Unit)? = null,
+    onAnimateKeyframes: ((CanvasElement) -> Unit)? = null,
     gradientConfigs: Map<String, GradientConfig> = emptyMap()
 ) {
-    val groupedNotes = notes.groupBy { it.groupId }
+    val groupedElements = elements.groupBy { it.groupId }
     val expandedGroups = remember { mutableStateMapOf<String, Boolean>() }
     val baseItems = buildList {
-        for ((groupId, groupNotes) in groupedNotes) {
+        for ((groupId, groupElements) in groupedElements) {
             if (groupId == null) continue
             val expanded = expandedGroups[groupId] ?: false
-            val actualChildren = groupNotes.filter { note -> note.id != groupId }
+            val actualChildren = groupElements.filter { element -> element.id != groupId }
             val groupName = groupNames[groupId] ?: "Group of ${actualChildren.size}"
             add(
                 DisplayItem.GroupHeader(
@@ -162,11 +162,11 @@ fun AnimatorCanvasElementsPanel(
                     isExpanded = expanded
                 )
             )
-            actualChildren.forEach { note ->
-                val originalIndex = notes.indexOf(note)
+            actualChildren.forEach { element ->
+                val originalIndex = elements.indexOf(element)
                 add(
-                    DisplayItem.NoteItem(
-                        note = note,
+                    DisplayItem.ElementItem(
+                        element = element,
                         originalIndex = originalIndex,
                         isGrouped = true,
                         groupId = groupId
@@ -174,19 +174,19 @@ fun AnimatorCanvasElementsPanel(
                 )
             }
         }
-        val ungrouped = groupedNotes[null] ?: emptyList()
-        ungrouped.forEach { note ->
-            val originalIndex = notes.indexOf(note)
-            add(DisplayItem.NoteItem(note, originalIndex, isGrouped = false))
+        val ungrouped = groupedElements[null] ?: emptyList()
+        ungrouped.forEach { element ->
+            val originalIndex = elements.indexOf(element)
+            add(DisplayItem.ElementItem(element, originalIndex, isGrouped = false))
         }
     }
-    val displayItems = remember(baseItems, expandedGroups, selectedNoteIds) {
+    val displayItems = remember(baseItems, expandedGroups, selectedElementIds) {
         val mutableList = baseItems.toMutableList()
         var insertionIndex = -1
         for (i in mutableList.indices.reversed()) {
             val item = mutableList[i]
-            if (item is DisplayItem.NoteItem &&
-                selectedNoteIds.contains(item.note.id) &&
+            if (item is DisplayItem.ElementItem &&
+                selectedElementIds.contains(item.element.id) &&
                 (item.groupId == null || expandedGroups[item.groupId] == true)
             ) {
                 insertionIndex = i + 1
@@ -201,7 +201,7 @@ fun AnimatorCanvasElementsPanel(
     val groupBounds = remember(displayItems) {
         val bounds = mutableMapOf<String?, Pair<Int, Int>>()
         displayItems.forEachIndexed { index, item ->
-            if (item is DisplayItem.NoteItem) {
+            if (item is DisplayItem.ElementItem) {
                 val current = bounds[item.groupId]
                 if (current == null) {
                     bounds[item.groupId] = index to index
@@ -253,18 +253,18 @@ fun AnimatorCanvasElementsPanel(
                             key = { index ->
                                 when (val item = displayItems[index]) {
                                     is DisplayItem.GroupHeader -> "header-${item.groupId}"
-                                    is DisplayItem.NoteItem -> item.note.id
+                                    is DisplayItem.ElementItem -> item.element.id
                                     is DisplayItem.ActionRow -> "action-row"
                                 }
                             }
                         ) { displayIndex ->
                             when (val displayItem = displayItems[displayIndex]) {
                                 is DisplayItem.GroupHeader -> {
-                                    val isGroupSelected = selectedNoteId == displayItem.groupId ||
-                                            selectedNoteIds.contains(displayItem.groupId) ||
-                                            notes.any {
+                                    val isGroupSelected = selectedElementId == displayItem.groupId ||
+                                            selectedElementIds.contains(displayItem.groupId) ||
+                                            elements.any {
                                                 it.groupId == displayItem.groupId &&
-                                                        (it.id == selectedNoteId || selectedNoteIds.contains(it.id))
+                                                        (it.id == selectedElementId || selectedElementIds.contains(it.id))
                                             }
 
                                     AnimatorGroupHeaderRow(
@@ -280,9 +280,9 @@ fun AnimatorCanvasElementsPanel(
                                     )
                                 }
 
-                                is DisplayItem.NoteItem -> {
-                                    val note = displayItem.note
-                                    val gradConfig = gradientConfigs[note.id]
+                                is DisplayItem.ElementItem -> {
+                                    val element = displayItem.element
+                                    val gradConfig = gradientConfigs[element.id]
                                     val originalIndex = displayItem.originalIndex
                                     val isGrouped = displayItem.isGrouped
                                     val groupId = displayItem.groupId
@@ -304,19 +304,19 @@ fun AnimatorCanvasElementsPanel(
                                         val isDownEnabled = bounds != null && displayIndex < bounds.second
 
                                         AnimatorCanvasElementItem(
-                                            notes = notes,
+                                            elements = elements,
                                             onReorder = onReorder,
-                                            note = note,
+                                            element = element,
                                             originalIndex = originalIndex,
-                                            isSelected = selectedNoteId == note.id,
+                                            isSelected = selectedElementId == element.id,
                                             isDragTarget = draggedDisplayIndex == displayIndex,
                                             isUpEnabled = isUpEnabled,
                                             isDownEnabled = isDownEnabled,
                                             dragOffset = if (draggedDisplayIndex == displayIndex) dragOffset else 0f,
-                                            selectedNoteIds = selectedNoteIds,
+                                            selectedElementIds = selectedElementIds,
                                             isGrouped = isGrouped,
-                                            onRowTap = { onSingleSelect(note) },
-                                            onToggleGroupSelection = { onToggleGroupSelection(note) },
+                                            onRowTap = { onSingleSelect(element) },
+                                            onToggleGroupSelection = { onToggleGroupSelection(element) },
                                             onDragStart = { offset ->
                                                 draggedDisplayIndex = displayIndex
                                                 dragOffset = offset.y
@@ -329,7 +329,7 @@ fun AnimatorCanvasElementsPanel(
                                                 val fromDisplayIndex = draggedDisplayIndex
                                                 if (fromDisplayIndex != null) {
                                                     val draggedItem =
-                                                        displayItems[fromDisplayIndex] as? DisplayItem.NoteItem
+                                                        displayItems[fromDisplayIndex] as? DisplayItem.ElementItem
                                                     if (draggedItem != null) {
                                                         val itemBounds = groupBounds[draggedItem.groupId]
                                                         if (itemBounds != null) {
@@ -342,7 +342,7 @@ fun AnimatorCanvasElementsPanel(
 
                                                             if (targetDisplayIdx != fromDisplayIndex) {
                                                                 val targetItem =
-                                                                    displayItems[targetDisplayIdx] as DisplayItem.NoteItem
+                                                                    displayItems[targetDisplayIdx] as DisplayItem.ElementItem
                                                                 onReorder(
                                                                     draggedItem.originalIndex,
                                                                     targetItem.originalIndex
@@ -358,12 +358,12 @@ fun AnimatorCanvasElementsPanel(
                                                 draggedDisplayIndex = null
                                                 dragOffset = 0f
                                             },
-                                            onEdit = { onEditNote(note) },
-                                            onCustomPolygonEdit = { onCustomPolygonEdit(note) },
-                                            onVisibilityToggle = { onToggleVisibility(note.id) },
-                                            onLockToggle = { onToggleLock(note.id) },
-                                            onDuplicate = { onDuplicate(note) },
-                                            onDelete = { onDelete(note) },
+                                            onEdit = { onEditElement(element) },
+                                            onCustomPolygonEdit = { onCustomPolygonEdit(element) },
+                                            onVisibilityToggle = { onToggleVisibility(element.id) },
+                                            onLockToggle = { onToggleLock(element.id) },
+                                            onDuplicate = { onDuplicate(element) },
+                                            onDelete = { onDelete(element) },
                                             themeColors = themeColors,
                                             gradientConfig = gradConfig,
                                             modifier = itemModifier
@@ -372,37 +372,37 @@ fun AnimatorCanvasElementsPanel(
                                 }
 
                                 is DisplayItem.ActionRow -> {
-                                    val hasGroup = notes.any { it.groupId != null && it.id in selectedNoteIds }
+                                    val hasGroup = elements.any { it.groupId != null && it.id in selectedElementIds }
                                     VideoGroupActionRow(
-                                        selectedCount = selectedNoteIds.size,
+                                        selectedCount = selectedElementIds.size,
                                         hasGroup = hasGroup,
-                                        onGroup = { onGroup("Group ${selectedNoteIds.size}", selectedNoteIds.toList()) },
-                                        onUngroup = { onUngroup(selectedNoteIds) },
+                                        onGroup = { onGroup("Group ${selectedElementIds.size}", selectedElementIds.toList()) },
+                                        onUngroup = { onUngroup(selectedElementIds) },
                                         onRename = {
-                                            val selectedNotes = notes.filter { it.id in selectedNoteIds }
-                                            val uniqueGroupIds = selectedNotes.mapNotNull { it.groupId }.distinct()
+                                            val selectedElements = elements.filter { it.id in selectedElementIds }
+                                            val uniqueGroupIds = selectedElements.mapNotNull { it.groupId }.distinct()
                                             if (hasGroup && uniqueGroupIds.isNotEmpty()) {
                                                 onRenameGroup?.invoke(
                                                     uniqueGroupIds.first(),
                                                     groupNames[uniqueGroupIds.first()] ?: "Group"
                                                 )
-                                            } else if (selectedNoteIds.size == 1) {
-                                                val note = selectedNotes.firstOrNull()
-                                                if (note != null) onRename(note)
+                                            } else if (selectedElementIds.size == 1) {
+                                                val element = selectedElements.firstOrNull()
+                                                if (element != null) onRename(element)
                                             }
                                         },
                                         onEditProperties = {
-                                            if (selectedNoteIds.size == 1) {
-                                                val note = notes.find { it.id == selectedNoteIds.first() }
-                                                if (note != null) onEditProperties(note)
+                                            if (selectedElementIds.size == 1) {
+                                                val element = elements.find { it.id == selectedElementIds.first() }
+                                                if (element != null) onEditProperties(element)
                                             }
                                         },
                                         onClearSelection = onClearSelection,
                                         modifier = Modifier.animateItem(),
                                         onAnimate = {
-                                            if (selectedNoteIds.size == 1) {
-                                                val note = notes.first { it.id in selectedNoteIds }
-                                                onAnimateKeyframes?.invoke(note)
+                                            if (selectedElementIds.size == 1) {
+                                                val element = elements.first { it.id in selectedElementIds }
+                                                onAnimateKeyframes?.invoke(element)
                                             }
                                         }
                                     )
@@ -419,15 +419,15 @@ fun AnimatorCanvasElementsPanel(
 @Composable
 fun AnimatorCanvasElementItem(
     modifier: Modifier = Modifier,
-    notes: List<CanvasNote>,
-    note: CanvasNote,
+    elements: List<CanvasElement>,
+    element: CanvasElement,
     originalIndex: Int,
     isSelected: Boolean,
     isDragTarget: Boolean,
     isUpEnabled: Boolean,
     isDownEnabled: Boolean,
     dragOffset: Float,
-    selectedNoteIds: Set<String>,
+    selectedElementIds: Set<String>,
     isGrouped: Boolean,
     onRowTap: () -> Unit,
     onToggleGroupSelection: () -> Unit,
@@ -453,7 +453,7 @@ fun AnimatorCanvasElementItem(
             .graphicsLayer { if (isDragTarget) translationY = dragOffset }
             .then(
                 if (!isGrouped) {
-                    Modifier.pointerInput(note.id, originalIndex) {
+                    Modifier.pointerInput(element.id, originalIndex) {
                         detectDragGesturesAfterLongPress(
                             onDragStart = { offset -> onDragStart(offset) },
                             onDrag = { change, dragAmount -> onDrag(change, dragAmount) },
@@ -483,7 +483,7 @@ fun AnimatorCanvasElementItem(
                         indication = null
                     ) { onToggleGroupSelection() }
                     .then(
-                        if (selectedNoteIds.contains(note.id)) {
+                        if (selectedElementIds.contains(element.id)) {
                             Modifier.border(2.dp, themeColors.primary, RoundedCornerShape(6.dp))
                         } else {
                             Modifier
@@ -491,13 +491,13 @@ fun AnimatorCanvasElementItem(
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                NoteThumbnail(note, themeColors, gradientConfig)
+                ElementThumbnail(element, themeColors, gradientConfig)
             }
 
             Spacer(Modifier.width(8.dp))
 
             Text(
-                text = getElementDisplayName(note, originalIndex, notes),
+                text = getElementDisplayName(element, originalIndex, elements),
                 modifier = Modifier
                     .weight(1f)
                     .clickable(
@@ -517,22 +517,22 @@ fun AnimatorCanvasElementItem(
             )
             IconButton(onClick = onVisibilityToggle, modifier = Modifier.size(28.dp)) {
                 Icon(
-                    imageVector = if (note.isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                    contentDescription = if (note.isVisible) "Hide Element" else "Show Element",
-                    tint = if (note.isVisible) themeColors.primary else Color.Gray,
+                    imageVector = if (element.isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                    contentDescription = if (element.isVisible) "Hide Element" else "Show Element",
+                    tint = if (element.isVisible) themeColors.primary else Color.Gray,
                     modifier = Modifier.size(20.dp)
                 )
             }
             IconButton(onClick = onLockToggle, modifier = Modifier.size(28.dp)) {
                 Icon(
-                    imageVector = if (note.isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
-                    contentDescription = if (note.isLocked) "Unlock Element" else "Lock Element",
-                    tint = if (note.isLocked) Color.Gray else themeColors.primary,
+                    imageVector = if (element.isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
+                    contentDescription = if (element.isLocked) "Unlock Element" else "Lock Element",
+                    tint = if (element.isLocked) Color.Gray else themeColors.primary,
                     modifier = Modifier.size(20.dp)
                 )
             }
             IconButton(onClick = {
-                if (note.content.startsWith("Shape:")) {
+                if (element.content.startsWith("Shape:")) {
                     onCustomPolygonEdit()
                 } else {
                     onEdit()
@@ -887,7 +887,7 @@ fun ToolbarSection(
                 },
                 onSaveSvg = {
                     coroutineScope.launch {
-                        saveCanvasAsSVG(graphicsLayer, context, viewModel.animatorCanvasNotes)
+                        saveCanvasAsSVG(graphicsLayer, context, viewModel.animatorCanvasElements)
                     }
                 },
                 onSaveVideo = onSaveVideo
@@ -906,18 +906,18 @@ fun ToolbarSection(
             )
         }
 
-        val selectedNoteId = viewModel.animatorSelectedNoteId
+        val selectedElementId = viewModel.animatorSelectedElementId
 
         IconButton(
             modifier = itemButtonSize,
             onClick = onTimelineClick,
-            enabled = selectedNoteId != null && !isPlayingAnimation
+            enabled = selectedElementId != null && !isPlayingAnimation
         ) {
             Icon(
                 imageVector = Icons.Default.Timeline,
                 contentDescription = "Keyframe Animation",
                 modifier = standardIconSize,
-                tint = if (selectedNoteId != null && !isPlayingAnimation)
+                tint = if (selectedElementId != null && !isPlayingAnimation)
                     MaterialTheme.colorScheme.primary
                 else
                     MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)

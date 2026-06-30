@@ -36,20 +36,20 @@ import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.fountofhopedotorg.fohbible.data.CanvasNote
+import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.ThemeColors
 
 @Composable
 fun CanvasElementItem(
-    notes: List<CanvasNote>,
-    note: CanvasNote,
+    elements: List<CanvasElement>,
+    element: CanvasElement,
     originalIndex: Int,
     isSelected: Boolean,
     isDragTarget: Boolean,
     isUpEnabled: Boolean,
     isDownEnabled: Boolean,
     dragOffset: Float,
-    selectedNoteIds: Set<String>,
+    selectedElementIds: Set<String>,
     isGrouped: Boolean,
     onRowTap: () -> Unit,
     onToggleGroupSelection: () -> Unit,
@@ -75,7 +75,7 @@ fun CanvasElementItem(
             .graphicsLayer { if (isDragTarget) translationY = dragOffset }
             .then(
                 if (!isGrouped) {
-                    Modifier.pointerInput(note.id, originalIndex) {
+                    Modifier.pointerInput(element.id, originalIndex) {
                         detectDragGesturesAfterLongPress(
                             onDragStart = { offset -> onDragStart(offset) },
                             onDrag = { change, dragAmount -> onDrag(change, dragAmount) },
@@ -105,7 +105,7 @@ fun CanvasElementItem(
                         indication = null
                     ) { onToggleGroupSelection() }
                     .then(
-                        if (selectedNoteIds.contains(note.id)) {
+                        if (selectedElementIds.contains(element.id)) {
                             Modifier.border(2.dp, themeColors.primary, RoundedCornerShape(6.dp))
                         } else {
                             Modifier
@@ -113,13 +113,13 @@ fun CanvasElementItem(
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                NoteThumbnail(note, themeColors)
+                ElementThumbnail(element, themeColors)
             }
 
             Spacer(Modifier.width(8.dp))
 
             Text(
-                text = getElementDisplayName(note, originalIndex, notes),
+                text = getElementDisplayName(element, originalIndex, elements),
                 modifier = Modifier
                     .weight(1f)
                     .clickable(
@@ -139,22 +139,22 @@ fun CanvasElementItem(
             )
             IconButton(onClick = onVisibilityToggle, modifier = Modifier.size(28.dp)) {
                 Icon(
-                    imageVector = if (note.isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                    contentDescription = if (note.isVisible) "Hide Element" else "Show Element",
-                    tint = if (note.isVisible) themeColors.primary else Color.Gray,
+                    imageVector = if (element.isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                    contentDescription = if (element.isVisible) "Hide Element" else "Show Element",
+                    tint = if (element.isVisible) themeColors.primary else Color.Gray,
                     modifier = Modifier.size(20.dp)
                 )
             }
             IconButton(onClick = onLockToggle, modifier = Modifier.size(28.dp)) {
                 Icon(
-                    imageVector = if (note.isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
-                    contentDescription = if (note.isLocked) "Unlock Element" else "Lock Element",
-                    tint = if (note.isLocked) Color.Gray else themeColors.primary,
+                    imageVector = if (element.isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
+                    contentDescription = if (element.isLocked) "Unlock Element" else "Lock Element",
+                    tint = if (element.isLocked) Color.Gray else themeColors.primary,
                     modifier = Modifier.size(20.dp)
                 )
             }
             IconButton(onClick = {
-                if (note.content.startsWith("Shape:")) {
+                if (element.content.startsWith("Shape:")) {
                     onCustomPolygonEdit()
                 } else {
                     onEdit()

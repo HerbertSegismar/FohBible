@@ -256,7 +256,7 @@ fun CombinedToolbarSection(
                 },
                 onSaveSvg = {
                     coroutineScope.launch {
-                        saveCanvasAsSVG(graphicsLayer, context, viewModel.canvasNotes)
+                        saveCanvasAsSVG(graphicsLayer, context, viewModel.canvasElements)
                     }
                 }
             )

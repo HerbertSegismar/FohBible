@@ -14,13 +14,13 @@ import androidx.compose.ui.Modifier
 
 @Composable
 fun RenameDialog(
-    noteId: String?,
+    elementId: String?,
     currentName: String,
     title: String = "Rename Element",
     onDismiss: () -> Unit,
     onConfirm: (String, String) -> Unit
 ) {
-    if (noteId != null) {
+    if (elementId != null) {
         var renameText by remember { mutableStateOf(currentName) }
         AlertDialog(
             onDismissRequest = onDismiss,
@@ -34,7 +34,7 @@ fun RenameDialog(
                 )
             },
             confirmButton = {
-                TextButton(onClick = { onConfirm(noteId, renameText) }) { Text("Save") }
+                TextButton(onClick = { onConfirm(elementId, renameText) }) { Text("Save") }
             },
             dismissButton = {
                 TextButton(onClick = onDismiss) { Text("Cancel") }

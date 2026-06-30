@@ -20,7 +20,7 @@ import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.unit.sp
 import com.fountofhopedotorg.fohbible.data.BezierNode
 import com.fountofhopedotorg.fohbible.data.BoundingBox
-import com.fountofhopedotorg.fohbible.data.CanvasNote
+import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.CrownStructure
 import com.fountofhopedotorg.fohbible.data.ProcessingOptions
 import com.fountofhopedotorg.fohbible.data.ThemeColors
@@ -148,7 +148,7 @@ suspend fun saveCanvasAsPDF(
 suspend fun saveCanvasAsSVG(
     graphicsLayer: GraphicsLayer,
     context: Context,
-    canvasNotes: List<CanvasNote>? = null
+    canvasElements: List<CanvasElement>? = null
 ) {
     try {
         val bitmap = graphicsLayer.toImageBitmap().asAndroidBitmap()
@@ -159,10 +159,10 @@ suspend fun saveCanvasAsSVG(
         val canvasDpHeight = bitmapHeight / density
         val scaleDownFactor = 1f / density
 
-        val allShapes = canvasNotes != null && canvasNotes.all { it.content.startsWith("Shape:") }
+        val allShapes = canvasElements != null && canvasElements.all { it.content.startsWith("Shape:") }
 
         val svgContent = if (allShapes) {
-            buildVectorSvg(canvasNotes, canvasDpWidth, canvasDpHeight)
+            buildVectorSvg(canvasElements, canvasDpWidth, canvasDpHeight)
         } else {
             val outputStream = ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
@@ -204,7 +204,7 @@ suspend fun saveCanvasAsSVG(
 }
 
 private fun buildVectorSvg(
-    notes: List<CanvasNote>,
+    elements: List<CanvasElement>,
     canvasWidth: Float,
     canvasHeight: Float
 ): String {
@@ -212,14 +212,14 @@ private fun buildVectorSvg(
     sb.append("""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $canvasWidth $canvasHeight" width="$canvasWidth" height="$canvasHeight">""")
     sb.append("\n  <rect width=\"100%\" height=\"100%\" fill=\"white\" />\n")
 
-    for (note in notes) {
-        if (!note.isVisible) continue
-        val x = note.offset.x
-        val y = note.offset.y
-        val w = note.width * note.scaleX
-        val h = note.height * note.scaleY
-        val color = colorToHex(note.backgroundColor)
-        val rot = note.rotation
+    for (element in elements) {
+        if (!element.isVisible) continue
+        val x = element.offset.x
+        val y = element.offset.y
+        val w = element.width * element.scaleX
+        val h = element.height * element.scaleY
+        val color = colorToHex(element.backgroundColor)
+        val rot = element.rotation
 
         val cx = w / 2f
         val cy = h / 2f
@@ -228,7 +228,7 @@ private fun buildVectorSvg(
             if (rot != 0f) append(" rotate($rot, $cx, $cy)")
         }
 
-        val shape = buildShapeSvg(note, w, h, color)
+        val shape = buildShapeSvg(element, w, h, color)
         if (shape.isNotEmpty()) {
             sb.append("  <g transform=\"$transform\">$shape</g>\n")
         }
@@ -237,9 +237,9 @@ private fun buildVectorSvg(
     return sb.toString()
 }
 
-private fun buildShapeSvg(note: CanvasNote, w: Float, h: Float, hexColor: String): String {
-    val content = note.content.trim()
-    val alpha = note.backgroundColor.alpha
+private fun buildShapeSvg(element: CanvasElement, w: Float, h: Float, hexColor: String): String {
+    val content = element.content.trim()
+    val alpha = element.backgroundColor.alpha
 
     return when {
         content.startsWith("Shape: Square") -> {
@@ -339,15 +339,15 @@ private fun buildPathD(segments: List<String>, w: Float, h: Float, close: Boolea
     return d.toString().trim()
 }
 
-fun getGroupBoundingBox(notes: List<CanvasNote>): BoundingBox? {
-    if (notes.isEmpty()) return null
+fun getGroupBoundingBox(elements: List<CanvasElement>): BoundingBox? {
+    if (elements.isEmpty()) return null
     var minX = Float.MAX_VALUE; var minY = Float.MAX_VALUE
     var maxX = Float.MIN_VALUE; var maxY = Float.MIN_VALUE
-    notes.forEach { note ->
-        val x = note.offset.x
-        val y = note.offset.y
-        val w = note.width
-        val h = note.height
+    elements.forEach { element ->
+        val x = element.offset.x
+        val y = element.offset.y
+        val w = element.width
+        val h = element.height
         minX = minOf(minX, x)
         minY = minOf(minY, y)
         maxX = maxOf(maxX, x + w)
@@ -373,23 +373,23 @@ fun getRandomColor(): Color {
 }
 
 fun getElementDisplayName(
-    note: CanvasNote,
+    element: CanvasElement,
     currentIndex: Int,
-    allNotes: List<CanvasNote>
+    allElements: List<CanvasElement>
 ): String {
-    if (!note.customName.isNullOrBlank()) {
-        return note.customName
+    if (!element.customName.isNullOrBlank()) {
+        return element.customName
     }
 
-    val category = noteCategory(note)
-    val count = allNotes.take(currentIndex + 1).count { other ->
-        noteCategory(other) == category
+    val category = elementCategory(element)
+    val count = allElements.take(currentIndex + 1).count { other ->
+        elementCategory(other) == category
     }
     return "$category $count"
 }
 
-private fun noteCategory(note: CanvasNote): String {
-    val content = note.content.trim()
+private fun elementCategory(element: CanvasElement): String {
+    val content = element.content.trim()
     return when {
         content == "Shape: Square"            -> "Square"
         content == "Shape: Circle"            -> "Circle"

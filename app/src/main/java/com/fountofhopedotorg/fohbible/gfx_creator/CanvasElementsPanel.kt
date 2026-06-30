@@ -42,29 +42,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
-import com.fountofhopedotorg.fohbible.data.CanvasNote
+import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.DisplayItem
 import com.fountofhopedotorg.fohbible.data.ThemeColors
 import kotlin.math.roundToInt
 
 @Composable
 fun CanvasElementsPanel(
-    notes: List<CanvasNote>,
-    selectedNoteIds: Set<String>,
-    selectedNoteId: String?,
+    elements: List<CanvasElement>,
+    selectedElementIds: Set<String>,
+    selectedElementId: String?,
     showTree: Boolean,
     onToggleTree: () -> Unit,
-    onSingleSelect: (CanvasNote) -> Unit,
-    onToggleGroupSelection: (CanvasNote) -> Unit,
+    onSingleSelect: (CanvasElement) -> Unit,
+    onToggleGroupSelection: (CanvasElement) -> Unit,
     onGroupHeaderTap: (String) -> Unit,
-    onEditNote: (CanvasNote) -> Unit,
-    onCustomPolygonEdit: (CanvasNote) -> Unit,
-    onRename: (CanvasNote) -> Unit,
-    onEditProperties: (CanvasNote) -> Unit,
+    onEditElement: (CanvasElement) -> Unit,
+    onCustomPolygonEdit: (CanvasElement) -> Unit,
+    onRename: (CanvasElement) -> Unit,
+    onEditProperties: (CanvasElement) -> Unit,
     onToggleVisibility: (String) -> Unit,
     onToggleLock: (String) -> Unit,
-    onDuplicate: (CanvasNote) -> Unit,
-    onDelete: (CanvasNote) -> Unit,
+    onDuplicate: (CanvasElement) -> Unit,
+    onDelete: (CanvasElement) -> Unit,
     onUngroup: (Set<String>) -> Unit,
     onGroup: (String, List<String>) -> Unit,
     onClearSelection: () -> Unit,
@@ -74,13 +74,13 @@ fun CanvasElementsPanel(
     groupNames: Map<String, String> = emptyMap(),
     onRenameGroup: ((groupId: String, currentName: String) -> Unit)? = null,
 ) {
-    val groupedNotes = notes.groupBy { it.groupId }
+    val groupedElements = elements.groupBy { it.groupId }
     val expandedGroups = remember { mutableStateMapOf<String, Boolean>() }
     val baseItems = buildList {
-        for ((groupId, groupNotes) in groupedNotes) {
+        for ((groupId, groupElements) in groupedElements) {
             if (groupId == null) continue
             val expanded = expandedGroups[groupId] ?: false
-            val actualChildren = groupNotes.filter { note -> note.id != groupId }
+            val actualChildren = groupElements.filter { element -> element.id != groupId }
             val groupName = groupNames[groupId] ?: "Group of ${actualChildren.size}"
             add(
                 DisplayItem.GroupHeader(
@@ -90,11 +90,11 @@ fun CanvasElementsPanel(
                     isExpanded = expanded
                 )
             )
-            actualChildren.forEach { note ->
-                val originalIndex = notes.indexOf(note)
+            actualChildren.forEach { element ->
+                val originalIndex = elements.indexOf(element)
                 add(
-                    DisplayItem.NoteItem(
-                        note = note,
+                    DisplayItem.ElementItem(
+                        element = element,
                         originalIndex = originalIndex,
                         isGrouped = true,
                         groupId = groupId
@@ -102,19 +102,19 @@ fun CanvasElementsPanel(
                 )
             }
         }
-        val ungrouped = groupedNotes[null] ?: emptyList()
-        ungrouped.forEach { note ->
-            val originalIndex = notes.indexOf(note)
-            add(DisplayItem.NoteItem(note, originalIndex, isGrouped = false))
+        val ungrouped = groupedElements[null] ?: emptyList()
+        ungrouped.forEach { element ->
+            val originalIndex = elements.indexOf(element)
+            add(DisplayItem.ElementItem(element, originalIndex, isGrouped = false))
         }
     }
-    val displayItems = remember(baseItems, expandedGroups, selectedNoteIds) {
+    val displayItems = remember(baseItems, expandedGroups, selectedElementIds) {
         val mutableList = baseItems.toMutableList()
         var insertionIndex = -1
         for (i in mutableList.indices.reversed()) {
             val item = mutableList[i]
-            if (item is DisplayItem.NoteItem &&
-                selectedNoteIds.contains(item.note.id) &&
+            if (item is DisplayItem.ElementItem &&
+                selectedElementIds.contains(item.element.id) &&
                 (item.groupId == null || expandedGroups[item.groupId] == true)
             ) {
                 insertionIndex = i + 1
@@ -129,7 +129,7 @@ fun CanvasElementsPanel(
     val groupBounds = remember(displayItems) {
         val bounds = mutableMapOf<String?, Pair<Int, Int>>()
         displayItems.forEachIndexed { index, item ->
-            if (item is DisplayItem.NoteItem) {
+            if (item is DisplayItem.ElementItem) {
                 val current = bounds[item.groupId]
                 if (current == null) {
                     bounds[item.groupId] = index to index
@@ -181,18 +181,18 @@ fun CanvasElementsPanel(
                             key = { index ->
                                 when (val item = displayItems[index]) {
                                     is DisplayItem.GroupHeader -> "header-${item.groupId}"
-                                    is DisplayItem.NoteItem -> item.note.id
+                                    is DisplayItem.ElementItem -> item.element.id
                                     is DisplayItem.ActionRow -> "action-row"
                                 }
                             }
                         ) { displayIndex ->
                             when (val displayItem = displayItems[displayIndex]) {
                                 is DisplayItem.GroupHeader -> {
-                                    val isGroupSelected = selectedNoteId == displayItem.groupId ||
-                                            selectedNoteIds.contains(displayItem.groupId) ||
-                                            notes.any {
+                                    val isGroupSelected = selectedElementId == displayItem.groupId ||
+                                            selectedElementIds.contains(displayItem.groupId) ||
+                                            elements.any {
                                                 it.groupId == displayItem.groupId &&
-                                                        (it.id == selectedNoteId || selectedNoteIds.contains(it.id))
+                                                        (it.id == selectedElementId || selectedElementIds.contains(it.id))
                                             }
 
                                     GroupHeaderRow(
@@ -208,8 +208,8 @@ fun CanvasElementsPanel(
                                     )
                                 }
 
-                                is DisplayItem.NoteItem -> {
-                                    val note = displayItem.note
+                                is DisplayItem.ElementItem -> {
+                                    val element = displayItem.element
                                     val originalIndex = displayItem.originalIndex
                                     val isGrouped = displayItem.isGrouped
                                     val groupId = displayItem.groupId
@@ -231,19 +231,19 @@ fun CanvasElementsPanel(
                                         val isDownEnabled = bounds != null && displayIndex < bounds.second
 
                                         CanvasElementItem(
-                                            notes = notes,
+                                            elements = elements,
                                             onReorder = onReorder,
-                                            note = note,
+                                            element = element,
                                             originalIndex = originalIndex,
-                                            isSelected = selectedNoteId == note.id,
+                                            isSelected = selectedElementId == element.id,
                                             isDragTarget = draggedDisplayIndex == displayIndex,
                                             isUpEnabled = isUpEnabled,
                                             isDownEnabled = isDownEnabled,
                                             dragOffset = if (draggedDisplayIndex == displayIndex) dragOffset else 0f,
-                                            selectedNoteIds = selectedNoteIds,
+                                            selectedElementIds = selectedElementIds,
                                             isGrouped = isGrouped,
-                                            onRowTap = { onSingleSelect(note) },
-                                            onToggleGroupSelection = { onToggleGroupSelection(note) },
+                                            onRowTap = { onSingleSelect(element) },
+                                            onToggleGroupSelection = { onToggleGroupSelection(element) },
                                             onDragStart = { offset ->
                                                 draggedDisplayIndex = displayIndex
                                                 dragOffset = offset.y
@@ -256,7 +256,7 @@ fun CanvasElementsPanel(
                                                 val fromDisplayIndex = draggedDisplayIndex
                                                 if (fromDisplayIndex != null) {
                                                     val draggedItem =
-                                                        displayItems[fromDisplayIndex] as? DisplayItem.NoteItem
+                                                        displayItems[fromDisplayIndex] as? DisplayItem.ElementItem
                                                     if (draggedItem != null) {
                                                         val itemBounds = groupBounds[draggedItem.groupId]
                                                         if (itemBounds != null) {
@@ -269,7 +269,7 @@ fun CanvasElementsPanel(
 
                                                             if (targetDisplayIdx != fromDisplayIndex) {
                                                                 val targetItem =
-                                                                    displayItems[targetDisplayIdx] as DisplayItem.NoteItem
+                                                                    displayItems[targetDisplayIdx] as DisplayItem.ElementItem
                                                                 onReorder(
                                                                     draggedItem.originalIndex,
                                                                     targetItem.originalIndex
@@ -285,12 +285,12 @@ fun CanvasElementsPanel(
                                                 draggedDisplayIndex = null
                                                 dragOffset = 0f
                                             },
-                                            onEdit = { onEditNote(note) },
-                                            onCustomPolygonEdit = { onCustomPolygonEdit(note) },
-                                            onVisibilityToggle = { onToggleVisibility(note.id) },
-                                            onLockToggle = { onToggleLock(note.id) },
-                                            onDuplicate = { onDuplicate(note) },
-                                            onDelete = { onDelete(note) },
+                                            onEdit = { onEditElement(element) },
+                                            onCustomPolygonEdit = { onCustomPolygonEdit(element) },
+                                            onVisibilityToggle = { onToggleVisibility(element.id) },
+                                            onLockToggle = { onToggleLock(element.id) },
+                                            onDuplicate = { onDuplicate(element) },
+                                            onDelete = { onDelete(element) },
                                             themeColors = themeColors,
                                             modifier = itemModifier
                                         )
@@ -298,29 +298,29 @@ fun CanvasElementsPanel(
                                 }
 
                                 is DisplayItem.ActionRow -> {
-                                    val hasGroup = notes.any { it.groupId != null && it.id in selectedNoteIds }
+                                    val hasGroup = elements.any { it.groupId != null && it.id in selectedElementIds }
                                     GroupActionRow(
-                                        selectedCount = selectedNoteIds.size,
+                                        selectedCount = selectedElementIds.size,
                                         hasGroup = hasGroup,
-                                        onGroup = { onGroup("Group ${selectedNoteIds.size}", selectedNoteIds.toList()) },
-                                        onUngroup = { onUngroup(selectedNoteIds) },
+                                        onGroup = { onGroup("Group ${selectedElementIds.size}", selectedElementIds.toList()) },
+                                        onUngroup = { onUngroup(selectedElementIds) },
                                         onRename = {
-                                            val selectedNotes = notes.filter { it.id in selectedNoteIds }
-                                            val uniqueGroupIds = selectedNotes.mapNotNull { it.groupId }.distinct()
+                                            val selectedElements = elements.filter { it.id in selectedElementIds }
+                                            val uniqueGroupIds = selectedElements.mapNotNull { it.groupId }.distinct()
                                             if (hasGroup && uniqueGroupIds.isNotEmpty()) {
                                                 onRenameGroup?.invoke(
                                                     uniqueGroupIds.first(),
                                                     groupNames[uniqueGroupIds.first()] ?: "Group"
                                                 )
-                                            } else if (selectedNoteIds.size == 1) {
-                                                val note = selectedNotes.firstOrNull()
-                                                if (note != null) onRename(note)
+                                            } else if (selectedElementIds.size == 1) {
+                                                val element = selectedElements.firstOrNull()
+                                                if (element != null) onRename(element)
                                             }
                                         },
                                         onEditProperties = {
-                                            if (selectedNoteIds.size == 1) {
-                                                val note = notes.find { it.id == selectedNoteIds.first() }
-                                                if (note != null) onEditProperties(note)
+                                            if (selectedElementIds.size == 1) {
+                                                val element = elements.find { it.id == selectedElementIds.first() }
+                                                if (element != null) onEditProperties(element)
                                             }
                                         },
                                         onClearSelection = onClearSelection,

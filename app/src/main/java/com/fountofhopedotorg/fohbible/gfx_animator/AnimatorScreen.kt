@@ -50,7 +50,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.color_wheel.ColorWheelDialog
-import com.fountofhopedotorg.fohbible.data.CanvasNote
+import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.GradientConfig
 import com.fountofhopedotorg.fohbible.data.ThemeColors
@@ -90,7 +90,7 @@ fun AnimatorScreen() {
 
     var isPlayingAnimation by remember { mutableStateOf(false) }
     var animationCurrentTimeUs by remember { mutableLongStateOf(0L) }
-    var originalNoteStates by remember { mutableStateOf<Map<String, CanvasNote>>(emptyMap()) }
+    var originalElementStates by remember { mutableStateOf<Map<String, CanvasElement>>(emptyMap()) }
 
     var isRecording by remember { mutableStateOf(false) }
     val encoder = remember { mutableStateOf<ComposeVideoEncoder?>(null) }
@@ -112,7 +112,7 @@ fun AnimatorScreen() {
             if (isPlayingAnimation) {
                 isPlayingAnimation = false
             } else {
-                originalNoteStates = viewModel.animatorCanvasNotes
+                originalElementStates = viewModel.animatorCanvasElements
                     .filter { it.keyframes.isNotEmpty() }
                     .associateBy { it.id }
                     .mapValues { it.value.copy() }
@@ -127,81 +127,81 @@ fun AnimatorScreen() {
             if (isPlayingAnimation) {
                 isPlayingAnimation = false
             } else {
-                val selectedNote = viewModel.animatorCanvasNotes.firstOrNull { it.id == viewModel.animatorSelectedNoteId }
-                if (selectedNote != null) {
-                    viewModel.animatorKeyframeTargetNoteId = selectedNote.id
+                val selectedElement = viewModel.animatorCanvasElements.firstOrNull { it.id == viewModel.animatorSelectedElementId }
+                if (selectedElement != null) {
+                    viewModel.animatorKeyframeTargetElementId = selectedElement.id
                     viewModel.animatorShowKeyframeDialog = true
                 }
             }
         }
     }
 
-    val notesGrouped = remember(viewModel.animatorCanvasNotes) {
-        viewModel.animatorCanvasNotes.groupBy { it.groupId }
+    val elementsGrouped = remember(viewModel.animatorCanvasElements) {
+        viewModel.animatorCanvasElements.groupBy { it.groupId }
     }
-    val selectedGroups = remember(viewModel.animatorSelectedNoteIds, viewModel.animatorCanvasNotes) {
-        viewModel.animatorCanvasNotes
-            .filter { it.groupId != null && it.id in viewModel.animatorSelectedNoteIds }
+    val selectedGroups = remember(viewModel.animatorSelectedElementIds, viewModel.animatorCanvasElements) {
+        viewModel.animatorCanvasElements
+            .filter { it.groupId != null && it.id in viewModel.animatorSelectedElementIds }
             .map { it.groupId!! }
             .toSet()
     }
     val hasAnyKeyframes by remember {
         derivedStateOf {
-            viewModel.animatorCanvasNotes.any { it.keyframes.isNotEmpty() }
+            viewModel.animatorCanvasElements.any { it.keyframes.isNotEmpty() }
         }
     }
     val enablePlayStop = hasAnyKeyframes || isPlayingAnimation
 
-    fun toggleGroupSelection(note: CanvasNote) {
-        val groupId = note.groupId
+    fun toggleGroupSelection(element: CanvasElement) {
+        val groupId = element.groupId
         if (groupId != null) {
-            val groupNotes = viewModel.animatorCanvasNotes.filter { it.groupId == groupId }
-            val allIds = groupNotes.map { it.id }.toSet()
-            val currentlySelected = viewModel.animatorSelectedNoteIds.containsAll(allIds)
+            val groupElements = viewModel.animatorCanvasElements.filter { it.groupId == groupId }
+            val allIds = groupElements.map { it.id }.toSet()
+            val currentlySelected = viewModel.animatorSelectedElementIds.containsAll(allIds)
 
-            viewModel.animatorSelectedNoteIds = if (currentlySelected) {
-                viewModel.animatorSelectedNoteIds - allIds
+            viewModel.animatorSelectedElementIds = if (currentlySelected) {
+                viewModel.animatorSelectedElementIds - allIds
             } else {
-                viewModel.animatorSelectedNoteIds + allIds
+                viewModel.animatorSelectedElementIds + allIds
             }
 
-            viewModel.animatorSelectedNoteId = if (currentlySelected) {
+            viewModel.animatorSelectedElementId = if (currentlySelected) {
                 null
             } else {
-                groupNotes.firstOrNull()?.id
+                groupElements.firstOrNull()?.id
             }
         } else {
-            val currentlySelected = viewModel.animatorSelectedNoteIds.contains(note.id)
-            viewModel.animatorSelectedNoteIds = if (currentlySelected) {
-                viewModel.animatorSelectedNoteIds - note.id
+            val currentlySelected = viewModel.animatorSelectedElementIds.contains(element.id)
+            viewModel.animatorSelectedElementIds = if (currentlySelected) {
+                viewModel.animatorSelectedElementIds - element.id
             } else {
-                viewModel.animatorSelectedNoteIds + note.id
+                viewModel.animatorSelectedElementIds + element.id
             }
-            viewModel.animatorSelectedNoteId = if (currentlySelected) null else note.id
+            viewModel.animatorSelectedElementId = if (currentlySelected) null else element.id
         }
     }
 
-    fun onCanvasNoteTap(note: CanvasNote) {
-        val groupId = note.groupId
+    fun onCanvasElementTap(element: CanvasElement) {
+        val groupId = element.groupId
         if (groupId != null) {
-            val groupNotes = viewModel.animatorCanvasNotes.filter { it.groupId == groupId }
-            viewModel.animatorSelectedNoteIds = groupNotes.map { it.id }.toSet()
-            viewModel.animatorSelectedNoteId = note.id
+            val groupElements = viewModel.animatorCanvasElements.filter { it.groupId == groupId }
+            viewModel.animatorSelectedElementIds = groupElements.map { it.id }.toSet()
+            viewModel.animatorSelectedElementId = element.id
         } else {
-            viewModel.animatorSelectedNoteIds = setOf(note.id)
-            viewModel.animatorSelectedNoteId = note.id
+            viewModel.animatorSelectedElementIds = setOf(element.id)
+            viewModel.animatorSelectedElementId = element.id
         }
     }
 
-    fun onSingleSelect(note: CanvasNote) {
-        viewModel.animatorSelectedNoteId = note.id
-        viewModel.animatorSelectedNoteIds = emptySet()
+    fun onSingleSelect(element: CanvasElement) {
+        viewModel.animatorSelectedElementId = element.id
+        viewModel.animatorSelectedElementIds = emptySet()
     }
 
     fun onGroupHeaderTap(groupId: String) {
-        val members = viewModel.animatorCanvasNotes.filter { it.groupId == groupId }
-        viewModel.animatorSelectedNoteIds = members.map { it.id }.toSet()
-        viewModel.animatorSelectedNoteId = members.firstOrNull()?.id
+        val members = viewModel.animatorCanvasElements.filter { it.groupId == groupId }
+        viewModel.animatorSelectedElementIds = members.map { it.id }.toSet()
+        viewModel.animatorSelectedElementId = members.firstOrNull()?.id
     }
 
     val onProportionalToggle: () -> Unit = remember {
@@ -213,7 +213,7 @@ fun AnimatorScreen() {
     ) { uri: Uri? ->
         if (uri != null) {
             viewModel.addToAnimatorCanvas(
-                CanvasNote(
+                CanvasElement(
                     content = "Image: $uri",
                     backgroundColor = Color.Transparent
                 )
@@ -248,7 +248,7 @@ fun AnimatorScreen() {
 
     val onSaveVideo: () -> Unit = remember {
         {
-            if (viewModel.animatorCanvasNotes.isEmpty()) {
+            if (viewModel.animatorCanvasElements.isEmpty()) {
                 Toast.makeText(context, "Canvas is empty", Toast.LENGTH_SHORT).show()
                 return@remember
             }
@@ -258,13 +258,13 @@ fun AnimatorScreen() {
 
     LaunchedEffect(isPlayingAnimation) {
         if (!isPlayingAnimation) {
-            if (originalNoteStates.isNotEmpty()) {
-                val restored = viewModel.animatorCanvasNotes.map { note ->
-                    originalNoteStates[note.id] ?: note
+            if (originalElementStates.isNotEmpty()) {
+                val restored = viewModel.animatorCanvasElements.map { element ->
+                    originalElementStates[element.id] ?: element
                 }
-                viewModel.animatorCanvasNotes.clear()
-                viewModel.animatorCanvasNotes.addAll(restored)
-                originalNoteStates = emptyMap()
+                viewModel.animatorCanvasElements.clear()
+                viewModel.animatorCanvasElements.addAll(restored)
+                originalElementStates = emptyMap()
             }
             encoder.value?.let {
                 it.releaseAndDiscard()
@@ -274,9 +274,9 @@ fun AnimatorScreen() {
             return@LaunchedEffect
         }
 
-        val keyframedNotes = viewModel.animatorCanvasNotes.filter { it.keyframes.isNotEmpty() }
-        val maxTimestamp = if (keyframedNotes.isNotEmpty()) {
-            keyframedNotes.maxOf { note -> note.keyframes.maxOfOrNull { it.timestampMs } ?: 0L }
+        val keyframedElements = viewModel.animatorCanvasElements.filter { it.keyframes.isNotEmpty() }
+        val maxTimestamp = if (keyframedElements.isNotEmpty()) {
+            keyframedElements.maxOf { element -> element.keyframes.maxOfOrNull { it.timestampMs } ?: 0L }
         } else {
             if (isRecording) 2000L else {
                 isPlayingAnimation = false
@@ -299,7 +299,7 @@ fun AnimatorScreen() {
                 frameRate = selectedFrameRate,
                 bitRate = selectedBitRateMbps * 1_000_000
             )
-            originalNoteStates = viewModel.animatorCanvasNotes.associateBy { it.id }
+            originalElementStates = viewModel.animatorCanvasElements.associateBy { it.id }
             animationCurrentTimeUs = 0L
             lastCaptureTimeUs = 0L
             hasCapturedFirstFrame = false
@@ -313,29 +313,29 @@ fun AnimatorScreen() {
         while (isActive && isPlayingAnimation) {
             val currentMs = animationCurrentTimeUs / 1000L
 
-            val snapshot = viewModel.animatorCanvasNotes.toList()
+            val snapshot = viewModel.animatorCanvasElements.toList()
             for (i in snapshot.indices) {
-                val note = snapshot[i]
-                if (note.keyframes.isEmpty()) continue
+                val element = snapshot[i]
+                if (element.keyframes.isEmpty()) continue
 
-                val sortedKeyframes = note.keyframes.sortedBy { it.timestampMs }
+                val sortedKeyframes = element.keyframes.sortedBy { it.timestampMs }
                 val (kfPrev, kfNext) = findSurroundingKeyframes(sortedKeyframes, currentMs)
                 val progress = if (kfNext != null && kfPrev != null && kfNext.timestampMs != kfPrev.timestampMs) {
                     ((currentMs - kfPrev.timestampMs).toFloat() /
                             (kfNext.timestampMs - kfPrev.timestampMs)).coerceIn(0f, 1f)
                 } else 0f
 
-                val newX = lerp(kfPrev?.x ?: note.offset.x, kfNext?.x ?: note.offset.x, progress)
-                val newY = lerp(kfPrev?.y ?: note.offset.y, kfNext?.y ?: note.offset.y, progress)
-                val newScaleX = lerp(kfPrev?.scaleX ?: note.scaleX, kfNext?.scaleX ?: note.scaleX, progress)
-                val newScaleY = lerp(kfPrev?.scaleY ?: note.scaleY, kfNext?.scaleY ?: note.scaleY, progress)
-                val newRotation = lerp(kfPrev?.rotation ?: note.rotation, kfNext?.rotation ?: note.rotation, progress)
+                val newX = lerp(kfPrev?.x ?: element.offset.x, kfNext?.x ?: element.offset.x, progress)
+                val newY = lerp(kfPrev?.y ?: element.offset.y, kfNext?.y ?: element.offset.y, progress)
+                val newScaleX = lerp(kfPrev?.scaleX ?: element.scaleX, kfNext?.scaleX ?: element.scaleX, progress)
+                val newScaleY = lerp(kfPrev?.scaleY ?: element.scaleY, kfNext?.scaleY ?: element.scaleY, progress)
+                val newRotation = lerp(kfPrev?.rotation ?: element.rotation, kfNext?.rotation ?: element.rotation, progress)
 
                 val newColor = if (kfPrev?.color != null && kfNext?.color != null) {
                     lerpColor(kfPrev.color, kfNext.color, progress)
                 } else kfNext?.color ?: kfPrev?.color
 
-                viewModel.animatorCanvasNotes[i] = note.copy(
+                viewModel.animatorCanvasElements[i] = element.copy(
                     offset = Offset(newX, newY),
                     scaleX = newScaleX,
                     scaleY = newScaleY,
@@ -343,11 +343,11 @@ fun AnimatorScreen() {
                 )
 
                 if (newColor != null) {
-                    val isText = !note.content.startsWith("Shape:") && !note.content.startsWith("Image:")
+                    val isText = !element.content.startsWith("Shape:") && !element.content.startsWith("Image:")
                     if (isText) {
-                        viewModel.updateAnimatorNoteTextColor(note.id, newColor)
+                        viewModel.updateAnimatorElementTextColor(element.id, newColor)
                     } else {
-                        viewModel.updateAnimatorNoteColor(note.id, newColor)
+                        viewModel.updateAnimatorElementColor(element.id, newColor)
                     }
                 }
 
@@ -355,9 +355,9 @@ fun AnimatorScreen() {
                     lerpGradient(kfPrev.gradientConfig, kfNext.gradientConfig, progress)
                 } else kfNext?.gradientConfig ?: kfPrev?.gradientConfig
                 if (newGradient != null) {
-                    viewModel.animatorGradientPairs[note.id] = newGradient
+                    viewModel.animatorGradientPairs[element.id] = newGradient
                 } else {
-                    viewModel.animatorGradientPairs.remove(note.id)
+                    viewModel.animatorGradientPairs.remove(element.id)
                 }
             }
 
@@ -402,10 +402,10 @@ fun AnimatorScreen() {
                 encoder.value = null
             }
             isRecording = false
-            if (originalNoteStates.isNotEmpty()) {
-                viewModel.animatorCanvasNotes.clear()
-                viewModel.animatorCanvasNotes.addAll(originalNoteStates.values.toList())
-                originalNoteStates = emptyMap()
+            if (originalElementStates.isNotEmpty()) {
+                viewModel.animatorCanvasElements.clear()
+                viewModel.animatorCanvasElements.addAll(originalElementStates.values.toList())
+                originalElementStates = emptyMap()
             }
         }
     }
@@ -444,16 +444,16 @@ fun AnimatorScreen() {
                         ) {
                             AnimatorCanvasArea(
                                 modifier = Modifier.fillMaxSize(),
-                                notes = viewModel.animatorCanvasNotes,
-                                selectedNoteIds = viewModel.animatorSelectedNoteIds,
-                                selectedNoteId = viewModel.animatorSelectedNoteId,
+                                elements = viewModel.animatorCanvasElements,
+                                selectedElementIds = viewModel.animatorSelectedElementIds,
+                                selectedElementId = viewModel.animatorSelectedElementId,
                                 selectedGroups = selectedGroups,
                                 dragGroupDelta = dragGroupDelta,
                                 onGroupDragDeltaChange = { dragGroupDelta = it },
-                                onCanvasNoteTap = { onCanvasNoteTap(it) },
-                                onNoteUpdatePosition = { note, offset, w, h, rotation ->
-                                    viewModel.updateAnimatorNoteProperties(
-                                        id = note.id,
+                                onCanvasElementTap = { onCanvasElementTap(it) },
+                                onElementUpdatePosition = { element, offset, w, h, rotation ->
+                                    viewModel.updateAnimatorElementProperties(
+                                        id = element.id,
                                         x = offset.x,
                                         y = offset.y,
                                         width = w,
@@ -462,22 +462,22 @@ fun AnimatorScreen() {
                                     )
                                 },
                                 onColorPickerRequested = {
-                                    viewModel.animatorNoteToColorEditId = it
+                                    viewModel.animatorElementToColorEditId = it
                                     viewModel.animatorShowColorPicker = true
                                 },
                                 onDeleteRequested = {
-                                    val idx = viewModel.animatorCanvasNotes.indexOfFirst { note -> note.id == it }
+                                    val idx = viewModel.animatorCanvasElements.indexOfFirst { element -> element.id == it }
                                     if (idx != -1) viewModel.removeFromAnimatorCanvas(idx)
                                 },
                                 onClearSelection = {
-                                    viewModel.animatorSelectedNoteIds = emptySet()
-                                    viewModel.animatorSelectedNoteId = null
+                                    viewModel.animatorSelectedElementIds = emptySet()
+                                    viewModel.animatorSelectedElementId = null
                                 },
                                 themeColors = themeColors,
                                 isDark = isDark,
-                                notesGrouped = notesGrouped,
+                                elementsGrouped = elementsGrouped,
                                 graphicsLayer = graphicsLayer,
-                                onNoteScaleChange = { id, sx, sy -> viewModel.updateAnimatorNoteScale(id, sx, sy) },
+                                onElementScaleChange = { id, sx, sy -> viewModel.updateAnimatorElementScale(id, sx, sy) },
                                 proportionalEditing = viewModel.proportionalEditing,
                                 onProportionalToggle = onProportionalToggle
                             )
@@ -511,37 +511,37 @@ fun AnimatorScreen() {
                         .padding(top = 20.dp)
                 ) {
                     AnimatorCanvasElementsPanel(
-                        notes = viewModel.animatorCanvasNotes,
+                        elements = viewModel.animatorCanvasElements,
                         onReorder = { from, to ->
-                            viewModel.reorderAnimatorCanvasNotes(from, to)
+                            viewModel.reorderAnimatorCanvasElements(from, to)
                         },
-                        selectedNoteIds = viewModel.animatorSelectedNoteIds,
-                        selectedNoteId = viewModel.animatorSelectedNoteId,
+                        selectedElementIds = viewModel.animatorSelectedElementIds,
+                        selectedElementId = viewModel.animatorSelectedElementId,
                         showTree = showCanvasElementsTree,
                         onToggleTree = { showCanvasElementsTree = !showCanvasElementsTree },
                         onSingleSelect = { onSingleSelect(it) },
                         onToggleGroupSelection = { toggleGroupSelection(it) },
                         onGroupHeaderTap = { onGroupHeaderTap(it) },
-                        onEditNote = { note ->
-                            viewModel.animatorDialogType = AnimatorDialogType.Edit(note.id, note.content)
+                        onEditElement = { element ->
+                            viewModel.animatorDialogType = AnimatorDialogType.Edit(element.id, element.content)
                         },
-                        onCustomPolygonEdit = { note ->
-                            val content = note.content.trim()
+                        onCustomPolygonEdit = { element ->
+                            val content = element.content.trim()
                             when {
                                 content.startsWith("Shape:CustomPolygon:") -> {
-                                    viewModel.animatorPolygonNoteToEditId = note.id
+                                    viewModel.animatorPolygonElementToEditId = element.id
                                     viewModel.animatorInitialPolygonString = content.removePrefix("Shape:CustomPolygon:")
                                     viewModel.animatorInitialIsLineMode = false
                                     viewModel.animatorShowCustomPolygonDialog = true
                                 }
                                 content.startsWith("Shape:CustomLine:") -> {
-                                    viewModel.animatorPolygonNoteToEditId = note.id
+                                    viewModel.animatorPolygonElementToEditId = element.id
                                     viewModel.animatorInitialPolygonString = content.removePrefix("Shape:CustomLine:")
                                     viewModel.animatorInitialIsLineMode = true
                                     viewModel.animatorShowCustomPolygonDialog = true
                                 }
                                 content.startsWith("Shape: Line") || content == "Shape: Line" -> {
-                                    viewModel.animatorPolygonNoteToEditId = note.id
+                                    viewModel.animatorPolygonElementToEditId = element.id
                                     viewModel.animatorInitialPolygonString = getSerializedPointsForShape("Line")
                                     viewModel.animatorInitialIsLineMode = true
                                     viewModel.animatorShowCustomPolygonDialog = true
@@ -550,67 +550,67 @@ fun AnimatorScreen() {
                                     val shapeType = content.removePrefix("Shape:").trim()
                                     val prefilledPoints = getSerializedPointsForShape(shapeType)
                                     if (prefilledPoints.isNotEmpty()) {
-                                        viewModel.animatorPolygonNoteToEditId = note.id
+                                        viewModel.animatorPolygonElementToEditId = element.id
                                         viewModel.animatorInitialPolygonString = prefilledPoints
                                         viewModel.animatorInitialIsLineMode = false
                                         viewModel.animatorShowCustomPolygonDialog = true
                                     } else {
-                                        viewModel.animatorDialogType = AnimatorDialogType.Edit(note.id, content)
+                                        viewModel.animatorDialogType = AnimatorDialogType.Edit(element.id, content)
                                     }
                                 }
                             }
                         },
-                        onRename = { note ->
-                            viewModel.animatorNoteToRenameId = note.id
+                        onRename = { element ->
+                            viewModel.animatorElementToRenameId = element.id
                             viewModel.animatorRenameText = getElementDisplayName(
-                                note,
-                                viewModel.animatorCanvasNotes.indexOf(note),
-                                viewModel.animatorCanvasNotes
+                                element,
+                                viewModel.animatorCanvasElements.indexOf(element),
+                                viewModel.animatorCanvasElements
                             )
                         },
-                        onEditProperties = { note ->
-                            viewModel.animatorEditPropertiesNoteId = note.id
-                            viewModel.animatorEditX = note.offset.x.toString()
-                            viewModel.animatorEditY = note.offset.y.toString()
-                            viewModel.animatorEditScaleX = note.scaleX.toString()
-                            viewModel.animatorEditScaleY = note.scaleY.toString()
-                            viewModel.animatorEditRotation = note.rotation.toString()
-                            viewModel.animatorEditColorForDialog = if (!note.content.startsWith("Shape:") && !note.content.startsWith("Image:"))
-                                note.textColor ?: Color.Black
+                        onEditProperties = { element ->
+                            viewModel.animatorEditPropertiesElementId = element.id
+                            viewModel.animatorEditX = element.offset.x.toString()
+                            viewModel.animatorEditY = element.offset.y.toString()
+                            viewModel.animatorEditScaleX = element.scaleX.toString()
+                            viewModel.animatorEditScaleY = element.scaleY.toString()
+                            viewModel.animatorEditRotation = element.rotation.toString()
+                            viewModel.animatorEditColorForDialog = if (!element.content.startsWith("Shape:") && !element.content.startsWith("Image:"))
+                                element.textColor ?: Color.Black
                             else
-                                note.backgroundColor
-                            viewModel.animatorEditShadowColorForDialog = note.shadowColor
-                            viewModel.animatorEditShadowOffsetX = note.shadowOffsetX
-                            viewModel.animatorEditShadowOffsetY = note.shadowOffsetY
-                            viewModel.animatorEditBorderThickness = note.borderThickness
-                            viewModel.animatorEditBorderColorForDialog = note.borderColor
+                                element.backgroundColor
+                            viewModel.animatorEditShadowColorForDialog = element.shadowColor
+                            viewModel.animatorEditShadowOffsetX = element.shadowOffsetX
+                            viewModel.animatorEditShadowOffsetY = element.shadowOffsetY
+                            viewModel.animatorEditBorderThickness = element.borderThickness
+                            viewModel.animatorEditBorderColorForDialog = element.borderColor
                             viewModel.animatorShowEditPropertiesDialog = true
                         },
-                        onAnimateKeyframes = { note ->
-                            viewModel.animatorKeyframeTargetNoteId = note.id
+                        onAnimateKeyframes = { element ->
+                            viewModel.animatorKeyframeTargetElementId = element.id
                             viewModel.animatorShowKeyframeDialog = true
                         },
                         onToggleVisibility = { viewModel.toggleAnimatorVisibility(it) },
                         onToggleLock = { viewModel.toggleAnimatorLock(it) },
-                        onDuplicate = { viewModel.addToAnimatorCanvas(CanvasNote(content = it.content)) },
+                        onDuplicate = { viewModel.addToAnimatorCanvas(CanvasElement(content = it.content)) },
                         onDelete = {
-                            val idx = viewModel.animatorCanvasNotes.indexOf(it)
+                            val idx = viewModel.animatorCanvasElements.indexOf(it)
                             if (idx != -1) viewModel.removeFromAnimatorCanvas(idx)
-                            if (viewModel.animatorSelectedNoteId == it.id) viewModel.animatorSelectedNoteId = null
+                            if (viewModel.animatorSelectedElementId == it.id) viewModel.animatorSelectedElementId = null
                         },
                         onUngroup = { ids ->
-                            viewModel.ungroupAnimatorNotes(ids)
-                            viewModel.animatorSelectedNoteIds = emptySet()
+                            viewModel.ungroupAnimatorElements(ids)
+                            viewModel.animatorSelectedElementIds = emptySet()
                         },
                         onGroup = { name, ids ->
                             if (name.isNotBlank() && ids.isNotEmpty()) {
                                 viewModel.createAnimatorGroup(ids)
-                                viewModel.animatorSelectedNoteIds = emptySet()
+                                viewModel.animatorSelectedElementIds = emptySet()
                                 viewModel.animatorShowGroupDialog = false
                                 viewModel.animatorGroupName = ""
                             }
                         },
-                        onClearSelection = { viewModel.animatorSelectedNoteIds = emptySet() },
+                        onClearSelection = { viewModel.animatorSelectedElementIds = emptySet() },
                         themeColors = themeColors,
                         density = LocalDensity.current,
                         groupNames = viewModel.animatorGroupNames,
@@ -627,11 +627,11 @@ fun AnimatorScreen() {
                 onAddShape = { shape ->
                     val color = getRandomColor()
                     viewModel.addToAnimatorCanvas(
-                        CanvasNote(content = "Shape: $shape", backgroundColor = color, width = 100f, height = 100f)
+                        CanvasElement(content = "Shape: $shape", backgroundColor = color, width = 100f, height = 100f)
                     )
                 },
                 onCustomPolygon = {
-                    viewModel.animatorPolygonNoteToEditId = null
+                    viewModel.animatorPolygonElementToEditId = null
                     viewModel.animatorInitialPolygonString = ""
                     viewModel.animatorInitialIsLineMode = false
                     viewModel.animatorShowCustomPolygonDialog = true
@@ -678,11 +678,11 @@ fun AnimatorScreen() {
                     onAddShape = { shape ->
                         val color = getRandomColor()
                         viewModel.addToAnimatorCanvas(
-                            CanvasNote(content = "Shape: $shape", backgroundColor = color, width = 100f, height = 100f)
+                            CanvasElement(content = "Shape: $shape", backgroundColor = color, width = 100f, height = 100f)
                         )
                     },
                     onCustomPolygon = {
-                        viewModel.animatorPolygonNoteToEditId = null
+                        viewModel.animatorPolygonElementToEditId = null
                         viewModel.animatorInitialPolygonString = ""
                         viewModel.animatorInitialIsLineMode = false
                         viewModel.animatorShowCustomPolygonDialog = true
@@ -749,16 +749,16 @@ fun AnimatorScreen() {
                     ) {
                         AnimatorCanvasArea(
                             modifier = Modifier.fillMaxSize(),
-                            notes = viewModel.animatorCanvasNotes,
-                            selectedNoteIds = viewModel.animatorSelectedNoteIds,
-                            selectedNoteId = viewModel.animatorSelectedNoteId,
+                            elements = viewModel.animatorCanvasElements,
+                            selectedElementIds = viewModel.animatorSelectedElementIds,
+                            selectedElementId = viewModel.animatorSelectedElementId,
                             selectedGroups = selectedGroups,
                             dragGroupDelta = dragGroupDelta,
                             onGroupDragDeltaChange = { dragGroupDelta = it },
-                            onCanvasNoteTap = { onCanvasNoteTap(it) },
-                            onNoteUpdatePosition = { note, offset, w, h, rotation ->
-                                viewModel.updateAnimatorNoteProperties(
-                                    id = note.id,
+                            onCanvasElementTap = { onCanvasElementTap(it) },
+                            onElementUpdatePosition = { element, offset, w, h, rotation ->
+                                viewModel.updateAnimatorElementProperties(
+                                    id = element.id,
                                     x = offset.x,
                                     y = offset.y,
                                     width = w,
@@ -766,22 +766,22 @@ fun AnimatorScreen() {
                                     rotation = rotation
                                 )
                             },
-                            onNoteScaleChange = { id, sx, sy -> viewModel.updateAnimatorNoteScale(id, sx, sy) },
+                            onElementScaleChange = { id, sx, sy -> viewModel.updateAnimatorElementScale(id, sx, sy) },
                             onColorPickerRequested = {
-                                viewModel.animatorNoteToColorEditId = it
+                                viewModel.animatorElementToColorEditId = it
                                 viewModel.animatorShowColorPicker = true
                             },
                             onDeleteRequested = {
-                                val idx = viewModel.animatorCanvasNotes.indexOfFirst { note -> note.id == it }
+                                val idx = viewModel.animatorCanvasElements.indexOfFirst { element -> element.id == it }
                                 if (idx != -1) viewModel.removeFromAnimatorCanvas(idx)
                             },
                             onClearSelection = {
-                                viewModel.animatorSelectedNoteIds = emptySet()
-                                viewModel.animatorSelectedNoteId = null
+                                viewModel.animatorSelectedElementIds = emptySet()
+                                viewModel.animatorSelectedElementId = null
                             },
                             themeColors = themeColors,
                             isDark = isDark,
-                            notesGrouped = notesGrouped,
+                            elementsGrouped = elementsGrouped,
                             graphicsLayer = graphicsLayer,
                             proportionalEditing = viewModel.proportionalEditing,
                             onProportionalToggle = onProportionalToggle
@@ -815,37 +815,37 @@ fun AnimatorScreen() {
                         .verticalScroll(mainScrollState)
                 ) {
                     AnimatorCanvasElementsPanel(
-                        notes = viewModel.animatorCanvasNotes,
+                        elements = viewModel.animatorCanvasElements,
                         onReorder = { from, to ->
-                            viewModel.reorderAnimatorCanvasNotes(from, to)
+                            viewModel.reorderAnimatorCanvasElements(from, to)
                         },
-                        selectedNoteIds = viewModel.animatorSelectedNoteIds,
-                        selectedNoteId = viewModel.animatorSelectedNoteId,
+                        selectedElementIds = viewModel.animatorSelectedElementIds,
+                        selectedElementId = viewModel.animatorSelectedElementId,
                         showTree = showCanvasElementsTree,
                         onToggleTree = { showCanvasElementsTree = !showCanvasElementsTree },
                         onSingleSelect = { onSingleSelect(it) },
                         onToggleGroupSelection = { toggleGroupSelection(it) },
                         onGroupHeaderTap = { onGroupHeaderTap(it) },
-                        onEditNote = { note ->
-                            viewModel.animatorDialogType = AnimatorDialogType.Edit(note.id, note.content)
+                        onEditElement = { element ->
+                            viewModel.animatorDialogType = AnimatorDialogType.Edit(element.id, element.content)
                         },
-                        onCustomPolygonEdit = { note ->
-                            val content = note.content.trim()
+                        onCustomPolygonEdit = { element ->
+                            val content = element.content.trim()
                             when {
                                 content.startsWith("Shape:CustomPolygon:") -> {
-                                    viewModel.animatorPolygonNoteToEditId = note.id
+                                    viewModel.animatorPolygonElementToEditId = element.id
                                     viewModel.animatorInitialPolygonString = content.removePrefix("Shape:CustomPolygon:")
                                     viewModel.animatorInitialIsLineMode = false
                                     viewModel.animatorShowCustomPolygonDialog = true
                                 }
                                 content.startsWith("Shape:CustomLine:") -> {
-                                    viewModel.animatorPolygonNoteToEditId = note.id
+                                    viewModel.animatorPolygonElementToEditId = element.id
                                     viewModel.animatorInitialPolygonString = content.removePrefix("Shape:CustomLine:")
                                     viewModel.animatorInitialIsLineMode = true
                                     viewModel.animatorShowCustomPolygonDialog = true
                                 }
                                 content.startsWith("Shape: Line") || content == "Shape: Line" -> {
-                                    viewModel.animatorPolygonNoteToEditId = note.id
+                                    viewModel.animatorPolygonElementToEditId = element.id
                                     viewModel.animatorInitialPolygonString = getSerializedPointsForShape("Line")
                                     viewModel.animatorInitialIsLineMode = true
                                     viewModel.animatorShowCustomPolygonDialog = true
@@ -854,67 +854,67 @@ fun AnimatorScreen() {
                                     val shapeType = content.removePrefix("Shape:").trim()
                                     val prefilledPoints = getSerializedPointsForShape(shapeType)
                                     if (prefilledPoints.isNotEmpty()) {
-                                        viewModel.animatorPolygonNoteToEditId = note.id
+                                        viewModel.animatorPolygonElementToEditId = element.id
                                         viewModel.animatorInitialPolygonString = prefilledPoints
                                         viewModel.animatorInitialIsLineMode = false
                                         viewModel.animatorShowCustomPolygonDialog = true
                                     } else {
-                                        viewModel.animatorDialogType = AnimatorDialogType.Edit(note.id, content)
+                                        viewModel.animatorDialogType = AnimatorDialogType.Edit(element.id, content)
                                     }
                                 }
                             }
                         },
-                        onRename = { note ->
-                            viewModel.animatorNoteToRenameId = note.id
+                        onRename = { element ->
+                            viewModel.animatorElementToRenameId = element.id
                             viewModel.animatorRenameText = getElementDisplayName(
-                                note,
-                                viewModel.animatorCanvasNotes.indexOf(note),
-                                viewModel.animatorCanvasNotes
+                                element,
+                                viewModel.animatorCanvasElements.indexOf(element),
+                                viewModel.animatorCanvasElements
                             )
                         },
-                        onEditProperties = { note ->
-                            viewModel.animatorEditPropertiesNoteId = note.id
-                            viewModel.animatorEditX = note.offset.x.toString()
-                            viewModel.animatorEditY = note.offset.y.toString()
-                            viewModel.animatorEditScaleX = note.scaleX.toString()
-                            viewModel.animatorEditScaleY = note.scaleY.toString()
-                            viewModel.animatorEditRotation = note.rotation.toString()
-                            viewModel.animatorEditColorForDialog = if (!note.content.startsWith("Shape:") && !note.content.startsWith("Image:"))
-                                note.textColor ?: Color.Black
+                        onEditProperties = { element ->
+                            viewModel.animatorEditPropertiesElementId = element.id
+                            viewModel.animatorEditX = element.offset.x.toString()
+                            viewModel.animatorEditY = element.offset.y.toString()
+                            viewModel.animatorEditScaleX = element.scaleX.toString()
+                            viewModel.animatorEditScaleY = element.scaleY.toString()
+                            viewModel.animatorEditRotation = element.rotation.toString()
+                            viewModel.animatorEditColorForDialog = if (!element.content.startsWith("Shape:") && !element.content.startsWith("Image:"))
+                                element.textColor ?: Color.Black
                             else
-                                note.backgroundColor
-                            viewModel.animatorEditShadowColorForDialog = note.shadowColor
-                            viewModel.animatorEditShadowOffsetX = note.shadowOffsetX
-                            viewModel.animatorEditShadowOffsetY = note.shadowOffsetY
-                            viewModel.animatorEditBorderThickness = note.borderThickness
-                            viewModel.animatorEditBorderColorForDialog = note.borderColor
+                                element.backgroundColor
+                            viewModel.animatorEditShadowColorForDialog = element.shadowColor
+                            viewModel.animatorEditShadowOffsetX = element.shadowOffsetX
+                            viewModel.animatorEditShadowOffsetY = element.shadowOffsetY
+                            viewModel.animatorEditBorderThickness = element.borderThickness
+                            viewModel.animatorEditBorderColorForDialog = element.borderColor
                             viewModel.animatorShowEditPropertiesDialog = true
                         },
-                        onAnimateKeyframes = { note ->
-                            viewModel.animatorKeyframeTargetNoteId = note.id
+                        onAnimateKeyframes = { element ->
+                            viewModel.animatorKeyframeTargetElementId = element.id
                             viewModel.animatorShowKeyframeDialog = true
                         },
                         onToggleVisibility = { viewModel.toggleAnimatorVisibility(it) },
                         onToggleLock = { viewModel.toggleAnimatorLock(it) },
-                        onDuplicate = { viewModel.addToAnimatorCanvas(CanvasNote(content = it.content)) },
+                        onDuplicate = { viewModel.addToAnimatorCanvas(CanvasElement(content = it.content)) },
                         onDelete = {
-                            val idx = viewModel.animatorCanvasNotes.indexOf(it)
+                            val idx = viewModel.animatorCanvasElements.indexOf(it)
                             if (idx != -1) viewModel.removeFromAnimatorCanvas(idx)
-                            if (viewModel.animatorSelectedNoteId == it.id) viewModel.animatorSelectedNoteId = null
+                            if (viewModel.animatorSelectedElementId == it.id) viewModel.animatorSelectedElementId = null
                         },
                         onUngroup = { ids ->
-                            viewModel.ungroupAnimatorNotes(ids)
-                            viewModel.animatorSelectedNoteIds = emptySet()
+                            viewModel.ungroupAnimatorElements(ids)
+                            viewModel.animatorSelectedElementIds = emptySet()
                         },
                         onGroup = { name, ids ->
                             if (name.isNotBlank() && ids.isNotEmpty()) {
                                 viewModel.createAnimatorGroup(ids)
-                                viewModel.animatorSelectedNoteIds = emptySet()
+                                viewModel.animatorSelectedElementIds = emptySet()
                                 viewModel.animatorShowGroupDialog = false
                                 viewModel.animatorGroupName = ""
                             }
                         },
-                        onClearSelection = { viewModel.animatorSelectedNoteIds = emptySet() },
+                        onClearSelection = { viewModel.animatorSelectedElementIds = emptySet() },
                         themeColors = themeColors,
                         density = LocalDensity.current,
                         groupNames = viewModel.animatorGroupNames,
@@ -932,14 +932,14 @@ fun AnimatorScreen() {
 
     when (val dialog = viewModel.animatorDialogType) {
         is AnimatorDialogType.Edit -> {
-            AnimatorEditNoteDialog(
-                noteId = dialog.noteId,
+            AnimatorEditElementDialog(
+                elementId = dialog.elementId,
                 initialContent = dialog.initialContent,
                 onDismiss = { viewModel.animatorDialogType = null },
                 onSave = { id, newContent ->
-                    val index = viewModel.animatorCanvasNotes.indexOfFirst { it.id == id }
+                    val index = viewModel.animatorCanvasElements.indexOfFirst { it.id == id }
                     if (index != -1) {
-                        val old = viewModel.animatorCanvasNotes[index]
+                        val old = viewModel.animatorCanvasElements[index]
                         val updated = old.copy(content = newContent)
                         viewModel.removeFromAnimatorCanvas(index)
                         viewModel.addToAnimatorCanvas(updated)
@@ -949,15 +949,15 @@ fun AnimatorScreen() {
             )
         }
         AnimatorDialogType.AddText -> {
-            AnimatorEditNoteDialog(
-                noteId = null,
+            AnimatorEditElementDialog(
+                elementId = null,
                 initialContent = "",
                 isNew = true,
                 onDismiss = { viewModel.animatorDialogType = null },
                 onSave = { _, newContent ->
                     if (newContent.isNotBlank()) {
                         viewModel.addToAnimatorCanvas(
-                            CanvasNote(
+                            CanvasElement(
                                 content = newContent,
                                 textColor = getRandomColor()
                             )
@@ -968,8 +968,8 @@ fun AnimatorScreen() {
             )
         }
         AnimatorDialogType.FetchVerse -> {
-            AnimatorEditNoteDialog(
-                noteId = null,
+            AnimatorEditElementDialog(
+                elementId = null,
                 initialContent = "",
                 isNew = true,
                 fetchMode = true,
@@ -981,7 +981,7 @@ fun AnimatorScreen() {
                 onSave = { _, newContent ->
                     if (newContent.isNotBlank()) {
                         viewModel.addToAnimatorCanvas(
-                            CanvasNote(
+                            CanvasElement(
                                 content = newContent,
                                 textColor = getRandomColor(),
                             )
@@ -995,24 +995,24 @@ fun AnimatorScreen() {
     }
 
     RenameDialog(
-        noteId = viewModel.animatorNoteToRenameId,
+        elementId = viewModel.animatorElementToRenameId,
         currentName = viewModel.animatorRenameText,
         onDismiss = {
-            viewModel.animatorNoteToRenameId = null
+            viewModel.animatorElementToRenameId = null
             viewModel.animatorRenameText = ""
         },
         onConfirm = { id, newName ->
             if (newName.isNotBlank()) {
-                viewModel.renameAnimatorCanvasNote(id, newName)
+                viewModel.renameAnimatorCanvasElement(id, newName)
             }
-            viewModel.animatorNoteToRenameId = null
+            viewModel.animatorElementToRenameId = null
             viewModel.animatorRenameText = ""
         }
     )
 
     if (viewModel.animatorGroupToRenameId != null) {
         RenameDialog(
-            noteId = viewModel.animatorGroupToRenameId,
+            elementId = viewModel.animatorGroupToRenameId,
             currentName = viewModel.animatorGroupRenameText,
             title = "Rename Group",
             onDismiss = {
@@ -1034,53 +1034,60 @@ fun AnimatorScreen() {
         initialName = viewModel.animatorGroupName,
         onDismiss = { viewModel.animatorShowGroupDialog = false },
         onConfirm = { name ->
-            if (name.isNotBlank() && viewModel.animatorSelectedNoteIds.isNotEmpty()) {
-                viewModel.createAnimatorGroup(viewModel.animatorSelectedNoteIds.toList())
-                viewModel.animatorSelectedNoteIds = emptySet()
+            if (name.isNotBlank() && viewModel.animatorSelectedElementIds.isNotEmpty()) {
+                viewModel.createAnimatorGroup(viewModel.animatorSelectedElementIds.toList())
+                viewModel.animatorSelectedElementIds = emptySet()
                 viewModel.animatorShowGroupDialog = false
                 viewModel.animatorGroupName = ""
             }
         }
     )
 
-    if (viewModel.animatorShowColorPicker && viewModel.animatorNoteToColorEditId != null) {
-        val targetNote = viewModel.animatorCanvasNotes.find { it.id == viewModel.animatorNoteToColorEditId }
+    // --- Corrected ColorWheelDialog block ---
+    if (viewModel.animatorShowColorPicker && viewModel.animatorElementToColorEditId != null) {
+        val targetElement = viewModel.animatorCanvasElements.find { it.id == viewModel.animatorElementToColorEditId }
+        val existingGradient = viewModel.animatorGradientPairs[viewModel.animatorElementToColorEditId]
 
-        val isShape = targetNote?.content?.startsWith("Shape:") == true
-        val existingGradient = viewModel.animatorGradientPairs[viewModel.animatorNoteToColorEditId]
+        // Determine if the element is a plain text element (not a shape or image)
+        val isText = targetElement?.content?.let {
+            !it.startsWith("Shape:") && !it.startsWith("Image:")
+        } ?: false
 
         ColorWheelDialog(
             onDismissRequest = {
                 viewModel.animatorShowColorPicker = false
-                viewModel.animatorNoteToColorEditId = null
+                viewModel.animatorElementToColorEditId = null
             },
             onColorSelected = { color ->
-                val noteId = viewModel.animatorNoteToColorEditId!!
-                viewModel.animatorGradientPairs.remove(noteId)
-                if (isShape) {
-                    viewModel.updateAnimatorNoteColor(noteId, color)
+                val elementId = viewModel.animatorElementToColorEditId!!
+                viewModel.animatorGradientPairs.remove(elementId)
+                if (isText) {
+                    viewModel.updateAnimatorElementTextColor(elementId, color)
                 } else {
-                    viewModel.updateAnimatorNoteTextColor(noteId, color)
+                    viewModel.updateAnimatorElementColor(elementId, color)
                 }
                 viewModel.animatorShowColorPicker = false
-                viewModel.animatorNoteToColorEditId = null
+                viewModel.animatorElementToColorEditId = null
             },
-            initialColor = targetNote?.backgroundColor ?: Color.White,
-            enableGradient = isShape,
-            onGradientSelected = if (isShape) {
-                { startColor, endColor, startOffset, endOffset ->
-                    val noteId = viewModel.animatorNoteToColorEditId!!
-                    viewModel.animatorGradientPairs[noteId] = GradientConfig(
-                        startColor = startColor,
-                        endColor = endColor,
-                        startOffset = startOffset,
-                        endOffset = endOffset
-                    )
-                    viewModel.updateAnimatorNoteColor(noteId, startColor)
-                    viewModel.animatorShowColorPicker = false
-                    viewModel.animatorNoteToColorEditId = null
+            initialColor = if (isText) targetElement.textColor ?: Color.Black
+            else targetElement?.backgroundColor ?: Color.White,
+            enableGradient = true,
+            onGradientSelected = { startColor, endColor, startOffset, endOffset ->
+                val elementId = viewModel.animatorElementToColorEditId!!
+                viewModel.animatorGradientPairs[elementId] = GradientConfig(
+                    startColor = startColor,
+                    endColor = endColor,
+                    startOffset = startOffset,
+                    endOffset = endOffset
+                )
+                if (isText) {
+                    viewModel.updateAnimatorElementTextColor(elementId, startColor)
+                } else {
+                    viewModel.updateAnimatorElementColor(elementId, startColor)
                 }
-            } else null,
+                viewModel.animatorShowColorPicker = false
+                viewModel.animatorElementToColorEditId = null
+            },
             initialGradientConfig = existingGradient
         )
     }
@@ -1091,7 +1098,7 @@ fun AnimatorScreen() {
             isLineMode = viewModel.animatorInitialIsLineMode,
             onDismiss = {
                 viewModel.animatorShowCustomPolygonDialog = false
-                viewModel.animatorPolygonNoteToEditId = null
+                viewModel.animatorPolygonElementToEditId = null
                 viewModel.animatorInitialPolygonString = ""
                 viewModel.animatorInitialIsLineMode = false
             },
@@ -1101,12 +1108,12 @@ fun AnimatorScreen() {
                 }
                 val shapeType = if (isLine) "CustomLine" else "CustomPolygon"
                 val contentString = "Shape:$shapeType:$serialized"
-                if (viewModel.animatorPolygonNoteToEditId != null) {
-                    viewModel.updateAnimatorNoteContent(viewModel.animatorPolygonNoteToEditId!!, contentString)
-                    viewModel.animatorSelectedNoteId = viewModel.animatorPolygonNoteToEditId
+                if (viewModel.animatorPolygonElementToEditId != null) {
+                    viewModel.updateAnimatorElementContent(viewModel.animatorPolygonElementToEditId!!, contentString)
+                    viewModel.animatorSelectedElementId = viewModel.animatorPolygonElementToEditId
                 } else {
                     viewModel.addToAnimatorCanvas(
-                        CanvasNote(
+                        CanvasElement(
                             content = contentString,
                             backgroundColor = getRandomColor(),
                             width = 100f,
@@ -1115,37 +1122,37 @@ fun AnimatorScreen() {
                     )
                 }
                 viewModel.animatorShowCustomPolygonDialog = false
-                viewModel.animatorPolygonNoteToEditId = null
+                viewModel.animatorPolygonElementToEditId = null
                 viewModel.animatorInitialPolygonString = ""
                 viewModel.animatorInitialIsLineMode = false
             }
         )
     }
 
-    if (viewModel.animatorShowKeyframeDialog && viewModel.animatorKeyframeTargetNoteId != null) {
-        val targetNote = viewModel.animatorCanvasNotes.find { it.id == viewModel.animatorKeyframeTargetNoteId }
-        val noteGradient = viewModel.animatorGradientPairs[viewModel.animatorKeyframeTargetNoteId]
+    if (viewModel.animatorShowKeyframeDialog && viewModel.animatorKeyframeTargetElementId != null) {
+        val targetElement = viewModel.animatorCanvasElements.find { it.id == viewModel.animatorKeyframeTargetElementId }
+        val elementGradient = viewModel.animatorGradientPairs[viewModel.animatorKeyframeTargetElementId]
         KeyframeAnimationDialog(
-            note = targetNote,
+            element = targetElement,
             onDismiss = {
                 viewModel.animatorShowKeyframeDialog = false
-                viewModel.animatorKeyframeTargetNoteId = null
+                viewModel.animatorKeyframeTargetElementId = null
             },
-            onSaveKeyframes = { noteId, updatedKeyframes ->
-                viewModel.updateAnimatorNoteKeyframes(noteId, updatedKeyframes)
+            onSaveKeyframes = { elementId, updatedKeyframes ->
+                viewModel.updateAnimatorElementKeyframes(elementId, updatedKeyframes)
                 viewModel.animatorShowKeyframeDialog = false
-                viewModel.animatorKeyframeTargetNoteId = null
+                viewModel.animatorKeyframeTargetElementId = null
             },
             timeMultiplier = 1f,
-            initialGradientConfig = noteGradient
+            initialGradientConfig = elementGradient
         )
     }
 
-    val existingGradient = viewModel.animatorGradientPairs[viewModel.animatorEditPropertiesNoteId]
+    val existingGradient = viewModel.animatorGradientPairs[viewModel.animatorEditPropertiesElementId]
 
     AnimatorEditPropertiesDialog (
         show = viewModel.animatorShowEditPropertiesDialog,
-        noteId = viewModel.animatorEditPropertiesNoteId,
+        elementId = viewModel.animatorEditPropertiesElementId,
         initialX = viewModel.animatorEditX,
         initialY = viewModel.animatorEditY,
         initialScaleX = viewModel.animatorEditScaleX,
@@ -1162,24 +1169,24 @@ fun AnimatorScreen() {
         initialGradientConfig = existingGradient,
         onDismiss = {
             viewModel.animatorShowEditPropertiesDialog = false
-            viewModel.animatorEditPropertiesNoteId = null
+            viewModel.animatorEditPropertiesElementId = null
         },
         onApply = { id, x, y, scaleX, scaleY, rot, color,
                     shadowColor, shadowOffsetX, shadowOffsetY,
                     borderThickness, borderColor,
                     gradientConfig ->
-            val currentNote = viewModel.animatorCanvasNotes.find { it.id == id }
-            if (currentNote != null) {
-                val isText = !currentNote.content.startsWith("Shape:") && !currentNote.content.startsWith("Image:")
-                viewModel.applyAllAnimatorNoteProperties(
+            val currentElement = viewModel.animatorCanvasElements.find { it.id == id }
+            if (currentElement != null) {
+                val isText = !currentElement.content.startsWith("Shape:") && !currentElement.content.startsWith("Image:")
+                viewModel.applyAllAnimatorElementProperties(
                     id = id,
-                    x = x.toFloatOrNull() ?: currentNote.offset.x,
-                    y = y.toFloatOrNull() ?: currentNote.offset.y,
-                    width = currentNote.width,
-                    height = currentNote.height,
-                    rotation = rot.toFloatOrNull() ?: currentNote.rotation,
-                    scaleX = scaleX.toFloatOrNull()?.coerceIn(0.1f, 10f) ?: currentNote.scaleX,
-                    scaleY = scaleY.toFloatOrNull()?.coerceIn(0.1f, 10f) ?: currentNote.scaleY,
+                    x = x.toFloatOrNull() ?: currentElement.offset.x,
+                    y = y.toFloatOrNull() ?: currentElement.offset.y,
+                    width = currentElement.width,
+                    height = currentElement.height,
+                    rotation = rot.toFloatOrNull() ?: currentElement.rotation,
+                    scaleX = scaleX.toFloatOrNull()?.coerceIn(0.1f, 10f) ?: currentElement.scaleX,
+                    scaleY = scaleY.toFloatOrNull()?.coerceIn(0.1f, 10f) ?: currentElement.scaleY,
                     color = color,
                     isTextElement = isText,
                     shadowColor = shadowColor,
@@ -1190,13 +1197,13 @@ fun AnimatorScreen() {
                 )
                 if (gradientConfig != null) {
                     viewModel.animatorGradientPairs[id] = gradientConfig
-                    viewModel.updateAnimatorNoteColor(id, gradientConfig.startColor)
+                    viewModel.updateAnimatorElementColor(id, gradientConfig.startColor)
                 } else {
                     viewModel.animatorGradientPairs.remove(id)
                 }
             }
             viewModel.animatorShowEditPropertiesDialog = false
-            viewModel.animatorEditPropertiesNoteId = null
+            viewModel.animatorEditPropertiesElementId = null
         }
     )
 

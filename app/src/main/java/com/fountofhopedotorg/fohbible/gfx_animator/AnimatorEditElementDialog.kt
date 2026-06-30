@@ -1,5 +1,8 @@
-package com.fountofhopedotorg.fohbible.gfx_creator
+package com.fountofhopedotorg.fohbible.gfx_animator
 
+import com.fountofhopedotorg.fohbible.gfx_creator.buildProcessedContent
+import com.fountofhopedotorg.fohbible.gfx_creator.buildReferenceString
+import com.fountofhopedotorg.fohbible.gfx_creator.getRandomColor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -20,8 +23,8 @@ import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
-fun EditNoteDialog(
-    noteId: String?,
+fun AnimatorEditElementDialog(
+    elementId: String?,
     initialContent: String,
     onDismiss: () -> Unit,
     onSave: (String?, String) -> Unit,
@@ -32,13 +35,13 @@ fun EditNoteDialog(
     verseProcessor: VerseTextProcessor? = null,
     themeColors: ThemeColors? = null
 ) {
-    if (noteId != null || isNew || fetchMode) {
+    if (elementId != null || isNew || fetchMode) {
         var content by remember { mutableStateOf(initialContent) }
         var referenceInput by remember { mutableStateOf("") }
         var fetchError by remember { mutableStateOf<String?>(null) }
         var fetchedVerses by remember { mutableStateOf<List<Verse>>(emptyList()) }
         var currentReference by remember { mutableStateOf("") }
-        val isEditMode = noteId != null
+        val isEditMode = elementId != null
         val isManualNew = isNew && !fetchMode
         val showEditableField = isEditMode || isManualNew
 
@@ -128,7 +131,7 @@ fun EditNoteDialog(
                     when {
                         fetchMode -> "Fetch Verse"
                         isNew -> "Add Text"
-                        else -> "Edit Canvas Note"
+                        else -> "Edit Canvas Element"
                     }
                 )
             },
@@ -207,7 +210,7 @@ fun EditNoteDialog(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(max = 250.dp),
-                            label = { Text("Note text") },
+                            label = { Text("Element text") },
                             maxLines = 8
                         )
                     }
@@ -217,8 +220,8 @@ fun EditNoteDialog(
                 if (isNew && fetchMode && viewModel != null) {
                     TextButton(
                         onClick = {
-                            viewModel.addToCanvas(
-                                CanvasNote(content = content, textColor = getRandomColor())
+                            viewModel.addToAnimatorCanvas(
+                                CanvasElement(content = content, textColor = getRandomColor())
                             )
                             onDismiss()
                         },
@@ -228,7 +231,7 @@ fun EditNoteDialog(
                     }
                 } else {
                     TextButton(
-                        onClick = { onSave(noteId, content) },
+                        onClick = { onSave(elementId, content) },
                         enabled = canSave
                     ) {
                         Text(if (isNew) "Add to Canvas" else "Save")

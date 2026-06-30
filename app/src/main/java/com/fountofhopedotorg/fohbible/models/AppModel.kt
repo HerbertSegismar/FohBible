@@ -18,7 +18,7 @@ import com.fountofhopedotorg.fohbible.Screen
 import com.fountofhopedotorg.fohbible.gfx_creator.getElementDisplayName
 import com.fountofhopedotorg.fohbible.data.BibleData
 import com.fountofhopedotorg.fohbible.data.CanvasKeyframe
-import com.fountofhopedotorg.fohbible.data.CanvasNote
+import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.GradientConfig
 import com.fountofhopedotorg.fohbible.data.PassageSelection
@@ -33,38 +33,38 @@ import java.util.UUID
 
 @Stable
 class AppViewModel(application: Application) : AndroidViewModel(application) {
-    var canvasNotes = mutableStateListOf<CanvasNote>()
-    var animatorKeyframeTargetNoteId: String? by mutableStateOf(null)
+    var canvasElements = mutableStateListOf<CanvasElement>()
+    var animatorKeyframeTargetElementId: String? by mutableStateOf(null)
     var animatorShowKeyframeDialog: Boolean by mutableStateOf(false)
 
-    fun updateAnimatorNoteKeyframes(noteId: String, keyframes: List<CanvasKeyframe>) {
-        val index = animatorCanvasNotes.indexOfFirst { it.id == noteId }
+    fun updateAnimatorElementKeyframes(noteId: String, keyframes: List<CanvasKeyframe>) {
+        val index = animatorCanvasElements.indexOfFirst { it.id == noteId }
         if (index != -1) {
-            animatorCanvasNotes[index] = animatorCanvasNotes[index].copy(keyframes = keyframes)
+            animatorCanvasElements[index] = animatorCanvasElements[index].copy(keyframes = keyframes)
         }
     }
 
-    fun addToCanvas(note: CanvasNote) {
-        canvasNotes.add(note.copy(id = UUID.randomUUID().toString()))
+    fun addToCanvas(note: CanvasElement) {
+        canvasElements.add(note.copy(id = UUID.randomUUID().toString()))
     }
 
     fun removeFromCanvas(index: Int) {
-        if (index in canvasNotes.indices) {
-            canvasNotes.removeAt(index)
+        if (index in canvasElements.indices) {
+            canvasElements.removeAt(index)
         }
     }
 
-    fun updateNoteColor(id: String, color: Color) {
-        val index = canvasNotes.indexOfFirst { it.id == id }
+    fun updateElementColor(id: String, color: Color) {
+        val index = canvasElements.indexOfFirst { it.id == id }
         if (index != -1) {
-            canvasNotes[index] = canvasNotes[index].copy(backgroundColor = color)
+            canvasElements[index] = canvasElements[index].copy(backgroundColor = color)
         }
     }
 
-    fun updateNoteTextColor(noteId: String, color: Color) {
-        val index = canvasNotes.indexOfFirst { it.id == noteId }
+    fun updateElementTextColor(noteId: String, color: Color) {
+        val index = canvasElements.indexOfFirst { it.id == noteId }
         if (index != -1) {
-            canvasNotes[index] = canvasNotes[index].copy(textColor = color)
+            canvasElements[index] = canvasElements[index].copy(textColor = color)
         }
     }
 
@@ -104,24 +104,24 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     )
 
     val animatorGradientPairs = mutableStateMapOf<String, GradientConfig>()
-    var animatorCanvasNotes = mutableStateListOf<CanvasNote>()
-    var animatorSelectedNoteIds by mutableStateOf<Set<String>>(emptySet())
-    var animatorSelectedNoteId by mutableStateOf<String?>(null)
+    var animatorCanvasElements = mutableStateListOf<CanvasElement>()
+    var animatorSelectedElementIds by mutableStateOf<Set<String>>(emptySet())
+    var animatorSelectedElementId by mutableStateOf<String?>(null)
     var animatorShowGroupDialog by mutableStateOf(false)
     var animatorGroupName by mutableStateOf("")
     val animatorGroupNames = mutableStateMapOf<String, String>()
     var animatorGroupToRenameId by mutableStateOf<String?>(null)
     var animatorGroupRenameText by mutableStateOf("")
-    var animatorNoteToRenameId by mutableStateOf<String?>(null)
+    var animatorElementToRenameId by mutableStateOf<String?>(null)
     var animatorRenameText by mutableStateOf("")
     var animatorShowColorPicker by mutableStateOf(false)
-    var animatorNoteToColorEditId by mutableStateOf<String?>(null)
+    var animatorElementToColorEditId by mutableStateOf<String?>(null)
     var animatorShowCustomPolygonDialog by mutableStateOf(false)
-    var animatorPolygonNoteToEditId by mutableStateOf<String?>(null)
+    var animatorPolygonElementToEditId by mutableStateOf<String?>(null)
     var animatorInitialPolygonString by mutableStateOf("")
     var animatorInitialIsLineMode by mutableStateOf(false)
     var animatorShowEditPropertiesDialog by mutableStateOf(false)
-    var animatorEditPropertiesNoteId by mutableStateOf<String?>(null)
+    var animatorEditPropertiesElementId by mutableStateOf<String?>(null)
     var animatorEditX by mutableStateOf("")
     var animatorEditY by mutableStateOf("")
     var animatorEditScaleX by mutableStateOf("")
@@ -328,24 +328,24 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun toggleVisibility(noteId: String) {
-        val index = canvasNotes.indexOfFirst { it.id == noteId }
+        val index = canvasElements.indexOfFirst { it.id == noteId }
         if (index != -1) {
-            canvasNotes[index] = canvasNotes[index].copy(isVisible = !canvasNotes[index].isVisible)
+            canvasElements[index] = canvasElements[index].copy(isVisible = !canvasElements[index].isVisible)
         }
     }
 
     fun toggleLock(noteId: String) {
-        val index = canvasNotes.indexOfFirst { it.id == noteId }
+        val index = canvasElements.indexOfFirst { it.id == noteId }
         if (index != -1) {
-            canvasNotes[index] = canvasNotes[index].copy(isLocked = !canvasNotes[index].isLocked)
+            canvasElements[index] = canvasElements[index].copy(isLocked = !canvasElements[index].isLocked)
         }
     }
 
-    fun renameCanvasNote(noteId: String, newName: String) {
-        val index = canvasNotes.indexOfFirst { it.id == noteId }
+    fun renameCanvasElement(noteId: String, newName: String) {
+        val index = canvasElements.indexOfFirst { it.id == noteId }
         if (index != -1) {
-            val updatedNote = canvasNotes[index].copy(customName = newName.trim())
-            canvasNotes[index] = updatedNote
+            val updatedNote = canvasElements[index].copy(customName = newName.trim())
+            canvasElements[index] = updatedNote
         }
     }
 
@@ -353,29 +353,29 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         if (noteIds.size < 2) return
 
         val groupId = "group_${UUID.randomUUID().toString().take(8)}"
-        val groupedNotes = canvasNotes.filter { it.id in noteIds }.map { note ->
-            val originalIndex = canvasNotes.indexOf(note)
+        val groupedNotes = canvasElements.filter { it.id in noteIds }.map { note ->
+            val originalIndex = canvasElements.indexOf(note)
             note.copy(
                 groupId = groupId,
-                customName = note.customName ?: getElementDisplayName(note, originalIndex, canvasNotes)
+                customName = note.customName ?: getElementDisplayName(note, originalIndex, canvasElements)
             )
         }
-        canvasNotes.removeAll { it.id in noteIds }
-        canvasNotes.addAll(0, groupedNotes)
+        canvasElements.removeAll { it.id in noteIds }
+        canvasElements.addAll(0, groupedNotes)
     }
 
-    fun ungroupNotes(noteIds: Set<String>) {
-        for (i in canvasNotes.indices) {
-            if (noteIds.contains(canvasNotes[i].id)) {
-                canvasNotes[i] = canvasNotes[i].copy(groupId = null)
+    fun ungroupElements(noteIds: Set<String>) {
+        for (i in canvasElements.indices) {
+            if (noteIds.contains(canvasElements[i].id)) {
+                canvasElements[i] = canvasElements[i].copy(groupId = null)
             }
         }
     }
 
-    fun updateNoteProperties(id: String, x: Float, y: Float, width: Float, height: Float, rotation: Float) {
-        val index = canvasNotes.indexOfFirst { it.id == id }
+    fun updateElementProperties(id: String, x: Float, y: Float, width: Float, height: Float, rotation: Float) {
+        val index = canvasElements.indexOfFirst { it.id == id }
         if (index != -1) {
-            canvasNotes[index] = canvasNotes[index].copy(
+            canvasElements[index] = canvasElements[index].copy(
                 offset = Offset(x, y),
                 width = width,
                 height = height,
@@ -384,24 +384,24 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun updateNoteScale(id: String, scaleX: Float, scaleY: Float) {
-        val index = canvasNotes.indexOfFirst { it.id == id }
+    fun updateElementScale(id: String, scaleX: Float, scaleY: Float) {
+        val index = canvasElements.indexOfFirst { it.id == id }
         if (index != -1) {
-            canvasNotes[index] = canvasNotes[index].copy(scaleX = scaleX, scaleY = scaleY)
+            canvasElements[index] = canvasElements[index].copy(scaleX = scaleX, scaleY = scaleY)
         }
     }
 
-    fun updateNoteContent(id: String, newContent: String) {
-        val index = canvasNotes.indexOfFirst { it.id == id }
+    fun updateElementContent(id: String, newContent: String) {
+        val index = canvasElements.indexOfFirst { it.id == id }
         if (index != -1) {
-            canvasNotes[index] = canvasNotes[index].copy(content = newContent)
+            canvasElements[index] = canvasElements[index].copy(content = newContent)
         }
     }
 
-    fun reorderCanvasNotes(from: Int, to: Int) {
-        if (from == to || from !in canvasNotes.indices || to !in canvasNotes.indices) return
-        val item = canvasNotes.removeAt(from)
-        canvasNotes.add(to, item)
+    fun reorderCanvasElements(from: Int, to: Int) {
+        if (from == to || from !in canvasElements.indices || to !in canvasElements.indices) return
+        val item = canvasElements.removeAt(from)
+        canvasElements.add(to, item)
     }
 
     val groupNames = mutableStateMapOf<String, String>()
@@ -410,7 +410,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         groupNames[groupId] = newName
     }
 
-    fun applyAllNoteProperties(
+    fun applyAllElementProperties(
         id: String,
         x: Float, y: Float, width: Float, height: Float, rotation: Float,
         scaleX: Float, scaleY: Float,
@@ -418,10 +418,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         shadowColor: Color?, shadowOffsetX: Float, shadowOffsetY: Float,
         borderThickness: Float, borderColor: Color?
     ) {
-        val index = canvasNotes.indexOfFirst { it.id == id }
+        val index = canvasElements.indexOfFirst { it.id == id }
         if (index != -1) {
-            val current = canvasNotes[index]
-            canvasNotes[index] = current.copy(
+            val current = canvasElements[index]
+            canvasElements[index] = current.copy(
                 offset = Offset(x, y),
                 width = width,
                 height = height,
@@ -439,61 +439,61 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun addToAnimatorCanvas(note: CanvasNote) {
-        animatorCanvasNotes.add(note.copy(id = UUID.randomUUID().toString()))
+    fun addToAnimatorCanvas(note: CanvasElement) {
+        animatorCanvasElements.add(note.copy(id = UUID.randomUUID().toString()))
     }
 
     fun removeFromAnimatorCanvas(index: Int) {
-        if (index in animatorCanvasNotes.indices) animatorCanvasNotes.removeAt(index)
+        if (index in animatorCanvasElements.indices) animatorCanvasElements.removeAt(index)
     }
 
-    fun updateAnimatorNoteColor(id: String, color: Color) {
-        animatorCanvasNotes.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let {
-            animatorCanvasNotes[it] = animatorCanvasNotes[it].copy(backgroundColor = color)
+    fun updateAnimatorElementColor(id: String, color: Color) {
+        animatorCanvasElements.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let {
+            animatorCanvasElements[it] = animatorCanvasElements[it].copy(backgroundColor = color)
         }
     }
 
-    fun updateAnimatorNoteTextColor(noteId: String, color: Color) {
-        animatorCanvasNotes.indexOfFirst { it.id == noteId }.takeIf { it != -1 }?.let {
-            animatorCanvasNotes[it] = animatorCanvasNotes[it].copy(textColor = color)
+    fun updateAnimatorElementTextColor(noteId: String, color: Color) {
+        animatorCanvasElements.indexOfFirst { it.id == noteId }.takeIf { it != -1 }?.let {
+            animatorCanvasElements[it] = animatorCanvasElements[it].copy(textColor = color)
         }
     }
 
-    fun updateAnimatorNoteProperties(id: String, x: Float, y: Float, width: Float, height: Float, rotation: Float) {
-        animatorCanvasNotes.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let {
-            animatorCanvasNotes[it] = animatorCanvasNotes[it].copy(
+    fun updateAnimatorElementProperties(id: String, x: Float, y: Float, width: Float, height: Float, rotation: Float) {
+        animatorCanvasElements.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let {
+            animatorCanvasElements[it] = animatorCanvasElements[it].copy(
                 offset = Offset(x, y), width = width, height = height, rotation = rotation
             )
         }
     }
 
-    fun updateAnimatorNoteScale(id: String, scaleX: Float, scaleY: Float) {
-        animatorCanvasNotes.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let {
-            animatorCanvasNotes[it] = animatorCanvasNotes[it].copy(scaleX = scaleX, scaleY = scaleY)
+    fun updateAnimatorElementScale(id: String, scaleX: Float, scaleY: Float) {
+        animatorCanvasElements.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let {
+            animatorCanvasElements[it] = animatorCanvasElements[it].copy(scaleX = scaleX, scaleY = scaleY)
         }
     }
 
-    fun updateAnimatorNoteContent(id: String, newContent: String) {
-        animatorCanvasNotes.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let {
-            animatorCanvasNotes[it] = animatorCanvasNotes[it].copy(content = newContent)
+    fun updateAnimatorElementContent(id: String, newContent: String) {
+        animatorCanvasElements.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let {
+            animatorCanvasElements[it] = animatorCanvasElements[it].copy(content = newContent)
         }
     }
 
     fun toggleAnimatorVisibility(noteId: String) {
-        animatorCanvasNotes.indexOfFirst { it.id == noteId }.takeIf { it != -1 }?.let {
-            animatorCanvasNotes[it] = animatorCanvasNotes[it].copy(isVisible = !animatorCanvasNotes[it].isVisible)
+        animatorCanvasElements.indexOfFirst { it.id == noteId }.takeIf { it != -1 }?.let {
+            animatorCanvasElements[it] = animatorCanvasElements[it].copy(isVisible = !animatorCanvasElements[it].isVisible)
         }
     }
 
     fun toggleAnimatorLock(noteId: String) {
-        animatorCanvasNotes.indexOfFirst { it.id == noteId }.takeIf { it != -1 }?.let {
-            animatorCanvasNotes[it] = animatorCanvasNotes[it].copy(isLocked = !animatorCanvasNotes[it].isLocked)
+        animatorCanvasElements.indexOfFirst { it.id == noteId }.takeIf { it != -1 }?.let {
+            animatorCanvasElements[it] = animatorCanvasElements[it].copy(isLocked = !animatorCanvasElements[it].isLocked)
         }
     }
 
-    fun renameAnimatorCanvasNote(noteId: String, newName: String) {
-        animatorCanvasNotes.indexOfFirst { it.id == noteId }.takeIf { it != -1 }?.let {
-            animatorCanvasNotes[it] = animatorCanvasNotes[it].copy(customName = newName.trim())
+    fun renameAnimatorCanvasElement(noteId: String, newName: String) {
+        animatorCanvasElements.indexOfFirst { it.id == noteId }.takeIf { it != -1 }?.let {
+            animatorCanvasElements[it] = animatorCanvasElements[it].copy(customName = newName.trim())
         }
     }
 
@@ -504,30 +504,30 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun createAnimatorGroup(noteIds: List<String>) {
         if (noteIds.size < 2) return
         val groupId = "vid_group_${UUID.randomUUID().toString().take(8)}"
-        val grouped = animatorCanvasNotes.filter { it.id in noteIds }.mapIndexed { _, note ->
+        val grouped = animatorCanvasElements.filter { it.id in noteIds }.mapIndexed { _, note ->
             note.copy(groupId = groupId)
         }
-        animatorCanvasNotes.removeAll { it.id in noteIds }
-        animatorCanvasNotes.addAll(0, grouped)
+        animatorCanvasElements.removeAll { it.id in noteIds }
+        animatorCanvasElements.addAll(0, grouped)
     }
 
-    fun ungroupAnimatorNotes(noteIds: Set<String>) {
-        for (i in animatorCanvasNotes.indices) {
-            if (animatorCanvasNotes[i].id in noteIds) {
-                animatorCanvasNotes[i] = animatorCanvasNotes[i].copy(groupId = null)
+    fun ungroupAnimatorElements(noteIds: Set<String>) {
+        for (i in animatorCanvasElements.indices) {
+            if (animatorCanvasElements[i].id in noteIds) {
+                animatorCanvasElements[i] = animatorCanvasElements[i].copy(groupId = null)
             }
         }
     }
 
-    fun applyAllAnimatorNoteProperties(
+    fun applyAllAnimatorElementProperties(
         id: String, x: Float, y: Float, width: Float, height: Float, rotation: Float,
         scaleX: Float, scaleY: Float, color: Color, isTextElement: Boolean,
         shadowColor: Color?, shadowOffsetX: Float, shadowOffsetY: Float,
         borderThickness: Float, borderColor: Color?
     ) {
-        animatorCanvasNotes.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let {
-            val current = animatorCanvasNotes[it]
-            animatorCanvasNotes[it] = current.copy(
+        animatorCanvasElements.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let {
+            val current = animatorCanvasElements[it]
+            animatorCanvasElements[it] = current.copy(
                 offset = Offset(x, y), width = width, height = height, rotation = rotation,
                 scaleX = scaleX, scaleY = scaleY,
                 textColor = if (isTextElement) color else current.textColor,
@@ -538,9 +538,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun reorderAnimatorCanvasNotes(from: Int, to: Int) {
-        if (from == to || from !in animatorCanvasNotes.indices || to !in animatorCanvasNotes.indices) return
-        val item = animatorCanvasNotes.removeAt(from)
-        animatorCanvasNotes.add(to, item)
+    fun reorderAnimatorCanvasElements(from: Int, to: Int) {
+        if (from == to || from !in animatorCanvasElements.indices || to !in animatorCanvasElements.indices) return
+        val item = animatorCanvasElements.removeAt(from)
+        animatorCanvasElements.add(to, item)
     }
 }

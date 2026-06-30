@@ -191,7 +191,7 @@ fun ChapterView(
 
         val isTemporaryHighlighted = verse.verseNumber == highlightedVerse
         val isBookmarked = databaseHelper?.isBookmarked(fullVerse) ?: false
-        val isNote = databaseHelper?.hasNote(fullVerse) ?: false
+        val isNote = databaseHelper?.hasElement(fullVerse) ?: false
         val refCount = crossRefCounts[verse.verseNumber] ?: 0
 
         val backgroundModifier = when {

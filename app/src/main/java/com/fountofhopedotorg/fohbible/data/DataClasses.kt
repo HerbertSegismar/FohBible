@@ -253,7 +253,7 @@ data class Droplet(
     val tailLength: Float = 0f
 )
 
-data class CanvasNote(
+data class CanvasElement(
     val id: String = UUID.randomUUID().toString(),
     val content: String,
     val offset: Offset = Offset.Zero,
@@ -398,8 +398,8 @@ sealed class DisplayItem {
         val isExpanded: Boolean
     ) : DisplayItem()
 
-    data class NoteItem(
-        val note: CanvasNote,
+    data class ElementItem(
+        val element: CanvasElement,
         val originalIndex: Int,
         val isGrouped: Boolean,
         val groupId: String? = null

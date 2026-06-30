@@ -10,16 +10,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.dp
-import com.fountofhopedotorg.fohbible.data.CanvasNote
+import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.GradientConfig
 import com.fountofhopedotorg.fohbible.data.ThemeColors
 
 @Composable
-fun NoteThumbnail(note: CanvasNote, themeColors: ThemeColors, gradientConfig: GradientConfig? = null) {
+fun ElementThumbnail(element: CanvasElement, themeColors: ThemeColors, gradientConfig: GradientConfig? = null) {
     when {
-        note.content.startsWith("Shape:") -> {
-            val shapeContent = note.content.removePrefix("Shape:").removePrefix(" ").trim()
-            val shapeColor = note.backgroundColor
+        element.content.startsWith("Shape:") -> {
+            val shapeContent = element.content.removePrefix("Shape:").removePrefix(" ").trim()
+            val shapeColor = element.backgroundColor
             when {
                 shapeContent.startsWith("Square") ->
                     SquareShape(modifier = Modifier.size(18.dp), color = shapeColor, gradientConfig = gradientConfig)
@@ -84,7 +84,7 @@ fun NoteThumbnail(note: CanvasNote, themeColors: ThemeColors, gradientConfig: Gr
                 else -> Icon(Icons.Default.ShapeLine, null, modifier = Modifier.size(18.dp), tint = shapeColor)
             }
         }
-        note.content.startsWith("Image:") -> Icon(Icons.Default.Image, null, modifier = Modifier.size(18.dp), tint = themeColors.primary)
+        element.content.startsWith("Image:") -> Icon(Icons.Default.Image, null, modifier = Modifier.size(18.dp), tint = themeColors.primary)
         else -> Icon(Icons.Default.TextFields, null, modifier = Modifier.size(18.dp), tint = themeColors.primary)
     }
 }

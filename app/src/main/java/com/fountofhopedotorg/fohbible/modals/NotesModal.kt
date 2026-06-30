@@ -84,7 +84,7 @@ fun NotesModal(
     LaunchedEffect(show, book, chapter, startVerse, endVerse) {
         if (show && databaseHelper != null && book.isNotBlank() && chapter > 0 && startVerse > 0) {
             isLoading = true
-            noteText = databaseHelper.getNote(book, chapter, startVerse, endVerse) ?: ""
+            noteText = databaseHelper.getElement(book, chapter, startVerse, endVerse) ?: ""
             isLoading = false
         }
     }

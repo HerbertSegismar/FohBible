@@ -25,12 +25,12 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
         private const val COLUMN_VERSE = "verse"
         const val BOOKMARKS_TABLE = "bookmarks"
         const val HIGHLIGHTS_TABLE = "highlights"
-        const val NOTES_TABLE = "notes"
+        const val ELEMENTS_TABLE = "elements"
         const val COLUMN_BOOK_NAME = "book_name"
         const val COLUMN_VERSE_NUMBER = "verse_number"
         const val COLUMN_START_VERSE = "start_verse"
         const val COLUMN_END_VERSE = "end_verse"
-        const val COLUMN_NOTE = "note"
+        const val COLUMN_ELEMENT = "element"
         const val COLUMN_TIMESTAMP = "timestamp"
         const val COLUMN_HIGHLIGHT_COLOR = "highlight_color"
         const val WORD_HIGHLIGHTS_TABLE = "word_highlights"
@@ -77,7 +77,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             )
             createBookmarksTable()
             createHighlightsTable()
-            createNotesTable()
+            createElementsTable()
             createWordHighlightsTable()
             migrateHighlightsTable()
         } catch (_: Exception) {
@@ -100,7 +100,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             )
             createBookmarksTable()
             createHighlightsTable()
-            createNotesTable()
+            createElementsTable()
             createWordHighlightsTable()
             true
         } catch (_: Exception) {
@@ -152,15 +152,15 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             }
         } catch (_: Exception) {}
     }
-    private fun createNotesTable() {
+    private fun createElementsTable() {
         database?.execSQL(
             """
-            CREATE TABLE IF NOT EXISTS $NOTES_TABLE (
+            CREATE TABLE IF NOT EXISTS $ELEMENTS_TABLE (
                 $COLUMN_BOOK_NAME TEXT,
                 $COLUMN_CHAPTER INTEGER,
                 $COLUMN_START_VERSE INTEGER,
                 $COLUMN_END_VERSE INTEGER,
-                $COLUMN_NOTE TEXT,
+                $COLUMN_ELEMENT TEXT,
                 $COLUMN_TIMESTAMP INTEGER DEFAULT (strftime('%s','now')),
                 PRIMARY KEY ($COLUMN_BOOK_NAME, $COLUMN_CHAPTER, $COLUMN_START_VERSE, $COLUMN_END_VERSE)
             )
@@ -706,18 +706,18 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
         } catch (_: Exception) { }
         return exists
     }
-    fun addOrUpdateNote(book: String, chapter: Int, startVerse: Int, endVerse: Int, note: String) {
+    fun addOrUpdateNote(book: String, chapter: Int, startVerse: Int, endVerse: Int, element: String) {
         try {
             val values = ContentValues().apply {
                 put(COLUMN_BOOK_NAME, book)
                 put(COLUMN_CHAPTER, chapter)
                 put(COLUMN_START_VERSE, startVerse)
                 put(COLUMN_END_VERSE, endVerse)
-                put(COLUMN_NOTE, note)
+                put(COLUMN_ELEMENT, element)
                 put(COLUMN_TIMESTAMP, System.currentTimeMillis() / 1000)
             }
             database?.insertWithOnConflict(
-                NOTES_TABLE,
+                ELEMENTS_TABLE,
                 null,
                 values,
                 SQLiteDatabase.CONFLICT_REPLACE
@@ -725,12 +725,12 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
         } catch (_: Exception) { }
     }
 
-    fun getNote(book: String, chapter: Int, startVerse: Int, endVerse: Int): String? {
-        var note: String? = null
+    fun getElement(book: String, chapter: Int, startVerse: Int, endVerse: Int): String? {
+        var element: String? = null
         try {
             val cursor = database?.query(
-                NOTES_TABLE,
-                arrayOf(COLUMN_NOTE),
+                ELEMENTS_TABLE,
+                arrayOf(COLUMN_ELEMENT),
                 "$COLUMN_BOOK_NAME = ? AND $COLUMN_CHAPTER = ? AND $COLUMN_START_VERSE = ? AND $COLUMN_END_VERSE = ?",
                 arrayOf(book, chapter.toString(), startVerse.toString(), endVerse.toString()),
                 null,
@@ -739,17 +739,17 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
             )
             cursor?.use {
                 if (it.moveToFirst()) {
-                    note = it.getString(it.getColumnIndexOrThrow(COLUMN_NOTE))
+                    element = it.getString(it.getColumnIndexOrThrow(COLUMN_ELEMENT))
                 }
             }
         } catch (_: Exception) { }
-        return note
+        return element
     }
 
     fun deleteNote(book: String, chapter: Int, startVerse: Int, endVerse: Int) {
         try {
             database?.delete(
-                NOTES_TABLE,
+                ELEMENTS_TABLE,
                 "$COLUMN_BOOK_NAME = ? AND $COLUMN_CHAPTER = ? AND $COLUMN_START_VERSE = ? AND $COLUMN_END_VERSE = ?",
                 arrayOf(book, chapter.toString(), startVerse.toString(), endVerse.toString())
             )
@@ -760,8 +760,8 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
         val notes = mutableListOf<Note>()
         try {
             database?.query(
-                NOTES_TABLE,
-                arrayOf(COLUMN_BOOK_NAME, COLUMN_CHAPTER, COLUMN_START_VERSE, COLUMN_END_VERSE, COLUMN_NOTE, COLUMN_TIMESTAMP),
+                ELEMENTS_TABLE,
+                arrayOf(COLUMN_BOOK_NAME, COLUMN_CHAPTER, COLUMN_START_VERSE, COLUMN_END_VERSE, COLUMN_ELEMENT, COLUMN_TIMESTAMP),
                 null, null, null, null, "$COLUMN_TIMESTAMP DESC"
             )?.use { cursor ->
                 while (cursor.moveToNext()) {
@@ -769,20 +769,20 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
                     val chapter = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_CHAPTER))
                     val startVerse = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_START_VERSE))
                     val endVerse = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_END_VERSE))
-                    val note = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_NOTE))
+                    val element = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_ELEMENT))
                     val timestamp = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_TIMESTAMP))
-                    notes.add(Note(bookName, chapter, startVerse, endVerse, note, timestamp))
+                    notes.add(Note(bookName, chapter, startVerse, endVerse, element, timestamp))
                 }
             }
         } catch (_: Exception) { }
         return notes
     }
-    fun hasNote(verse: Verse): Boolean {
+    fun hasElement(verse: Verse): Boolean {
         var exists = false
         try {
             val cursor = database?.query(
-                NOTES_TABLE,
-                arrayOf(COLUMN_NOTE),
+                ELEMENTS_TABLE,
+                arrayOf(COLUMN_ELEMENT),
                 "$COLUMN_BOOK_NAME = ? AND $COLUMN_CHAPTER = ? AND $COLUMN_START_VERSE <= ? AND $COLUMN_END_VERSE >= ?",
                 arrayOf(
                     verse.bookName,

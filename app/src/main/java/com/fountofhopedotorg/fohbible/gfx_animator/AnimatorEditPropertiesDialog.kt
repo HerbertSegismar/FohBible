@@ -41,7 +41,7 @@ import com.fountofhopedotorg.fohbible.data.GradientConfig
 @Composable
 fun AnimatorEditPropertiesDialog(
     show: Boolean,
-    noteId: String?,
+    elementId: String?,
     initialX: String,
     initialY: String,
     initialScaleX: String,
@@ -58,7 +58,7 @@ fun AnimatorEditPropertiesDialog(
     initialGradientConfig: GradientConfig? = null,
     onDismiss: () -> Unit,
     onApply: (
-        noteId: String,
+        elementId: String,
         x: String,
         y: String,
         scaleX: String,
@@ -73,8 +73,8 @@ fun AnimatorEditPropertiesDialog(
         gradientConfig: GradientConfig?
     ) -> Unit
 ) {
-    if (show && noteId != null) {
-        key(noteId) {
+    if (show && elementId != null) {
+        key(elementId) {
             val normalizedInitialRotation = remember(true, initialRotation) {
                 val degrees = initialRotation.toDoubleOrNull() ?: 0.0
                 ((degrees % 360) + 360) % 360
@@ -94,8 +94,6 @@ fun AnimatorEditPropertiesDialog(
             var editBorderColor by remember(show, initialBorderColor) { mutableStateOf(initialBorderColor) }
             var showShadowColorPicker by remember { mutableStateOf(false) }
             var showBorderColorPicker by remember { mutableStateOf(false) }
-
-            // Gradient config – no separate UI, just stored & passed to ColorWheel
             var editGradientConfig by remember(show, initialGradientConfig) {
                 mutableStateOf(initialGradientConfig)
             }
@@ -184,7 +182,6 @@ fun AnimatorEditPropertiesDialog(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                         )
 
-                        // Main colour swatch – opens ColorWheel with gradient support
                         OutlinedTextField(
                             value = " ",
                             onValueChange = {},
@@ -288,7 +285,7 @@ fun AnimatorEditPropertiesDialog(
                         val borderColor = editBorderColor
 
                         onApply(
-                            noteId,
+                            elementId,
                             editX,
                             editY,
                             editScaleX,
@@ -300,7 +297,7 @@ fun AnimatorEditPropertiesDialog(
                             shadowOffsetY,
                             borderThickness,
                             borderColor,
-                            editGradientConfig   // pass the stored gradient (or null)
+                            editGradientConfig
                         )
                     }) { Text("Apply") }
                 },
@@ -309,20 +306,19 @@ fun AnimatorEditPropertiesDialog(
                 }
             )
 
-            // Color picker with gradient support
             if (showEditColorPicker) {
                 ColorWheelDialog(
                     onDismissRequest = { showEditColorPicker = false },
                     onColorSelected = { selectedColor ->
                         editColor = selectedColor
-                        editGradientConfig = null   // clear gradient when a plain colour is chosen
+                        editGradientConfig = null
                         showEditColorPicker = false
                     },
                     initialColor = editColor,
-                    enableGradient = true,          // always show gradient option
+                    enableGradient = true,
                     onGradientSelected = { startColor, endColor, startOffset, endOffset ->
                         editGradientConfig = GradientConfig(startColor, endColor, startOffset, endOffset)
-                        editColor = startColor      // keep the displayed colour in sync with gradient start
+                        editColor = startColor
                         showEditColorPicker = false
                     },
                     initialGradientConfig = editGradientConfig

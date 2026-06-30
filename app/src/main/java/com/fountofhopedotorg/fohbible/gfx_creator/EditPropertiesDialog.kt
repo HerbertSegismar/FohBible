@@ -40,7 +40,7 @@ import com.fountofhopedotorg.fohbible.color_wheel.ColorWheelDialog
 @Composable
 fun EditPropertiesDialog(
     show: Boolean,
-    noteId: String?,
+    elementId: String?,
     initialX: String,
     initialY: String,
     initialScaleX: String,
@@ -56,7 +56,7 @@ fun EditPropertiesDialog(
     initialBorderColor: Color? = null,
     onDismiss: () -> Unit,
     onApply: (
-        noteId: String,
+        elementId: String,
         x: String,
         y: String,
         scaleX: String,
@@ -70,8 +70,8 @@ fun EditPropertiesDialog(
         borderColor: Color?
     ) -> Unit
 ) {
-    if (show && noteId != null) {
-        key(noteId) {
+    if (show && elementId != null) {
+        key(elementId) {
             val normalizedInitialRotation = remember(true, initialRotation) {
                 val degrees = initialRotation.toDoubleOrNull() ?: 0.0
                 ((degrees % 360) + 360) % 360
@@ -279,7 +279,7 @@ fun EditPropertiesDialog(
                         val borderColor = editBorderColor
 
                         onApply(
-                            noteId,
+                            elementId,
                             editX,
                             editY,
                             editScaleX,
