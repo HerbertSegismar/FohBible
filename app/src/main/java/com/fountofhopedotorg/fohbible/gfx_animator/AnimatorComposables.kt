@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.CropSquare
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
@@ -84,6 +85,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.DisplayItem
@@ -688,7 +690,8 @@ fun ToolbarSection(
     isPlayingAnimation: Boolean = false,
     onPlayPause: () -> Unit = {},
     onTimelineClick: () -> Unit = {},
-    enablePlayStop: Boolean = false
+    enablePlayStop: Boolean = false,
+    onCanvasSizeClick: () -> Unit = {}   // <-- New parameter
 ) {
     var showMoreShapes by remember { mutableStateOf(false) }
     val viewModel: AppViewModel = viewModel()
@@ -700,6 +703,7 @@ fun ToolbarSection(
     val imageIconColor = remember { getRandomColor().copy(alpha = 0.8f) }
     val fullscreenIconColor = remember { getRandomColor().copy(alpha = 0.8f) }
     val saveIconColor = remember { getRandomColor().copy(alpha = 0.8f) }
+    val canvasSizeIconColor = remember { getRandomColor().copy(alpha = 0.8f) } // New color
 
     val modes = listOf(
         Triple("Add Text", Icons.Default.TextFields, textIconColor),
@@ -778,7 +782,12 @@ fun ToolbarSection(
 
             DropdownMenu(
                 expanded = showMoreShapes,
-                onDismissRequest = { showMoreShapes = false },
+                onDismissRequest = {},
+                properties = PopupProperties(
+                    focusable = false,
+                    dismissOnClickOutside = false,
+                    dismissOnBackPress = false
+                ),
                 modifier = Modifier
                     .width(if (isLandscape) 80.dp else 40.dp)
                     .background(MaterialTheme.colorScheme.primary.copy(0.05f))
@@ -797,8 +806,17 @@ fun ToolbarSection(
                     "ArrowRight" to @Composable { ArrowRightShape(modifier = Modifier.fillMaxSize(), color = getRandomColor().copy(0.8f)) }
                 )
 
+                val allMenuItems = newShapes + ("Close" to @Composable {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close Menu",
+                        modifier = Modifier.fillMaxSize(),
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                })
+
                 if (isLandscape) {
-                    val chunkedShapes = newShapes.chunked(2)
+                    val chunkedShapes = allMenuItems.chunked(2)
                     chunkedShapes.forEach { rowItems ->
                         Row(modifier = Modifier.fillMaxWidth()) {
                             rowItems.forEach { (name, preview) ->
@@ -806,8 +824,11 @@ fun ToolbarSection(
                                     modifier = Modifier
                                         .size(40.dp)
                                         .clickable {
-                                            showMoreShapes = false
-                                            onAddShape(name)
+                                            if (name == "Close") {
+                                                showMoreShapes = false
+                                            } else {
+                                                onAddShape(name)
+                                            }
                                         },
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -819,12 +840,15 @@ fun ToolbarSection(
                         }
                     }
                 } else {
-                    newShapes.forEach { (name, preview) ->
+                    allMenuItems.forEach { (name, preview) ->
                         DropdownMenuItem(
                             text = {},
                             onClick = {
-                                showMoreShapes = false
-                                onAddShape(name)
+                                if (name == "Close") {
+                                    showMoreShapes = false
+                                } else {
+                                    onAddShape(name)
+                                }
                             },
                             leadingIcon = {
                                 Box(Modifier.size(18.dp)) {
@@ -881,9 +905,7 @@ fun ToolbarSection(
                     coroutineScope.launch { saveCanvasAsImage(graphicsLayer, context, "JPG") }
                 },
                 onSavePdf = {
-                    coroutineScope.launch {
-                        saveCanvasAsPDF(graphicsLayer, context)
-                    }
+                    coroutineScope.launch { saveCanvasAsPDF(graphicsLayer, context) }
                 },
                 onSaveSvg = {
                     coroutineScope.launch {
@@ -903,6 +925,17 @@ fun ToolbarSection(
                 imageVector = if (isFullScreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
                 contentDescription = if (isFullScreen) "Exit Fullscreen" else "Enter Fullscreen",
                 tint = fullscreenIconColor
+            )
+        }
+        IconButton(
+            modifier = itemButtonSize,
+            onClick = onCanvasSizeClick
+        ) {
+            Icon(
+                imageVector = Icons.Default.CropSquare,
+                contentDescription = "Set Canvas Size",
+                modifier = standardIconSize,
+                tint = canvasSizeIconColor
             )
         }
 
@@ -942,8 +975,7 @@ fun ToolbarSection(
 
     if (isLandscape) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {

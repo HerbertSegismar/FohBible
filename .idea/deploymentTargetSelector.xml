@@ -51,10 +51,10 @@
       </SelectionState>
       <SelectionState runConfigName="androidTest">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-05-30T06:54:04.488339Z">
+        <DropdownSelection timestamp="2026-07-01T10:42:28.348279Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\herbe\.android\avd\Pixel_7_Pro.avd" />
+              <DeviceId pluginId="Default" identifier="serial=127.0.0.1:21503;connection=fdf9b4a9" />
             </handle>
           </Target>
         </DropdownSelection>

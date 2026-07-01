@@ -40,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
@@ -76,14 +77,18 @@ fun AnimatorScreen() {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val canvasWidthPx = if (isLandscape) 1920 else 1080
-    val canvasHeightPx = if (isLandscape) 1080 else 1920
     val density = LocalDensity.current
-    val canvasWidthDp = with(density) { canvasWidthPx.toDp() }
-    val canvasHeightDp = with(density) { canvasHeightPx.toDp() }
 
     val viewModel: AppViewModel = viewModel()
     val graphicsLayer = rememberGraphicsLayer()
+
+    var customWidthPx by rememberSaveable { mutableIntStateOf(if (isLandscape) 1920 else 1080) }
+    var customHeightPx by rememberSaveable { mutableIntStateOf(if (isLandscape) 1080 else 1920) }
+    var showCanvasSizeDialog by remember { mutableStateOf(false) }
+    val canvasWidthPx = customWidthPx
+    val canvasHeightPx = customHeightPx
+    val canvasWidthDp = with(density) { canvasWidthPx.toDp() }
+    val canvasHeightDp = with(density) { canvasHeightPx.toDp() }
 
     var showCanvasElementsTree by rememberSaveable { mutableStateOf(true) }
     var dragGroupDelta by remember { mutableStateOf(Offset.Zero) }
@@ -429,80 +434,92 @@ fun AnimatorScreen() {
                             containerWidthDp / canvasWidthDp,
                             containerHeightDp / canvasHeightDp
                         )
-                        val offsetXDp = (containerWidthDp - canvasWidthDp * scale) / 2
-                        val offsetYDp = (containerHeightDp - canvasHeightDp * scale) / 2
-
                         Box(
-                            modifier = Modifier
-                                .requiredSize(canvasWidthDp, canvasHeightDp)
-                                .graphicsLayer {
-                                    scaleX = scale
-                                    scaleY = scale
-                                    translationX = offsetXDp.toPx()
-                                    translationY = offsetYDp.toPx()
-                                }
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
                         ) {
-                            AnimatorCanvasArea(
+                            CheckerboardBackground(
                                 modifier = Modifier.fillMaxSize(),
-                                elements = viewModel.animatorCanvasElements,
-                                selectedElementIds = viewModel.animatorSelectedElementIds,
-                                selectedElementId = viewModel.animatorSelectedElementId,
-                                selectedGroups = selectedGroups,
-                                dragGroupDelta = dragGroupDelta,
-                                onGroupDragDeltaChange = { dragGroupDelta = it },
-                                onCanvasElementTap = { onCanvasElementTap(it) },
-                                onElementUpdatePosition = { element, offset, w, h, rotation ->
-                                    viewModel.updateAnimatorElementProperties(
-                                        id = element.id,
-                                        x = offset.x,
-                                        y = offset.y,
-                                        width = w,
-                                        height = h,
-                                        rotation = rotation
-                                    )
-                                },
-                                onColorPickerRequested = {
-                                    viewModel.animatorElementToColorEditId = it
-                                    viewModel.animatorShowColorPicker = true
-                                },
-                                onDeleteRequested = {
-                                    val idx = viewModel.animatorCanvasElements.indexOfFirst { element -> element.id == it }
-                                    if (idx != -1) viewModel.removeFromAnimatorCanvas(idx)
-                                },
-                                onClearSelection = {
-                                    viewModel.animatorSelectedElementIds = emptySet()
-                                    viewModel.animatorSelectedElementId = null
-                                },
-                                themeColors = themeColors,
-                                isDark = isDark,
-                                elementsGrouped = elementsGrouped,
-                                graphicsLayer = graphicsLayer,
-                                onElementScaleChange = { id, sx, sy -> viewModel.updateAnimatorElementScale(id, sx, sy) },
-                                proportionalEditing = viewModel.proportionalEditing,
-                                onProportionalToggle = onProportionalToggle
+                                tileSizeDp = 8.dp,
+                                color1 = Color(0xFFCCCCCC),
+                                color2 = Color(0xFF999999)
                             )
+                            Box(
+                                modifier = Modifier
+                                    .requiredSize(canvasWidthDp, canvasHeightDp)
+                                    .graphicsLayer {
+                                        scaleX = scale
+                                        scaleY = scale
+                                        transformOrigin = TransformOrigin(0.5f, 0.5f)
+                                    }
+                                    .background(Color.White)
+                            ) {
+                                AnimatorCanvasArea(
+                                    modifier = Modifier.fillMaxSize(),
+                                    elements = viewModel.animatorCanvasElements,
+                                    selectedElementIds = viewModel.animatorSelectedElementIds,
+                                    selectedElementId = viewModel.animatorSelectedElementId,
+                                    selectedGroups = selectedGroups,
+                                    dragGroupDelta = dragGroupDelta,
+                                    onGroupDragDeltaChange = { dragGroupDelta = it },
+                                    onCanvasElementTap = { onCanvasElementTap(it) },
+                                    onElementUpdatePosition = { element, offset, w, h, rotation ->
+                                        viewModel.updateAnimatorElementProperties(
+                                            id = element.id,
+                                            x = offset.x,
+                                            y = offset.y,
+                                            width = w,
+                                            height = h,
+                                            rotation = rotation
+                                        )
+                                    },
+                                    onColorPickerRequested = {
+                                        viewModel.animatorElementToColorEditId = it
+                                        viewModel.animatorShowColorPicker = true
+                                    },
+                                    onDeleteRequested = {
+                                        val idx = viewModel.animatorCanvasElements.indexOfFirst { element -> element.id == it }
+                                        if (idx != -1) viewModel.removeFromAnimatorCanvas(idx)
+                                        viewModel.animatorSelectedElementIds -= it
+                                        if (viewModel.animatorSelectedElementId == it) {
+                                            viewModel.animatorSelectedElementId = null
+                                        }
+                                    },
+                                    onClearSelection = {
+                                        viewModel.animatorSelectedElementIds = emptySet()
+                                        viewModel.animatorSelectedElementId = null
+                                    },
+                                    themeColors = themeColors,
+                                    isDark = isDark,
+                                    elementsGrouped = elementsGrouped,
+                                    graphicsLayer = graphicsLayer,
+                                    onElementScaleChange = { id, sx, sy -> viewModel.updateAnimatorElementScale(id, sx, sy) },
+                                    proportionalEditing = viewModel.proportionalEditing,
+                                    onProportionalToggle = onProportionalToggle
+                                )
 
-                            if (isPlayingAnimation) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(24.dp)
-                                        .background(Color.Black.copy(alpha = 0.3f))
-                                        .pointerInput(Unit) {},
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        if (isRecording) "Exporting Video…" else "Playing Animation…",
-                                        color = Color.White,
-                                        style = MaterialTheme.typography.titleMedium
-                                    )
+                                if (isPlayingAnimation) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(24.dp)
+                                            .background(Color.Black.copy(alpha = 0.3f))
+                                            .pointerInput(Unit) {},
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            if (isRecording) "Exporting Video…" else "Playing Animation…",
+                                            color = Color.White,
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.width(2.dp))
+                Spacer(modifier = Modifier.width(10.dp))
 
                 Column(
                     modifier = Modifier
@@ -596,6 +613,7 @@ fun AnimatorScreen() {
                         onDelete = {
                             val idx = viewModel.animatorCanvasElements.indexOf(it)
                             if (idx != -1) viewModel.removeFromAnimatorCanvas(idx)
+                            viewModel.animatorSelectedElementIds -= it.id
                             if (viewModel.animatorSelectedElementId == it.id) viewModel.animatorSelectedElementId = null
                         },
                         onUngroup = { ids ->
@@ -622,7 +640,7 @@ fun AnimatorScreen() {
                     )
                 }
             }
-
+            Spacer(modifier = Modifier.height(9.dp))
             ToolbarSection(
                 onAddShape = { shape ->
                     val color = getRandomColor()
@@ -663,7 +681,8 @@ fun AnimatorScreen() {
                 isPlayingAnimation = isPlayingAnimation,
                 onPlayPause = onPlayPause,
                 onTimelineClick = onTimelineClick,
-                enablePlayStop = enablePlayStop
+                enablePlayStop = enablePlayStop,
+                onCanvasSizeClick = { showCanvasSizeDialog = true }
             )
         }
     } else {
@@ -714,7 +733,8 @@ fun AnimatorScreen() {
                     isPlayingAnimation = isPlayingAnimation,
                     onPlayPause = onPlayPause,
                     onTimelineClick = onTimelineClick,
-                    enablePlayStop = enablePlayStop
+                    enablePlayStop = enablePlayStop,
+                    onCanvasSizeClick = { showCanvasSizeDialog = true }
                 )
             }
 
@@ -734,79 +754,91 @@ fun AnimatorScreen() {
                         containerWidthDp / canvasWidthDp,
                         containerHeightDp / canvasHeightDp
                     )
-                    val offsetXDp = (containerWidthDp - canvasWidthDp * scale) / 2
-                    val offsetYDp = (containerHeightDp - canvasHeightDp * scale) / 2
-
                     Box(
-                        modifier = Modifier
-                            .requiredSize(canvasWidthDp, canvasHeightDp)
-                            .graphicsLayer {
-                                scaleX = scale
-                                scaleY = scale
-                                translationX = offsetXDp.toPx()
-                                translationY = offsetYDp.toPx()
-                            }
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        AnimatorCanvasArea(
+                        CheckerboardBackground(
                             modifier = Modifier.fillMaxSize(),
-                            elements = viewModel.animatorCanvasElements,
-                            selectedElementIds = viewModel.animatorSelectedElementIds,
-                            selectedElementId = viewModel.animatorSelectedElementId,
-                            selectedGroups = selectedGroups,
-                            dragGroupDelta = dragGroupDelta,
-                            onGroupDragDeltaChange = { dragGroupDelta = it },
-                            onCanvasElementTap = { onCanvasElementTap(it) },
-                            onElementUpdatePosition = { element, offset, w, h, rotation ->
-                                viewModel.updateAnimatorElementProperties(
-                                    id = element.id,
-                                    x = offset.x,
-                                    y = offset.y,
-                                    width = w,
-                                    height = h,
-                                    rotation = rotation
-                                )
-                            },
-                            onElementScaleChange = { id, sx, sy -> viewModel.updateAnimatorElementScale(id, sx, sy) },
-                            onColorPickerRequested = {
-                                viewModel.animatorElementToColorEditId = it
-                                viewModel.animatorShowColorPicker = true
-                            },
-                            onDeleteRequested = {
-                                val idx = viewModel.animatorCanvasElements.indexOfFirst { element -> element.id == it }
-                                if (idx != -1) viewModel.removeFromAnimatorCanvas(idx)
-                            },
-                            onClearSelection = {
-                                viewModel.animatorSelectedElementIds = emptySet()
-                                viewModel.animatorSelectedElementId = null
-                            },
-                            themeColors = themeColors,
-                            isDark = isDark,
-                            elementsGrouped = elementsGrouped,
-                            graphicsLayer = graphicsLayer,
-                            proportionalEditing = viewModel.proportionalEditing,
-                            onProportionalToggle = onProportionalToggle
+                            tileSizeDp = 8.dp,
+                            color1 = Color(0xFFCCCCCC),
+                            color2 = Color(0xFF999999)
                         )
+                        Box(
+                            modifier = Modifier
+                                .requiredSize(canvasWidthDp, canvasHeightDp)
+                                .graphicsLayer {
+                                    scaleX = scale
+                                    scaleY = scale
+                                    transformOrigin = TransformOrigin(0.5f, 0.5f)
+                                }
+                                .background(Color.White)
+                        ) {
+                            AnimatorCanvasArea(
+                                modifier = Modifier.fillMaxSize(),
+                                elements = viewModel.animatorCanvasElements,
+                                selectedElementIds = viewModel.animatorSelectedElementIds,
+                                selectedElementId = viewModel.animatorSelectedElementId,
+                                selectedGroups = selectedGroups,
+                                dragGroupDelta = dragGroupDelta,
+                                onGroupDragDeltaChange = { dragGroupDelta = it },
+                                onCanvasElementTap = { onCanvasElementTap(it) },
+                                onElementUpdatePosition = { element, offset, w, h, rotation ->
+                                    viewModel.updateAnimatorElementProperties(
+                                        id = element.id,
+                                        x = offset.x,
+                                        y = offset.y,
+                                        width = w,
+                                        height = h,
+                                        rotation = rotation
+                                    )
+                                },
+                                onElementScaleChange = { id, sx, sy -> viewModel.updateAnimatorElementScale(id, sx, sy) },
+                                onColorPickerRequested = {
+                                    viewModel.animatorElementToColorEditId = it
+                                    viewModel.animatorShowColorPicker = true
+                                },
+                                onDeleteRequested = {
+                                    val idx = viewModel.animatorCanvasElements.indexOfFirst { element -> element.id == it }
+                                    if (idx != -1) viewModel.removeFromAnimatorCanvas(idx)
+                                    viewModel.animatorSelectedElementIds -= it
+                                    if (viewModel.animatorSelectedElementId == it) {
+                                        viewModel.animatorSelectedElementId = null
+                                    }
+                                },
+                                onClearSelection = {
+                                    viewModel.animatorSelectedElementIds = emptySet()
+                                    viewModel.animatorSelectedElementId = null
+                                },
+                                themeColors = themeColors,
+                                isDark = isDark,
+                                elementsGrouped = elementsGrouped,
+                                graphicsLayer = graphicsLayer,
+                                proportionalEditing = viewModel.proportionalEditing,
+                                onProportionalToggle = onProportionalToggle
+                            )
 
-                        if (isPlayingAnimation) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(24.dp)
-                                    .background(Color.Black.copy(alpha = 0.3f))
-                                    .pointerInput(Unit) {},
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    if (isRecording) "Exporting Video…" else "Playing Animation…",
-                                    color = Color.White,
-                                    style = MaterialTheme.typography.titleMedium
-                                )
+                            if (isPlayingAnimation) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(24.dp)
+                                        .background(Color.Black.copy(alpha = 0.3f))
+                                        .pointerInput(Unit) {},
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        if (isRecording) "Exporting Video…" else "Playing Animation…",
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+                                }
                             }
                         }
                     }
                 }
 
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(12.dp))
 
                 Column(
                     modifier = Modifier
@@ -900,6 +932,7 @@ fun AnimatorScreen() {
                         onDelete = {
                             val idx = viewModel.animatorCanvasElements.indexOf(it)
                             if (idx != -1) viewModel.removeFromAnimatorCanvas(idx)
+                            viewModel.animatorSelectedElementIds -= it.id
                             if (viewModel.animatorSelectedElementId == it.id) viewModel.animatorSelectedElementId = null
                         },
                         onUngroup = { ids ->
@@ -1224,6 +1257,19 @@ fun AnimatorScreen() {
                 lastCaptureTimeUs = 0L
                 hasCapturedFirstFrame = false
                 isPlayingAnimation = true
+            }
+        )
+    }
+
+    if (showCanvasSizeDialog) {
+        CanvasSizeDialog(
+            initialWidth = customWidthPx,
+            initialHeight = customHeightPx,
+            onDismiss = { showCanvasSizeDialog = false },
+            onConfirm = { width, height ->
+                customWidthPx = width
+                customHeightPx = height
+                showCanvasSizeDialog = false
             }
         )
     }
