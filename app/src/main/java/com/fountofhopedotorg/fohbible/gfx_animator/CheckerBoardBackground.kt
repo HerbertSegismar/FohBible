@@ -8,6 +8,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 
 @Composable
 fun CheckerboardBackground(
@@ -17,16 +18,21 @@ fun CheckerboardBackground(
     color2: Color = Color(0xFF666666)
 ) {
     Canvas(modifier = modifier) {
-        val tilePx = tileSizeDp.toPx()
-        val tilesX = (size.width / tilePx).toInt() + 1
-        val tilesY = (size.height / tilePx).toInt() + 1
+        val targetTilePx = tileSizeDp.toPx()
+
+        val tilesX = (size.width / targetTilePx).roundToInt().coerceAtLeast(1)
+        val tilesY = (size.height / targetTilePx).roundToInt().coerceAtLeast(1)
+
+        val actualTileWidth = size.width / tilesX
+        val actualTileHeight = size.height / tilesY
+
         for (row in 0 until tilesY) {
             for (col in 0 until tilesX) {
                 val color = if ((row + col) % 2 == 0) color1 else color2
                 drawRect(
                     color = color,
-                    topLeft = Offset(col * tilePx, row * tilePx),
-                    size = Size(tilePx, tilePx)
+                    topLeft = Offset(col * actualTileWidth, row * actualTileHeight),
+                    size = Size(actualTileWidth, actualTileHeight)
                 )
             }
         }

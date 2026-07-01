@@ -640,7 +640,6 @@ fun AnimatorScreen() {
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(9.dp))
             ToolbarSection(
                 onAddShape = { shape ->
                     val color = getRandomColor()
