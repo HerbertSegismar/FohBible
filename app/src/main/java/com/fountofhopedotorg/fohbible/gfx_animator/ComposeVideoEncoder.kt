@@ -144,7 +144,6 @@ class ComposeVideoEncoder(
                     encodedData.position(bufferInfo.offset)
                     encodedData.limit(bufferInfo.offset + bufferInfo.size)
 
-                    // ----- ASSIGN CORRECT PTS FROM QUEUE -----
                     bufferInfo.presentationTimeUs = pendingPtsQueue.poll() ?: 0L
 
                     muxer.writeSampleData(trackIndex, encodedData, bufferInfo)
@@ -156,10 +155,6 @@ class ComposeVideoEncoder(
         }
     }
 
-    /**
-     * Add a frame and supply its exact presentation time in MICROSECONDS.
-     * The timestamp is queued and later assigned to the corresponding encoded output frame.
-     */
     fun addFrame(bitmap: Bitmap, ptsUs: Long) {
         drainEncoder(false)
         val surface = inputSurface ?: return
@@ -213,7 +208,6 @@ class ComposeVideoEncoder(
 
         surface.unlockCanvasAndPost(canvas)
 
-        // Queue the timestamp for the next output buffer
         pendingPtsQueue.add(ptsUs)
     }
 

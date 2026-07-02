@@ -34,6 +34,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -65,8 +66,12 @@ import com.fountofhopedotorg.fohbible.models.AnimatorDialogType
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.theme.LocalAppTheme
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.min
 import kotlin.time.Duration.Companion.microseconds
 import kotlin.time.Duration.Companion.milliseconds
@@ -109,6 +114,14 @@ fun AnimatorScreen() {
     var showMp4SettingsDialog by remember { mutableStateOf(false) }
     var selectedFrameRate by remember { mutableIntStateOf(30) }
     var selectedBitRateMbps by remember { mutableIntStateOf(20) }
+
+    var exportMode by remember { mutableStateOf("Screen") }
+    var offscreenOutputMode by remember { mutableStateOf("Video") }
+    var offscreenResolutionMultiplier by remember { mutableFloatStateOf(1f) }
+    var isOffscreenExporting by remember { mutableStateOf(false) }
+    var offscreenExportProgress by remember { mutableFloatStateOf(0f) }
+    var offscreenExportJob by remember { mutableStateOf<Job?>(null) }
+    val exportScope = rememberCoroutineScope()
 
     val cancelExport: () -> Unit = remember { { isPlayingAnimation = false } }
 
@@ -644,7 +657,7 @@ fun AnimatorScreen() {
                 onAddShape = { shape ->
                     val color = getRandomColor()
                     viewModel.addToAnimatorCanvas(
-                        CanvasElement(content = "Shape: $shape", backgroundColor = color, width = 100f, height = 100f)
+                        CanvasElement(content = "Shape: $shape", backgroundColor = color, width = 200f, height = 200f)
                     )
                 },
                 onCustomPolygon = {
@@ -696,7 +709,7 @@ fun AnimatorScreen() {
                     onAddShape = { shape ->
                         val color = getRandomColor()
                         viewModel.addToAnimatorCanvas(
-                            CanvasElement(content = "Shape: $shape", backgroundColor = color, width = 100f, height = 100f)
+                            CanvasElement(content = "Shape: $shape", backgroundColor = color, width = 200f, height = 200f)
                         )
                     },
                     onCustomPolygon = {
@@ -1148,8 +1161,8 @@ fun AnimatorScreen() {
                         CanvasElement(
                             content = contentString,
                             backgroundColor = getRandomColor(),
-                            width = 100f,
-                            height = 100f
+                            width = 200f,
+                            height = 200f
                         )
                     )
                 }
@@ -1243,19 +1256,51 @@ fun AnimatorScreen() {
         Mp4ExportSettingsDialog(
             initialFrameRate = selectedFrameRate,
             initialBitRateMbps = selectedBitRateMbps,
+            initialExportMode = exportMode,
+            initialOutputMode = offscreenOutputMode,
+            initialResolutionMultiplier = offscreenResolutionMultiplier,
             onDismiss = { showMp4SettingsDialog = false },
-            onConfirm = { chosenFrameRate: Int, chosenBitRateMbps: Int ->
-                selectedFrameRate = chosenFrameRate
-                selectedBitRateMbps = chosenBitRateMbps
+            onConfirm = { frameRate, bitRate, mode, outMode, resolution ->
+                selectedFrameRate = frameRate
+                selectedBitRateMbps = bitRate
+                exportMode = mode
+                offscreenOutputMode = outMode
+                offscreenResolutionMultiplier = resolution
                 showMp4SettingsDialog = false
-                isPlayingAnimation = false
-                isRecording = true
-                encoder.value = null
-                exportProgress = 0f
-                recordingMaxTimestamp = 0L
-                lastCaptureTimeUs = 0L
-                hasCapturedFirstFrame = false
-                isPlayingAnimation = true
+
+                if (mode == "Screen") {
+                    isPlayingAnimation = false
+                    isRecording = true
+                    encoder.value = null
+                    exportProgress = 0f
+                    recordingMaxTimestamp = 0L
+                    lastCaptureTimeUs = 0L
+                    hasCapturedFirstFrame = false
+                    isPlayingAnimation = true
+                } else {
+                    isOffscreenExporting = true
+                    offscreenExportProgress = 0f
+                    offscreenExportJob = exportScope.launch(Dispatchers.IO) {
+                        offscreenExport(
+                            context,
+                            canvasWidthPx,
+                            canvasHeightPx,
+                            frameRate,
+                            bitRate,
+                            outMode,
+                            resolution,
+                            viewModel.animatorCanvasElements.toList(),
+                            viewModel.animatorGradientPairs.toMap()
+                        ) { progress ->
+                            withContext(Dispatchers.Main) {
+                                offscreenExportProgress = progress
+                            }
+                        }
+                        withContext(Dispatchers.Main) {
+                            isOffscreenExporting = false
+                        }
+                    }
+                }
             }
         )
     }
@@ -1269,6 +1314,16 @@ fun AnimatorScreen() {
                 customWidthPx = width
                 customHeightPx = height
                 showCanvasSizeDialog = false
+            }
+        )
+    }
+
+    if (isOffscreenExporting) {
+        ExportDialog(
+            progress = offscreenExportProgress,
+            onCancelRequested = {
+                offscreenExportJob?.cancel()
+                isOffscreenExporting = false
             }
         )
     }

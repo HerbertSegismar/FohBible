@@ -691,7 +691,7 @@ fun ToolbarSection(
     onPlayPause: () -> Unit = {},
     onTimelineClick: () -> Unit = {},
     enablePlayStop: Boolean = false,
-    onCanvasSizeClick: () -> Unit = {}   // <-- New parameter
+    onCanvasSizeClick: () -> Unit = {}
 ) {
     var showMoreShapes by remember { mutableStateOf(false) }
     val viewModel: AppViewModel = viewModel()
@@ -703,7 +703,7 @@ fun ToolbarSection(
     val imageIconColor = remember { getRandomColor().copy(alpha = 0.8f) }
     val fullscreenIconColor = remember { getRandomColor().copy(alpha = 0.8f) }
     val saveIconColor = remember { getRandomColor().copy(alpha = 0.8f) }
-    val canvasSizeIconColor = remember { getRandomColor().copy(alpha = 0.8f) } // New color
+    val canvasSizeIconColor = remember { getRandomColor().copy(alpha = 0.8f) }
 
     val modes = listOf(
         Triple("Add Text", Icons.Default.TextFields, textIconColor),
@@ -720,26 +720,26 @@ fun ToolbarSection(
     )
 
     val itemButtonSize = Modifier.size(40.dp)
-    val standardIconSize = Modifier.size(24.dp)
+    val standardIconSize = Modifier.size(20.dp)
 
     val firstItems: @Composable () -> Unit = {
         ShapeSelectionCard(
             modifier = itemButtonSize,
             onClick = { onAddShape("Square") }
         ) {
-            SquareShape(modifier = Modifier.size(30.dp))
+            SquareShape(modifier = Modifier.size(20.dp))
         }
         ShapeSelectionCard(
             modifier = itemButtonSize,
             onClick = { onAddShape("Circle") }
         ) {
-            CircleShape(modifier = Modifier.size(30.dp))
+            CircleShape(modifier = Modifier.size(20.dp))
         }
         ShapeSelectionCard(
             modifier = itemButtonSize,
             onClick = { onAddShape("Triangle") }
         ) {
-            TriangleShape(modifier = Modifier.size(30.dp))
+            TriangleShape(modifier = Modifier.size(20.dp))
         }
         ShapeSelectionCard(
             modifier = itemButtonSize,
@@ -747,14 +747,14 @@ fun ToolbarSection(
         ) {
             PolygonShape(
                 points = pentagonPoints,
-                modifier = Modifier.size(30.dp)
+                modifier = Modifier.size(20.dp)
             )
         }
         ShapeSelectionCard(
             modifier = itemButtonSize,
             onClick = { onAddShape("Line") }
         ) {
-            LineShape(modifier = Modifier.size(18.dp))
+            LineShape(modifier = Modifier.size(20.dp))
         }
         ShapeSelectionCard(
             modifier = itemButtonSize,
@@ -996,15 +996,27 @@ fun ToolbarSection(
 fun Mp4ExportSettingsDialog(
     initialFrameRate: Int,
     initialBitRateMbps: Int,
+    initialExportMode: String = "Screen",
+    initialOutputMode: String = "Video",
+    initialResolutionMultiplier: Float = 1f,
     onDismiss: () -> Unit,
-    onConfirm: (frameRate: Int, bitRate: Int) -> Unit
+    onConfirm: (
+        frameRate: Int,
+        bitRate: Int,
+        exportMode: String,
+        outputMode: String,
+        resolutionMultiplier: Float
+    ) -> Unit
 ) {
     var frameRate by remember { mutableIntStateOf(initialFrameRate) }
     var bitRateMbps by remember { mutableFloatStateOf(initialBitRateMbps.toFloat()) }
+    var exportMode by remember { mutableStateOf(initialExportMode) }
+    var outputMode by remember { mutableStateOf(initialOutputMode) }
+    var resolutionMultiplier by remember { mutableFloatStateOf(initialResolutionMultiplier) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("MP4 Export Settings") },
+        title = { Text("Export Settings") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text("Frame Rate: $frameRate fps")
@@ -1017,17 +1029,67 @@ fun Mp4ExportSettingsDialog(
                         )
                     }
                 }
+
                 Text("Bit Rate: ${bitRateMbps.roundToInt()} Mbps")
                 Slider(
                     value = bitRateMbps,
                     onValueChange = { bitRateMbps = it },
                     valueRange = 5f..50f,
-                    steps = 44,
+                    steps = 44
                 )
+
+                Text("Export Mode:")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = exportMode == "Screen",
+                        onClick = { exportMode = "Screen" },
+                        label = { Text("Screen Render") }
+                    )
+                    FilterChip(
+                        selected = exportMode == "Native",
+                        onClick = { exportMode = "Native" },
+                        label = { Text("Native Render") }
+                    )
+                }
+
+                if (exportMode == "Native") {
+                    Text("Output Format:")
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = outputMode == "Video",
+                            onClick = { outputMode = "Video" },
+                            label = { Text("Video") }
+                        )
+                        FilterChip(
+                            selected = outputMode == "PNG Sequence",
+                            onClick = { outputMode = "PNG Sequence" },
+                            label = { Text("PNG Sequence") }
+                        )
+                    }
+
+                    Text("Resolution Multiplier:")
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(1f, 2f, 4f).forEach { mult ->
+                            FilterChip(
+                                selected = resolutionMultiplier == mult,
+                                onClick = { resolutionMultiplier = mult },
+                                label = { Text("${mult.toInt()}x") }
+                            )
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(frameRate, bitRateMbps.roundToInt()) }) {
+            TextButton(onClick = {
+                onConfirm(
+                    frameRate,
+                    bitRateMbps.roundToInt(),
+                    exportMode,
+                    outputMode,
+                    resolutionMultiplier
+                )
+            }) {
                 Text("Export")
             }
         },

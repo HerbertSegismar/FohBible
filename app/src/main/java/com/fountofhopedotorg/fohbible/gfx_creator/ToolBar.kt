@@ -92,19 +92,19 @@ fun CombinedToolbarSection(
             modifier = itemButtonSize,
             onClick = { onAddShape("Square") }
         ) {
-            SquareShape(modifier = Modifier.size(30.dp))
+            SquareShape(modifier = Modifier.size(20.dp))
         }
         ShapeSelectionCard(
             modifier = itemButtonSize,
             onClick = { onAddShape("Circle") }
         ) {
-            CircleShape(modifier = Modifier.size(30.dp))
+            CircleShape(modifier = Modifier.size(20.dp))
         }
         ShapeSelectionCard(
             modifier = itemButtonSize,
             onClick = { onAddShape("Triangle") }
         ) {
-            TriangleShape(modifier = Modifier.size(30.dp))
+            TriangleShape(modifier = Modifier.size(20.dp))
         }
         ShapeSelectionCard(
             modifier = itemButtonSize,
@@ -112,14 +112,14 @@ fun CombinedToolbarSection(
         ) {
             PolygonShape(
                 points = pentagonPoints,
-                modifier = Modifier.size(30.dp)
+                modifier = Modifier.size(20.dp)
             )
         }
         ShapeSelectionCard(
             modifier = itemButtonSize,
             onClick = { onAddShape("Line") }
         ) {
-            LineShape(modifier = Modifier.size(18.dp).padding(top = 6.dp))
+            LineShape(modifier = Modifier.size(20.dp).padding(top = 6.dp))
         }
         ShapeSelectionCard(
             modifier = itemButtonSize,
@@ -128,7 +128,7 @@ fun CombinedToolbarSection(
             Icon(
                 imageVector = Icons.Default.ShapeLine,
                 contentDescription = "Custom Polygon",
-                modifier = standardIconSize,   // now uses the same icon size as ToolbarSection
+                modifier = standardIconSize,
                 tint = getRandomColor().copy(0.8f)
             )
         }

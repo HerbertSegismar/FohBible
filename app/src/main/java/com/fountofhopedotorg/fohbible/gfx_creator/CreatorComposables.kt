@@ -10,11 +10,8 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
@@ -61,14 +58,17 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.offset
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import coil.compose.AsyncImage
@@ -84,6 +84,24 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
 
+fun Modifier.requiredSizePx(width: Float, height: Float) = this.layout { measurable, _ ->
+    val w = width.roundToInt().coerceAtLeast(0)
+    val h = height.roundToInt().coerceAtLeast(0)
+    val placeable = measurable.measure(Constraints.fixed(w, h))
+    layout(placeable.width, placeable.height) { placeable.placeRelative(0, 0) }
+}
+
+fun Modifier.paddingPx(all: Float) = this.layout { measurable, constraints ->
+    val p = all.roundToInt()
+    val horizontal = p * 2
+    val vertical = p * 2
+    val newConstraints = constraints.offset(-horizontal, -vertical)
+    val placeable = measurable.measure(newConstraints)
+    val w = placeable.width + horizontal
+    val h = placeable.height + vertical
+    layout(w, h) { placeable.placeRelative(p, p) }
+}
+
 @Composable
 fun ShapeSelectionCard(
     modifier: Modifier = Modifier,
@@ -93,7 +111,7 @@ fun ShapeSelectionCard(
     Box(
         modifier = modifier
             .clickable { onClick() }
-            .padding(12.dp),
+            .paddingPx(12f),
         contentAlignment = Alignment.Center
     ) {
         shapePreview()
@@ -703,12 +721,11 @@ fun CanvasSvgItem(
     val currentRotation by rememberUpdatedState(element.rotation)
     val currentScaleX by rememberUpdatedState(element.scaleX)
     val currentScaleY by rememberUpdatedState(element.scaleY)
-
     val currentWidth by rememberUpdatedState(element.width)
     val currentHeight by rememberUpdatedState(element.height)
 
-    val handleSize = 24.dp
-    val handleRadiusPx = with(LocalDensity.current) { handleSize.toPx() / 2f }
+    val handleSizePx = 64f
+    val handleRadiusPx = handleSizePx / 2f
 
     val isCustomPolygon = element.content.startsWith("Shape:CustomPolygon:")
     val isCustomLine = element.content.startsWith("Shape:CustomLine:")
@@ -772,12 +789,7 @@ fun CanvasSvgItem(
 
     Box(
         modifier = Modifier
-            .offset {
-                IntOffset(
-                    (offset.x * density).roundToInt(),
-                    (offset.y * density).roundToInt()
-                )
-            }
+            .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
             .wrapContentSize(unbounded = true)
     ) {
         Box(
@@ -799,10 +811,7 @@ fun CanvasSvgItem(
 
                                     val screenPanX = localPanX * cos(angleRad) - localPanY * sin(angleRad)
                                     val screenPanY = localPanX * sin(angleRad) + localPanY * cos(angleRad)
-                                    offset += Offset(
-                                        screenPanX.toFloat() / density,
-                                        screenPanY.toFloat() / density
-                                    )
+                                    offset += Offset(screenPanX.toFloat(), screenPanY.toFloat())
 
                                     val newScaleX = (currentScaleX * zoom).coerceIn(0.1f, 10f)
                                     val newScaleY = (currentScaleY * zoom).coerceIn(0.1f, 10f)
@@ -813,9 +822,7 @@ fun CanvasSvgItem(
                                 }
                             }
                             .pointerInput(Unit) {
-                                detectTapGestures {
-                                    onSelect()
-                                }
+                                detectTapGestures { onSelect() }
                             }
                     } else {
                         Modifier
@@ -825,15 +832,13 @@ fun CanvasSvgItem(
         ) {
             Box(
                 modifier = Modifier
-                    .width(currentWidth.dp)
-                    .height(currentHeight.dp)
-                    .padding(handleSize / 2),
+                    .requiredSizePx(currentWidth, currentHeight),
                 contentAlignment = Alignment.Center
             ) {
                 if (element.shadowColor != null && element.shadowColor.alpha > 0f) {
                     val shadowModifier = Modifier
                         .fillMaxSize()
-                        .offset(x = element.shadowOffsetX.dp, y = element.shadowOffsetY.dp)
+                        .offset { IntOffset(element.shadowOffsetX.roundToInt(), element.shadowOffsetY.roundToInt()) }
                         .blur(radius = 2.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
 
                     when {
@@ -869,6 +874,7 @@ fun CanvasSvgItem(
                         }
                     }
                 }
+
                 val mainModifier = Modifier.fillMaxSize()
                 when {
                     element.content == "Shape: Square" -> SquareShape(mainModifier, element.backgroundColor, gradientConfig = gradientConfig)
@@ -905,7 +911,7 @@ fun CanvasSvgItem(
 
                 if (element.borderThickness > 0f && element.borderColor != null) {
                     val borderColor = element.borderColor
-                    val strokeWidthPx = with(LocalDensity.current) { element.borderThickness.dp.toPx() }
+                    val strokeWidthPx = element.borderThickness
                     val strokeStyle = Stroke(width = strokeWidthPx, cap = StrokeCap.Round, join = StrokeJoin.Round)
                     val borderModifier = Modifier.fillMaxSize()
 
@@ -948,7 +954,7 @@ fun CanvasSvgItem(
                     Box(
                         modifier = Modifier
                             .matchParentSize()
-                            .border(0.5.dp, MaterialTheme.colorScheme.primary)
+                            .border(width = (0.5f / density).dp, color = MaterialTheme.colorScheme.primary) // 0.5px converted to dp
                     )
                 }
             }
@@ -972,34 +978,37 @@ fun CanvasSvgItem(
                 )
             }
 
+            // Delete handle – top-left corner
             Box(
                 modifier = Modifier
-                    .offset { getTargetHandleOffset(handleRadiusPx, handleRadiusPx) }
-                    .size(handleSize)
+                    .offset { getTargetHandleOffset(0f, 0f) }
+                    .requiredSizePx(handleSizePx, handleSizePx)
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                    .border(width = (1f / density).dp, color = MaterialTheme.colorScheme.primary, shape = CircleShape)
                     .clickable { onDeleteRequested() },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Close, "Delete", tint = Color.Red, modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.Close, "Delete", tint = Color.Red, modifier = Modifier.requiredSizePx(handleSizePx, handleSizePx))
             }
 
+            // Color picker handle – bottom-left corner
             Box(
                 modifier = Modifier
-                    .offset { getTargetHandleOffset(handleRadiusPx, baseSize.height - handleRadiusPx) }
-                    .size(handleSize)
+                    .offset { getTargetHandleOffset(0f, baseSize.height.toFloat()) }
+                    .requiredSizePx(handleSizePx, handleSizePx)
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                    .border(width = (1f / density).dp, color = MaterialTheme.colorScheme.primary, shape = CircleShape)
                     .clickable { onColorPickerRequested() },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Palette, "Change Color", tint = Color.Blue, modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.Palette, "Change Color", tint = Color.Blue, modifier = Modifier.requiredSizePx(handleSizePx, handleSizePx))
             }
 
+            // Rotation handle – top-right corner
             Box(
                 modifier = Modifier
-                    .offset { getTargetHandleOffset(baseSize.width - handleRadiusPx, handleRadiusPx) }
-                    .size(handleSize)
+                    .offset { getTargetHandleOffset(baseSize.width.toFloat(), 0f) }
+                    .requiredSizePx(handleSizePx, handleSizePx)
                     .pointerInput(baseSize) {
                         var startRotation = 0f
                         var accumulatedAngle = 0f
@@ -1009,8 +1018,8 @@ fun CanvasSvgItem(
                                 startRotation = currentRotation
                                 accumulatedAngle = 0f
                                 val rad = startRotation * (Math.PI / 180.0)
-                                val dx = (baseSize.width - handleRadiusPx) - cx
-                                val dy = handleRadiusPx - cy
+                                val dx = baseSize.width.toFloat() - cx
+                                val dy = 0f - cy
                                 val scaledDx = dx * currentScaleX
                                 val scaledDy = dy * currentScaleY
                                 val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
@@ -1032,16 +1041,17 @@ fun CanvasSvgItem(
                         )
                     }
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape),
+                    .border(width = (1f / density).dp, color = MaterialTheme.colorScheme.primary, shape = CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Refresh, "Rotate", tint = Color.DarkGray, modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.Refresh, "Rotate", tint = Color.DarkGray, modifier = Modifier.requiredSizePx(handleSizePx, handleSizePx))
             }
 
+            // Scale handle – bottom-right corner
             Box(
                 modifier = Modifier
-                    .offset { getTargetHandleOffset(baseSize.width - handleRadiusPx, baseSize.height - handleRadiusPx) }
-                    .size(handleSize)
+                    .offset { getTargetHandleOffset(baseSize.width.toFloat(), baseSize.height.toFloat()) }
+                    .requiredSizePx(handleSizePx, handleSizePx)
                     .pointerInput(baseSize) {
                         var startScaleX = 1f
                         var startScaleY = 1f
@@ -1053,8 +1063,8 @@ fun CanvasSvgItem(
                                 startScaleY = currentScaleY
                                 fixedRotation = currentRotation
                                 val rad = fixedRotation * (Math.PI / 180.0)
-                                val dx = (baseSize.width - handleRadiusPx) - cx
-                                val dy = (baseSize.height - handleRadiusPx) - cy
+                                val dx = baseSize.width.toFloat() - cx
+                                val dy = baseSize.height.toFloat() - cy
                                 val scaledDx = dx * startScaleX
                                 val scaledDy = dy * startScaleY
                                 val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
@@ -1068,8 +1078,11 @@ fun CanvasSvgItem(
                                 val unrotatedRad = -rad
                                 val newScaledDx = currentVector.x * cos(unrotatedRad) - currentVector.y * sin(unrotatedRad)
                                 val newScaledDy = currentVector.x * sin(unrotatedRad) + currentVector.y * cos(unrotatedRad)
-                                val dx = (baseSize.width - handleRadiusPx) - cx
-                                val dy = (baseSize.height - handleRadiusPx) - cy
+
+                                // Correct baseline distances: from centre to corner (no handleRadius offset)
+                                val dx = baseSize.width.toFloat() - cx
+                                val dy = baseSize.height.toFloat() - cy
+
                                 if (latestProportional) {
                                     val originalDist = sqrt(dx * dx + dy * dy)
                                     val newDist = sqrt(newScaledDx * newScaledDx + newScaledDy * newScaledDy)
@@ -1084,18 +1097,19 @@ fun CanvasSvgItem(
                         )
                     }
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape),
+                    .border(width = (1f / density).dp, color = MaterialTheme.colorScheme.primary, shape = CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Box(modifier = Modifier.size(10.dp).background(Color.DarkGray, CircleShape))
+                Box(modifier = Modifier.requiredSizePx(48f, 48f).background(Color.DarkGray, CircleShape))
             }
 
+            // Proportional toggle handle – centred on top edge
             Box(
                 modifier = Modifier
-                    .offset { getTargetHandleOffset(baseSize.width / 2f, handleRadiusPx) }
-                    .size(handleSize)
+                    .offset { getTargetHandleOffset(baseSize.width.toFloat() / 2f, 0f) }
+                    .requiredSizePx(handleSizePx, handleSizePx)
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                    .border(width = (1f / density).dp, color = MaterialTheme.colorScheme.primary, shape = CircleShape)
                     .clickable { onProportionalToggle() },
                 contentAlignment = Alignment.Center
             ) {
@@ -1103,7 +1117,7 @@ fun CanvasSvgItem(
                     imageVector = if (proportionalEditing) Icons.Default.Link else Icons.Default.LinkOff,
                     contentDescription = if (proportionalEditing) "Disable proportional" else "Enable proportional",
                     tint = if (proportionalEditing) Color(0xFF1976D2) else Color.Gray,
-                    modifier = Modifier.size(14.dp)
+                    modifier = Modifier.requiredSizePx(handleSizePx, handleSizePx)
                 )
             }
         }
@@ -1113,7 +1127,7 @@ fun CanvasSvgItem(
 @Composable
 fun CanvasTextItem(
     element: CanvasElement,
-    gradientConfig: GradientConfig? = null,   // ← NEW parameter
+    gradientConfig: GradientConfig? = null,
     isSelected: Boolean,
     isLocked: Boolean,
     onSelect: () -> Unit,
@@ -1133,8 +1147,9 @@ fun CanvasTextItem(
     val currentWidth by rememberUpdatedState(element.width)
     val currentHeight by rememberUpdatedState(element.height)
 
-    val handleSize = 24.dp
-    val handleRadiusPx = with(LocalDensity.current) { handleSize.toPx() / 2f }
+    // Match SVG handle sizes: 64px diameter
+    val handleSizePx = 64f
+    val handleRadiusPx = handleSizePx / 2f
 
     val latestProportional by rememberUpdatedState(proportionalEditing)
 
@@ -1190,15 +1205,14 @@ fun CanvasTextItem(
                 .alpha(if (isLocked) 0.2f else 1f)
         ) {
             Box(
-                modifier = Modifier
-                    .padding(handleSize / 2),
+                modifier = Modifier,
                 contentAlignment = Alignment.Center
             ) {
                 if (isSelected) {
                     Box(
                         modifier = Modifier
                             .matchParentSize()
-                            .border(0.5.dp, MaterialTheme.colorScheme.primary)
+                            .border(width = (0.5f / density).dp, color = MaterialTheme.colorScheme.primary) // 0.5px
                     )
                 }
                 Box(
@@ -1306,6 +1320,8 @@ fun CanvasTextItem(
                 }
             }
         }
+
+        // Handles – consistent with SVG: 64px size, placed exactly on the corners
         if (isSelected && baseSize != IntSize.Zero && !isLocked) {
             val cx = baseSize.width / 2f
             val cy = baseSize.height / 2f
@@ -1324,34 +1340,37 @@ fun CanvasTextItem(
                 )
             }
 
+            // Delete handle – top-left corner
             Box(
                 modifier = Modifier
-                    .offset { getTargetHandleOffset(handleRadiusPx, handleRadiusPx) }
-                    .size(handleSize)
+                    .offset { getTargetHandleOffset(0f, 0f) }
+                    .requiredSizePx(handleSizePx, handleSizePx)
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                    .border(width = (1f / density).dp, color = MaterialTheme.colorScheme.primary, shape = CircleShape)
                     .clickable { onDeleteRequested() },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Close, "Delete", tint = Color.Red, modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.Close, "Delete", tint = Color.Red, modifier = Modifier.requiredSizePx(handleSizePx, handleSizePx))
             }
 
+            // Color picker handle – bottom-left corner
             Box(
                 modifier = Modifier
-                    .offset { getTargetHandleOffset(handleRadiusPx, baseSize.height - handleRadiusPx) }
-                    .size(handleSize)
+                    .offset { getTargetHandleOffset(0f, baseSize.height.toFloat()) }
+                    .requiredSizePx(handleSizePx, handleSizePx)
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                    .border(width = (1f / density).dp, color = MaterialTheme.colorScheme.primary, shape = CircleShape)
                     .clickable { onColorPickerRequested() },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Palette, "Change Color", tint = Color.Blue, modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.Palette, "Change Color", tint = Color.Blue, modifier = Modifier.requiredSizePx(handleSizePx, handleSizePx))
             }
 
+            // Rotation handle – top-right corner
             Box(
                 modifier = Modifier
-                    .offset { getTargetHandleOffset(baseSize.width - handleRadiusPx, handleRadiusPx) }
-                    .size(handleSize)
+                    .offset { getTargetHandleOffset(baseSize.width.toFloat(), 0f) }
+                    .requiredSizePx(handleSizePx, handleSizePx)
                     .pointerInput(baseSize) {
                         var startRotation = 0f
                         var accumulatedAngle = 0f
@@ -1361,8 +1380,8 @@ fun CanvasTextItem(
                                 startRotation = currentRotation
                                 accumulatedAngle = 0f
                                 val rad = startRotation * (Math.PI / 180.0)
-                                val dx = (baseSize.width - handleRadiusPx) - cx
-                                val dy = handleRadiusPx - cy
+                                val dx = baseSize.width.toFloat() - cx
+                                val dy = 0f - cy
                                 val scaledDx = dx * currentScaleX
                                 val scaledDy = dy * currentScaleY
                                 val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
@@ -1384,16 +1403,17 @@ fun CanvasTextItem(
                         )
                     }
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape),
+                    .border(width = (1f / density).dp, color = MaterialTheme.colorScheme.primary, shape = CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Refresh, "Rotate", tint = Color.DarkGray, modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.Refresh, "Rotate", tint = Color.DarkGray, modifier = Modifier.requiredSizePx(handleSizePx, handleSizePx))
             }
 
+            // Scale handle – bottom-right corner
             Box(
                 modifier = Modifier
-                    .offset { getTargetHandleOffset(baseSize.width - handleRadiusPx, baseSize.height - handleRadiusPx) }
-                    .size(handleSize)
+                    .offset { getTargetHandleOffset(baseSize.width.toFloat(), baseSize.height.toFloat()) }
+                    .requiredSizePx(handleSizePx, handleSizePx)
                     .pointerInput(baseSize) {
                         var startScaleX = 1f
                         var startScaleY = 1f
@@ -1405,8 +1425,8 @@ fun CanvasTextItem(
                                 startScaleY = currentScaleY
                                 fixedRotation = currentRotation
                                 val rad = fixedRotation * (Math.PI / 180.0)
-                                val dx = (baseSize.width - handleRadiusPx) - cx
-                                val dy = (baseSize.height - handleRadiusPx) - cy
+                                val dx = baseSize.width.toFloat() - cx
+                                val dy = baseSize.height.toFloat() - cy
                                 val scaledDx = dx * startScaleX
                                 val scaledDy = dy * startScaleY
                                 val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
@@ -1420,8 +1440,10 @@ fun CanvasTextItem(
                                 val unrotatedRad = -rad
                                 val newScaledDx = currentVector.x * cos(unrotatedRad) - currentVector.y * sin(unrotatedRad)
                                 val newScaledDy = currentVector.x * sin(unrotatedRad) + currentVector.y * cos(unrotatedRad)
-                                val dx = (baseSize.width - handleRadiusPx) - cx
-                                val dy = (baseSize.height - handleRadiusPx) - cy
+
+                                val dx = baseSize.width.toFloat() - cx
+                                val dy = baseSize.height.toFloat() - cy
+
                                 if (latestProportional) {
                                     val originalDist = sqrt(dx * dx + dy * dy)
                                     val newDist = sqrt(newScaledDx * newScaledDx + newScaledDy * newScaledDy)
@@ -1436,18 +1458,19 @@ fun CanvasTextItem(
                         )
                     }
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape),
+                    .border(width = (1f / density).dp, color = MaterialTheme.colorScheme.primary, shape = CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Box(modifier = Modifier.size(10.dp).background(Color.DarkGray, CircleShape))
+                Box(modifier = Modifier.requiredSizePx(48f, 48f).background(Color.DarkGray, CircleShape))
             }
 
+            // Proportional toggle handle – centered on top edge
             Box(
                 modifier = Modifier
-                    .offset { getTargetHandleOffset(baseSize.width / 2f, handleRadiusPx) }
-                    .size(handleSize)
+                    .offset { getTargetHandleOffset(baseSize.width.toFloat() / 2f, 0f) }
+                    .requiredSizePx(handleSizePx, handleSizePx)
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                    .border(width = (1f / density).dp, color = MaterialTheme.colorScheme.primary, shape = CircleShape)
                     .clickable { onProportionalToggle() },
                 contentAlignment = Alignment.Center
             ) {
@@ -1455,12 +1478,13 @@ fun CanvasTextItem(
                     imageVector = if (proportionalEditing) Icons.Default.Link else Icons.Default.LinkOff,
                     contentDescription = if (proportionalEditing) "Disable proportional" else "Enable proportional",
                     tint = if (proportionalEditing) Color(0xFF1976D2) else Color.Gray,
-                    modifier = Modifier.size(14.dp)
+                    modifier = Modifier.requiredSizePx(handleSizePx, handleSizePx)
                 )
             }
         }
     }
 }
+
 
 @Composable
 fun CanvasImageItem(
@@ -1476,17 +1500,16 @@ fun CanvasImageItem(
     proportionalEditing: Boolean,
     onProportionalToggle: () -> Unit
 ) {
+    val density = LocalDensity.current.density
     var offset by remember(element.offset) { mutableStateOf(element.offset) }
     var rotation by remember(element.id, element.rotation) { mutableFloatStateOf(element.rotation) }
     val scaleX by rememberUpdatedState(element.scaleX)
     val scaleY by rememberUpdatedState(element.scaleY)
 
     var baseSize by remember { mutableStateOf(IntSize.Zero) }
-    val density = LocalDensity.current.density
 
-    val handleSize = 24.dp
-    val handleRadiusPx = with(LocalDensity.current) { handleSize.toPx() / 2f }
-
+    val handleSizePx = 64f
+    val handleRadiusPx = handleSizePx / 2f
     val latestProportional by rememberUpdatedState(proportionalEditing)
 
     val uriString = element.content.removePrefix("Image: ")
@@ -1494,12 +1517,7 @@ fun CanvasImageItem(
 
     Box(
         modifier = Modifier
-            .offset {
-                IntOffset(
-                    (offset.x * density).roundToInt(),
-                    (offset.y * density).roundToInt()
-                )
-            }
+            .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
             .wrapContentSize(unbounded = true)
     ) {
         Box(
@@ -1521,10 +1539,7 @@ fun CanvasImageItem(
 
                                     val screenPanX = localPanX * cos(angleRad) - localPanY * sin(angleRad)
                                     val screenPanY = localPanX * sin(angleRad) + localPanY * cos(angleRad)
-                                    offset += Offset(
-                                        screenPanX.toFloat() / density,
-                                        screenPanY.toFloat() / density
-                                    )
+                                    offset += Offset(screenPanX.toFloat(), screenPanY.toFloat())
 
                                     val newScaleX = (scaleX * zoom).coerceIn(0.1f, 10f)
                                     val newScaleY = (scaleY * zoom).coerceIn(0.1f, 10f)
@@ -1545,9 +1560,7 @@ fun CanvasImageItem(
         ) {
             Box(
                 modifier = Modifier
-                    .width(element.width.dp)
-                    .height(element.height.dp)
-                    .padding(handleSize / 2),
+                    .requiredSizePx(element.width, element.height),
                 contentAlignment = Alignment.Center
             ) {
 
@@ -1557,7 +1570,7 @@ fun CanvasImageItem(
                         contentDescription = "Image Shadow",
                         modifier = Modifier
                             .matchParentSize()
-                            .offset(x = element.shadowOffsetX.dp, y = element.shadowOffsetY.dp)
+                            .offset { IntOffset(element.shadowOffsetX.roundToInt(), element.shadowOffsetY.roundToInt()) }
                             .blur(radius = 2.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded),
                         contentScale = ContentScale.Fit,
                         colorFilter = ColorFilter.tint(element.shadowColor)
@@ -1568,7 +1581,7 @@ fun CanvasImageItem(
                     Box(
                         modifier = Modifier
                             .matchParentSize()
-                            .border(0.5.dp, MaterialTheme.colorScheme.primary)
+                            .border(width = (0.5f / density).dp, color = MaterialTheme.colorScheme.primary)
                     )
                 }
 
@@ -1630,34 +1643,37 @@ fun CanvasImageItem(
                 )
             }
 
+            // Delete handle – top‑left corner
             Box(
                 modifier = Modifier
-                    .offset { getTargetHandleOffset(handleRadiusPx, handleRadiusPx) }
-                    .size(handleSize)
+                    .offset { getTargetHandleOffset(0f, 0f) }
+                    .requiredSizePx(handleSizePx, handleSizePx)
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                    .border(width = (1f / density).dp, color = MaterialTheme.colorScheme.primary, shape = CircleShape)
                     .clickable { onDeleteRequested() },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Close, "Delete", tint = Color.Red, modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.Close, "Delete", tint = Color.Red, modifier = Modifier.requiredSizePx(handleSizePx, handleSizePx))
             }
 
+            // Color picker handle – bottom‑left corner
             Box(
                 modifier = Modifier
-                    .offset { getTargetHandleOffset(handleRadiusPx, baseSize.height - handleRadiusPx) }
-                    .size(handleSize)
+                    .offset { getTargetHandleOffset(0f, baseSize.height.toFloat()) }
+                    .requiredSizePx(handleSizePx, handleSizePx)
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                    .border(width = (1f / density).dp, color = MaterialTheme.colorScheme.primary, shape = CircleShape)
                     .clickable { onColorPickerRequested() },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Palette, "Change Color", tint = Color.Blue, modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.Palette, "Change Color", tint = Color.Blue, modifier = Modifier.requiredSizePx(handleSizePx, handleSizePx))
             }
 
+            // Rotation handle – top‑right corner
             Box(
                 modifier = Modifier
-                    .offset { getTargetHandleOffset(baseSize.width - handleRadiusPx, handleRadiusPx) }
-                    .size(handleSize)
+                    .offset { getTargetHandleOffset(baseSize.width.toFloat(), 0f) }
+                    .requiredSizePx(handleSizePx, handleSizePx)
                     .pointerInput(baseSize) {
                         var startRotation = 0f
                         var accumulatedAngle = 0f
@@ -1668,8 +1684,9 @@ fun CanvasImageItem(
                                 startRotation = rotation
                                 accumulatedAngle = 0f
                                 val rad = startRotation * (Math.PI / 180.0)
-                                val dx = (baseSize.width - handleRadiusPx) - cx
-                                val dy = handleRadiusPx - cy
+                                // Corner position: (baseSize.width, 0)
+                                val dx = baseSize.width.toFloat() - cx
+                                val dy = 0f - cy
                                 val scaledDx = dx * scaleX
                                 val scaledDy = dy * scaleY
                                 val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
@@ -1691,16 +1708,17 @@ fun CanvasImageItem(
                         )
                     }
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape),
+                    .border(width = (1f / density).dp, color = MaterialTheme.colorScheme.primary, shape = CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Refresh, "Rotate", tint = Color.DarkGray, modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.Refresh, "Rotate", tint = Color.DarkGray, modifier = Modifier.requiredSizePx(handleSizePx, handleSizePx))
             }
 
+            // Scale handle – bottom‑right corner
             Box(
                 modifier = Modifier
-                    .offset { getTargetHandleOffset(baseSize.width - handleRadiusPx, baseSize.height - handleRadiusPx) }
-                    .size(handleSize)
+                    .offset { getTargetHandleOffset(baseSize.width.toFloat(), baseSize.height.toFloat()) }
+                    .requiredSizePx(handleSizePx, handleSizePx)
                     .pointerInput(baseSize) {
                         var startScaleX = 1f
                         var startScaleY = 1f
@@ -1714,8 +1732,9 @@ fun CanvasImageItem(
                                 fixedRotation = rotation
 
                                 val rad = fixedRotation * (Math.PI / 180.0)
-                                val dx = (baseSize.width - handleRadiusPx) - cx
-                                val dy = (baseSize.height - handleRadiusPx) - cy
+                                // Corner position: (baseSize.width, baseSize.height)
+                                val dx = baseSize.width.toFloat() - cx
+                                val dy = baseSize.height.toFloat() - cy
                                 val scaledDx = dx * startScaleX
                                 val scaledDy = dy * startScaleY
                                 val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
@@ -1731,8 +1750,9 @@ fun CanvasImageItem(
                                 val newScaledDx = currentVector.x * cos(unrotatedRad) - currentVector.y * sin(unrotatedRad)
                                 val newScaledDy = currentVector.x * sin(unrotatedRad) + currentVector.y * cos(unrotatedRad)
 
-                                val dx = (baseSize.width - handleRadiusPx) - cx
-                                val dy = (baseSize.height - handleRadiusPx) - cy
+                                // Full centre‑to‑corner distances (no handleRadius offset)
+                                val dx = baseSize.width.toFloat() - cx
+                                val dy = baseSize.height.toFloat() - cy
 
                                 if (latestProportional) {
                                     val originalDist = sqrt(dx * dx + dy * dy)
@@ -1748,18 +1768,19 @@ fun CanvasImageItem(
                         )
                     }
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape),
+                    .border(width = (1f / density).dp, color = MaterialTheme.colorScheme.primary, shape = CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Box(modifier = Modifier.size(10.dp).background(Color.DarkGray, CircleShape))
+                Box(modifier = Modifier.requiredSizePx(48f, 48f).background(Color.DarkGray, CircleShape))
             }
 
+            // Proportional toggle handle – centred on top edge
             Box(
                 modifier = Modifier
-                    .offset { getTargetHandleOffset(baseSize.width / 2f, handleRadiusPx) }
-                    .size(handleSize)
+                    .offset { getTargetHandleOffset(baseSize.width.toFloat() / 2f, 0f) }
+                    .requiredSizePx(handleSizePx, handleSizePx)
                     .background(Color.White, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                    .border(width = (1f / density).dp, color = MaterialTheme.colorScheme.primary, shape = CircleShape)
                     .clickable { onProportionalToggle() },
                 contentAlignment = Alignment.Center
             ) {
@@ -1767,7 +1788,7 @@ fun CanvasImageItem(
                     imageVector = if (proportionalEditing) Icons.Default.Link else Icons.Default.LinkOff,
                     contentDescription = if (proportionalEditing) "Disable proportional" else "Enable proportional",
                     tint = if (proportionalEditing) Color(0xFF1976D2) else Color.Gray,
-                    modifier = Modifier.size(14.dp)
+                    modifier = Modifier.requiredSizePx(handleSizePx, handleSizePx)
                 )
             }
         }
@@ -1889,7 +1910,7 @@ fun CustomPathPreview(
                 drawPath(
                     path = path,
                     color = color.copy(alpha = 0.8f),
-                    style = Stroke(width = 1.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+                    style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
                 )
             } else {
                 val brush = gradientConfig?.let {
@@ -1902,7 +1923,7 @@ fun CustomPathPreview(
                 drawPath(
                     path = path,
                     brush = brush ?: SolidColor(color),
-                    style = Stroke(width = 0.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+                    style = Stroke(width = 0.5f, cap = StrokeCap.Round, join = StrokeJoin.Round)
                 )
             }
         }
