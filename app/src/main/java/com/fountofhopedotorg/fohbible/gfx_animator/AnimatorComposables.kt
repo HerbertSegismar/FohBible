@@ -1053,20 +1053,6 @@ fun Mp4ExportSettingsDialog(
                 }
 
                 if (exportMode == "Native") {
-                    Text("Output Format:")
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            selected = outputMode == "Video",
-                            onClick = { outputMode = "Video" },
-                            label = { Text("Video") }
-                        )
-                        FilterChip(
-                            selected = outputMode == "PNG Sequence",
-                            onClick = { outputMode = "PNG Sequence" },
-                            label = { Text("PNG Sequence") }
-                        )
-                    }
-
                     Text("Resolution Multiplier:")
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(1f, 2f, 4f).forEach { mult ->

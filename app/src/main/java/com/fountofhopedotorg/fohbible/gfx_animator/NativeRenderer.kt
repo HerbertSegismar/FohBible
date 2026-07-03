@@ -31,7 +31,6 @@ import androidx.core.graphics.withTranslation
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
 import java.io.File
-import java.io.FileOutputStream
 
 suspend fun loadImageBitmaps(
     elements: List<CanvasElement>,
@@ -48,7 +47,6 @@ suspend fun loadImageBitmaps(
     val h = targetHeightPx.roundToInt()
 
     for (el in elements) {
-        // ensure exact match with space after colon, as used when adding
         if (el.content.startsWith("Image: ")) {
             val uriString = el.content.removePrefix("Image: ").trim()
             val uri = uriString.toUri()
@@ -69,8 +67,6 @@ suspend fun loadImageBitmaps(
                 val bmp = if (drawable is BitmapDrawable) {
                     drawable.bitmap
                 } else {
-                    // Create a new bitmap and DRAW the drawable onto it,
-                    // making sure the bounds are set.
                     createBitmap(w, h).also { canvasBitmap ->
                         val canvas = Canvas(canvasBitmap)
                         drawable.setBounds(0, 0, w, h)
@@ -197,13 +193,12 @@ fun drawFrame(
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
-suspend fun offscreenExport(
+suspend fun nativeExport(
     context: Context,
     canvasWidthPx: Int,
     canvasHeightPx: Int,
     frameRate: Int,
     bitRateMbps: Int,
-    outputMode: String,
     resolutionMultiplier: Float,
     elements: List<CanvasElement>,
     gradientConfigs: Map<String, GradientConfig>,
@@ -221,87 +216,48 @@ suspend fun offscreenExport(
     var currentTimeUs = 0L
     var frameIndex = 0
 
-    if (outputMode == "Video") {
-        val encoder = OffscreenVideoEncoder(
-            context, exportWidth, exportHeight, frameRate,
-            bitRateMbps * 1_000_000, mimeType = "video/hevc"
-        )
-        val surface = encoder.inputSurface
+    val encoder = OffscreenVideoEncoder(
+        context, exportWidth, exportHeight, frameRate,
+        bitRateMbps * 1_000_000, mimeType = "video/hevc"
+    )
+    val surface = encoder.inputSurface
 
-        try {
-            while (currentTimeUs / 1000L <= maxTimestampMs + 500 && currentCoroutineContext().isActive) {
-                val canvas = surface.lockCanvas(null) ?: break
-                drawFrame(
-                    canvas, elements, currentTimeUs / 1000L, gradientConfigs,
-                    imageBitmaps, resolutionMultiplier   // ← scaleFactor
-                )
-                surface.unlockCanvasAndPost(canvas)
-
-                frameIndex++
-                currentTimeUs += frameDurationUs
-
-                encoder.drainEncoder {}
-
-                val progress = (currentTimeUs / 1000f) / (maxTimestampMs + 500f)
-                onProgress(progress.coerceIn(0f, 1f))
-            }
-            encoder.signalEndOfStream()
-
-            var eosReceived = false
-            while (!eosReceived && currentCoroutineContext().isActive) {
-                encoder.drainEncoder { eosReceived = true }
-            }
-
-            val savedPath = encoder.releaseAndSaveToGallery("native_${System.currentTimeMillis()}")
-            withContext(Dispatchers.Main) {
-                if (savedPath != null) {
-                    Toast.makeText(context, "Video saved", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(context, "Failed to save video", Toast.LENGTH_SHORT).show()
-                }
-            }
-        } finally {
-            encoder.release()
-        }
-    } else {
-        val folder = File(
-            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
-            "AnimatorExport_${System.currentTimeMillis()}"
-        ).apply { mkdirs() }
-
+    try {
         while (currentTimeUs / 1000L <= maxTimestampMs + 500 && currentCoroutineContext().isActive) {
-            val bitmap = renderFrame(
-                elements, gradientConfigs, imageBitmaps,
-                currentTimeUs / 1000L, exportWidth, exportHeight, resolutionMultiplier
+            val canvas = surface.lockCanvas(null) ?: break
+            drawFrame(
+                canvas, elements, currentTimeUs / 1000L, gradientConfigs,
+                imageBitmaps, resolutionMultiplier
             )
-            val file = File(folder, "frame_${frameIndex.toString().padStart(5, '0')}.png")
-            withContext(Dispatchers.IO) {
-                FileOutputStream(file).use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-            }
-            bitmap.recycle()
+            surface.unlockCanvasAndPost(canvas)
+
             frameIndex++
             currentTimeUs += frameDurationUs
+
+            encoder.drainEncoder {}
+
             val progress = (currentTimeUs / 1000f) / (maxTimestampMs + 500f)
             onProgress(progress.coerceIn(0f, 1f))
         }
+        encoder.signalEndOfStream()
+
+        var eosReceived = false
+        while (!eosReceived && currentCoroutineContext().isActive) {
+            encoder.drainEncoder { eosReceived = true }
+        }
+
+        val savedPath = encoder.releaseAndSaveToGallery("native_${System.currentTimeMillis()}")
+        withContext(Dispatchers.Main) {
+            if (savedPath != null) {
+                Toast.makeText(context, "Video saved", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "Failed to save video", Toast.LENGTH_SHORT).show()
+            }
+        }
+    } finally {
+        encoder.release()
     }
     imageBitmaps.values.forEach { it.recycle() }
-}
-
-@RequiresApi(Build.VERSION_CODES.O)
-fun renderFrame(
-    elements: List<CanvasElement>,
-    gradientConfigs: Map<String, GradientConfig>,
-    imageBitmaps: Map<String, Bitmap>,
-    timeMs: Long,
-    width: Int,
-    height: Int,
-    scaleFactor: Float
-): Bitmap {
-    val bitmap = createBitmap(width, height)
-    val canvas = Canvas(bitmap)
-    drawFrame(canvas, elements, timeMs, gradientConfigs, imageBitmaps, scaleFactor)
-    return bitmap
 }
 
 class OffscreenVideoEncoder(

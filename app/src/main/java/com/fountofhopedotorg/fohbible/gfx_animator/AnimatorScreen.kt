@@ -1281,13 +1281,12 @@ fun AnimatorScreen() {
                     isOffscreenExporting = true
                     offscreenExportProgress = 0f
                     offscreenExportJob = exportScope.launch(Dispatchers.IO) {
-                        offscreenExport(
+                        nativeExport(
                             context,
                             canvasWidthPx,
                             canvasHeightPx,
                             frameRate,
                             bitRate,
-                            outMode,
                             resolution,
                             viewModel.animatorCanvasElements.toList(),
                             viewModel.animatorGradientPairs.toMap()
