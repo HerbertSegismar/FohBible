@@ -1,5 +1,6 @@
 package com.fountofhopedotorg.fohbible.gfx_animator
 
+import android.content.res.Configuration.ORIENTATION_LANDSCAPE
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -21,7 +22,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -30,8 +31,11 @@ import com.fountofhopedotorg.fohbible.color_wheel.ColorWheelDialog
 import com.fountofhopedotorg.fohbible.data.CanvasKeyframe
 import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.GradientConfig
-import java.util.Locale
 import kotlin.math.roundToInt
+import kotlin.math.roundToLong
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.platform.LocalConfiguration
 
 private val GradientConfigNullableSaver = Saver<GradientConfig?, String>(
     save = { config ->
@@ -49,9 +53,8 @@ private val GradientConfigNullableSaver = Saver<GradientConfig?, String>(
         }
     },
     restore = { str ->
-        if (str == "NULL") {
-            null
-        } else {
+        if (str == "NULL") null
+        else {
             val parts = str.split(",").map { it.toFloatOrNull() ?: 0f }
             if (parts.size < 6) null
             else GradientConfig(
@@ -69,7 +72,7 @@ private val GradientConfigNullableSaver = Saver<GradientConfig?, String>(
 fun KeyframeAnimationDialog(
     element: CanvasElement?,
     onDismiss: () -> Unit,
-    onSaveKeyframes: (String, List<CanvasKeyframe>) -> Unit,
+    onSaveKeyframes: (String, List<CanvasKeyframe>, Long, Long) -> Unit,
     timeMultiplier: Float,
     initialGradientConfig: GradientConfig? = null
 ) {
@@ -77,7 +80,17 @@ fun KeyframeAnimationDialog(
 
     val localKeyframes = remember(element.keyframes) { mutableStateListOf(*element.keyframes.toTypedArray()) }
 
-    var timeInput by rememberSaveable { mutableStateOf("") }
+    var trimStartMs by rememberSaveable { mutableLongStateOf(element.startTimeMs) }
+    var trimEndMs by rememberSaveable {
+        mutableLongStateOf(if (element.endTimeMs == Long.MAX_VALUE) 5_000L else element.endTimeMs)
+    }
+
+    var timeInput by rememberSaveable {
+        val initialCenterMs = trimStartMs + (trimEndMs - trimStartMs) / 2
+        val initialDisplay = (initialCenterMs / timeMultiplier).roundToInt().toLong()
+        mutableStateOf(initialDisplay.toString())
+    }
+
     var xInput by rememberSaveable { mutableStateOf(element.offset.x.toString()) }
     var yInput by rememberSaveable { mutableStateOf(element.offset.y.toString()) }
     var scaleXInput by rememberSaveable { mutableStateOf(element.scaleX.toString()) }
@@ -88,9 +101,7 @@ fun KeyframeAnimationDialog(
         if (element.content.startsWith("Shape:") || element.content.startsWith("Image:")) element.backgroundColor
         else element.textColor ?: Color.Black
     }
-    var pickedColorArgb by rememberSaveable(initialElementColor) {
-        mutableLongStateOf(initialElementColor.toArgb().toLong())
-    }
+    var pickedColorArgb by rememberSaveable(initialElementColor) { mutableLongStateOf(initialElementColor.toArgb().toLong()) }
 
     var currentGradientConfig by rememberSaveable(
         initialGradientConfig,
@@ -102,16 +113,13 @@ fun KeyframeAnimationDialog(
     val pickedColor = Color(pickedColorArgb.toInt())
     var editingKeyframeTimestamp by rememberSaveable { mutableStateOf<Long?>(null) }
 
+
     fun storedToDisplay(storedMs: Long): Long = (storedMs / timeMultiplier).roundToInt().toLong()
     fun displayToStored(displayMs: Long): Long = (displayMs * timeMultiplier).roundToInt().toLong()
 
-    val autoMaxMs = remember(localKeyframes) {
-        val maxStored = localKeyframes.maxOfOrNull { it.timestampMs } ?: 0L
-        (storedToDisplay(maxStored) + 1000).coerceAtLeast(5000L)
-    }
-
-    var userMaxMs by rememberSaveable { mutableStateOf<Long?>(null) }
-    val effectiveMaxMs = maxOf(autoMaxMs, userMaxMs ?: 0L)
+    val maxKeyframeStored = localKeyframes.maxOfOrNull { it.timestampMs } ?: 0L
+    val trimLimitLow = 0L
+    val trimLimitHigh = maxKeyframeStored + 10_000L
 
     fun populateFromKeyframe(kf: CanvasKeyframe) {
         timeInput = storedToDisplay(kf.timestampMs).toString()
@@ -127,14 +135,11 @@ fun KeyframeAnimationDialog(
 
     LaunchedEffect(Unit) {
         if (localKeyframes.isEmpty()) {
-            val storedZero = displayToStored(0L)
             localKeyframes.add(
                 CanvasKeyframe(
-                    timestampMs = storedZero,
-                    x = element.offset.x,
-                    y = element.offset.y,
-                    scaleX = element.scaleX,
-                    scaleY = element.scaleY,
+                    timestampMs = trimStartMs,
+                    x = element.offset.x, y = element.offset.y,
+                    scaleX = element.scaleX, scaleY = element.scaleY,
                     rotation = element.rotation,
                     color = initialElementColor,
                     gradientConfig = null
@@ -143,74 +148,22 @@ fun KeyframeAnimationDialog(
         }
     }
 
+    LaunchedEffect(trimStartMs) {
+        val firstKf = localKeyframes.minByOrNull { it.timestampMs }
+        if (firstKf != null && firstKf.timestampMs != trimStartMs) {
+            val index = localKeyframes.indexOf(firstKf)
+            localKeyframes[index] = firstKf.copy(timestampMs = trimStartMs)
+        }
+    }
+
     LaunchedEffect(initialGradientConfig, initialElementColor) {
-        val firstKf = localKeyframes.firstOrNull { it.timestampMs == displayToStored(0L) }
+        val firstKf = localKeyframes.minByOrNull { it.timestampMs }
         if (firstKf != null) {
             val index = localKeyframes.indexOf(firstKf)
             localKeyframes[index] = firstKf.copy(
                 color = initialGradientConfig?.startColor ?: initialElementColor,
                 gradientConfig = initialGradientConfig
             )
-        }
-    }
-
-    @Composable
-    fun TimelineControl() {
-        val currentMs = timeInput.toLongOrNull()?.coerceIn(0L, effectiveMaxMs) ?: 0L
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Slider(
-                value = currentMs.toFloat(),
-                onValueChange = { timeInput = it.roundToInt().toString() },
-                valueRange = 0f..effectiveMaxMs.toFloat().coerceAtLeast(1000f),
-                modifier = Modifier.weight(1f),
-                colors = SliderDefaults.colors(
-                    thumbColor = MaterialTheme.colorScheme.primary,
-                    activeTrackColor = MaterialTheme.colorScheme.primary,
-                    inactiveTrackColor = MaterialTheme.colorScheme.secondary.copy(0.1f)
-                ),
-                thumb = {
-                    Box(
-                        modifier = Modifier
-                            .size(22.dp)
-                            .shadow(4.dp, CircleShape)
-                            .background(MaterialTheme.colorScheme.primary, CircleShape)
-                            .border(2.dp, MaterialTheme.colorScheme.onPrimary, CircleShape)
-                    )
-                }
-            )
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .width(72.dp)
-                    .background(MaterialTheme.colorScheme.secondary.copy(0.1f), RoundedCornerShape(6.dp))
-                    .padding(horizontal = 4.dp, vertical = 2.dp)
-            ) {
-                BasicTextField(
-                    value = timeInput,
-                    onValueChange = { newValue ->
-                        if (newValue.all { c -> c.isDigit() }) {
-                            timeInput = newValue
-                            newValue.toLongOrNull()?.let { typedMs ->
-                                if (typedMs > effectiveMaxMs && typedMs > 5000) {
-                                    userMaxMs = typedMs
-                                }
-                            }
-                        }
-                    },
-                    textStyle = MaterialTheme.typography.bodySmall.copy(
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Bold
-                    ),
-                    singleLine = true,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    "ms",
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.padding(start = 2.dp)
-                )
-            }
         }
     }
 
@@ -442,9 +395,8 @@ fun KeyframeAnimationDialog(
     fun InsertUpdateButton(modifier: Modifier = Modifier) {
         Button(
             onClick = {
-                val rawT = timeInput.toLongOrNull() ?: 0L
-                val clampedDisplayMs = rawT.coerceIn(0L, effectiveMaxMs)
-                val storedMs = displayToStored(clampedDisplayMs)
+                val rawDisplayMs = timeInput.toLongOrNull() ?: 0L
+                val storedMs = displayToStored(rawDisplayMs)
 
                 val x = xInput.toFloatOrNull() ?: element.offset.x
                 val y = yInput.toFloatOrNull() ?: element.offset.y
@@ -469,7 +421,11 @@ fun KeyframeAnimationDialog(
                     )
                 )
 
-                val bumpedMs = (clampedDisplayMs + 10L).coerceAtMost(effectiveMaxMs)
+                if (storedMs > trimEndMs) {
+                    trimEndMs = storedMs + 200
+                }
+
+                val bumpedMs = rawDisplayMs + 500L
                 timeInput = bumpedMs.toString()
             },
             modifier = modifier,
@@ -486,27 +442,250 @@ fun KeyframeAnimationDialog(
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(
-                if (editingKeyframeTimestamp != null) "Update" else "Insert",
+                if (editingKeyframeTimestamp != null) "Update Key" else "Insert Key",
                 style = MaterialTheme.typography.labelMedium,
                 color = Color.White
             )
         }
     }
 
+    @Composable
+    fun UnifiedTimelineTrimmer() {
+        val currentStoredMs = displayToStored(timeInput.toLongOrNull() ?: 0L)
+
+        var trackMax by remember {
+            mutableFloatStateOf(
+                maxOf(
+                    trimLimitHigh.toFloat(),
+                    trimEndMs.toFloat() + 2000f,
+                    currentStoredMs.toFloat() + 2000f
+                )
+            )
+        }
+
+        LaunchedEffect(currentStoredMs, trimEndMs) {
+            if (currentStoredMs > trackMax) trackMax = currentStoredMs.toFloat() + 2000f
+            if (trimEndMs > trackMax) trackMax = trimEndMs.toFloat() + 2000f
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
+        ) {
+            Text(
+                "Timeline & Trim",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(8.dp))
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                @Composable
+                fun TimeField(label: String, value: String, isPrimary: Boolean, onValueChange: (String) -> Unit) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        Text(label, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(end = 4.dp))
+                        BasicTextField(
+                            value = value,
+                            onValueChange = onValueChange,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color.White, RoundedCornerShape(4.dp))
+                                .padding(horizontal = 4.dp, vertical = 2.dp),
+                            textStyle = MaterialTheme.typography.bodySmall.copy(
+                                fontWeight = if (isPrimary) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isPrimary) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            ),
+                            singleLine = true
+                        )
+                    }
+                }
+
+                TimeField("Start", trimStartMs.toString(), false) { new ->
+                    new.toLongOrNull()?.let { v ->
+                        if (v > trackMax) trackMax = v.toFloat() + 2000f
+                        trimStartMs = v.coerceIn(trimLimitLow, trackMax.toLong()).coerceAtMost(trimEndMs)
+                    }
+                }
+
+                TimeField("Time", timeInput, true) { new ->
+                    if (new.all { it.isDigit() }) {
+                        timeInput = new
+                        new.toLongOrNull()?.let { v ->
+                            val storedV = displayToStored(v)
+                            if (storedV > trackMax) trackMax = storedV.toFloat() + 2000f
+                        }
+                    }
+                }
+
+                TimeField("End", trimEndMs.toString(), false) { new ->
+                    new.toLongOrNull()?.let { v ->
+                        if (v > trackMax) trackMax = v.toFloat() + 2000f
+                        trimEndMs = v.coerceIn(trimLimitLow, trackMax.toLong()).coerceAtLeast(trimStartMs)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // The Custom 3-Thumb unified timeline
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            val primaryColor = MaterialTheme.colorScheme.primary
+            val inactiveColor = MaterialTheme.colorScheme.surfaceVariant
+
+            BoxWithConstraints(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                val widthPx = constraints.maxWidth.toFloat()
+                val thumbRadiusPx = with(density) { 11.dp.toPx() }
+                val usableWidth = (widthPx - (thumbRadiusPx * 2)).coerceAtLeast(1f)
+                val safeTrackMax = trackMax.toLong().coerceAtLeast(1L)
+
+                fun timeToPx(time: Long): Float {
+                    return (time.toFloat() / safeTrackMax) * usableWidth
+                }
+
+                fun pxToTime(px: Float): Long {
+                    return ((px / usableWidth) * safeTrackMax).roundToLong().coerceIn(0L, safeTrackMax)
+                }
+
+                val startPxBase = timeToPx(trimStartMs)
+                val endPxBase = timeToPx(trimEndMs)
+                val currentPxBase = timeToPx(currentStoredMs)
+
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val trackY = size.height / 2
+                    val trackEnd = size.width - thumbRadiusPx
+
+                    drawLine(
+                        color = inactiveColor,
+                        start = Offset(thumbRadiusPx, trackY),
+                        end = Offset(trackEnd, trackY),
+                        strokeWidth = 6.dp.toPx(),
+                        cap = androidx.compose.ui.graphics.StrokeCap.Round
+                    )
+
+                    drawLine(
+                        color = primaryColor.copy(alpha = 0.4f),
+                        start = Offset(thumbRadiusPx + startPxBase, trackY),
+                        end = Offset(thumbRadiusPx + endPxBase, trackY),
+                        strokeWidth = 6.dp.toPx(),
+                        cap = androidx.compose.ui.graphics.StrokeCap.Round
+                    )
+
+                    // Draw keyframe indicators
+                    localKeyframes.forEach { kf ->
+                        val kfPx = timeToPx(kf.timestampMs)
+                        if (kfPx in 0f..usableWidth) {
+                            val indicatorColor = kf.gradientConfig?.startColor ?: kf.color ?: Color.White
+
+                            // Fill
+                            drawCircle(
+                                color = indicatorColor,
+                                radius = 4.dp.toPx(),
+                                center = Offset(thumbRadiusPx + kfPx, trackY)
+                            )
+                            // Stroke
+                            drawCircle(
+                                color = Color.Black.copy(alpha = 0.4f),
+                                radius = 4.dp.toPx(),
+                                center = Offset(thumbRadiusPx + kfPx, trackY),
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx())
+                            )
+                        }
+                    }
+                }
+
+                @Composable
+                fun DraggableThumb(
+                    basePx: Float,
+                    isPlayhead: Boolean,
+                    onPositionChange: (Float) -> Unit
+                ) {
+                    var tempDragPx by remember { mutableFloatStateOf(basePx) }
+                    var isDragging by remember { mutableStateOf(false) }
+
+                    LaunchedEffect(basePx) {
+                        if (!isDragging) {
+                            tempDragPx = basePx
+                        }
+                    }
+
+                    val sizeDp = if (isPlayhead) 22.dp else 16.dp
+
+                    Box(
+                        modifier = Modifier
+                            .offset {
+                                androidx.compose.ui.unit.IntOffset(
+                                    x = (thumbRadiusPx + tempDragPx - with(density) { sizeDp.toPx() } / 2).roundToInt(),
+                                    y = 0
+                                )
+                            }
+                            .size(sizeDp)
+                            .shadow(if (isPlayhead) 4.dp else 2.dp, CircleShape)
+                            .background(if (isPlayhead) primaryColor else Color.White, CircleShape)
+                            .border(
+                                width = if (isPlayhead) 2.dp else 1.dp,
+                                color = if (isPlayhead) MaterialTheme.colorScheme.onPrimary else primaryColor,
+                                shape = CircleShape
+                            )
+                            .pointerInput(Unit) {
+                                detectHorizontalDragGestures(
+                                    onDragStart = {
+                                        isDragging = true
+                                    },
+                                    onHorizontalDrag = { change: PointerInputChange, dragAmount: Float ->
+                                        change.consume()
+                                        tempDragPx = (tempDragPx + dragAmount).coerceIn(0f, usableWidth)
+                                    },
+                                    onDragEnd = {
+                                        onPositionChange(tempDragPx)
+                                        isDragging = false
+                                    },
+                                    onDragCancel = {
+                                        isDragging = false
+                                    }
+                                )
+                            }
+                    )
+                }
+
+                DraggableThumb(basePx = startPxBase, isPlayhead = false) { newPx ->
+                    trimStartMs = pxToTime(newPx).coerceAtMost(trimEndMs)
+                }
+
+                DraggableThumb(basePx = endPxBase, isPlayhead = false) { newPx ->
+                    trimEndMs = pxToTime(newPx).coerceAtLeast(trimStartMs)
+                }
+
+                DraggableThumb(basePx = currentPxBase, isPlayhead = true) { newPx ->
+                    val newStoredTime = pxToTime(newPx)
+                    timeInput = storedToDisplay(newStoredTime).toString()
+                }
+            }
+        }
+    }
+
     val configuration = LocalConfiguration.current
-    val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    val isLandscape = configuration.orientation == ORIENTATION_LANDSCAPE
 
     @Composable
     fun EditorContent(includeKeyframeList: Boolean = true) {
-        Text("Timeline", style = MaterialTheme.typography.labelMedium)
-        TimelineControl()
-
         if (includeKeyframeList) {
             Text("Keyframes", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp))
             KeyframeListCompact()
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
         }
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
         Text(
             if (editingKeyframeTimestamp != null) "Editing Keyframe" else "New Keyframe",
@@ -516,17 +695,19 @@ fun KeyframeAnimationDialog(
         ParameterSlider("X", xInput, { xInput = it }, -2000f..2000f, "px")
         ParameterSlider("Y", yInput, { yInput = it }, -2000f..2000f, "px")
         ParameterSlider("SX", scaleXInput, { scaleXInput = it }, 0.1f..10f, "",
-            { String.format(Locale.US, "%.2f", it) })
+            { String.format(java.util.Locale.US, "%.2f", it) })
         ParameterSlider("SY", scaleYInput, { scaleYInput = it }, 0.1f..10f, "",
-            { String.format(Locale.US, "%.2f", it) })
+            { String.format(java.util.Locale.US, "%.2f", it) })
         ParameterSlider("Rot", rotationInput, { rotationInput = it }, -360f..360f, "°",
-            { String.format(Locale.US, "%.1f", it) })
+            { String.format(java.util.Locale.US, "%.1f", it) })
 
         ColorSwatch()
 
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
             InsertUpdateButton()
         }
+
+        UnifiedTimelineTrimmer()
     }
 
     AlertDialog(
@@ -551,10 +732,9 @@ fun KeyframeAnimationDialog(
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Text("Timeline", style = MaterialTheme.typography.labelMedium)
-                        TimelineControl()
                         Text("Keyframes", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp))
                         KeyframeListCompact()
+                        UnifiedTimelineTrimmer()
                     }
                     Column(
                         modifier = Modifier
@@ -569,11 +749,11 @@ fun KeyframeAnimationDialog(
                         ParameterSlider("X", xInput, { xInput = it }, -2000f..2000f, "px")
                         ParameterSlider("Y", yInput, { yInput = it }, -2000f..2000f, "px")
                         ParameterSlider("SX", scaleXInput, { scaleXInput = it }, 0.1f..10f, "",
-                            { String.format(Locale.US, "%.2f", it) })
+                            { String.format(java.util.Locale.US, "%.2f", it) })
                         ParameterSlider("SY", scaleYInput, { scaleYInput = it }, 0.1f..10f, "",
-                            { String.format(Locale.US, "%.2f", it) })
+                            { String.format(java.util.Locale.US, "%.2f", it) })
                         ParameterSlider("Rot", rotationInput, { rotationInput = it }, -360f..360f, "°",
-                            { String.format(Locale.US, "%.1f", it) })
+                            { String.format(java.util.Locale.US, "%.1f", it) })
                         ColorSwatch()
                         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
                             InsertUpdateButton()
@@ -593,7 +773,14 @@ fun KeyframeAnimationDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSaveKeyframes(element.id, localKeyframes.sortedBy { it.timestampMs }) }) {
+            TextButton(onClick = {
+                onSaveKeyframes(
+                    element.id,
+                    localKeyframes.sortedBy { it.timestampMs },
+                    trimStartMs,
+                    trimEndMs
+                )
+            }) {
                 Text("Save")
             }
         },

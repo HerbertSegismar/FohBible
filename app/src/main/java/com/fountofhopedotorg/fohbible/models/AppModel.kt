@@ -537,10 +537,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             )
         }
     }
-
     fun reorderAnimatorCanvasElements(from: Int, to: Int) {
         if (from == to || from !in animatorCanvasElements.indices || to !in animatorCanvasElements.indices) return
         val item = animatorCanvasElements.removeAt(from)
         animatorCanvasElements.add(to, item)
+    }
+
+    fun updateAnimatorElementDuration(elementId: String, startTimeMs: Long, endTimeMs: Long) {
+        val index = animatorCanvasElements.indexOfFirst { it.id == elementId }
+        if (index != -1) {
+            animatorCanvasElements[index] = animatorCanvasElements[index].copy(
+                startTimeMs = startTimeMs,
+                endTimeMs = endTimeMs
+            )
+        }
     }
 }

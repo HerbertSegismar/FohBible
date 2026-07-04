@@ -17,6 +17,8 @@ import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.net.toUri
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.graphics.toArgb
 import coil.ImageLoader
 import coil.request.ImageRequest
@@ -28,6 +30,7 @@ import kotlinx.coroutines.withContext
 import kotlin.math.*
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.withTranslation
+import com.fountofhopedotorg.fohbible.gfx_creator.generateThornCrownPaths
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
 import java.io.File
@@ -57,7 +60,7 @@ suspend fun loadImageBitmaps(
                 .allowHardware(false)
                 .listener(
                     onError = { _, result ->
-                        android.util.Log.e("OffscreenExport", "Failed to load image ${el.id}: $uriString, ${result.throwable}")
+                        android.util.Log.e("NativeExport", "Failed to load image ${el.id}: $uriString, ${result.throwable}")
                     }
                 )
                 .build()
@@ -74,14 +77,12 @@ suspend fun loadImageBitmaps(
                     }
                 }
                 map[el.id] = bmp
-                android.util.Log.d("OffscreenExport", "Loaded image ${el.id} (${bmp.width}x${bmp.height})")
+                android.util.Log.d("NativeExport", "Loaded image ${el.id} (${bmp.width}x${bmp.height})")
             } else {
-                android.util.Log.w("OffscreenExport", "Drawable is null for ${el.id}: $uriString")
+                android.util.Log.w("NativeExport", "Drawable is null for ${el.id}: $uriString")
             }
         }
     }
-
-    android.util.Log.d("OffscreenExport", "Loaded ${map.size} images for ${elements.count { it.content.startsWith("Image: ") }} image elements")
     map
 }
 
@@ -97,8 +98,13 @@ fun drawFrame(
     canvas.drawColor(Color.WHITE)
 
     for (element in elements) {
+        if (timeMs < element.startTimeMs || timeMs > element.endTimeMs) {
+            continue
+        }
+
         val keyframes = element.keyframes.sortedBy { it.timestampMs }
         val (prev, next) = findSurroundingKeyframes(keyframes, timeMs)
+
         val progress = if (next != null && prev != null && next.timestampMs != prev.timestampMs) {
             ((timeMs - prev.timestampMs).toFloat() / (next.timestampMs - prev.timestampMs)).coerceIn(0f, 1f)
         } else 0f
@@ -111,7 +117,6 @@ fun drawFrame(
         val scaleX = lerp(prev?.scaleX ?: element.scaleX, next?.scaleX ?: element.scaleX, progress)
         val scaleY = lerp(prev?.scaleY ?: element.scaleY, next?.scaleY ?: element.scaleY, progress)
         val rotation = lerp(prev?.rotation ?: element.rotation, next?.rotation ?: element.rotation, progress)
-
         val color = when {
             prev?.color != null && next?.color != null -> lerpColor(prev.color, next.color, progress)
             next?.color != null -> next.color
@@ -202,6 +207,8 @@ suspend fun nativeExport(
     resolutionMultiplier: Float,
     elements: List<CanvasElement>,
     gradientConfigs: Map<String, GradientConfig>,
+    startTimeMs: Long,
+    endTimeMs: Long,
     onProgress: suspend (Float) -> Unit
 ) {
     val exportWidth = (canvasWidthPx * resolutionMultiplier).toInt()
@@ -209,12 +216,9 @@ suspend fun nativeExport(
 
     val imageBitmaps = loadImageBitmaps(elements, context, exportWidth.toFloat(), exportHeight.toFloat())
 
-    val allKeyframes = elements.flatMap { it.keyframes }
-    val maxTimestampMs = allKeyframes.maxOfOrNull { it.timestampMs } ?: 2000L
-
-    val frameDurationUs = 1_000_000L / frameRate
-    var currentTimeUs = 0L
-    var frameIndex = 0
+    val frameDurationMs = 1000L / frameRate
+    var currentTimeMs = startTimeMs
+    val totalDurationMs = (endTimeMs - startTimeMs).coerceAtLeast(1L)
 
     val encoder = OffscreenVideoEncoder(
         context, exportWidth, exportHeight, frameRate,
@@ -223,41 +227,46 @@ suspend fun nativeExport(
     val surface = encoder.inputSurface
 
     try {
-        while (currentTimeUs / 1000L <= maxTimestampMs + 500 && currentCoroutineContext().isActive) {
-            val canvas = surface.lockCanvas(null) ?: break
-            drawFrame(
-                canvas, elements, currentTimeUs / 1000L, gradientConfigs,
-                imageBitmaps, resolutionMultiplier
-            )
-            surface.unlockCanvasAndPost(canvas)
+        while (currentTimeMs <= endTimeMs && currentCoroutineContext().isActive) {
+            val canvas = surface.lockCanvas(null)
 
-            frameIndex++
-            currentTimeUs += frameDurationUs
+            if (canvas != null) {
+                drawFrame(
+                    canvas,
+                    elements,
+                    currentTimeMs,
+                    gradientConfigs,
+                    imageBitmaps,
+                    resolutionMultiplier
+                )
+                surface.unlockCanvasAndPost(canvas)
+            }
 
             encoder.drainEncoder {}
 
-            val progress = (currentTimeUs / 1000f) / (maxTimestampMs + 500f)
+            val progress = (currentTimeMs - startTimeMs).toFloat() / totalDurationMs.toFloat()
             onProgress(progress.coerceIn(0f, 1f))
-        }
-        encoder.signalEndOfStream()
 
+            currentTimeMs += frameDurationMs
+        }
+
+        encoder.signalEndOfStream()
         var eosReceived = false
         while (!eosReceived && currentCoroutineContext().isActive) {
             encoder.drainEncoder { eosReceived = true }
         }
 
-        val savedPath = encoder.releaseAndSaveToGallery("native_${System.currentTimeMillis()}")
+        val savedPath = encoder.releaseAndSaveToGallery("NativeExport_${System.currentTimeMillis()}")
+
         withContext(Dispatchers.Main) {
-            if (savedPath != null) {
-                Toast.makeText(context, "Video saved", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(context, "Failed to save video", Toast.LENGTH_SHORT).show()
+            if (savedPath == null) {Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show()
             }
         }
+    } catch (_: Exception) {
     } finally {
         encoder.release()
+        imageBitmaps.values.forEach { it.recycle() }
     }
-    imageBitmaps.values.forEach { it.recycle() }
 }
 
 class OffscreenVideoEncoder(
@@ -275,7 +284,7 @@ class OffscreenVideoEncoder(
 
     private var encodedFrameCount = 0L
 
-    private val outputFile = File(context.cacheDir, "temp_offscreen_video.mp4")
+    private val outputFile = File(context.cacheDir, "temp_native_video.mp4")
     lateinit var inputSurface: Surface
         private set
 
@@ -425,10 +434,10 @@ private fun drawElementContent(
             val strokePaint = Paint(paint)
             strokePaint.style = Paint.Style.STROKE
             strokePaint.strokeWidth = element.borderThickness * density
-            canvas.drawText(element.content, 0f, 20f * density, strokePaint)
+            canvas.drawText(element.content, 0f, 60f * density, strokePaint)
         } else {
             val textPaint = Paint(paint).apply {
-                textSize = 20f * density
+                textSize = 60f * density
                 typeface = Typeface.DEFAULT
                 textAlign = Paint.Align.LEFT
             }
@@ -460,7 +469,38 @@ private fun drawElementContent(
         }
         return
     }
+    if (element.content == "Shape: ThornCrown") {
+        val seed = element.id.hashCode().toLong()
+        val size = Size(width, height)
 
+        val crown = generateThornCrownPaths(seed, size)
+
+        val vineAndroid = crown.vinePath.asAndroidPath()
+        val thornsAndroid = crown.thornsPath.asAndroidPath()
+
+        val strokeWidthScale = min(width, height) / 938f
+
+        if (strokeOnly) {
+            val borderPaint = Paint(paint).apply {
+                style = Paint.Style.STROKE
+                strokeWidth = element.borderThickness * density
+                strokeJoin = Paint.Join.ROUND
+                strokeCap = Paint.Cap.ROUND
+            }
+            canvas.drawPath(vineAndroid, borderPaint)
+        } else {
+            val vinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = paint.color
+                style = Paint.Style.STROKE
+                strokeWidth = 8f * strokeWidthScale
+                strokeJoin = Paint.Join.ROUND
+                strokeCap = Paint.Cap.ROUND
+            }
+            canvas.drawPath(vineAndroid, vinePaint)
+            canvas.drawPath(thornsAndroid, paint)
+        }
+        return
+    }
     val path = createPathForShape(element.content, width, height)
     path?.let { canvas.drawPath(it, paint) }
 }
@@ -550,12 +590,7 @@ private fun createPathForShape(content: String, width: Float, height: Float): Pa
                 close()
             }
         }
-        content == "Shape: ThornCrown" -> {
-            val cx = width / 2f
-            val cy = height / 2f
-            val r = min(cx, cy)
-            Path().apply { addCircle(cx, cy, r, Path.Direction.CW) }
-        }
+        content == "Shape: ThornCrown" -> null
         content == "Shape: Moon" -> {
             Path().apply {
                 addOval(0f, 0f, width, height, Path.Direction.CW)

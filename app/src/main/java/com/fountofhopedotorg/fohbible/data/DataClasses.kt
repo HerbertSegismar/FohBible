@@ -275,7 +275,9 @@ data class CanvasElement(
     val borderThickness: Float = 1f,
     val borderColor: Color? = null,
     val keyframes: List<CanvasKeyframe> = emptyList(),
-    val alpha: Float = 1f
+    val alpha: Float = 1f,
+    val startTimeMs: Long = 0L,
+    val endTimeMs: Long = Long.MAX_VALUE
 )
 
 data class BezierNode(

@@ -1,5 +1,9 @@
 package com.fountofhopedotorg.fohbible.gfx_creator
 
+import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
+import android.graphics.RectF
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.LinkOff
+import androidx.compose.material.icons.filled.OpenWith
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
@@ -140,6 +145,13 @@ fun regularPolygonPath(sides: Int, size: Size): Path {
     return path
 }
 
+@Composable
+fun PentagonShape(
+    modifier: Modifier = Modifier,
+    color: Color = getRandomColor().copy(0.4f),
+    drawStyle: DrawStyle = Fill,
+    gradientConfig: GradientConfig? = null
+) = ShapeCanvas(modifier, color, drawStyle, gradientConfig) { regularPolygonPath(5, it) }
 
 @Composable
 fun HexagonShape(
@@ -521,6 +533,10 @@ fun CanvasItemSelectionHandles(
     val handleRadiusPx = handleSizePx / 2f
     val latestProportional by rememberUpdatedState(proportionalEditing)
 
+    val latestScaleX by rememberUpdatedState(currentScaleX)
+    val latestScaleY by rememberUpdatedState(currentScaleY)
+    val latestRotation by rememberUpdatedState(currentRotation)
+
     fun offsetAt(localX: Float, localY: Float) = handleOffset(
         baseSize, localX, localY, currentScaleX, currentScaleY, currentRotation, handleRadiusPx
     )
@@ -602,9 +618,9 @@ fun CanvasItemSelectionHandles(
                 var currentVector = Offset.Zero
                 detectDragGestures(
                     onDragStart = {
-                        startScaleX = currentScaleX
-                        startScaleY = currentScaleY
-                        fixedRotation = currentRotation
+                        startScaleX = latestScaleX
+                        startScaleY = latestScaleY
+                        fixedRotation = latestRotation
                         val rad = fixedRotation * (PI / 180.0)
                         val dx = baseSize.width.toFloat() - baseSize.width / 2f
                         val dy = baseSize.height.toFloat() - baseSize.height / 2f
@@ -642,7 +658,15 @@ fun CanvasItemSelectionHandles(
             .border(width = (1f / density).dp, color = MaterialTheme.colorScheme.primary, shape = CircleShape),
         contentAlignment = Alignment.Center
     ) {
-        Box(modifier = Modifier.requiredSizePx(48f, 48f).background(Color.DarkGray, CircleShape))
+        Icon(
+            imageVector = Icons.Default.OpenWith,
+            contentDescription = "Scale",
+            tint = Color.DarkGray,
+            modifier = Modifier.requiredSizePx(
+                width = 60f,
+                height = 60f
+            )
+        )
     }
 
     Box(
@@ -803,13 +827,7 @@ fun CanvasSvgItem(
                         element.content == "Shape: Circle" -> CircleShape(shadowModifier, element.shadowColor)
                         element.content == "Shape: Triangle" -> TriangleShape(shadowModifier, element.shadowColor)
                         element.content == "Shape: Line" -> LineShape(shadowModifier, element.shadowColor)
-                        element.content == "Shape: Pentagon" -> {
-                            val pentagonPoints = listOf(
-                                Offset(0.5f, 0f), Offset(1f, 0.4f),
-                                Offset(0.8f, 1f), Offset(0.2f, 1f), Offset(0f, 0.4f)
-                            )
-                            PolygonShape(pentagonPoints, shadowModifier, element.shadowColor)
-                        }
+                        element.content == "Shape: Pentagon" -> PentagonShape(shadowModifier, element.shadowColor)
                         element.content == "Shape: Hexagon" -> HexagonShape(shadowModifier, element.shadowColor)
                         element.content == "Shape: Star" -> StarShape(shadowModifier, element.shadowColor)
                         element.content == "Shape: Diamond" -> DiamondShape(shadowModifier, element.shadowColor)
@@ -838,13 +856,7 @@ fun CanvasSvgItem(
                     element.content == "Shape: Circle" -> CircleShape(mainModifier, element.backgroundColor, gradientConfig = gradientConfig)
                     element.content == "Shape: Triangle" -> TriangleShape(mainModifier, element.backgroundColor, gradientConfig = gradientConfig)
                     element.content == "Shape: Line" -> LineShape(mainModifier, element.backgroundColor, gradientConfig = gradientConfig)
-                    element.content == "Shape: Pentagon" -> {
-                        val pentagonPoints = listOf(
-                            Offset(0.5f, 0f), Offset(1f, 0.4f),
-                            Offset(0.8f, 1f), Offset(0.2f, 1f), Offset(0f, 0.4f)
-                        )
-                        PolygonShape(pentagonPoints, mainModifier, element.backgroundColor, gradientConfig = gradientConfig)
-                    }
+                    element.content == "Shape: Pentagon" -> PentagonShape(mainModifier, element.backgroundColor, gradientConfig = gradientConfig)
                     element.content == "Shape: Hexagon" -> HexagonShape(mainModifier, element.backgroundColor, gradientConfig = gradientConfig)
                     element.content == "Shape: Star" -> StarShape(mainModifier, element.backgroundColor, gradientConfig = gradientConfig)
                     element.content == "Shape: Diamond" -> DiamondShape(mainModifier, element.backgroundColor, gradientConfig = gradientConfig)
@@ -877,13 +889,7 @@ fun CanvasSvgItem(
                         element.content == "Shape: Circle" -> CircleShape(borderModifier, borderColor, drawStyle = strokeStyle)
                         element.content == "Shape: Triangle" -> TriangleShape(borderModifier, borderColor, drawStyle = strokeStyle)
                         element.content == "Shape: Line" -> LineShape(borderModifier, borderColor, strokeWidth = strokeWidthPx)
-                        element.content == "Shape: Pentagon" -> {
-                            val pentagonPoints = listOf(
-                                Offset(0.5f, 0f), Offset(1f, 0.4f),
-                                Offset(0.8f, 1f), Offset(0.2f, 1f), Offset(0f, 0.4f)
-                            )
-                            PolygonShape(pentagonPoints, borderModifier, borderColor, drawStyle = strokeStyle)
-                        }
+                        element.content == "Shape: Pentagon" -> PentagonShape(borderModifier, borderColor, drawStyle = strokeStyle)
                         element.content == "Shape: Hexagon" -> HexagonShape(borderModifier, borderColor, drawStyle = strokeStyle)
                         element.content == "Shape: Star" -> StarShape(borderModifier, borderColor, drawStyle = strokeStyle)
                         element.content == "Shape: Diamond" -> DiamondShape(borderModifier, borderColor, drawStyle = strokeStyle)
@@ -960,6 +966,10 @@ fun CanvasTextItem(
     val currentWidth by rememberUpdatedState(element.width)
     val currentHeight by rememberUpdatedState(element.height)
 
+    val lockedFontSize = (60f / density).sp
+    val lockedPadding = (24f / density).dp
+    val lockedMaxWidth = (750f / density).dp
+
     Box(
         modifier = Modifier
             .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
@@ -1014,8 +1024,8 @@ fun CanvasTextItem(
                 }
                 Box(
                     modifier = Modifier.onSizeChanged { size ->
-                        val newWidth = size.width / density
-                        val newHeight = size.height / density
+                        val newWidth = size.width.toFloat()
+                        val newHeight = size.height.toFloat()
                         if ((newWidth - currentWidth).absoluteValue > 1f ||
                             (newHeight - currentHeight).absoluteValue > 1f
                         ) {
@@ -1027,8 +1037,8 @@ fun CanvasTextItem(
                     val textShadow = if (element.shadowColor != null && element.shadowColor.alpha > 0f) {
                         Shadow(
                             color = element.shadowColor,
-                            offset = Offset(element.shadowOffsetX * density, element.shadowOffsetY * density),
-                            blurRadius = 2f * density
+                            offset = Offset(element.shadowOffsetX, element.shadowOffsetY),
+                            blurRadius = 6f
                         )
                     } else null
 
@@ -1036,27 +1046,27 @@ fun CanvasTextItem(
                         Text(
                             text = element.content,
                             color = element.borderColor,
-                            fontSize = 20.sp,
+                            fontSize = lockedFontSize,
                             fontWeight = FontWeight.Medium,
                             textAlign = TextAlign.Center,
                             style = TextStyle(
                                 shadow = textShadow,
                                 drawStyle = Stroke(
-                                    width = element.borderThickness * density,
+                                    width = element.borderThickness,
                                     join = StrokeJoin.Round
                                 )
                             ),
                             modifier = Modifier
-                                .padding(8.dp)
-                                .widthIn(max = 250.dp)
+                                .padding(lockedPadding)
+                                .widthIn(max = lockedMaxWidth)
                         )
                     }
 
                     if (gradientConfig != null) {
                         Box(
                             modifier = Modifier
-                                .padding(8.dp)
-                                .widthIn(max = 250.dp)
+                                .padding(lockedPadding)
+                                .widthIn(max = lockedMaxWidth)
                         ) {
                             Box(
                                 modifier = Modifier
@@ -1075,13 +1085,13 @@ fun CanvasTextItem(
                                                 )
                                             )
                                         )
-                                        val paint = android.graphics.Paint().apply {
-                                            xfermode = android.graphics.PorterDuffXfermode(
-                                                android.graphics.PorterDuff.Mode.DST_IN
+                                        val paint = Paint().apply {
+                                            xfermode = PorterDuffXfermode(
+                                                PorterDuff.Mode.DST_IN
                                             )
                                         }
                                         drawContext.canvas.nativeCanvas.saveLayer(
-                                            android.graphics.RectF(0f, 0f, size.width, size.height),
+                                            RectF(0f, 0f, size.width, size.height),
                                             paint
                                         )
                                         drawContent()
@@ -1091,7 +1101,7 @@ fun CanvasTextItem(
                                 Text(
                                     text = element.content,
                                     color = Color.White,
-                                    fontSize = 20.sp,
+                                    fontSize = lockedFontSize,
                                     fontWeight = FontWeight.Medium,
                                     textAlign = TextAlign.Center
                                 )
@@ -1101,15 +1111,15 @@ fun CanvasTextItem(
                         Text(
                             text = element.content,
                             color = element.textColor ?: Color.Black,
-                            fontSize = 20.sp,
+                            fontSize = lockedFontSize,
                             fontWeight = FontWeight.Medium,
                             textAlign = TextAlign.Center,
                             style = TextStyle(
                                 shadow = if (element.borderThickness > 0f && element.borderColor != null) null else textShadow
                             ),
                             modifier = Modifier
-                                .padding(8.dp)
-                                .widthIn(max = 250.dp)
+                                .padding(lockedPadding)
+                                .widthIn(max = lockedMaxWidth)
                         )
                     }
                 }

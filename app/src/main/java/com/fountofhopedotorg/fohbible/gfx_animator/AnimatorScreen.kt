@@ -123,6 +123,8 @@ fun AnimatorScreen() {
     var offscreenExportJob by remember { mutableStateOf<Job?>(null) }
     val exportScope = rememberCoroutineScope()
 
+    var currentTimeMs by remember { mutableLongStateOf(0L) }
+
     val cancelExport: () -> Unit = remember { { isPlayingAnimation = false } }
 
     val onPlayPause = remember {
@@ -274,8 +276,11 @@ fun AnimatorScreen() {
         }
     }
 
+    // ---- Main animation loop and time synchronization ----
     LaunchedEffect(isPlayingAnimation) {
         if (!isPlayingAnimation) {
+            // Reset timed canvas so all elements reappear
+            currentTimeMs = 0L
             if (originalElementStates.isNotEmpty()) {
                 val restored = viewModel.animatorCanvasElements.map { element ->
                     originalElementStates[element.id] ?: element
@@ -330,6 +335,8 @@ fun AnimatorScreen() {
 
         while (isActive && isPlayingAnimation) {
             val currentMs = animationCurrentTimeUs / 1000L
+            // Update the timed canvas state so elements appear/disappear
+            currentTimeMs = currentMs
 
             val snapshot = viewModel.animatorCanvasElements.toList()
             for (i in snapshot.indices) {
@@ -410,7 +417,7 @@ fun AnimatorScreen() {
             exportProgress = 1f
             val enc = encoder.value
             if (enc != null) {
-                val fileName = "VideoEditor_${System.currentTimeMillis()}"
+                val fileName = "ScreenRender_${System.currentTimeMillis()}"
                 val savedPath = enc.releaseAndSaveToGallery(fileName)
                 if (savedPath != null) {
                     Toast.makeText(context, "Video saved", Toast.LENGTH_SHORT).show()
@@ -427,6 +434,7 @@ fun AnimatorScreen() {
             }
         }
     }
+
 
     if (isLandscape) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -508,7 +516,8 @@ fun AnimatorScreen() {
                                     graphicsLayer = graphicsLayer,
                                     onElementScaleChange = { id, sx, sy -> viewModel.updateAnimatorElementScale(id, sx, sy) },
                                     proportionalEditing = viewModel.proportionalEditing,
-                                    onProportionalToggle = onProportionalToggle
+                                    onProportionalToggle = onProportionalToggle,
+                                    currentTimeMs = currentTimeMs   // <-- timed canvas
                                 )
 
                                 if (isPlayingAnimation) {
@@ -827,7 +836,8 @@ fun AnimatorScreen() {
                                 elementsGrouped = elementsGrouped,
                                 graphicsLayer = graphicsLayer,
                                 proportionalEditing = viewModel.proportionalEditing,
-                                onProportionalToggle = onProportionalToggle
+                                onProportionalToggle = onProportionalToggle,
+                                currentTimeMs = currentTimeMs   // <-- timed canvas
                             )
 
                             if (isPlayingAnimation) {
@@ -975,6 +985,7 @@ fun AnimatorScreen() {
         }
     }
 
+    // ---- Dialog sections ----
     when (val dialog = viewModel.animatorDialogType) {
         is AnimatorDialogType.Edit -> {
             AnimatorEditElementDialog(
@@ -1088,12 +1099,9 @@ fun AnimatorScreen() {
         }
     )
 
-    // --- Corrected ColorWheelDialog block ---
     if (viewModel.animatorShowColorPicker && viewModel.animatorElementToColorEditId != null) {
         val targetElement = viewModel.animatorCanvasElements.find { it.id == viewModel.animatorElementToColorEditId }
         val existingGradient = viewModel.animatorGradientPairs[viewModel.animatorElementToColorEditId]
-
-        // Determine if the element is a plain text element (not a shape or image)
         val isText = targetElement?.content?.let {
             !it.startsWith("Shape:") && !it.startsWith("Image:")
         } ?: false
@@ -1183,8 +1191,9 @@ fun AnimatorScreen() {
                 viewModel.animatorShowKeyframeDialog = false
                 viewModel.animatorKeyframeTargetElementId = null
             },
-            onSaveKeyframes = { elementId, updatedKeyframes ->
+            onSaveKeyframes = { elementId, updatedKeyframes, newStartMs, newEndMs ->
                 viewModel.updateAnimatorElementKeyframes(elementId, updatedKeyframes)
+                viewModel.updateAnimatorElementDuration(elementId, newStartMs, newEndMs)
                 viewModel.animatorShowKeyframeDialog = false
                 viewModel.animatorKeyframeTargetElementId = null
             },
@@ -1195,7 +1204,7 @@ fun AnimatorScreen() {
 
     val existingGradient = viewModel.animatorGradientPairs[viewModel.animatorEditPropertiesElementId]
 
-    AnimatorEditPropertiesDialog (
+    AnimatorEditPropertiesDialog(
         show = viewModel.animatorShowEditPropertiesDialog,
         elementId = viewModel.animatorEditPropertiesElementId,
         initialX = viewModel.animatorEditX,
@@ -1278,25 +1287,42 @@ fun AnimatorScreen() {
                     hasCapturedFirstFrame = false
                     isPlayingAnimation = true
                 } else {
+                    val allElements = viewModel.animatorCanvasElements.toList()
+                    val startMs = 0L
+                    val endMs = allElements.flatMap { it.keyframes }
+                        .maxOfOrNull { it.timestampMs } ?: 0L
+
                     isOffscreenExporting = true
                     offscreenExportProgress = 0f
                     offscreenExportJob = exportScope.launch(Dispatchers.IO) {
-                        nativeExport(
-                            context,
-                            canvasWidthPx,
-                            canvasHeightPx,
-                            frameRate,
-                            bitRate,
-                            resolution,
-                            viewModel.animatorCanvasElements.toList(),
-                            viewModel.animatorGradientPairs.toMap()
-                        ) { progress ->
-                            withContext(Dispatchers.Main) {
-                                offscreenExportProgress = progress
+                        try {
+                            nativeExport(
+                                context,
+                                canvasWidthPx,
+                                canvasHeightPx,
+                                frameRate,
+                                bitRate,
+                                resolution,
+                                viewModel.animatorCanvasElements.toList(),
+                                viewModel.animatorGradientPairs.toMap(),
+                                startTimeMs = startMs,
+                                endTimeMs = endMs
+                            ) { progress ->
+                                withContext(Dispatchers.Main) {
+                                    offscreenExportProgress = progress
+                                }
                             }
-                        }
-                        withContext(Dispatchers.Main) {
-                            isOffscreenExporting = false
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(context, "Video saved to gallery", Toast.LENGTH_SHORT).show()
+                            }
+                        } catch (e: Exception) {
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                            }
+                        } finally {
+                            withContext(Dispatchers.Main) {
+                                isOffscreenExporting = false
+                            }
                         }
                     }
                 }

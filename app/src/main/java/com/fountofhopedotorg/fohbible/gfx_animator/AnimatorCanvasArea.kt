@@ -1,9 +1,5 @@
 package com.fountofhopedotorg.fohbible.gfx_animator
 
-import com.fountofhopedotorg.fohbible.gfx_creator.CanvasImageItem
-import com.fountofhopedotorg.fohbible.gfx_creator.CanvasSvgItem
-import com.fountofhopedotorg.fohbible.gfx_creator.CanvasTextItem
-import com.fountofhopedotorg.fohbible.gfx_creator.getGroupBoundingBox
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -25,6 +21,10 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.fountofhopedotorg.fohbible.gfx_creator.CanvasImageItem
+import com.fountofhopedotorg.fohbible.gfx_creator.CanvasSvgItem
+import com.fountofhopedotorg.fohbible.gfx_creator.CanvasTextItem
+import com.fountofhopedotorg.fohbible.gfx_creator.getGroupBoundingBox
 import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.models.AppViewModel
@@ -51,6 +51,7 @@ fun AnimatorCanvasArea(
     graphicsLayer: GraphicsLayer,
     proportionalEditing: Boolean,
     onProportionalToggle: () -> Unit,
+    currentTimeMs: Long
 ) {
     val viewModel: AppViewModel = viewModel()
     Box(
@@ -73,7 +74,9 @@ fun AnimatorCanvasArea(
                 }
         ) {
             elements.forEach { element ->
+                // Check both visibility flag AND time window
                 if (!element.isVisible) return@forEach
+                if (currentTimeMs !in element.startTimeMs..element.endTimeMs) return@forEach
 
                 key(element.id) {
                     val isInSelectedGroup = element.groupId in selectedGroups
