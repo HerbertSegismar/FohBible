@@ -543,12 +543,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         animatorCanvasElements.add(to, item)
     }
 
-    fun updateAnimatorElementDuration(elementId: String, startTimeMs: Long, endTimeMs: Long) {
-        val index = animatorCanvasElements.indexOfFirst { it.id == elementId }
+    fun updateAnimatorElementDuration(id: String, startMs: Long, endMs: Long) {
+        val index = animatorCanvasElements.indexOfFirst { it.id == id }
         if (index != -1) {
-            animatorCanvasElements[index] = animatorCanvasElements[index].copy(
-                startTimeMs = startTimeMs,
-                endTimeMs = endTimeMs
+            val old = animatorCanvasElements[index]
+            animatorCanvasElements[index] = old.copy(
+                startTimeMs = startMs,
+                endTimeMs = endMs
             )
         }
     }

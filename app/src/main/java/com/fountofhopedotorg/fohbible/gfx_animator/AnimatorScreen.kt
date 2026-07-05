@@ -1187,6 +1187,10 @@ fun AnimatorScreen() {
         val elementGradient = viewModel.animatorGradientPairs[viewModel.animatorKeyframeTargetElementId]
         KeyframeAnimationDialog(
             element = targetElement,
+            allElements = viewModel.animatorCanvasElements,
+            onElementSelected = { selectedElement ->
+                viewModel.animatorKeyframeTargetElementId = selectedElement.id
+            },
             onDismiss = {
                 viewModel.animatorShowKeyframeDialog = false
                 viewModel.animatorKeyframeTargetElementId = null
@@ -1194,8 +1198,6 @@ fun AnimatorScreen() {
             onSaveKeyframes = { elementId, updatedKeyframes, newStartMs, newEndMs ->
                 viewModel.updateAnimatorElementKeyframes(elementId, updatedKeyframes)
                 viewModel.updateAnimatorElementDuration(elementId, newStartMs, newEndMs)
-                viewModel.animatorShowKeyframeDialog = false
-                viewModel.animatorKeyframeTargetElementId = null
             },
             timeMultiplier = 1f,
             initialGradientConfig = elementGradient
