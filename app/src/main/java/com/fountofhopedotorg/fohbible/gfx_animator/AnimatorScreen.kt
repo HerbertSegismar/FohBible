@@ -276,10 +276,8 @@ fun AnimatorScreen() {
         }
     }
 
-    // ---- Main animation loop and time synchronization ----
     LaunchedEffect(isPlayingAnimation) {
         if (!isPlayingAnimation) {
-            // Reset timed canvas so all elements reappear
             currentTimeMs = 0L
             if (originalElementStates.isNotEmpty()) {
                 val restored = viewModel.animatorCanvasElements.map { element ->
@@ -335,7 +333,6 @@ fun AnimatorScreen() {
 
         while (isActive && isPlayingAnimation) {
             val currentMs = animationCurrentTimeUs / 1000L
-            // Update the timed canvas state so elements appear/disappear
             currentTimeMs = currentMs
 
             val snapshot = viewModel.animatorCanvasElements.toList()
@@ -517,7 +514,7 @@ fun AnimatorScreen() {
                                     onElementScaleChange = { id, sx, sy -> viewModel.updateAnimatorElementScale(id, sx, sy) },
                                     proportionalEditing = viewModel.proportionalEditing,
                                     onProportionalToggle = onProportionalToggle,
-                                    currentTimeMs = currentTimeMs   // <-- timed canvas
+                                    currentTimeMs = currentTimeMs
                                 )
 
                                 if (isPlayingAnimation) {
@@ -837,7 +834,7 @@ fun AnimatorScreen() {
                                 graphicsLayer = graphicsLayer,
                                 proportionalEditing = viewModel.proportionalEditing,
                                 onProportionalToggle = onProportionalToggle,
-                                currentTimeMs = currentTimeMs   // <-- timed canvas
+                                currentTimeMs = currentTimeMs
                             )
 
                             if (isPlayingAnimation) {
@@ -985,7 +982,6 @@ fun AnimatorScreen() {
         }
     }
 
-    // ---- Dialog sections ----
     when (val dialog = viewModel.animatorDialogType) {
         is AnimatorDialogType.Edit -> {
             AnimatorEditElementDialog(

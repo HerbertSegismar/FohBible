@@ -40,9 +40,10 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.IntOffset
 import java.util.Locale
 
@@ -266,7 +267,7 @@ fun KeyframeAnimationDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = 120.dp)
+                .heightIn(max = 200.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
@@ -620,13 +621,18 @@ fun KeyframeAnimationDialog(
             val handleWidthDp = 20.dp
             val handleWidthPx = with(density) { handleWidthDp.toPx() }
 
+            val textMeasurer = rememberTextMeasurer()
+            val secondsLineColor = Color.Gray.copy(alpha = 0.6f)
+            val millisLineColor = Color.Gray.copy(alpha = 0.2f)
+            val markerTextStyle = MaterialTheme.typography.labelSmall.copy(color = Color.Gray.copy(alpha = 0.7f))
+
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(trackHeightDp * elements.size.coerceAtLeast(1))
             ) {
                 val viewportWidthPx = with(density) { maxWidth.toPx() }
-                val scale = viewportWidthPx / MAX_VISIBLE_DURATION_MS.toFloat()   // pixels per ms
+                val scale = viewportWidthPx / MAX_VISIBLE_DURATION_MS.toFloat()
                 val contentWidthPx = scale * universalDurationMs.coerceAtLeast(1L)
                 val totalTrackWidth = contentWidthPx - 2 * handleWidthPx
                 val safeTrackWidth = totalTrackWidth.coerceAtLeast(1f)
@@ -697,28 +703,29 @@ fun KeyframeAnimationDialog(
                                             val isDownOnSelectedTrack =
                                                 downTrackIndex == elements.indexOfFirst { it.id == selectedElement?.id }
 
-                                            val startPx = timeToPx(currentTrimStartMs)
-                                            val endPx = timeToPx(currentTrimEndMs)
+                                            val startPx = timeToPx(trimStartMs)
+                                            val endPx = timeToPx(trimEndMs)
                                             val insideSelectedBlock =
                                                 isDownOnSelectedTrack && (downPos.x in startPx..endPx)
 
-                                            if (insideSelectedBlock) {
-                                                val slopChange = awaitHorizontalTouchSlopOrCancellation(down.id) { change, _ ->
-                                                    change.consume()
-                                                }
+                                            val slopChange = awaitHorizontalTouchSlopOrCancellation(down.id) { change, _ ->
+                                                change.consume()
+                                            }
 
-                                                if (slopChange != null) {
+                                            if (slopChange != null) {
+                                                if (insideSelectedBlock) {
                                                     isBlockDragActive = true
                                                     var previousPosition = slopChange.position
 
-                                                    var activeStartMs = currentTrimStartMs
-                                                    var activeEndMs = currentTrimEndMs
+                                                    var activeStartMs = trimStartMs
+                                                    var activeEndMs = trimEndMs
                                                     val dragDuration = activeEndMs - activeStartMs
 
                                                     try {
                                                         do {
                                                             val event = awaitPointerEvent()
-                                                            val dragChange = event.changes.firstOrNull { it.id == down.id }
+                                                            val dragChange =
+                                                                event.changes.firstOrNull { it.id == down.id }
                                                             if (dragChange != null) {
                                                                 dragChange.consume()
                                                                 val currentPosition = dragChange.position
@@ -726,11 +733,9 @@ fun KeyframeAnimationDialog(
                                                                 previousPosition = currentPosition
 
                                                                 val timeDelta = ((dx / safeTrackWidth) * universalDurationMs).roundToLong()
-
                                                                 if (timeDelta != 0L) {
                                                                     var newStart = activeStartMs + timeDelta
                                                                     var newEnd = activeEndMs + timeDelta
-
                                                                     if (newStart < 0L) {
                                                                         newStart = 0L
                                                                         newEnd = dragDuration
@@ -738,10 +743,8 @@ fun KeyframeAnimationDialog(
                                                                         newEnd = universalDurationMs
                                                                         newStart = universalDurationMs - dragDuration
                                                                     }
-
                                                                     activeStartMs = newStart
                                                                     activeEndMs = newEnd
-
                                                                     trimStartMs = newStart
                                                                     trimEndMs = newEnd
                                                                 }
@@ -750,17 +753,11 @@ fun KeyframeAnimationDialog(
                                                     } finally {
                                                         isBlockDragActive = false
                                                     }
-                                                } else {
-                                                    val newTime = pxToTime(downPos.x)
-                                                    timeInput = storedToDisplay(newTime).toString()
-                                                    if (downTrackIndex in elements.indices) {
-                                                        onElementSelected(elements[downTrackIndex])
-                                                    }
                                                 }
                                             } else {
                                                 var newTime = pxToTime(downPos.x)
                                                 if (isDownOnSelectedTrack) {
-                                                    newTime = newTime.coerceIn(currentTrimStartMs, currentTrimEndMs)
+                                                    newTime = newTime.coerceIn(trimStartMs, trimEndMs)
                                                 }
                                                 timeInput = storedToDisplay(newTime).toString()
                                                 if (downTrackIndex in elements.indices) {
@@ -774,13 +771,83 @@ fun KeyframeAnimationDialog(
                             elements.forEachIndexed { index, trackElement ->
                                 val isSelected = trackElement.id == selectedElement?.id
                                 val yOffset = index * trackHeightPx
+                                val trackRectHeight = trackHeightPx - 4.dp.toPx()
+                                val trackEndY = yOffset + trackRectHeight
 
+                                // Track background
                                 drawRect(
                                     color = if (isSelected) inactiveColor else inactiveColor.copy(alpha = 0.3f),
                                     topLeft = Offset(handleWidthPx, yOffset),
-                                    size = Size(safeTrackWidth, trackHeightPx - 4.dp.toPx())
+                                    size = Size(safeTrackWidth, trackRectHeight)
                                 )
 
+                                // Green placeholder (left)
+                                drawRect(
+                                    color = Color(0xFF4CAF50).copy(alpha = 0.5f),
+                                    topLeft = Offset(0f, yOffset),
+                                    size = Size(handleWidthPx, trackRectHeight)
+                                )
+
+                                // Red placeholder (right)
+                                drawRect(
+                                    color = Color(0xFFF44336).copy(alpha = 0.5f),
+                                    topLeft = Offset(handleWidthPx + safeTrackWidth, yOffset),
+                                    size = Size(
+                                        (contentWidthPx - (handleWidthPx + safeTrackWidth)).coerceAtLeast(0f),
+                                        trackRectHeight
+                                    )
+                                )
+
+                                // ---- TIMELINE MARKERS (ticks at top, text at bottom) ----
+                                // Seconds ticks (every 1000ms) and labels
+                                var secTime = 0L
+                                val secondsTickHeight = 6.dp.toPx()
+                                while (secTime <= universalDurationMs) {
+                                    val x = timeToPx(secTime)
+                                    if (x in handleWidthPx..(handleWidthPx + safeTrackWidth)) {
+                                        // Top tick
+                                        drawLine(
+                                            color = secondsLineColor,
+                                            start = Offset(x, yOffset),
+                                            end = Offset(x, yOffset + secondsTickHeight),
+                                            strokeWidth = 1.5.dp.toPx()
+                                        )
+                                        // Label at bottom
+                                        val label = "${secTime / 1000}s"
+                                        val textLayoutResult = textMeasurer.measure(
+                                            text = label,
+                                            style = markerTextStyle
+                                        )
+                                        val textX = x - textLayoutResult.size.width / 2f
+                                        val textY = trackEndY - textLayoutResult.size.height - 2.dp.toPx()
+                                        drawText(
+                                            textLayoutResult = textLayoutResult,
+                                            topLeft = Offset(textX, textY)
+                                        )
+                                    }
+                                    secTime += 1000L
+                                }
+
+                                // Millisecond ticks (every 200ms, fainter, no label)
+                                val millisStep = 200L
+                                val millisTickHeight = 4.dp.toPx()
+                                var millisTime = 0L
+                                while (millisTime <= universalDurationMs) {
+                                    if (millisTime % 1000L != 0L) {   // skip whole seconds
+                                        val x = timeToPx(millisTime)
+                                        if (x in handleWidthPx..(handleWidthPx + safeTrackWidth)) {
+                                            drawLine(
+                                                color = millisLineColor,
+                                                start = Offset(x, yOffset),
+                                                end = Offset(x, yOffset + millisTickHeight),
+                                                strokeWidth = 0.5.dp.toPx()
+                                            )
+                                        }
+                                    }
+                                    millisTime += millisStep
+                                }
+
+                                // Active block
                                 val startPx = timeToPx(if (isSelected) trimStartMs else trackElement.startTimeMs)
                                 val rawEnd = if (trackElement.endTimeMs == Long.MAX_VALUE) 5000L else trackElement.endTimeMs
                                 val endPx = timeToPx(if (isSelected) trimEndMs else rawEnd)
@@ -788,15 +855,18 @@ fun KeyframeAnimationDialog(
                                 drawRect(
                                     color = primaryColor.copy(alpha = if (isSelected) 0.6f else 0.2f),
                                     topLeft = Offset(startPx, yOffset),
-                                    size = Size(maxOf(0f, endPx - startPx), trackHeightPx - 4.dp.toPx())
+                                    size = Size(maxOf(0f, endPx - startPx), trackRectHeight)
                                 )
 
-                                val keyframesToDraw = if (isSelected) localKeyframes else trackElement.keyframes
+                                // Keyframes
+                                val keyframesToDraw =
+                                    if (isSelected) localKeyframes else trackElement.keyframes
                                 keyframesToDraw.forEach { kf ->
                                     val kfPx = timeToPx(kf.timestampMs)
                                     if (kfPx in handleWidthPx..(handleWidthPx + safeTrackWidth)) {
-                                        val indicatorColor = kf.gradientConfig?.startColor ?: kf.color ?: Color.White
-                                        val cy = yOffset + ((trackHeightPx - 4.dp.toPx()) / 2)
+                                        val indicatorColor =
+                                            kf.gradientConfig?.startColor ?: kf.color ?: Color.White
+                                        val cy = yOffset + (trackRectHeight / 2)
                                         val r = 6.dp.toPx()
 
                                         val diamondPath = Path().apply {
@@ -816,7 +886,9 @@ fun KeyframeAnimationDialog(
                                 }
                             }
 
-                            val selectedTrackIndex = elements.indexOfFirst { it.id == selectedElement?.id }
+                            // Playhead
+                            val selectedTrackIndex =
+                                elements.indexOfFirst { it.id == selectedElement?.id }
                             if (selectedTrackIndex >= 0) {
                                 val trackTop = selectedTrackIndex * trackHeightPx
                                 val trackBottom = trackTop + trackHeightPx - 4.dp.toPx()
@@ -828,86 +900,92 @@ fun KeyframeAnimationDialog(
                                 )
                             }
                         }
+                    }
 
-                        val selectedIndex = elements.indexOfFirst { it.id == selectedElement?.id }
-                        if (selectedIndex >= 0) {
-                            val yOffsetDp = trackHeightDp * selectedIndex
+                    // Trim handles
+                    val selectedIndex = elements.indexOfFirst { it.id == selectedElement?.id }
+                    if (selectedIndex >= 0) {
+                        val yOffsetDp = trackHeightDp * selectedIndex
 
-                            @Composable
-                            fun TrimHandle(
-                                isLeft: Boolean,
-                                basePx: Float,
-                                dragLimit: ClosedFloatingPointRange<Float>,
-                                onPositionChange: (Float) -> Unit,
-                                onDragStateChanged: (Boolean) -> Unit
-                            ) {
-                                var tempDragPx by remember { mutableFloatStateOf(basePx) }
-                                var isDragging by remember { mutableStateOf(false) }
+                        @Composable
+                        fun TrimHandle(
+                            isLeft: Boolean,
+                            basePx: Float,
+                            dragLimit: ClosedFloatingPointRange<Float>,
+                            onPositionChange: (Float) -> Unit,
+                            onDragStateChanged: (Boolean) -> Unit
+                        ) {
+                            var tempDragPx by remember { mutableFloatStateOf(basePx) }
+                            var isDragging by remember { mutableStateOf(false) }
 
-                                LaunchedEffect(basePx) {
-                                    if (!isDragging) tempDragPx = basePx
-                                }
-
-                                LaunchedEffect(isDragging) {
-                                    onDragStateChanged(isDragging)
-                                }
-
-                                val xOffset = if (isLeft) tempDragPx - handleWidthPx else tempDragPx
-
-                                Box(
-                                    modifier = Modifier
-                                        .offset { IntOffset(xOffset.roundToInt(), yOffsetDp.roundToPx()) }
-                                        .height(trackHeightDp * 0.87f)
-                                        .width(handleWidthDp)
-                                        .background(
-                                            color = primaryColor,
-                                            shape = if (isLeft)
-                                                RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp)
-                                            else
-                                                RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp)
-                                        )
-                                        .pointerInput(Unit) {
-                                            detectHorizontalDragGestures(
-                                                onDragStart = { isDragging = true },
-                                                onHorizontalDrag = { change: PointerInputChange, dragAmount: Float ->
-                                                    change.consume()
-                                                    tempDragPx = (tempDragPx + dragAmount).coerceIn(dragLimit)
-                                                },
-                                                onDragEnd = {
-                                                    onPositionChange(tempDragPx)
-                                                    isDragging = false
-                                                },
-                                                onDragCancel = { isDragging = false }
-                                            )
-                                        },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                                        Box(modifier = Modifier.width(1.dp).height(16.dp).background(Color.White.copy(alpha = 0.6f)))
-                                        Box(modifier = Modifier.width(1.dp).height(16.dp).background(Color.White.copy(alpha = 0.6f)))
-                                    }
-                                }
+                            LaunchedEffect(basePx) {
+                                if (!isDragging) tempDragPx = basePx
                             }
 
-                            val startPxBase = timeToPx(trimStartMs)
-                            val endPxBase = timeToPx(trimEndMs)
+                            LaunchedEffect(isDragging) {
+                                onDragStateChanged(isDragging)
+                            }
 
-                            TrimHandle(
-                                isLeft = true,
-                                basePx = startPxBase,
-                                dragLimit = handleWidthPx..endPxBase,
-                                onPositionChange = { newPx -> trimStartMs = pxToTime(newPx).coerceAtMost(trimEndMs) },
-                                onDragStateChanged = { isHandleDragging = it }
-                            )
+                            val xOffset = if (isLeft) tempDragPx - handleWidthPx else tempDragPx
 
-                            TrimHandle(
-                                isLeft = false,
-                                basePx = endPxBase,
-                                dragLimit = startPxBase..(handleWidthPx + safeTrackWidth),
-                                onPositionChange = { newPx -> trimEndMs = pxToTime(newPx).coerceAtLeast(trimStartMs) },
-                                onDragStateChanged = { isHandleDragging = it }
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .offset { IntOffset(xOffset.roundToInt(), yOffsetDp.roundToPx()) }
+                                    .height(trackHeightDp * 0.87f)
+                                    .width(handleWidthDp)
+                                    .background(
+                                        color = primaryColor,
+                                        shape = if (isLeft)
+                                            RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp)
+                                        else
+                                            RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp)
+                                    )
+                                    .pointerInput(Unit) {
+                                        detectHorizontalDragGestures(
+                                            onDragStart = { isDragging = true },
+                                            onHorizontalDrag = { change, dragAmount ->
+                                                change.consume()
+                                                tempDragPx =
+                                                    (tempDragPx + dragAmount).coerceIn(dragLimit)
+                                            },
+                                            onDragEnd = {
+                                                onPositionChange(tempDragPx)
+                                                isDragging = false
+                                            },
+                                            onDragCancel = { isDragging = false }
+                                        )
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Box(modifier = Modifier.width(1.dp).height(16.dp).background(Color.White.copy(alpha = 0.6f)))
+                                    Box(modifier = Modifier.width(1.dp).height(16.dp).background(Color.White.copy(alpha = 0.6f)))
+                                }
+                            }
                         }
+
+                        val startPxBase = timeToPx(trimStartMs)
+                        val endPxBase = timeToPx(trimEndMs)
+
+                        TrimHandle(
+                            isLeft = true,
+                            basePx = startPxBase,
+                            dragLimit = handleWidthPx..endPxBase,
+                            onPositionChange = { newPx ->
+                                trimStartMs = pxToTime(newPx).coerceAtMost(trimEndMs)
+                            },
+                            onDragStateChanged = { isHandleDragging = it }
+                        )
+
+                        TrimHandle(
+                            isLeft = false,
+                            basePx = endPxBase,
+                            dragLimit = startPxBase..(handleWidthPx + safeTrackWidth),
+                            onPositionChange = { newPx ->
+                                trimEndMs = pxToTime(newPx).coerceAtLeast(trimStartMs)
+                            },
+                            onDragStateChanged = { isHandleDragging = it }
+                        )
                     }
                 }
             }
@@ -919,12 +997,6 @@ fun KeyframeAnimationDialog(
 
     @Composable
     fun EditorContent(includeKeyframeList: Boolean = true) {
-        if (includeKeyframeList) {
-            Text("Keyframes", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp))
-            KeyframeListCompact()
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-        }
-
         Text(
             if (editingKeyframeTimestamp != null) "Editing Keyframe" else "New Keyframe",
             style = MaterialTheme.typography.labelMedium
@@ -955,6 +1027,11 @@ fun KeyframeAnimationDialog(
                 clampTrimsToUniversal()
             }
         )
+        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+        if (includeKeyframeList) {
+            Text("Keyframes", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp))
+            KeyframeListCompact()
+        }
     }
 
     AlertDialog(
