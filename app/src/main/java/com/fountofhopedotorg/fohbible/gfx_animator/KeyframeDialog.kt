@@ -39,6 +39,8 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.PointerEvent
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.drawText
@@ -696,20 +698,78 @@ fun KeyframeAnimationDialog(
                                         val isDownOnSelectedTrack =
                                             downTrackIndex == elements.indexOfFirst { it.id == selectedElement?.id }
 
+                                        // Block bounds for drag detection
                                         val startPx = timeToPx(trimStartMs)
                                         val endPx = timeToPx(trimEndMs)
                                         val insideSelectedBlock =
                                             isDownOnSelectedTrack && (downPos.x in startPx..endPx)
 
+                                        // Hit‑test diamonds of the currently selected element
+                                        fun findKeyframeAt(position: Offset): CanvasKeyframe? {
+                                            val sel = selectedElement ?: return null
+                                            val selIndex = elements.indexOfFirst { it.id == sel.id }
+                                            if (selIndex == -1) return null
+                                            val trackTop = selIndex * trackHeightPx
+                                            val centerY = trackTop + (trackHeightPx - 4.dp.toPx()) / 2f
+                                            val hitRadius = 12.dp.toPx()
+                                            return localKeyframes.minByOrNull {
+                                                val kfPx = timeToPx(it.timestampMs)
+                                                (Offset(kfPx, centerY) - position).getDistance()
+                                                    .takeIf { d -> d <= hitRadius }
+                                                    ?: Float.MAX_VALUE
+                                            }?.takeIf {
+                                                val kfPx = timeToPx(it.timestampMs)
+                                                (Offset(kfPx, centerY) - position).getDistance() <= hitRadius
+                                            }
+                                        }
+
+                                        val hitKeyframe = findKeyframeAt(downPos)
+
+                                        var longPressHandled = false
                                         var isTap = true
                                         var dragTriggered = false
-                                        val touchSlop = viewConfiguration.touchSlop
                                         var lastPosition = downPos
+                                        val touchSlop = viewConfiguration.touchSlop
 
+                                        var initialEvent: PointerEvent? = null   // event that arrived before timeout
+
+                                        // If we hit a diamond, wait for long‑press timeout OR first pointer event
+                                        if (hitKeyframe != null) {
+                                            val timeoutResult =
+                                                withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+                                                    awaitPointerEvent(PointerEventPass.Main)
+                                                }
+                                            if (timeoutResult == null) {
+                                                // No event during timeout → long press
+                                                longPressHandled = true
+                                                editingKeyframeTimestamp = hitKeyframe.timestampMs
+                                                populateFromKeyframe(hitKeyframe)
+
+                                                // Consume the rest of this gesture until the finger is lifted
+                                                while (true) {
+                                                    val upEvent = awaitPointerEvent()
+                                                    if (!upEvent.changes.any { it.id == down.id && it.pressed }) break
+                                                }
+                                                continue  // go to next down event in the outer loop
+                                            } else {
+                                                // An event arrived before timeout → normal drag/tap handling
+                                                initialEvent = timeoutResult
+                                            }
+                                        }
+
+                                        // Process the initial event (if any) and then continue waiting for more
                                         while (true) {
-                                            val event = awaitPointerEvent()
+                                            val event = if (initialEvent != null) {
+                                                val e = initialEvent
+                                                initialEvent = null
+                                                e
+                                            } else {
+                                                awaitPointerEvent()
+                                            }
+
                                             val change = event.changes.firstOrNull { it.id == down.id }
                                             if (change == null || !change.pressed) {
+                                                // Finger lifted → tap
                                                 break
                                             }
 
@@ -717,19 +777,25 @@ fun KeyframeAnimationDialog(
                                             val dragDistance = (currentPos - downPos).getDistance()
 
                                             if (dragDistance > touchSlop) {
+                                                // Drag started
                                                 isTap = false
                                                 val dx = currentPos.x - downPos.x
                                                 val dy = currentPos.y - downPos.y
-
                                                 if (insideSelectedBlock && kotlin.math.abs(dx) > kotlin.math.abs(dy)) {
                                                     dragTriggered = true
                                                     change.consume()
                                                     lastPosition = currentPos
                                                 }
+                                                // If not a block drag we simply keep waiting for the up
+                                            }
+
+                                            if (dragTriggered) {
+                                                // Exit the tap‑waiting loop and enter the dedicated drag‑handling loop
                                                 break
                                             }
                                         }
 
+                                        // ----- Block drag handling (unchanged) -----
                                         if (dragTriggered) {
                                             isBlockDragActive = true
                                             var activeStartMs = trimStartMs
@@ -747,7 +813,8 @@ fun KeyframeAnimationDialog(
                                                     val dx = currentPosition.x - lastPosition.x
                                                     lastPosition = currentPosition
 
-                                                    val timeDelta = ((dx / safeTrackWidth) * universalDurationMs).roundToLong()
+                                                    val timeDelta =
+                                                        ((dx / safeTrackWidth) * universalDurationMs).roundToLong()
                                                     if (timeDelta != 0L) {
                                                         var newStart = activeStartMs + timeDelta
                                                         var newEnd = activeEndMs + timeDelta
@@ -767,7 +834,10 @@ fun KeyframeAnimationDialog(
                                             } finally {
                                                 isBlockDragActive = false
                                             }
-                                        } else if (isTap) {
+                                        }
+
+                                        // ----- Tap handling (only if no long press was performed) -----
+                                        if (isTap) {
                                             var newTime = pxToTime(downPos.x)
                                             if (isDownOnSelectedTrack) {
                                                 newTime = newTime.coerceIn(trimStartMs, trimEndMs)
@@ -989,69 +1059,24 @@ fun KeyframeAnimationDialog(
         }
     }
 
-    // ================== Editor content (no header) ==================
-    @Composable
-    fun EditorContent(includeKeyframeList: Boolean = true) {
-        Text(
-            if (editingKeyframeTimestamp != null) "Editing Keyframe" else "New Keyframe",
-            style = MaterialTheme.typography.labelMedium
-        )
-
-        ParameterSlider("X", xInput, { xInput = it }, -2000f..2000f, "px")
-        ParameterSlider("Y", yInput, { yInput = it }, -2000f..2000f, "px")
-        ParameterSlider("SX", scaleXInput, { scaleXInput = it }, 0.1f..10f, "",
-            { String.format(Locale.US, "%.2f", it) })
-        ParameterSlider("SY", scaleYInput, { scaleYInput = it }, 0.1f..10f, "",
-            { String.format(Locale.US, "%.2f", it) })
-        ParameterSlider("Rot", rotationInput, { rotationInput = it }, -360f..360f, "°",
-            { String.format(Locale.US, "%.1f", it) })
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 2.dp)
-        ) {
-            ColorSwatch(modifier = Modifier.weight(1f))
-            InsertUpdateButton()
-        }
-
-        UnifiedTimelineTrack(
-            elements = allElements,
-            selectedElement = element,
-            onElementSelected = autoSaveAndSelect,
-            universalDurationMs = universalDurationMs,
-            scrollState = timelineScrollState
-        )
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-        if (includeKeyframeList) {
-            Text("Keyframes", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp))
-            KeyframeListCompact()
-        }
-    }
-
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == ORIENTATION_LANDSCAPE
 
     AlertDialog(
         onDismissRequest = onDismiss,
         modifier = Modifier
-            .fillMaxSize(0.95f)
-            .padding(4.dp),
-        title = {
-            Text("Keyframe Editor", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        },
+            .fillMaxSize()
+            .padding(horizontal = 4.dp),
+        title = {},
         text = {
             val portraitScrollState = rememberScrollState()
             val leftColumnScrollState = rememberScrollState()
             val rightColumnScrollState = rememberScrollState()
 
             Column(modifier = Modifier.fillMaxSize()) {
-                // Fixed header at the top – never scrolls
                 TimelineHeader()
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
-                // Scrollable content below
                 if (isLandscape) {
                     Row(
                         modifier = Modifier
@@ -1063,29 +1088,8 @@ fun KeyframeAnimationDialog(
                         Column(
                             modifier = Modifier
                                 .weight(0.4f)
-                                .verticalScroll(leftColumnScrollState),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text("Keyframes", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp))
-                            KeyframeListCompact()
-                            UnifiedTimelineTrack(
-                                elements = allElements,
-                                selectedElement = element,
-                                onElementSelected = autoSaveAndSelect,
-                                universalDurationMs = universalDurationMs,
-                                scrollState = timelineScrollState
-                            )
-                        }
-                        Column(
-                            modifier = Modifier
-                                .weight(0.6f)
                                 .verticalScroll(rightColumnScrollState),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Text(
-                                if (editingKeyframeTimestamp != null) "Editing Keyframe" else "New Keyframe",
-                                style = MaterialTheme.typography.labelMedium
-                            )
                             ParameterSlider("X", xInput, { xInput = it }, -2000f..2000f, "px")
                             ParameterSlider("Y", yInput, { yInput = it }, -2000f..2000f, "px")
                             ParameterSlider("SX", scaleXInput, { scaleXInput = it }, 0.1f..10f, "",
@@ -1095,28 +1099,77 @@ fun KeyframeAnimationDialog(
                             ParameterSlider("Rot", rotationInput, { rotationInput = it }, -360f..360f, "°",
                                 { String.format(Locale.US, "%.1f", it) })
 
-                            // Color swatch and button on the same row
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 2.dp)
                             ) {
                                 ColorSwatch(modifier = Modifier.weight(1f))
-                                InsertUpdateButton()
+                                InsertUpdateButton(modifier = Modifier.height(33.dp))
                             }
                         }
+                        Column(
+                            modifier = Modifier
+                                .weight(0.6f)
+                                .verticalScroll(leftColumnScrollState),
+                        ) {
+                            UnifiedTimelineTrack(
+                                elements = allElements,
+                                selectedElement = element,
+                                onElementSelected = autoSaveAndSelect,
+                                universalDurationMs = universalDurationMs,
+                                scrollState = timelineScrollState
+                            )
+                            Text("Keyframes", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 2.dp))
+                            KeyframeListCompact()
+                        }
                     }
-                } else {
+                }  else {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f)
-                            .verticalScroll(portraitScrollState)
-                            .imePadding(),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                            .imePadding()
                     ) {
-                        EditorContent()
+                        Text(
+                            if (editingKeyframeTimestamp != null) "Editing Keyframe" else "New Keyframe",
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                        ParameterSlider("X", xInput, { xInput = it }, -2000f..2000f, "px")
+                        ParameterSlider("Y", yInput, { yInput = it }, -2000f..2000f, "px")
+                        ParameterSlider("SX", scaleXInput, { scaleXInput = it }, 0.1f..10f, "",
+                            { String.format(Locale.US, "%.2f", it) })
+                        ParameterSlider("SY", scaleYInput, { scaleYInput = it }, 0.1f..10f, "",
+                            { String.format(Locale.US, "%.2f", it) })
+                        ParameterSlider("Rot", rotationInput, { rotationInput = it }, -360f..360f, "°",
+                            { String.format(Locale.US, "%.1f", it) })
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth().padding(bottom = 6.dp)
+                        ) {
+                            ColorSwatch(modifier = Modifier.weight(1f))
+                            InsertUpdateButton(modifier = Modifier.height(30.dp))
+                        }
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                                .verticalScroll(portraitScrollState),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            UnifiedTimelineTrack(
+                                elements = allElements,
+                                selectedElement = element,
+                                onElementSelected = autoSaveAndSelect,
+                                universalDurationMs = universalDurationMs,
+                                scrollState = timelineScrollState
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                            Text("Keyframes", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp))
+                            KeyframeListCompact()
+                        }
                     }
                 }
             }
