@@ -4,6 +4,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import com.fountofhopedotorg.fohbible.data.CanvasKeyframe
 import com.fountofhopedotorg.fohbible.data.GradientConfig
+import com.fountofhopedotorg.fohbible.data.TweenType
+import java.util.Locale
+import kotlin.math.roundToInt
 
 
 fun lerp(start: Float, stop: Float, fraction: Float): Float =
@@ -47,4 +50,15 @@ fun lerpGradient(a: GradientConfig, b: GradientConfig, fraction: Float): Gradien
             lerp(a.endOffset.y, b.endOffset.y, fraction)
         )
     )
+}
+
+fun formatPosition(value: Float): String = value.roundToInt().toString()
+fun formatScale(value: Float): String = String.format(Locale.US, "%.2f", value)
+fun formatRotation(value: Float): String = String.format(Locale.US, "%.1f", value)
+
+fun ease(t: Float, type: TweenType): Float = when (type) {
+    TweenType.LINEAR -> t
+    TweenType.EASE_IN -> t * t
+    TweenType.EASE_OUT -> t * (2 - t)
+    TweenType.EASE_IN_OUT -> if (t < 0.5f) 2 * t * t else -1 + (4 - 2 * t) * t
 }

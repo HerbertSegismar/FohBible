@@ -66,6 +66,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -78,6 +79,8 @@ import androidx.compose.ui.unit.offset
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.size.Size as Size2
 import com.fountofhopedotorg.fohbible.data.BezierNodeData
 import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.GradientConfig
@@ -644,11 +647,11 @@ fun CanvasItemSelectionHandles(
                         if (latestProportional) {
                             val originalDist = sqrt(dx * dx + dy * dy)
                             val newDist = sqrt(newScaledDx * newScaledDx + newScaledDy * newScaledDy)
-                            val uniformScale = if (originalDist > 0f) (newDist / originalDist).toFloat().coerceIn(0.1f, 10f) else 1f
+                            val uniformScale = if (originalDist > 0f) (newDist / originalDist).toFloat().coerceIn(0.1f, 25f) else 1f
                             onScaleChanged(uniformScale, uniformScale)
                         } else {
-                            val newScaleX = if (dx != 0f) (newScaledDx / dx).toFloat().coerceIn(0.1f, 10f) else startScaleX
-                            val newScaleY = if (dy != 0f) (newScaledDy / dy).toFloat().coerceIn(0.1f, 10f) else startScaleY
+                            val newScaleX = if (dx != 0f) (newScaledDx / dx).toFloat().coerceIn(0.1f, 25f) else startScaleX
+                            val newScaleY = if (dy != 0f) (newScaledDy / dy).toFloat().coerceIn(0.1f, 25f) else startScaleY
                             onScaleChanged(newScaleX, newScaleY)
                         }
                     }
@@ -796,8 +799,8 @@ fun CanvasSvgItem(
                                     val screenPanY = localPanX * sin(angleRad) + localPanY * cos(angleRad)
                                     offset += Offset(screenPanX.toFloat(), screenPanY.toFloat())
 
-                                    val newScaleX = (currentScaleX * zoom).coerceIn(0.1f, 10f)
-                                    val newScaleY = (currentScaleY * zoom).coerceIn(0.1f, 10f)
+                                    val newScaleX = (currentScaleX * zoom).coerceIn(0.1f, 25f)
+                                    val newScaleY = (currentScaleY * zoom).coerceIn(0.1f, 25f)
                                     val newRotation = currentRotation + rot
 
                                     onScaleChanged(newScaleX, newScaleY)
@@ -996,8 +999,8 @@ fun CanvasTextItem(
                                     val screenPanY = localPanX * sin(angleRad) + localPanY * cos(angleRad)
                                     offset += Offset(screenPanX.toFloat(), screenPanY.toFloat())
 
-                                    val newScaleX = (currentScaleX * zoom).coerceIn(0.1f, 10f)
-                                    val newScaleY = (currentScaleY * zoom).coerceIn(0.1f, 10f)
+                                    val newScaleX = (currentScaleX * zoom).coerceIn(0.1f, 25f)
+                                    val newScaleY = (currentScaleY * zoom).coerceIn(0.1f, 25f)
                                     val newRotation = currentRotation + rot
 
                                     onScaleChanged(newScaleX, newScaleY)
@@ -1161,6 +1164,8 @@ fun CanvasImageItem(
     onProportionalToggle: () -> Unit
 ) {
     val density = LocalDensity.current.density
+    val context = LocalContext.current
+
     var offset by remember(element.offset) { mutableStateOf(element.offset) }
     var rotation by remember(element.id, element.rotation) { mutableFloatStateOf(element.rotation) }
     val scaleX by rememberUpdatedState(element.scaleX)
@@ -1170,6 +1175,13 @@ fun CanvasImageItem(
 
     val uriString = element.content.removePrefix("Image: ")
     val uri = uriString.toUri()
+
+    val fullResImageRequest = remember(uri, context) {
+        ImageRequest.Builder(context)
+            .data(uri)
+            .size(Size2.ORIGINAL)
+            .build()
+    }
 
     Box(
         modifier = Modifier
@@ -1197,8 +1209,8 @@ fun CanvasImageItem(
                                     val screenPanY = localPanX * sin(angleRad) + localPanY * cos(angleRad)
                                     offset += Offset(screenPanX.toFloat(), screenPanY.toFloat())
 
-                                    val newScaleX = (scaleX * zoom).coerceIn(0.1f, 10f)
-                                    val newScaleY = (scaleY * zoom).coerceIn(0.1f, 10f)
+                                    val newScaleX = (scaleX * zoom).coerceIn(0.1f, 25f)
+                                    val newScaleY = (scaleY * zoom).coerceIn(0.1f, 25f)
                                     rotation += rot
 
                                     onScaleChanged(newScaleX, newScaleY)
@@ -1219,7 +1231,7 @@ fun CanvasImageItem(
             ) {
                 if (element.shadowColor != null && element.shadowColor.alpha > 0f) {
                     AsyncImage(
-                        model = uri,
+                        model = fullResImageRequest,
                         contentDescription = "Image Shadow",
                         modifier = Modifier
                             .matchParentSize()
@@ -1239,7 +1251,7 @@ fun CanvasImageItem(
                 }
 
                 AsyncImage(
-                    model = uri,
+                    model = fullResImageRequest,
                     contentDescription = "Canvas Image",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Fit

@@ -37,6 +37,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.fountofhopedotorg.fohbible.color_wheel.ColorWheelDialog
 import com.fountofhopedotorg.fohbible.data.GradientConfig
+import java.util.Locale
 
 @Composable
 fun AnimatorEditPropertiesDialog(
@@ -80,18 +81,20 @@ fun AnimatorEditPropertiesDialog(
                 ((degrees % 360) + 360) % 360
             }.toString()
 
-            var editX by remember(show, initialX) { mutableStateOf(initialX) }
-            var editY by remember(show, initialY) { mutableStateOf(initialY) }
-            var editScaleX by remember(show, initialScaleX) { mutableStateOf(initialScaleX) }
-            var editScaleY by remember(show, initialScaleY) { mutableStateOf(initialScaleY) }
-            var editRotation by remember(show, normalizedInitialRotation) { mutableStateOf(normalizedInitialRotation) }
+            var editX by remember(show, initialX) { mutableStateOf(formatPosition(initialX.toFloatOrNull() ?: 0f)) }
+            var editY by remember(show, initialY) { mutableStateOf(formatPosition(initialY.toFloatOrNull() ?: 0f)) }
+            var editScaleX by remember(show, initialScaleX) { mutableStateOf(formatScale(initialScaleX.toFloatOrNull() ?: 1f)) }
+            var editScaleY by remember(show, initialScaleY) { mutableStateOf(formatScale(initialScaleY.toFloatOrNull() ?: 1f)) }
+            var editRotation by remember(show, normalizedInitialRotation) { mutableStateOf(formatRotation(normalizedInitialRotation.toFloatOrNull() ?: 0f)) }
+            var editShadowOffsetX by remember(show, initialShadowOffsetX) { mutableStateOf(String.format(
+                Locale.US, "%.1f", initialShadowOffsetX)) }
+            var editShadowOffsetY by remember(show, initialShadowOffsetY) { mutableStateOf(String.format(Locale.US, "%.1f", initialShadowOffsetY)) }
+            var editBorderThickness by remember(show, initialBorderThickness) { mutableStateOf(String.format(Locale.US, "%.1f", initialBorderThickness)) }
+
+            var editBorderColor by remember(show, initialBorderColor) { mutableStateOf(initialBorderColor) }
             var editColor by remember(show, initialColor) { mutableStateOf(initialColor) }
             var showEditColorPicker by remember { mutableStateOf(false) }
             var editShadowColor by remember(show, initialShadowColor) { mutableStateOf(initialShadowColor) }
-            var editShadowOffsetX by remember(show, initialShadowOffsetX) { mutableStateOf(initialShadowOffsetX.toString()) }
-            var editShadowOffsetY by remember(show, initialShadowOffsetY) { mutableStateOf(initialShadowOffsetY.toString()) }
-            var editBorderThickness by remember(show, initialBorderThickness) { mutableStateOf(initialBorderThickness.toString()) }
-            var editBorderColor by remember(show, initialBorderColor) { mutableStateOf(initialBorderColor) }
             var showShadowColorPicker by remember { mutableStateOf(false) }
             var showBorderColorPicker by remember { mutableStateOf(false) }
             var editGradientConfig by remember(show, initialGradientConfig) {
@@ -143,7 +146,7 @@ fun AnimatorEditPropertiesDialog(
                             value = editScaleX,
                             onValueChange = { newValue ->
                                 val parsed = newValue.toFloatOrNull()
-                                if (parsed != null && parsed in 0.1f..10f) {
+                                if (parsed != null && parsed in 0.1f..25f) {
                                     editScaleX = newValue
                                     if (proportionalEnabled) {
                                         editScaleY = newValue
@@ -152,7 +155,7 @@ fun AnimatorEditPropertiesDialog(
                                     editScaleX = newValue
                                 }
                             },
-                            label = { Text("Scale X (0.1 – 10)") },
+                            label = { Text("Scale X (0.1 – 25)") },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                         )
@@ -160,7 +163,7 @@ fun AnimatorEditPropertiesDialog(
                             value = editScaleY,
                             onValueChange = { newValue ->
                                 val parsed = newValue.toFloatOrNull()
-                                if (parsed != null && parsed in 0.1f..10f) {
+                                if (parsed != null && parsed in 0.1f..25f) {
                                     editScaleY = newValue
                                     if (proportionalEnabled) {
                                         editScaleX = newValue
@@ -169,7 +172,7 @@ fun AnimatorEditPropertiesDialog(
                                     editScaleY = newValue
                                 }
                             },
-                            label = { Text("Scale Y (0.1 – 10)") },
+                            label = { Text("Scale Y (0.1 – 25)") },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                         )

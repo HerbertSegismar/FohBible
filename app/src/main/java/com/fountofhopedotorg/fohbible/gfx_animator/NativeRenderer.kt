@@ -105,9 +105,11 @@ fun drawFrame(
         val keyframes = element.keyframes.sortedBy { it.timestampMs }
         val (prev, next) = findSurroundingKeyframes(keyframes, timeMs)
 
-        val progress = if (next != null && prev != null && next.timestampMs != prev.timestampMs) {
+        val rawProgress = if (next != null && prev != null && next.timestampMs != prev.timestampMs) {
             ((timeMs - prev.timestampMs).toFloat() / (next.timestampMs - prev.timestampMs)).coerceIn(0f, 1f)
         } else 0f
+
+        val progress = if (next != null) ease(rawProgress, next.tweenType) else rawProgress
 
         val x = lerp(prev?.x ?: element.offset.x, next?.x ?: element.offset.x, progress) * scaleFactor
         val y = lerp(prev?.y ?: element.offset.y, next?.y ?: element.offset.y, progress) * scaleFactor

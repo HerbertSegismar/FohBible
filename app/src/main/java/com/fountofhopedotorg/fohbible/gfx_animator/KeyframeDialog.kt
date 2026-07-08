@@ -18,14 +18,26 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.PointerEvent
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import com.fountofhopedotorg.fohbible.color_wheel.ColorWheelDialog
@@ -35,17 +47,7 @@ import com.fountofhopedotorg.fohbible.data.GradientConfig
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.PointerEvent
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.unit.IntOffset
+import com.fountofhopedotorg.fohbible.data.TweenType
 import java.util.Locale
 
 private val GradientConfigNullableSaver = Saver<GradientConfig?, String>(
@@ -89,10 +91,16 @@ fun KeyframeAnimationDialog(
     onDismiss: () -> Unit,
     onSaveKeyframes: (String, List<CanvasKeyframe>, Long, Long) -> Unit,
     timeMultiplier: Float,
-    initialGradientConfig: GradientConfig? = null
+    initialGradientConfig: GradientConfig? = null,
+    canvasWidth: Int,
+    canvasHeight: Int
 ) {
-
     var scrollOffsetSaved by rememberSaveable("timelineScroll") { mutableIntStateOf(0) }
+
+    val xMin = -0.05f * canvasWidth
+    val xMax = 1.05f * canvasWidth
+    val yMin = -0.05f * canvasHeight
+    val yMax = 1.05f * canvasHeight
 
     if (element == null) return
     fun storedToDisplay(storedMs: Long): Long = (storedMs / timeMultiplier).roundToInt().toLong()
@@ -112,6 +120,8 @@ fun KeyframeAnimationDialog(
         mutableStateOf(effectiveInitialGradientConfig)
     }
     var editingKeyframeTimestamp by rememberSaveable(element.id) { mutableStateOf<Long?>(null) }
+
+    var editingSegmentIndex by remember { mutableStateOf<Int?>(null) }
 
     var trimStartMs by rememberSaveable(element.id) { mutableLongStateOf(element.startTimeMs) }
     var trimEndMs   by rememberSaveable(element.id) {
@@ -156,19 +166,19 @@ fun KeyframeAnimationDialog(
     }
 
     var xInput by rememberSaveable(element.id) {
-        mutableStateOf(element.offset.x.toString())
+        mutableStateOf(formatPosition(element.offset.x))
     }
     var yInput by rememberSaveable(element.id) {
-        mutableStateOf(element.offset.y.toString())
+        mutableStateOf(formatPosition(element.offset.y))
     }
     var scaleXInput by rememberSaveable(element.id) {
-        mutableStateOf(element.scaleX.toString())
+        mutableStateOf(formatScale(element.scaleX))
     }
     var scaleYInput by rememberSaveable(element.id) {
-        mutableStateOf(element.scaleY.toString())
+        mutableStateOf(formatScale(element.scaleY))
     }
     var rotationInput by rememberSaveable(element.id) {
-        mutableStateOf(element.rotation.toString())
+        mutableStateOf(formatRotation(element.rotation))
     }
 
     var pickedColorArgb by rememberSaveable(element.id) {
@@ -203,11 +213,11 @@ fun KeyframeAnimationDialog(
 
     fun populateFromKeyframe(kf: CanvasKeyframe) {
         timeInput = storedToDisplay(kf.timestampMs).toString()
-        xInput = kf.x?.toString() ?: element.offset.x.toString()
-        yInput = kf.y?.toString() ?: element.offset.y.toString()
-        scaleXInput = kf.scaleX?.toString() ?: element.scaleX.toString()
-        scaleYInput = kf.scaleY?.toString() ?: element.scaleY.toString()
-        rotationInput = kf.rotation?.toString() ?: element.rotation.toString()
+        xInput = kf.x?.let { formatPosition(it) } ?: formatPosition(element.offset.x)
+        yInput = kf.y?.let { formatPosition(it) } ?: formatPosition(element.offset.y)
+        scaleXInput = kf.scaleX?.let { formatScale(it) } ?: formatScale(element.scaleX)
+        scaleYInput = kf.scaleY?.let { formatScale(it) } ?: formatScale(element.scaleY)
+        rotationInput = kf.rotation?.let { formatRotation(it) } ?: formatRotation(element.rotation)
         val displayColor = kf.gradientConfig?.startColor ?: kf.color ?: initialElementColor
         pickedColorArgb = displayColor.toArgb().toLong()
         currentGradientConfig = kf.gradientConfig
@@ -538,7 +548,6 @@ fun KeyframeAnimationDialog(
         }
     }
 
-    // ================== Fixed Header ==================
     @Composable
     fun TimelineHeader() {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -605,7 +614,6 @@ fun KeyframeAnimationDialog(
         }
     }
 
-    // ================== Timeline Track (no header) ==================
     @Composable
     fun UnifiedTimelineTrack(
         elements: List<CanvasElement>,
@@ -626,6 +634,9 @@ fun KeyframeAnimationDialog(
         val trackHeightPx = with(density) { trackHeightDp.toPx() }
         val handleWidthDp = 20.dp
         val handleWidthPx = with(density) { handleWidthDp.toPx() }
+
+        val trackPaddingPx = with(density) { 4.dp.toPx() }
+        val hitHeightPx = with(density) { 10.dp.toPx() }
 
         val textMeasurer = rememberTextMeasurer()
         val secondsLineColor = Color.Gray.copy(alpha = 0.6f)
@@ -675,6 +686,38 @@ fun KeyframeAnimationDialog(
                 return ((relativeX / safeTrackWidth) * universalDurationMs).roundToLong().coerceIn(0L, universalDurationMs)
             }
 
+            fun distanceToLineSegment(p: Offset, a: Offset, b: Offset): Float {
+                val ab = b - a
+                val ap = p - a
+                val t = (ap.x * ab.x + ap.y * ab.y) / (ab.x * ab.x + ab.y * ab.y).coerceAtLeast(1f)
+                val clampedT = t.coerceIn(0f, 1f)
+                val closest = a + ab * clampedT
+                return (p - closest).getDistance()
+            }
+
+            fun findTweenSegmentAt(position: Offset): Int? {
+                val sel = selectedElement ?: return null
+                val sortedKfs = localKeyframes.sortedBy { it.timestampMs }
+                if (sortedKfs.size < 2) return null
+                val selIndex = elements.indexOfFirst { it.id == sel.id }
+                if (selIndex == -1) return null
+                val trackTop = selIndex * trackHeightPx
+                val cy = trackTop + (trackHeightPx - trackPaddingPx) / 2f
+                val tapY = position.y
+                if (tapY !in (cy - hitHeightPx)..(cy + hitHeightPx)) return null
+                for (i in 0 until sortedKfs.size - 1) {
+                    val x1 = timeToPx(sortedKfs[i].timestampMs)
+                    val x2 = timeToPx(sortedKfs[i + 1].timestampMs)
+                    val minX = minOf(x1, x2)
+                    val maxX = maxOf(x1, x2)
+                    if (position.x in minX..maxX) {
+                        val dist = distanceToLineSegment(position, Offset(x1, cy), Offset(x2, cy))
+                        if (dist <= hitHeightPx) return i
+                    }
+                }
+                return null
+            }
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -698,20 +741,18 @@ fun KeyframeAnimationDialog(
                                         val isDownOnSelectedTrack =
                                             downTrackIndex == elements.indexOfFirst { it.id == selectedElement?.id }
 
-                                        // Block bounds for drag detection
                                         val startPx = timeToPx(trimStartMs)
                                         val endPx = timeToPx(trimEndMs)
                                         val insideSelectedBlock =
                                             isDownOnSelectedTrack && (downPos.x in startPx..endPx)
 
-                                        // Hit‑test diamonds of the currently selected element
                                         fun findKeyframeAt(position: Offset): CanvasKeyframe? {
                                             val sel = selectedElement ?: return null
                                             val selIndex = elements.indexOfFirst { it.id == sel.id }
                                             if (selIndex == -1) return null
                                             val trackTop = selIndex * trackHeightPx
-                                            val centerY = trackTop + (trackHeightPx - 4.dp.toPx()) / 2f
-                                            val hitRadius = 12.dp.toPx()
+                                            val centerY = trackTop + (trackHeightPx - trackPaddingPx) / 2f
+                                            val hitRadius = with(density) { 12.dp.toPx() }
                                             return localKeyframes.minByOrNull {
                                                 val kfPx = timeToPx(it.timestampMs)
                                                 (Offset(kfPx, centerY) - position).getDistance()
@@ -724,6 +765,7 @@ fun KeyframeAnimationDialog(
                                         }
 
                                         val hitKeyframe = findKeyframeAt(downPos)
+                                        val hitSegmentIndex = if (hitKeyframe == null) findTweenSegmentAt(downPos) else null
 
                                         var longPressHandled = false
                                         var isTap = true
@@ -731,33 +773,37 @@ fun KeyframeAnimationDialog(
                                         var lastPosition = downPos
                                         val touchSlop = viewConfiguration.touchSlop
 
-                                        var initialEvent: PointerEvent? = null   // event that arrived before timeout
+                                        var initialEvent: PointerEvent? = null
 
-                                        // If we hit a diamond, wait for long‑press timeout OR first pointer event
                                         if (hitKeyframe != null) {
                                             val timeoutResult =
                                                 withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
                                                     awaitPointerEvent(PointerEventPass.Main)
                                                 }
                                             if (timeoutResult == null) {
-                                                // No event during timeout → long press
                                                 longPressHandled = true
                                                 editingKeyframeTimestamp = hitKeyframe.timestampMs
                                                 populateFromKeyframe(hitKeyframe)
 
-                                                // Consume the rest of this gesture until the finger is lifted
                                                 while (true) {
                                                     val upEvent = awaitPointerEvent()
                                                     if (!upEvent.changes.any { it.id == down.id && it.pressed }) break
                                                 }
-                                                continue  // go to next down event in the outer loop
+                                                continue
                                             } else {
-                                                // An event arrived before timeout → normal drag/tap handling
                                                 initialEvent = timeoutResult
                                             }
                                         }
 
-                                        // Process the initial event (if any) and then continue waiting for more
+                                        if (hitSegmentIndex != null) {
+                                            editingSegmentIndex = hitSegmentIndex
+                                            while (true) {
+                                                val event = awaitPointerEvent()
+                                                if (!event.changes.any { it.id == down.id && it.pressed }) break
+                                            }
+                                            continue
+                                        }
+
                                         while (true) {
                                             val event = if (initialEvent != null) {
                                                 val e = initialEvent
@@ -768,16 +814,12 @@ fun KeyframeAnimationDialog(
                                             }
 
                                             val change = event.changes.firstOrNull { it.id == down.id }
-                                            if (change == null || !change.pressed) {
-                                                // Finger lifted → tap
-                                                break
-                                            }
+                                            if (change == null || !change.pressed) break
 
                                             val currentPos = change.position
                                             val dragDistance = (currentPos - downPos).getDistance()
 
                                             if (dragDistance > touchSlop) {
-                                                // Drag started
                                                 isTap = false
                                                 val dx = currentPos.x - downPos.x
                                                 val dy = currentPos.y - downPos.y
@@ -786,16 +828,11 @@ fun KeyframeAnimationDialog(
                                                     change.consume()
                                                     lastPosition = currentPos
                                                 }
-                                                // If not a block drag we simply keep waiting for the up
                                             }
 
-                                            if (dragTriggered) {
-                                                // Exit the tap‑waiting loop and enter the dedicated drag‑handling loop
-                                                break
-                                            }
+                                            if (dragTriggered) break
                                         }
 
-                                        // ----- Block drag handling (unchanged) -----
                                         if (dragTriggered) {
                                             isBlockDragActive = true
                                             var activeStartMs = trimStartMs
@@ -836,7 +873,6 @@ fun KeyframeAnimationDialog(
                                             }
                                         }
 
-                                        // ----- Tap handling (only if no long press was performed) -----
                                         if (isTap) {
                                             var newTime = pxToTime(downPos.x)
                                             if (isDownOnSelectedTrack) {
@@ -854,7 +890,7 @@ fun KeyframeAnimationDialog(
                         elements.forEachIndexed { index, trackElement ->
                             val isSelected = trackElement.id == selectedElement?.id
                             val yOffset = index * trackHeightPx
-                            val trackRectHeight = trackHeightPx - 4.dp.toPx()
+                            val trackRectHeight = trackHeightPx - trackPaddingPx
                             val trackEndY = yOffset + trackRectHeight
 
                             drawRect(
@@ -954,13 +990,39 @@ fun KeyframeAnimationDialog(
                                     )
                                 }
                             }
+
+                            if (isSelected) {
+                                val sortedKfs = localKeyframes.sortedBy { it.timestampMs }
+                                if (sortedKfs.size >= 2) {
+                                    for (i in 0 until sortedKfs.size - 1) {
+                                        val kfA = sortedKfs[i]
+                                        val kfB = sortedKfs[i + 1]
+                                        val startLinePx = timeToPx(kfA.timestampMs)
+                                        val endLinePx = timeToPx(kfB.timestampMs)
+                                        val cy = yOffset + (trackRectHeight / 2)
+                                        val pathEffect = when (kfB.tweenType) {
+                                            TweenType.LINEAR -> null
+                                            TweenType.EASE_IN -> PathEffect.dashPathEffect(floatArrayOf(10f, 5f), 0f)
+                                            TweenType.EASE_OUT -> PathEffect.dashPathEffect(floatArrayOf(20f, 5f, 5f, 5f), 0f)
+                                            TweenType.EASE_IN_OUT -> PathEffect.dashPathEffect(floatArrayOf(15f, 10f), 0f)
+                                        }
+                                        drawLine(
+                                            color = Color.White.copy(alpha = 0.8f),
+                                            start = Offset(startLinePx, cy),
+                                            end = Offset(endLinePx, cy),
+                                            strokeWidth = 2.dp.toPx(),
+                                            pathEffect = pathEffect
+                                        )
+                                    }
+                                }
+                            }
                         }
 
                         val selectedTrackIndex =
                             elements.indexOfFirst { it.id == selectedElement?.id }
                         if (selectedTrackIndex >= 0) {
                             val trackTop = selectedTrackIndex * trackHeightPx
-                            val trackBottom = trackTop + trackHeightPx - 4.dp.toPx()
+                            val trackBottom = trackTop + trackHeightPx - trackPaddingPx
                             drawLine(
                                 color = onSurface,
                                 start = Offset(playheadPx, trackTop),
@@ -1056,6 +1118,50 @@ fun KeyframeAnimationDialog(
                     )
                 }
             }
+
+            if (editingSegmentIndex != null) {
+                val sortedKfs = localKeyframes.sortedBy { it.timestampMs }
+                val laterKf = sortedKfs[editingSegmentIndex!! + 1]
+                val currentTween = laterKf.tweenType
+
+                AlertDialog(
+                    onDismissRequest = { editingSegmentIndex = null },
+                    title = { Text("Choose Tween Type") },
+                    text = {
+                        Column {
+                            TweenType.entries.forEach { type ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            val updated = laterKf.copy(tweenType = type)
+                                            val idx = localKeyframes.indexOf(laterKf)
+                                            if (idx != -1) localKeyframes[idx] = updated
+                                            editingSegmentIndex = null
+                                        }
+                                        .padding(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = currentTween == type,
+                                        onClick = null
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        type.name.replace("_", " ")
+                                            .lowercase()
+                                            .replaceFirstChar { it.uppercase() }
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {},
+                    dismissButton = {
+                        TextButton(onClick = { editingSegmentIndex = null }) { Text("Cancel") }
+                    }
+                )
+            }
         }
     }
 
@@ -1090,11 +1196,11 @@ fun KeyframeAnimationDialog(
                                 .weight(0.4f)
                                 .verticalScroll(rightColumnScrollState),
                         ) {
-                            ParameterSlider("X", xInput, { xInput = it }, -2000f..2000f, "px")
-                            ParameterSlider("Y", yInput, { yInput = it }, -2000f..2000f, "px")
-                            ParameterSlider("SX", scaleXInput, { scaleXInput = it }, 0.1f..10f, "",
+                            ParameterSlider("X", xInput, { xInput = it }, xMin..xMax, "px")
+                            ParameterSlider("Y", yInput, { yInput = it }, yMin..yMax, "px")
+                            ParameterSlider("SX", scaleXInput, { scaleXInput = it }, 0.1f..25f, "",
                                 { String.format(Locale.US, "%.2f", it) })
-                            ParameterSlider("SY", scaleYInput, { scaleYInput = it }, 0.1f..10f, "",
+                            ParameterSlider("SY", scaleYInput, { scaleYInput = it }, 0.1f..25f, "",
                                 { String.format(Locale.US, "%.2f", it) })
                             ParameterSlider("Rot", rotationInput, { rotationInput = it }, -360f..360f, "°",
                                 { String.format(Locale.US, "%.1f", it) })
@@ -1124,7 +1230,7 @@ fun KeyframeAnimationDialog(
                             KeyframeListCompact()
                         }
                     }
-                }  else {
+                } else {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1135,11 +1241,11 @@ fun KeyframeAnimationDialog(
                             if (editingKeyframeTimestamp != null) "Editing Keyframe" else "New Keyframe",
                             style = MaterialTheme.typography.labelMedium
                         )
-                        ParameterSlider("X", xInput, { xInput = it }, -2000f..2000f, "px")
-                        ParameterSlider("Y", yInput, { yInput = it }, -2000f..2000f, "px")
-                        ParameterSlider("SX", scaleXInput, { scaleXInput = it }, 0.1f..10f, "",
+                        ParameterSlider("X", xInput, { xInput = it }, xMin..xMax, "px")
+                        ParameterSlider("Y", yInput, { yInput = it }, yMin..yMax, "px")
+                        ParameterSlider("SX", scaleXInput, { scaleXInput = it }, 0.1f..25f, "",
                             { String.format(Locale.US, "%.2f", it) })
-                        ParameterSlider("SY", scaleYInput, { scaleYInput = it }, 0.1f..10f, "",
+                        ParameterSlider("SY", scaleYInput, { scaleYInput = it }, 0.1f..25f, "",
                             { String.format(Locale.US, "%.2f", it) })
                         ParameterSlider("Rot", rotationInput, { rotationInput = it }, -360f..360f, "°",
                             { String.format(Locale.US, "%.1f", it) })

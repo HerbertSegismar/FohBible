@@ -342,10 +342,13 @@ fun AnimatorScreen() {
 
                 val sortedKeyframes = element.keyframes.sortedBy { it.timestampMs }
                 val (kfPrev, kfNext) = findSurroundingKeyframes(sortedKeyframes, currentMs)
-                val progress = if (kfNext != null && kfPrev != null && kfNext.timestampMs != kfPrev.timestampMs) {
+
+                val rawProgress = if (kfNext != null && kfPrev != null && kfNext.timestampMs != kfPrev.timestampMs) {
                     ((currentMs - kfPrev.timestampMs).toFloat() /
                             (kfNext.timestampMs - kfPrev.timestampMs)).coerceIn(0f, 1f)
                 } else 0f
+
+                val progress = if (kfNext != null) ease(rawProgress, kfNext.tweenType) else rawProgress
 
                 val newX = lerp(kfPrev?.x ?: element.offset.x, kfNext?.x ?: element.offset.x, progress)
                 val newY = lerp(kfPrev?.y ?: element.offset.y, kfNext?.y ?: element.offset.y, progress)
@@ -1196,7 +1199,9 @@ fun AnimatorScreen() {
                 viewModel.updateAnimatorElementDuration(elementId, newStartMs, newEndMs)
             },
             timeMultiplier = 1f,
-            initialGradientConfig = elementGradient
+            initialGradientConfig = elementGradient,
+            canvasWidth = customWidthPx,
+            canvasHeight = customHeightPx
         )
     }
 
@@ -1237,8 +1242,8 @@ fun AnimatorScreen() {
                     width = currentElement.width,
                     height = currentElement.height,
                     rotation = rot.toFloatOrNull() ?: currentElement.rotation,
-                    scaleX = scaleX.toFloatOrNull()?.coerceIn(0.1f, 10f) ?: currentElement.scaleX,
-                    scaleY = scaleY.toFloatOrNull()?.coerceIn(0.1f, 10f) ?: currentElement.scaleY,
+                    scaleX = scaleX.toFloatOrNull()?.coerceIn(0.1f, 25f) ?: currentElement.scaleX,
+                    scaleY = scaleY.toFloatOrNull()?.coerceIn(0.1f, 25f) ?: currentElement.scaleY,
                     color = color,
                     isTextElement = isText,
                     shadowColor = shadowColor,

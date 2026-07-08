@@ -257,8 +257,8 @@ data class CanvasElement(
     val id: String = UUID.randomUUID().toString(),
     val content: String,
     val offset: Offset = Offset.Zero,
-    val width: Float = 100f,
-    val height: Float = 100f,
+    val width: Float = 200f,
+    val height: Float = 200f,
     val rotation: Float = 0f,
     val backgroundColor: Color = Color.White,
     val position: Offset = Offset.Zero,
@@ -389,7 +389,8 @@ data class CanvasKeyframe(
     val scaleY: Float? = null,
     val rotation: Float? = null,
     val color: Color? = null,
-    val gradientConfig: GradientConfig? = null
+    val gradientConfig: GradientConfig? = null,
+    val tweenType: TweenType = TweenType.LINEAR
 )
 
 sealed class DisplayItem {
@@ -408,4 +409,11 @@ sealed class DisplayItem {
     ) : DisplayItem()
 
     object ActionRow : DisplayItem()
+}
+
+enum class TweenType {
+    LINEAR,
+    EASE_IN,
+    EASE_OUT,
+    EASE_IN_OUT
 }

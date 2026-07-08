@@ -137,7 +137,7 @@ fun EditPropertiesDialog(
                             value = editScaleX,
                             onValueChange = { newValue ->
                                 val parsed = newValue.toFloatOrNull()
-                                if (parsed != null && parsed in 0.1f..10f) {
+                                if (parsed != null && parsed in 0.1f..100f) {
                                     editScaleX = newValue
                                     if (proportionalEnabled) {
                                         editScaleY = newValue
@@ -146,7 +146,7 @@ fun EditPropertiesDialog(
                                     editScaleX = newValue
                                 }
                             },
-                            label = { Text("Scale X (0.1 – 10)") },
+                            label = { Text("Scale X (0.1 – 100)") },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                         )
@@ -154,7 +154,7 @@ fun EditPropertiesDialog(
                             value = editScaleY,
                             onValueChange = { newValue ->
                                 val parsed = newValue.toFloatOrNull()
-                                if (parsed != null && parsed in 0.1f..10f) {
+                                if (parsed != null && parsed in 0.1f..100f) {
                                     editScaleY = newValue
                                     if (proportionalEnabled) {
                                         editScaleX = newValue
@@ -163,7 +163,7 @@ fun EditPropertiesDialog(
                                     editScaleY = newValue
                                 }
                             },
-                            label = { Text("Scale Y (0.1 – 10)") },
+                            label = { Text("Scale Y (0.1 – 100)") },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                         )
