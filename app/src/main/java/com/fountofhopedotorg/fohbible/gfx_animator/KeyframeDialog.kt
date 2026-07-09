@@ -47,6 +47,8 @@ import com.fountofhopedotorg.fohbible.data.GradientConfig
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.material3.HorizontalDivider
+import com.fountofhopedotorg.fohbible.data.EasingPoint
 import com.fountofhopedotorg.fohbible.data.TweenType
 import java.util.Locale
 
@@ -1005,6 +1007,7 @@ fun KeyframeAnimationDialog(
                                             TweenType.EASE_IN -> PathEffect.dashPathEffect(floatArrayOf(10f, 5f), 0f)
                                             TweenType.EASE_OUT -> PathEffect.dashPathEffect(floatArrayOf(20f, 5f, 5f, 5f), 0f)
                                             TweenType.EASE_IN_OUT -> PathEffect.dashPathEffect(floatArrayOf(15f, 10f), 0f)
+                                            TweenType.CUSTOM -> PathEffect.dashPathEffect(floatArrayOf(5f, 10f, 20f, 10f), 0f)
                                         }
                                         drawLine(
                                             color = Color.White.copy(alpha = 0.8f),
@@ -1122,43 +1125,121 @@ fun KeyframeAnimationDialog(
             if (editingSegmentIndex != null) {
                 val sortedKfs = localKeyframes.sortedBy { it.timestampMs }
                 val laterKf = sortedKfs[editingSegmentIndex!! + 1]
-                val currentTween = laterKf.tweenType
+
+                var selectedType by remember(editingSegmentIndex) { mutableStateOf(laterKf.tweenType) }
+                var customPoints by remember(editingSegmentIndex) {
+                    mutableStateOf(
+                        laterKf.customPoints
+                            ?: listOf(EasingPoint(x = 0f, y = 0f), EasingPoint(x = 1f, y = 1f))
+                    )
+                }
+
+                val landscape = LocalConfiguration.current.orientation == ORIENTATION_LANDSCAPE
 
                 AlertDialog(
                     onDismissRequest = { editingSegmentIndex = null },
+                    modifier = Modifier.fillMaxWidth(if (landscape) 0.9f else 1f),
+                    properties = DialogProperties(usePlatformDefaultWidth = false),
                     title = { Text("Choose Tween Type") },
                     text = {
-                        Column {
-                            TweenType.entries.forEach { type ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            val updated = laterKf.copy(tweenType = type)
-                                            val idx = localKeyframes.indexOf(laterKf)
-                                            if (idx != -1) localKeyframes[idx] = updated
-                                            editingSegmentIndex = null
+                        if (landscape) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    TweenType.entries.forEach { type ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable { selectedType = type }
+                                                .padding(horizontal = 8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            RadioButton(
+                                                selected = selectedType == type,
+                                                onClick = { selectedType = type }
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                type.name.replace("_", " ")
+                                                    .lowercase()
+                                                    .replaceFirstChar { it.uppercase() }
+                                            )
                                         }
-                                        .padding(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    RadioButton(
-                                        selected = currentTween == type,
-                                        onClick = null
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
+                                    }
+                                }
+                                if (selectedType == TweenType.CUSTOM) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            "Tap to add point • Long-press for smooth/sharp",
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        CustomEasingEditor(
+                                            points = customPoints,
+                                            onPointsChanged = { customPoints = it }
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            Column {
+                                TweenType.entries.forEach { type ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { selectedType = type }
+                                            .padding(horizontal = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        RadioButton(
+                                            selected = selectedType == type,
+                                            onClick = { selectedType = type }
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            type.name.replace("_", " ")
+                                                .lowercase()
+                                                .replaceFirstChar { it.uppercase() }
+                                        )
+                                    }
+                                }
+
+                                if (selectedType == TweenType.CUSTOM) {
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    HorizontalDivider()
+                                    Spacer(modifier = Modifier.height(16.dp))
                                     Text(
-                                        type.name.replace("_", " ")
-                                            .lowercase()
-                                            .replaceFirstChar { it.uppercase() }
+                                        "Tap to add point • Long-press for smooth/sharp",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    CustomEasingEditor(
+                                        points = customPoints,
+                                        onPointsChanged = { customPoints = it }
                                     )
                                 }
                             }
                         }
                     },
-                    confirmButton = {},
+                    confirmButton = {
+                        TextButton(onClick = {
+                            val updated = laterKf.copy(
+                                tweenType = selectedType,
+                                customPoints = if (selectedType == TweenType.CUSTOM) customPoints else null
+                            )
+                            val idx = localKeyframes.indexOf(laterKf)
+                            if (idx != -1) localKeyframes[idx] = updated
+                            editingSegmentIndex = null
+                        }) {
+                            Text("Save")
+                        }
+                    },
                     dismissButton = {
-                        TextButton(onClick = { editingSegmentIndex = null }) { Text("Cancel") }
+                        TextButton(onClick = { editingSegmentIndex = null }) {
+                            Text("Cancel")
+                        }
                     }
                 )
             }

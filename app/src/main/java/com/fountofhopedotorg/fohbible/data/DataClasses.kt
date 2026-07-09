@@ -390,7 +390,8 @@ data class CanvasKeyframe(
     val rotation: Float? = null,
     val color: Color? = null,
     val gradientConfig: GradientConfig? = null,
-    val tweenType: TweenType = TweenType.LINEAR
+    val tweenType: TweenType = TweenType.LINEAR,
+    val customPoints: List<EasingPoint>? = null
 )
 
 sealed class DisplayItem {
@@ -415,5 +416,14 @@ enum class TweenType {
     LINEAR,
     EASE_IN,
     EASE_OUT,
-    EASE_IN_OUT
+    EASE_IN_OUT,
+    CUSTOM
 }
+
+data class EasingPoint(
+    val x: Float,
+    val y: Float,
+    val isSmooth: Boolean = false,
+    val handleOut: Offset = Offset.Zero,
+    val handleIn: Offset = Offset.Zero
+)

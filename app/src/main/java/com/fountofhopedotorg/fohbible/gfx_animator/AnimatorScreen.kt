@@ -343,12 +343,16 @@ fun AnimatorScreen() {
                 val sortedKeyframes = element.keyframes.sortedBy { it.timestampMs }
                 val (kfPrev, kfNext) = findSurroundingKeyframes(sortedKeyframes, currentMs)
 
-                val rawProgress = if (kfNext != null && kfPrev != null && kfNext.timestampMs != kfPrev.timestampMs) {
-                    ((currentMs - kfPrev.timestampMs).toFloat() /
+                val progress = if (kfNext != null && kfPrev != null && kfNext.timestampMs != kfPrev.timestampMs) {
+                    val rawProgress = ((currentMs - kfPrev.timestampMs).toFloat() /
                             (kfNext.timestampMs - kfPrev.timestampMs)).coerceIn(0f, 1f)
-                } else 0f
 
-                val progress = if (kfNext != null) ease(rawProgress, kfNext.tweenType) else rawProgress
+                    ease(
+                        rawProgress,
+                        kfNext.tweenType,
+                        customPoints = kfNext.customPoints ?: emptyList()
+                    )
+                } else 0f
 
                 val newX = lerp(kfPrev?.x ?: element.offset.x, kfNext?.x ?: element.offset.x, progress)
                 val newY = lerp(kfPrev?.y ?: element.offset.y, kfNext?.y ?: element.offset.y, progress)
