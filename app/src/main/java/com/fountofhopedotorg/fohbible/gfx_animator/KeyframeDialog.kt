@@ -261,13 +261,20 @@ fun KeyframeAnimationDialog(
 
     LaunchedEffect(element) {
         editingKeyframeTimestamp = null
+        val midpointStored = trimStartMs + (trimEndMs - trimStartMs) / 2
+        timeInput = storedToDisplay(midpointStored).toString()
+
         val firstKeyframe = localKeyframes.minByOrNull { it.timestampMs }
         if (firstKeyframe != null) {
-            populateFromKeyframe(firstKeyframe)
+            xInput = firstKeyframe.x?.let { formatPosition(it) } ?: formatPosition(element.offset.x)
+            yInput = firstKeyframe.y?.let { formatPosition(it) } ?: formatPosition(element.offset.y)
+            scaleXInput = firstKeyframe.scaleX?.let { formatScale(it) } ?: formatScale(element.scaleX)
+            scaleYInput = firstKeyframe.scaleY?.let { formatScale(it) } ?: formatScale(element.scaleY)
+            rotationInput = firstKeyframe.rotation?.let { formatRotation(it) } ?: formatRotation(element.rotation)
+            val displayColor = firstKeyframe.gradientConfig?.startColor ?: firstKeyframe.color ?: initialElementColor
+            pickedColorArgb = displayColor.toArgb().toLong()
+            currentGradientConfig = firstKeyframe.gradientConfig
         } else {
-            timeInput = storedToDisplay(
-                (trimStartMs + (trimEndMs - trimStartMs) / 2)
-            ).toString()
             xInput = element.offset.x.toString()
             yInput = element.offset.y.toString()
             scaleXInput = element.scaleX.toString()
@@ -1051,6 +1058,9 @@ fun KeyframeAnimationDialog(
                         var tempDragPx by remember { mutableFloatStateOf(basePx) }
                         var isDragging by remember { mutableStateOf(false) }
 
+                        val currentDragLimit by rememberUpdatedState(dragLimit)
+                        val currentOnPositionChange by rememberUpdatedState(onPositionChange)
+
                         LaunchedEffect(basePx) {
                             if (!isDragging) tempDragPx = basePx
                         }
@@ -1078,11 +1088,10 @@ fun KeyframeAnimationDialog(
                                         onDragStart = { isDragging = true },
                                         onHorizontalDrag = { change, dragAmount ->
                                             change.consume()
-                                            tempDragPx =
-                                                (tempDragPx + dragAmount).coerceIn(dragLimit)
+                                            tempDragPx = (tempDragPx + dragAmount).coerceIn(currentDragLimit)
+                                            currentOnPositionChange(tempDragPx)
                                         },
                                         onDragEnd = {
-                                            onPositionChange(tempDragPx)
                                             isDragging = false
                                         },
                                         onDragCancel = { isDragging = false }
