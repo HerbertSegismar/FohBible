@@ -121,7 +121,7 @@ fun HistoryTable(
     }
 
     BoxWithConstraints(modifier = modifier) {
-        val safeZonePadding = 8.dp // Ensures canvas strokes don't hit the screen edge
+        val safeZonePadding = 8.dp
         val availableWidth = maxWidth - safeZonePadding * 2
         val minSize = 48.dp
         val spacing = 8.dp

@@ -389,33 +389,43 @@ fun DrawScope.drawPeh(progress: Float, isDarkMode: Boolean = false) {
 
 fun DrawScope.drawSamech(progress: Float, isDarkMode: Boolean = false) {
     val outer = Path().apply {
-        moveTo(0.5f, 8.405f)                          // -6
-        lineTo(11.095f, -5.5f)                        // -6
-        lineTo(11.284f, 0.648f)                       // -6
+        // Start top-left horn
+        moveTo(0.5f, 8.405f)
+        lineTo(11.095f, -5.5f)
+        lineTo(11.284f, 0.648f)
+
+        // Roofline
         cubicTo(11.284f, 0.648f, 37.166f, 0.723f, 43.097f, 0.74f)
         cubicTo(44.636f, 0.746f, 46.163f, 1.004f, 47.619f, 1.504f)
-        cubicTo(52.773f, 3.309f, 56.386f, 7.574f, 58.187f, 12.842f)
-        cubicTo(58.816f, 14.642f, 59.131f, 16.537f, 59.12f, 18.444f)
-        cubicTo(59.204f, 23.851f, 59.069f, 46.604f, 59.055f, 48.895f)
-        cubicTo(59.05f, 49.581f, 58.998f, 50.266f, 58.9f, 50.945f)
-        cubicTo(58.159f, 56.022f, 56.599f, 58.339f, 54.079f, 60.105f)
-        cubicTo(51.393f, 61.982f, 48.191f, 62.981f, 44.914f, 62.964f)
-        cubicTo(35.775f, 62.916f, 13.838f, 62.797f, 13.838f, 62.797f)
-        cubicTo(8.781f, 62.861f, 5.526f, 59.958f, 4.757f, 52.959f)
-        lineTo(4.379f, 12.189f)                       // -6
+        cubicTo(54.165f, 3.793f, 58.224f, 10.055f, 59.243f, 17.297f)
+
+        // Smooth bottom-right sweep
+        cubicTo(59.243f, 17.297f, 61.94f, 35.716f, 51.073f, 47.455f)
+        cubicTo(38.134f, 61.433f, 29.391f, 61.288f, 18.716f, 62.058f)
+        cubicTo(14.264f, 62.379f, 9.073f, 59.958f, 8.304f, 52.959f)
+
+        // Ascending left wall back to the horn
+        lineTo(4.379f, 12.189f)
         cubicTo(4.035f, 10.114f, 2.609f, 8.967f, 0.5f, 8.405f)
         close()
     }
 
     val inner = Path().apply {
-        moveTo(11.284f, 10.297f)                      // -6
-        cubicTo(11.284f, 10.297f, 11.341f, 36.112f, 11.367f, 47.624f)
-        cubicTo(11.373f, 50.627f, 13.806f, 53.059f, 16.808f, 53.066f)
-        cubicTo(27.258f, 53.091f, 49.369f, 53.142f, 51.988f, 53.148f)
-        cubicTo(52.084f, 53.148f, 52.179f, 53.133f, 52.269f, 53.102f)
-        cubicTo(52.57f, 51.536f, 52.054f, 19f, 52.054f, 19f)   // -6 (25→19)
-        cubicTo(52.394f, 14.07f, 48.594f, 11f, 42.879f, 10.108f) // -6
-        lineTo(11.284f, 10.297f)
+        // Inner counter loop
+        moveTo(11.136f, 9.115f)
+
+        // Inner right wall sweeping downwards
+        cubicTo(11.136f, 9.115f, 13.937f, 37.932f, 15.133f, 50.244f)
+        cubicTo(15.279f, 51.743f, 16.038f, 53.115f, 17.231f, 54.035f)
+        cubicTo(18.425f, 54.955f, 19.945f, 55.341f, 21.432f, 55.100f)
+
+        // Smooth inner bottom-right curve turn
+        cubicTo(28.088f, 54.013f, 38.916f, 51.018f, 45.149f, 42.802f)
+        cubicTo(54.328f, 30.702f, 51.020f, 19.000f, 51.020f, 19.000f)
+
+        // Inner roof return curve
+        cubicTo(49.733f, 13.627f, 45.490f, 9.818f, 39.775f, 8.925f)
+        lineTo(11.136f, 9.115f)
         close()
     }
 
@@ -631,4 +641,203 @@ fun DrawScope.drawYod(progress: Float, isDarkMode: Boolean = false) {
     }
     val (scale, leftOffset, topOffset) = calculateLayout(path)
     drawAnimatedLetter(progress, path, isDarkMode, scale, leftOffset, topOffset)
+}
+
+// ─── Kaf Sofit (Final Kaf) ─────────────────────────
+fun DrawScope.drawKafSofit(progress: Float, isDarkMode: Boolean = false) {
+    val path = Path().apply {
+        moveTo(0.5f, 9.963f)
+        lineTo(13.27f, -6f)
+        lineTo(13.388f, 0.148f)
+        lineTo(30.297f, 0.148f)
+        cubicTo(38.308f, 2.327f, 43.057f, 6.878f, 44.131f, 19.101f)
+        lineTo(44.131f, 85.0f)   // Outer stem drops straight down past baseline
+        lineTo(35.263f, 85.0f)   // Bottom edge of descender
+        lineTo(35.381f, 17.294f) // Inner stem returns straight up
+        cubicTo(35.13f, 13.793f, 32.795f, 11.335f, 28.76f, 9.726f)
+        lineTo(0.5f, 9.963f)
+        close()
+    }
+    val (scale, leftOffset, topOffset) = calculateLayout(path)
+    drawAnimatedLetter(progress, path, isDarkMode, scale, leftOffset, topOffset)
+}
+
+// ─── Mem Sofit (Final Mem) ──────────────────────────
+fun DrawScope.drawMemSofit(progress: Float, isDarkMode: Boolean = false) {
+    val outer = Path().apply {
+        // Exact top-left calligraphic horn copied from Samech
+        moveTo(0.5f, 8.405f)
+        lineTo(11.095f, -5.5f)
+        lineTo(11.284f, 0.648f)
+
+        // Roofline heading right, stopping short to curve
+        lineTo(54.055f, 0.74f)
+        cubicTo(56.800f, 0.740f, 59.055f, 2.995f, 59.055f, 5.740f)
+
+        // Right wall heading down, stopping short to curve
+        lineTo(59.055f, 57.964f)
+        cubicTo(59.055f, 60.714f, 56.800f, 62.964f, 54.055f, 62.964f)
+
+        // Flat baseline heading left, stopping short to curve
+        lineTo(9.379f, 62.964f)
+        cubicTo(6.629f, 62.964f, 4.379f, 60.714f, 4.379f, 57.964f)
+
+        // Left wall running up to meet the horn geometry
+        lineTo(4.379f, 12.189f)
+        cubicTo(4.035f, 10.114f, 2.609f, 8.967f, 0.5f, 8.405f)
+        close()
+    }
+
+    val inner = Path().apply {
+        // Top-left inner corner
+        moveTo(11.284f, 13.297f)
+        lineTo(11.284f, 10.297f)
+
+        // Inner roofline to inner right wall corner (rounded slightly tighter)
+        lineTo(49.488f, 10.297f)
+        cubicTo(50.800f, 10.297f, 51.988f, 11.485f, 51.988f, 12.797f)
+
+        // Inner right wall down to inner floor level
+        lineTo(51.988f, 50.566f)
+        cubicTo(51.988f, 51.878f, 50.800f, 53.066f, 49.488f, 53.066f)
+
+        // Inner floor line back to inner left wall
+        lineTo(13.784f, 53.066f)
+        cubicTo(12.472f, 53.066f, 11.284f, 51.878f, 11.284f, 50.566f)
+
+        close()
+    }
+
+    val fullPath = Path().apply {
+        fillType = PathFillType.EvenOdd
+        addPath(outer)
+        addPath(inner)
+    }
+    val (scale, leftOffset, topOffset) = calculateLayout(fullPath)
+
+    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
+    val strokeEnd = 0.8f
+    val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
+    val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
+
+    val outerMeasure = PathMeasure().apply { setPath(outer, false) }
+    val innerMeasure = PathMeasure().apply { setPath(inner, false) }
+    val totalLength = outerMeasure.length + innerMeasure.length
+    val targetLength = totalLength * strokeProgress
+
+    val animatedPath = Path()
+    if (targetLength <= outerMeasure.length) {
+        outerMeasure.getSegment(0f, targetLength, animatedPath, true)
+    } else {
+        outerMeasure.getSegment(0f, outerMeasure.length, animatedPath, true)
+        innerMeasure.getSegment(0f, targetLength - outerMeasure.length, animatedPath, true)
+    }
+
+    withTransform({
+        translate(left = leftOffset, top = topOffset)
+        scale(scale, scale, pivot = Offset.Zero)
+    }) {
+        drawPath(
+            path = animatedPath,
+            color = color,
+            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        )
+        if (fillProgress > 0f) {
+            drawPath(path = fullPath, color = color.copy(alpha = fillProgress), style = Fill)
+        }
+    }
+}
+
+// ─── Nun Sofit (Final Nun) ──────────────────────────
+fun DrawScope.drawNunSofit(progress: Float, isDarkMode: Boolean = false) {
+    val path = Path().apply {
+        moveTo(6.271f, 9.271f)
+        lineTo(12.608f, 0f)
+        lineTo(26.325f, 10.973f)
+        cubicTo(28.015f, 12.834f, 28.702f, 14.694f, 28.879f, 16.555f)
+        lineTo(28.879f, 85.0f) // Outer stem drops straight down
+        lineTo(19.0f, 85.0f)   // Bottom edge of descender
+        lineTo(19.0f, 23.117f) // Inner stem returns straight up
+        cubicTo(19.044f, 18.364f, 13.52f, 13.772f, 6.271f, 9.271f)
+        close()
+    }
+    val (scale, leftOffset, topOffset) = calculateLayout(path)
+    drawAnimatedLetter(progress, path, isDarkMode, scale, leftOffset, topOffset)
+}
+
+// ─── Peh Sofit (Final Peh) ──────────────────────────
+fun DrawScope.drawPehSofit(progress: Float, isDarkMode: Boolean = false) {
+    val path = Path().apply {
+        moveTo(16.888f, 36.892f)
+        cubicTo(0.868f, 28.399f, 2.954f, 16.061f, 22.564f, 0f)
+        cubicTo(36.745f, 4.296f, 50.013f, 19.087f, 50.013f, 19.087f)
+        lineTo(49.807f, 85.0f)   // Outer stem drops straight down
+        lineTo(41.175f, 85.0f)   // Bottom edge of descender
+        lineTo(41.264f, 24.969f) // Inner stem returns up to the loop
+        cubicTo(42.667f, 24.091f, 23.53f, 8.018f, 19.49f, 10.051f)
+        cubicTo(12.927f, 13.354f, 12.674f, 25.02f, 22.446f, 29.088f)
+        lineTo(16.888f, 36.892f)
+        close()
+    }
+    val (scale, leftOffset, topOffset) = calculateLayout(path)
+    drawAnimatedLetter(progress, path, isDarkMode, scale, leftOffset, topOffset)
+}
+
+// ─── Tsadeh Sofit (Final Tsadeh) ────────────────────
+fun DrawScope.drawTsadehSofit(progress: Float, isDarkMode: Boolean = false) {
+    val glyphPath = Path().apply {
+        // Start of left arm
+        moveTo(0.5f, 8.304f)
+        lineTo(7.712f, 0.737f)
+
+        // Curve down inner branch connection
+        cubicTo(15.201f, 15.566f, 22.690f, 23.322f, 30.179f, 28.997f)
+
+        // Curve up to meet the right horn peak
+        cubicTo(34.740f, 23.054f, 37.222f, 16.733f, 31.361f, 8.896f)
+        lineTo(39.874f, 0.5f)
+
+        // Descending curves toward the leg joint
+        cubicTo(46.876f, 12.681f, 43.347f, 23.950f, 33.637f, 32.663f)
+        cubicTo(33.637f, 32.663f, 42.303f, 40.201f, 44.072f, 49.116f)
+
+        // Final long straight down to bottom right tip of the leg
+        cubicTo(46.870f, 63.214f, 45.550f, 83.939f, 45.550f, 83.939f)
+
+        // Bottom terminal line of the leg
+        cubicTo(45.550f, 83.939f, 38.318f, 84.031f, 37.716f, 81.160f)
+
+        // Sweeping up the back side of the long leg
+        cubicTo(36.423f, 74.987f, 39.811f, 64.356f, 34.683f, 49.263f)
+
+        // Smooth interior branch sweep returning to the left start point
+        cubicTo(31.888f, 41.038f, 6.195f, 20.920f, 0.5f, 8.304f)
+        close()
+    }
+
+    val (scale, leftOffset, topOffset) = calculateLayout(glyphPath)
+
+    val color = if (isDarkMode) Color.White else Color(0xFF1A237E)
+    val strokeEnd = 0.8f
+    val strokeProgress = (progress / strokeEnd).coerceIn(0f, 1f)
+    val fillProgress = ((progress - strokeEnd) / (1f - strokeEnd)).coerceIn(0f, 1f)
+
+    val pathMeasure = PathMeasure().apply { setPath(glyphPath, false) }
+    val targetLength = pathMeasure.length * strokeProgress
+    val animatedPath = Path()
+    pathMeasure.getSegment(0f, targetLength, animatedPath, true)
+
+    withTransform({
+        translate(left = leftOffset, top = topOffset)
+        scale(scale, scale, pivot = Offset.Zero)
+    }) {
+        drawPath(
+            path = animatedPath,
+            color = color,
+            style = Stroke(width = 1f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        )
+        if (fillProgress > 0f) {
+            drawPath(path = glyphPath, color = color.copy(alpha = fillProgress), style = Fill)
+        }
+    }
 }
