@@ -57,6 +57,7 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -84,6 +85,7 @@ import coil.size.Size as Size2
 import com.fountofhopedotorg.fohbible.data.BezierNodeData
 import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.GradientConfig
+import com.fountofhopedotorg.fohbible.gfx_animator.PivotHandle
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.absoluteValue
@@ -492,30 +494,6 @@ fun ShapeSelectionCard(
     }
 }
 
-private fun handleOffset(
-    baseSize: IntSize,
-    localX: Float,
-    localY: Float,
-    scaleX: Float,
-    scaleY: Float,
-    rotationDeg: Float,
-    handleRadiusPx: Float
-): IntOffset {
-    val cx = baseSize.width / 2f
-    val cy = baseSize.height / 2f
-    val dx = localX - cx
-    val dy = localY - cy
-    val scaledDx = dx * scaleX
-    val scaledDy = dy * scaleY
-    val rad = rotationDeg * (PI / 180.0)
-    val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
-    val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
-    return IntOffset(
-        (cx + rx - handleRadiusPx).roundToInt(),
-        (cy + ry - handleRadiusPx).roundToInt()
-    )
-}
-
 @Composable
 fun CanvasItemSelectionHandles(
     baseSize: IntSize,
@@ -525,6 +503,8 @@ fun CanvasItemSelectionHandles(
     currentWidth: Float,
     currentHeight: Float,
     proportionalEditing: Boolean,
+    pivotX: Float,
+    pivotY: Float,
     onUpdatePosition: (Offset, Float, Float, Float) -> Unit,
     onScaleChanged: (Float, Float) -> Unit,
     onDeleteRequested: () -> Unit,
@@ -539,11 +519,27 @@ fun CanvasItemSelectionHandles(
     val latestScaleX by rememberUpdatedState(currentScaleX)
     val latestScaleY by rememberUpdatedState(currentScaleY)
     val latestRotation by rememberUpdatedState(currentRotation)
+    val latestPivotX by rememberUpdatedState(pivotX)
+    val latestPivotY by rememberUpdatedState(pivotY)
 
-    fun offsetAt(localX: Float, localY: Float) = handleOffset(
-        baseSize, localX, localY, currentScaleX, currentScaleY, currentRotation, handleRadiusPx
-    )
+    // Offset helper that uses pivot as origin
+    fun offsetAt(localX: Float, localY: Float): IntOffset {
+        val pivotLocalX = latestPivotX * baseSize.width
+        val pivotLocalY = latestPivotY * baseSize.height
+        val dx = localX - pivotLocalX
+        val dy = localY - pivotLocalY
+        val scaledDx = dx * currentScaleX
+        val scaledDy = dy * currentScaleY
+        val rad = currentRotation * (PI / 180.0)
+        val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
+        val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
+        return IntOffset(
+            (pivotLocalX + rx - handleRadiusPx).roundToInt(),
+            (pivotLocalY + ry - handleRadiusPx).roundToInt()
+        )
+    }
 
+    // Delete handle (top-left)
     Box(
         modifier = Modifier
             .offset { offsetAt(0f, 0f) }
@@ -556,6 +552,7 @@ fun CanvasItemSelectionHandles(
         Icon(Icons.Default.Close, "Delete", tint = Color.Red, modifier = Modifier.requiredSizePx(handleSizePx, handleSizePx))
     }
 
+    // Color picker handle (bottom-left)
     Box(
         modifier = Modifier
             .offset { offsetAt(0f, baseSize.height.toFloat()) }
@@ -568,6 +565,7 @@ fun CanvasItemSelectionHandles(
         Icon(Icons.Default.Palette, "Change Color", tint = Color.Blue, modifier = Modifier.requiredSizePx(handleSizePx, handleSizePx))
     }
 
+    // Rotate handle (top-right)
     Box(
         modifier = Modifier
             .offset { offsetAt(baseSize.width.toFloat(), 0f) }
@@ -580,9 +578,11 @@ fun CanvasItemSelectionHandles(
                     onDragStart = {
                         startRotation = currentRotation
                         accumulatedAngle = 0f
+                        val pivotLocX = latestPivotX * baseSize.width
+                        val pivotLocY = latestPivotY * baseSize.height
+                        val dx = baseSize.width.toFloat() - pivotLocX
+                        val dy = 0f - pivotLocY
                         val rad = startRotation * (PI / 180.0)
-                        val dx = baseSize.width.toFloat() - baseSize.width / 2f
-                        val dy = 0f - baseSize.height / 2f
                         val scaledDx = dx * currentScaleX
                         val scaledDy = dy * currentScaleY
                         val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
@@ -610,6 +610,7 @@ fun CanvasItemSelectionHandles(
         Icon(Icons.Default.Refresh, "Rotate", tint = Color.DarkGray, modifier = Modifier.requiredSizePx(handleSizePx, handleSizePx))
     }
 
+    // Scale handle (bottom-right)
     Box(
         modifier = Modifier
             .offset { offsetAt(baseSize.width.toFloat(), baseSize.height.toFloat()) }
@@ -624,9 +625,11 @@ fun CanvasItemSelectionHandles(
                         startScaleX = latestScaleX
                         startScaleY = latestScaleY
                         fixedRotation = latestRotation
+                        val pivotLocX = latestPivotX * baseSize.width
+                        val pivotLocY = latestPivotY * baseSize.height
+                        val dx = baseSize.width.toFloat() - pivotLocX
+                        val dy = baseSize.height.toFloat() - pivotLocY
                         val rad = fixedRotation * (PI / 180.0)
-                        val dx = baseSize.width.toFloat() - baseSize.width / 2f
-                        val dy = baseSize.height.toFloat() - baseSize.height / 2f
                         val scaledDx = dx * startScaleX
                         val scaledDy = dy * startScaleY
                         val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
@@ -641,8 +644,10 @@ fun CanvasItemSelectionHandles(
                         val newScaledDx = currentVector.x * cos(unrotatedRad) - currentVector.y * sin(unrotatedRad)
                         val newScaledDy = currentVector.x * sin(unrotatedRad) + currentVector.y * cos(unrotatedRad)
 
-                        val dx = baseSize.width.toFloat() - baseSize.width / 2f
-                        val dy = baseSize.height.toFloat() - baseSize.height / 2f
+                        val pivotLocX = latestPivotX * baseSize.width
+                        val pivotLocY = latestPivotY * baseSize.height
+                        val dx = baseSize.width.toFloat() - pivotLocX
+                        val dy = baseSize.height.toFloat() - pivotLocY
 
                         if (latestProportional) {
                             val originalDist = sqrt(dx * dx + dy * dy)
@@ -665,13 +670,11 @@ fun CanvasItemSelectionHandles(
             imageVector = Icons.Default.OpenWith,
             contentDescription = "Scale",
             tint = Color.DarkGray,
-            modifier = Modifier.requiredSizePx(
-                width = 60f,
-                height = 60f
-            )
+            modifier = Modifier.requiredSizePx(width = 60f, height = 60f)
         )
     }
 
+    // Proportional toggle handle (top-center)
     Box(
         modifier = Modifier
             .offset { offsetAt(baseSize.width.toFloat() / 2f, 0f) }
@@ -702,7 +705,11 @@ fun CanvasSvgItem(
     onDeleteRequested: () -> Unit,
     proportionalEditing: Boolean,
     onProportionalToggle: () -> Unit,
-    gradientConfig: GradientConfig? = null
+    gradientConfig: GradientConfig? = null,
+    onStartPivotPlacement: () -> Unit = {},
+    onPlacePivotLocal: (Float, Float) -> Unit = { _, _ -> },
+    isPivotPlacementActive: Boolean = false,
+    isActivePivotTarget: Boolean = false
 ) {
     val density = LocalDensity.current.density
     var offset by remember(element.offset) { mutableStateOf(element.offset) }
@@ -784,11 +791,16 @@ fun CanvasSvgItem(
                     this.scaleX = currentScaleX
                     this.scaleY = currentScaleY
                     rotationZ = currentRotation
+                    transformOrigin = TransformOrigin(element.pivotX, element.pivotY)
                 }
                 .onSizeChanged { baseSize = it }
                 .then(
-                    if (!isLocked) {
+                    // Disable all interactions while placing a pivot
+                    if (!isLocked && !isPivotPlacementActive) {
                         Modifier
+                            .pointerInput(Unit) {
+                                detectTapGestures { onSelect() }
+                            }
                             .pointerInput(Unit) {
                                 detectTransformGestures { _, pan, zoom, rot ->
                                     val angleRad = currentRotation * (PI / 180.0)
@@ -807,9 +819,6 @@ fun CanvasSvgItem(
                                     onUpdatePosition(offset, currentWidth, currentHeight, newRotation)
                                 }
                             }
-                            .pointerInput(Unit) {
-                                detectTapGestures { onSelect() }
-                            }
                     } else Modifier
                 )
                 .alpha(if (isLocked) 0.2f else 1f)
@@ -819,6 +828,7 @@ fun CanvasSvgItem(
                     .requiredSizePx(currentWidth, currentHeight),
                 contentAlignment = Alignment.Center
             ) {
+                // Shadow layer
                 if (element.shadowColor != null && element.shadowColor.alpha > 0f) {
                     val shadowModifier = Modifier
                         .fillMaxSize()
@@ -853,6 +863,7 @@ fun CanvasSvgItem(
                     }
                 }
 
+                // Main shape
                 val mainModifier = Modifier.fillMaxSize()
                 when {
                     element.content == "Shape: Square" -> SquareShape(mainModifier, element.backgroundColor, gradientConfig = gradientConfig)
@@ -881,6 +892,7 @@ fun CanvasSvgItem(
                     }
                 }
 
+                // Border
                 if (element.borderThickness > 0f && element.borderColor != null) {
                     val borderColor = element.borderColor
                     val strokeWidthPx = element.borderThickness
@@ -916,6 +928,7 @@ fun CanvasSvgItem(
                     }
                 }
 
+                // Selection highlight
                 if (isSelected) {
                     Box(
                         modifier = Modifier
@@ -926,21 +939,40 @@ fun CanvasSvgItem(
             }
         }
 
+        // Handles and PivotHandle (hidden during pivot placement except the pivot indicator)
         if (isSelected && baseSize != IntSize.Zero && !isLocked) {
-            CanvasItemSelectionHandles(
+            if (!isPivotPlacementActive) {
+                CanvasItemSelectionHandles(
+                    baseSize = baseSize,
+                    currentScaleX = currentScaleX,
+                    currentScaleY = currentScaleY,
+                    currentRotation = currentRotation,
+                    currentWidth = currentWidth,
+                    currentHeight = currentHeight,
+                    proportionalEditing = proportionalEditing,
+                    pivotX = element.pivotX,
+                    pivotY = element.pivotY,
+                    onUpdatePosition = { _, w, h, rot -> onUpdatePosition(offset, w, h, rot) },
+                    onScaleChanged = onScaleChanged,
+                    onDeleteRequested = onDeleteRequested,
+                    onColorPickerRequested = onColorPickerRequested,
+                    onProportionalToggle = onProportionalToggle,
+                    density = density
+                )
+            }
+            PivotHandle(
                 baseSize = baseSize,
+                pivotX = element.pivotX,
+                pivotY = element.pivotY,
+                density = density,
+                isActive = isActivePivotTarget,
+                onStartPivotPlacement = onStartPivotPlacement,
+                onPlacePivotLocal = onPlacePivotLocal,
+                currentRotation = currentRotation,
                 currentScaleX = currentScaleX,
                 currentScaleY = currentScaleY,
-                currentRotation = currentRotation,
-                currentWidth = currentWidth,
-                currentHeight = currentHeight,
-                proportionalEditing = proportionalEditing,
-                onUpdatePosition = { _, w, h, rot -> onUpdatePosition(offset, w, h, rot) },
-                onScaleChanged = onScaleChanged,
-                onDeleteRequested = onDeleteRequested,
-                onColorPickerRequested = onColorPickerRequested,
-                onProportionalToggle = onProportionalToggle,
-                density = density
+                elementWidth = currentWidth,
+                elementHeight = currentHeight
             )
         }
     }
@@ -958,7 +990,11 @@ fun CanvasTextItem(
     onColorPickerRequested: () -> Unit,
     onDeleteRequested: () -> Unit,
     proportionalEditing: Boolean,
-    onProportionalToggle: () -> Unit
+    onProportionalToggle: () -> Unit,
+    onStartPivotPlacement: () -> Unit = {},
+    onPlacePivotLocal: (Float, Float) -> Unit = { _, _ -> },
+    isPivotPlacementActive: Boolean = false,
+    isActivePivotTarget: Boolean = false
 ) {
     val density = LocalDensity.current.density
     var offset by remember(element.offset) { mutableStateOf(element.offset) }
@@ -984,11 +1020,16 @@ fun CanvasTextItem(
                     this.scaleX = currentScaleX
                     this.scaleY = currentScaleY
                     rotationZ = currentRotation
+                    transformOrigin = TransformOrigin(element.pivotX, element.pivotY)
                 }
                 .onSizeChanged { baseSize = it }
                 .then(
-                    if (!isLocked) {
+                    // Disable interactions while placing a pivot
+                    if (!isLocked && !isPivotPlacementActive) {
                         Modifier
+                            .pointerInput(Unit) {
+                                detectTapGestures { onSelect() }
+                            }
                             .pointerInput(Unit) {
                                 detectTransformGestures { _, pan, zoom, rot ->
                                     val angleRad = currentRotation * (PI / 180.0)
@@ -1007,9 +1048,6 @@ fun CanvasTextItem(
                                     onUpdatePosition(offset, currentWidth, currentHeight, newRotation)
                                 }
                             }
-                            .pointerInput(Unit) {
-                                detectTapGestures { onSelect() }
-                            }
                     } else Modifier
                 )
                 .alpha(if (isLocked) 0.2f else 1f)
@@ -1027,12 +1065,19 @@ fun CanvasTextItem(
                 }
                 Box(
                     modifier = Modifier.onSizeChanged { size ->
-                        val newWidth = size.width.toFloat()
-                        val newHeight = size.height.toFloat()
-                        if ((newWidth - currentWidth).absoluteValue > 1f ||
-                            (newHeight - currentHeight).absoluteValue > 1f
-                        ) {
-                            onUpdatePosition(offset, newWidth, newHeight, currentRotation)
+                        val newW = size.width.toFloat()
+                        val newH = size.height.toFloat()
+                        val oldW = currentWidth
+                        val oldH = currentHeight
+                        if ((newW - oldW).absoluteValue > 1f || (newH - oldH).absoluteValue > 1f) {
+                            // Keep the pivot point stationary in screen space
+                            val px = element.pivotX
+                            val py = element.pivotY
+                            val deltaOffsetX = px * (oldW - newW)
+                            val deltaOffsetY = py * (oldH - newH)
+                            val newOffset = Offset(offset.x + deltaOffsetX, offset.y + deltaOffsetY)
+                            offset = newOffset
+                            onUpdatePosition(newOffset, newW, newH, currentRotation)
                         }
                     },
                     contentAlignment = Alignment.Center
@@ -1129,21 +1174,40 @@ fun CanvasTextItem(
             }
         }
 
+        // Handles and PivotHandle (hidden during pivot placement except the pivot indicator)
         if (isSelected && baseSize != IntSize.Zero && !isLocked) {
-            CanvasItemSelectionHandles(
+            if (!isPivotPlacementActive) {
+                CanvasItemSelectionHandles(
+                    baseSize = baseSize,
+                    currentScaleX = currentScaleX,
+                    currentScaleY = currentScaleY,
+                    currentRotation = currentRotation,
+                    currentWidth = currentWidth,
+                    currentHeight = currentHeight,
+                    proportionalEditing = proportionalEditing,
+                    pivotX = element.pivotX,
+                    pivotY = element.pivotY,
+                    onUpdatePosition = { _, w, h, rot -> onUpdatePosition(offset, w, h, rot) },
+                    onScaleChanged = onScaleChanged,
+                    onDeleteRequested = onDeleteRequested,
+                    onColorPickerRequested = onColorPickerRequested,
+                    onProportionalToggle = onProportionalToggle,
+                    density = density
+                )
+            }
+            PivotHandle(
                 baseSize = baseSize,
+                pivotX = element.pivotX,
+                pivotY = element.pivotY,
+                density = density,
+                isActive = isActivePivotTarget,
+                onStartPivotPlacement = onStartPivotPlacement,
+                onPlacePivotLocal = onPlacePivotLocal,
+                currentRotation = currentRotation,
                 currentScaleX = currentScaleX,
                 currentScaleY = currentScaleY,
-                currentRotation = currentRotation,
-                currentWidth = currentWidth,
-                currentHeight = currentHeight,
-                proportionalEditing = proportionalEditing,
-                onUpdatePosition = { _, w, h, rot -> onUpdatePosition(offset, w, h, rot) },
-                onScaleChanged = onScaleChanged,
-                onDeleteRequested = onDeleteRequested,
-                onColorPickerRequested = onColorPickerRequested,
-                onProportionalToggle = onProportionalToggle,
-                density = density
+                elementWidth = currentWidth,
+                elementHeight = currentHeight
             )
         }
     }
@@ -1161,7 +1225,11 @@ fun CanvasImageItem(
     onColorPickerRequested: () -> Unit,
     onDeleteRequested: () -> Unit,
     proportionalEditing: Boolean,
-    onProportionalToggle: () -> Unit
+    onProportionalToggle: () -> Unit,
+    onStartPivotPlacement: () -> Unit = {},
+    onPlacePivotLocal: (Float, Float) -> Unit = { _, _ -> },
+    isPivotPlacementActive: Boolean = false,
+    isActivePivotTarget: Boolean = false
 ) {
     val density = LocalDensity.current.density
     val context = LocalContext.current
@@ -1194,11 +1262,16 @@ fun CanvasImageItem(
                     this.scaleX = scaleX
                     this.scaleY = scaleY
                     rotationZ = rotation
+                    transformOrigin = TransformOrigin(element.pivotX, element.pivotY)
                 }
                 .onSizeChanged { baseSize = it }
                 .then(
-                    if (!isLocked) {
+                    // Disable interactions while placing a pivot
+                    if (!isLocked && !isPivotPlacementActive) {
                         Modifier
+                            .pointerInput(Unit) {
+                                detectTapGestures { onSelect() }
+                            }
                             .pointerInput(Unit) {
                                 detectTransformGestures { _, pan, zoom, rot ->
                                     val angleRad = rotation * (PI / 180.0)
@@ -1216,9 +1289,6 @@ fun CanvasImageItem(
                                     onScaleChanged(newScaleX, newScaleY)
                                     onUpdatePosition(offset, element.width, element.height, rotation)
                                 }
-                            }
-                            .pointerInput(Unit) {
-                                detectTapGestures { onSelect() }
                             }
                     } else Modifier
                 )
@@ -1275,21 +1345,40 @@ fun CanvasImageItem(
             }
         }
 
+        // Handles and PivotHandle (hidden during pivot placement except the pivot indicator)
         if (isSelected && baseSize != IntSize.Zero && !isLocked) {
-            CanvasItemSelectionHandles(
+            if (!isPivotPlacementActive) {
+                CanvasItemSelectionHandles(
+                    baseSize = baseSize,
+                    currentScaleX = scaleX,
+                    currentScaleY = scaleY,
+                    currentRotation = rotation,
+                    currentWidth = element.width,
+                    currentHeight = element.height,
+                    proportionalEditing = proportionalEditing,
+                    pivotX = element.pivotX,
+                    pivotY = element.pivotY,
+                    onUpdatePosition = { _, w, h, rot -> onUpdatePosition(offset, w, h, rot) },
+                    onScaleChanged = onScaleChanged,
+                    onDeleteRequested = onDeleteRequested,
+                    onColorPickerRequested = onColorPickerRequested,
+                    onProportionalToggle = onProportionalToggle,
+                    density = density
+                )
+            }
+            PivotHandle(
                 baseSize = baseSize,
+                pivotX = element.pivotX,
+                pivotY = element.pivotY,
+                density = density,
+                isActive = isActivePivotTarget,
+                onStartPivotPlacement = onStartPivotPlacement,
+                onPlacePivotLocal = onPlacePivotLocal,
+                currentRotation = rotation,          // variable name in image item is “rotation”
                 currentScaleX = scaleX,
                 currentScaleY = scaleY,
-                currentRotation = rotation,
-                currentWidth = element.width,
-                currentHeight = element.height,
-                proportionalEditing = proportionalEditing,
-                onUpdatePosition = { _, w, h, rot -> onUpdatePosition(offset, w, h, rot) },
-                onScaleChanged = onScaleChanged,
-                onDeleteRequested = onDeleteRequested,
-                onColorPickerRequested = onColorPickerRequested,
-                onProportionalToggle = onProportionalToggle,
-                density = density
+                elementWidth = element.width,
+                elementHeight = element.height
             )
         }
     }

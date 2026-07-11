@@ -746,6 +746,10 @@ fun ActionButtonsSection(
                 .weight(1f)
                 .height(48.dp),
             shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(
+                width = 1.5.dp,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 1f)
+            ),
             colors = ButtonDefaults.buttonColors(
                 containerColor = if (isValidHex) selectedColor else MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
                 contentColor = if (isValidHex) buttonTextColor else MaterialTheme.colorScheme.onPrimary,

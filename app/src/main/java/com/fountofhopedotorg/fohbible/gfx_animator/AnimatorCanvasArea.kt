@@ -28,7 +28,10 @@ import com.fountofhopedotorg.fohbible.gfx_creator.getGroupBoundingBox
 import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.models.AppViewModel
+import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 @Composable
 fun AnimatorCanvasArea(
@@ -51,14 +54,52 @@ fun AnimatorCanvasArea(
     graphicsLayer: GraphicsLayer,
     proportionalEditing: Boolean,
     onProportionalToggle: () -> Unit,
-    currentTimeMs: Long
+    currentTimeMs: Long,
+    isPivotPlacementActive: Boolean = false,
+    pivotTargetId: String? = null,
+    onStartPivotPlacement: (String) -> Unit = {},
+    onPlacePivotLocal: (Float, Float) -> Unit = { _, _ -> }
 ) {
     val viewModel: AppViewModel = viewModel()
+
     Box(
         modifier = modifier
             .clipToBounds()
-            .pointerInput(Unit) {
-                detectTapGestures(onTap = { onClearSelection() })
+            .pointerInput(isPivotPlacementActive, pivotTargetId) {
+                detectTapGestures { tapOffset ->
+                    if (isPivotPlacementActive && pivotTargetId != null) {
+                        val target = elements.firstOrNull { it.id == pivotTargetId }
+                        if (target != null) {
+                            val px = tapOffset.x
+                            val py = tapOffset.y
+                            val w = target.width
+                            val h = target.height
+
+                            // 1. Shift to the element’s transform origin (current pivot)
+                            val dx = px - target.offset.x - target.pivotX * w
+                            val dy = py - target.offset.y - target.pivotY * h
+
+                            // 2. Inverse rotation
+                            val rad = target.rotation * (PI / 180.0).toFloat()
+                            val cosA = cos(rad)
+                            val sinA = sin(rad)
+                            val u = dx * cosA + dy * sinA
+                            val v = -dx * sinA + dy * cosA
+
+                            // 3. Inverse scale and add back the current pivot
+                            val localX = if (target.scaleX != 0f) u / target.scaleX + target.pivotX * w else 0f
+                            val localY = if (target.scaleY != 0f) v / target.scaleY + target.pivotY * h else 0f
+
+                            // 4. Normalize without clamping – allows pivots outside the element
+                            val normX = localX / w
+                            val normY = localY / h
+
+                            onPlacePivotLocal(normX, normY)
+                        }
+                    } else {
+                        onClearSelection()
+                    }
+                }
             }
     ) {
         Box(
@@ -74,7 +115,6 @@ fun AnimatorCanvasArea(
                 }
         ) {
             elements.forEach { element ->
-                // Check both visibility flag AND time window
                 if (!element.isVisible) return@forEach
                 if (currentTimeMs !in element.startTimeMs..element.endTimeMs) return@forEach
 
@@ -82,6 +122,7 @@ fun AnimatorCanvasArea(
                     val isInSelectedGroup = element.groupId in selectedGroups
                     val isItemSelected = selectedElementIds.contains(element.id) ||
                             (selectedElementId == element.id && selectedElementIds.isEmpty())
+
                     Box(
                         modifier = if (isInSelectedGroup) {
                             Modifier.offset {
@@ -111,7 +152,11 @@ fun AnimatorCanvasArea(
                                 onDeleteRequested = { onDeleteRequested(element.id) },
                                 onScaleChanged = { sx, sy -> onElementScaleChange(element.id, sx, sy) },
                                 proportionalEditing = proportionalEditing,
-                                onProportionalToggle = onProportionalToggle
+                                onProportionalToggle = onProportionalToggle,
+                                onStartPivotPlacement = { onStartPivotPlacement(element.id) },
+                                isPivotPlacementActive = isPivotPlacementActive,
+                                isActivePivotTarget = isPivotPlacementActive && pivotTargetId == element.id,
+                                onPlacePivotLocal = onPlacePivotLocal
                             )
                             element.content.startsWith("Image:") -> CanvasImageItem(
                                 element = element,
@@ -130,7 +175,11 @@ fun AnimatorCanvasArea(
                                 onDeleteRequested = { onDeleteRequested(element.id) },
                                 onScaleChanged = { sx, sy -> onElementScaleChange(element.id, sx, sy) },
                                 proportionalEditing = proportionalEditing,
-                                onProportionalToggle = onProportionalToggle
+                                onProportionalToggle = onProportionalToggle,
+                                onStartPivotPlacement = { onStartPivotPlacement(element.id) },
+                                isPivotPlacementActive = isPivotPlacementActive,
+                                isActivePivotTarget = isPivotPlacementActive && pivotTargetId == element.id,
+                                onPlacePivotLocal = onPlacePivotLocal
                             )
                             else -> CanvasTextItem(
                                 element = element,
@@ -151,7 +200,11 @@ fun AnimatorCanvasArea(
                                 onDeleteRequested = { onDeleteRequested(element.id) },
                                 onScaleChanged = { sx, sy -> onElementScaleChange(element.id, sx, sy) },
                                 proportionalEditing = proportionalEditing,
-                                onProportionalToggle = onProportionalToggle
+                                onProportionalToggle = onProportionalToggle,
+                                onStartPivotPlacement = { onStartPivotPlacement(element.id) },
+                                isPivotPlacementActive = isPivotPlacementActive,
+                                isActivePivotTarget = isPivotPlacementActive && pivotTargetId == element.id,
+                                onPlacePivotLocal = onPlacePivotLocal
                             )
                         }
                     }

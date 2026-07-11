@@ -277,7 +277,9 @@ data class CanvasElement(
     val keyframes: List<CanvasKeyframe> = emptyList(),
     val alpha: Float = 1f,
     val startTimeMs: Long = 0L,
-    val endTimeMs: Long = Long.MAX_VALUE
+    val endTimeMs: Long = Long.MAX_VALUE,
+    val pivotX: Float = 0.5f,
+    val pivotY: Float = 0.5f
 )
 
 data class BezierNode(

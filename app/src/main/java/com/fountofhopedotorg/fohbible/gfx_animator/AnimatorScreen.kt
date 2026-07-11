@@ -72,9 +72,41 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.min
+import kotlin.math.sin
 import kotlin.time.Duration.Companion.microseconds
 import kotlin.time.Duration.Companion.milliseconds
+
+fun adjustOffsetForPivotChange(
+    element: CanvasElement,
+    oldPivotX: Float,
+    oldPivotY: Float,
+    newPivotX: Float,
+    newPivotY: Float
+): Offset {
+    val w = element.width
+    val h = element.height
+
+    val dx = (newPivotX - oldPivotX) * w
+    val dy = (newPivotY - oldPivotY) * h
+
+    val scaledDx = dx * element.scaleX
+    val scaledDy = dy * element.scaleY
+
+    val rad = element.rotation * (PI / 180.0).toFloat()
+    val cosA = cos(rad)
+    val sinA = sin(rad)
+
+    val rotatedDx = scaledDx * cosA - scaledDy * sinA
+    val rotatedDy = scaledDx * sinA + scaledDy * cosA
+
+    val deltaOffsetX = rotatedDx - dx
+    val deltaOffsetY = rotatedDy - dy
+
+    return element.offset + Offset(deltaOffsetX, deltaOffsetY)
+}
 
 @RequiresApi(Build.VERSION_CODES.Q)
 @Composable
@@ -124,6 +156,11 @@ fun AnimatorScreen() {
     val exportScope = rememberCoroutineScope()
 
     var currentTimeMs by remember { mutableLongStateOf(0L) }
+
+    var isPivotPlacementActive by remember { mutableStateOf(false) }
+    var pivotTargetId by remember { mutableStateOf<String?>(null) }
+
+    var isFineTunerMode by remember { mutableStateOf(false) }
 
     val cancelExport: () -> Unit = remember { { isPlayingAnimation = false } }
 
@@ -273,6 +310,36 @@ fun AnimatorScreen() {
                 return@remember
             }
             showMp4SettingsDialog = true
+        }
+    }
+    val onStartPivotPlacement: (String) -> Unit = { elementId ->
+        isPivotPlacementActive = true
+        pivotTargetId = elementId
+    }
+
+    val onPlacePivotLocal: (Float, Float) -> Unit = { px, py ->
+        val id = pivotTargetId
+        if (id != null) {
+            val index = viewModel.animatorCanvasElements.indexOfFirst { it.id == id }
+            if (index != -1) {
+                val oldElement = viewModel.animatorCanvasElements[index]
+
+                val newOffset = adjustOffsetForPivotChange(
+                    element = oldElement,
+                    oldPivotX = oldElement.pivotX,
+                    oldPivotY = oldElement.pivotY,
+                    newPivotX = px,
+                    newPivotY = py
+                )
+
+                viewModel.animatorCanvasElements[index] = oldElement.copy(
+                    pivotX = px,
+                    pivotY = py,
+                    offset = newOffset
+                )
+            }
+            isPivotPlacementActive = false
+            pivotTargetId = null
         }
     }
 
@@ -521,7 +588,11 @@ fun AnimatorScreen() {
                                     onElementScaleChange = { id, sx, sy -> viewModel.updateAnimatorElementScale(id, sx, sy) },
                                     proportionalEditing = viewModel.proportionalEditing,
                                     onProportionalToggle = onProportionalToggle,
-                                    currentTimeMs = currentTimeMs
+                                    currentTimeMs = currentTimeMs,
+                                    isPivotPlacementActive = isPivotPlacementActive,
+                                    pivotTargetId = pivotTargetId,
+                                    onStartPivotPlacement = onStartPivotPlacement,
+                                    onPlacePivotLocal = onPlacePivotLocal
                                 )
 
                                 if (isPlayingAnimation) {
@@ -547,11 +618,13 @@ fun AnimatorScreen() {
 
                 Spacer(modifier = Modifier.width(10.dp))
 
+                // Right panel – now fully handled by AnimatorCanvasElementsPanel
                 Column(
                     modifier = Modifier
                         .weight(0.8f)
                         .fillMaxHeight()
                         .padding(top = 20.dp)
+                        .verticalScroll(rememberScrollState())   // outer scroll for whole panel
                 ) {
                     AnimatorCanvasElementsPanel(
                         elements = viewModel.animatorCanvasElements,
@@ -663,6 +736,11 @@ fun AnimatorScreen() {
                             viewModel.animatorGroupRenameText = currentName
                         },
                         gradientConfigs = viewModel.animatorGradientPairs,
+                        // --- new parameters for inline toggle ---
+                        isFineTunerMode = isFineTunerMode,
+                        onToggleFineTunerMode = { isFineTunerMode = !isFineTunerMode },
+                        viewModel = viewModel,
+                        fineTunerSelectedElementId = viewModel.animatorSelectedElementId
                     )
                 }
             }
@@ -711,6 +789,7 @@ fun AnimatorScreen() {
             )
         }
     } else {
+        // Portrait layout
         Row(modifier = Modifier.fillMaxSize().padding(top = 20.dp)) {
 
             Column(
@@ -841,7 +920,11 @@ fun AnimatorScreen() {
                                 graphicsLayer = graphicsLayer,
                                 proportionalEditing = viewModel.proportionalEditing,
                                 onProportionalToggle = onProportionalToggle,
-                                currentTimeMs = currentTimeMs
+                                currentTimeMs = currentTimeMs,
+                                isPivotPlacementActive = isPivotPlacementActive,
+                                pivotTargetId = pivotTargetId,
+                                onStartPivotPlacement = onStartPivotPlacement,
+                                onPlacePivotLocal = onPlacePivotLocal
                             )
 
                             if (isPlayingAnimation) {
@@ -866,6 +949,7 @@ fun AnimatorScreen() {
 
                 Spacer(Modifier.height(12.dp))
 
+                // Bottom panel – fully handled by the panel
                 Column(
                     modifier = Modifier
                         .weight(0.25f)
@@ -982,6 +1066,11 @@ fun AnimatorScreen() {
                             viewModel.animatorGroupRenameText = currentName
                         },
                         gradientConfigs = viewModel.animatorGradientPairs,
+                        // --- new parameters for inline toggle ---
+                        isFineTunerMode = isFineTunerMode,
+                        onToggleFineTunerMode = { isFineTunerMode = !isFineTunerMode },
+                        viewModel = viewModel,
+                        fineTunerSelectedElementId = viewModel.animatorSelectedElementId
                     )
                     Spacer(Modifier.height(16.dp))
                 }
@@ -989,6 +1078,7 @@ fun AnimatorScreen() {
         }
     }
 
+    // --- Dialog code remains unchanged ---
     when (val dialog = viewModel.animatorDialogType) {
         is AnimatorDialogType.Edit -> {
             AnimatorEditElementDialog(

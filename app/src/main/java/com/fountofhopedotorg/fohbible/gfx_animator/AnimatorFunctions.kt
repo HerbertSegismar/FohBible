@@ -7,8 +7,6 @@ import com.fountofhopedotorg.fohbible.data.EasingPoint
 import com.fountofhopedotorg.fohbible.data.GradientConfig
 import com.fountofhopedotorg.fohbible.data.TweenType
 import java.util.Locale
-import kotlin.math.roundToInt
-
 
 fun lerp(start: Float, stop: Float, fraction: Float): Float =
     start + (stop - start) * fraction
@@ -53,7 +51,7 @@ fun lerpGradient(a: GradientConfig, b: GradientConfig, fraction: Float): Gradien
     )
 }
 
-fun formatPosition(value: Float): String = value.roundToInt().toString()
+fun formatPosition(value: Float) = String.format(Locale.US, "%.1f", value)
 fun formatScale(value: Float): String = String.format(Locale.US, "%.2f", value)
 fun formatRotation(value: Float): String = String.format(Locale.US, "%.1f", value)
 

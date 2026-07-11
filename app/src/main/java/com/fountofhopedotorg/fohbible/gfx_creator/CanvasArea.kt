@@ -21,8 +21,12 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.fountofhopedotorg.fohbible.data.CanvasElement
+import com.fountofhopedotorg.fohbible.data.GradientConfig
 import com.fountofhopedotorg.fohbible.data.ThemeColors
+import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 @Composable
 fun CanvasArea(
@@ -45,12 +49,52 @@ fun CanvasArea(
     graphicsLayer: GraphicsLayer,
     proportionalEditing: Boolean,
     onProportionalToggle: () -> Unit,
+    // Pivot placement – global control
+    isPivotPlacementActive: Boolean = false,
+    pivotTargetId: String? = null,
+    onStartPivotPlacement: (String) -> Unit = {},
+    onPlacePivotLocal: (Float, Float) -> Unit = { _, _ -> },
+    // Gradient support
+    gradientConfigs: Map<String, GradientConfig> = emptyMap()
 ) {
     Box(
         modifier = modifier
             .clipToBounds()
-            .pointerInput(Unit) {
-                detectTapGestures(onTap = { onClearSelection() })
+            .pointerInput(isPivotPlacementActive, pivotTargetId) {
+                detectTapGestures { tapOffset ->
+                    if (isPivotPlacementActive && pivotTargetId != null) {
+                        val target = elements.firstOrNull { it.id == pivotTargetId }
+                        if (target != null) {
+                            val px = tapOffset.x
+                            val py = tapOffset.y
+                            val w = target.width
+                            val h = target.height
+
+                            // 1. Shift to the element’s transform origin (current pivot)
+                            val dx = px - target.offset.x - target.pivotX * w
+                            val dy = py - target.offset.y - target.pivotY * h
+
+                            // 2. Inverse rotation
+                            val rad = target.rotation * (PI / 180.0).toFloat()
+                            val cosA = cos(rad)
+                            val sinA = sin(rad)
+                            val u = dx * cosA + dy * sinA
+                            val v = -dx * sinA + dy * cosA
+
+                            // 3. Inverse scale and add back the current pivot
+                            val localX = if (target.scaleX != 0f) u / target.scaleX + target.pivotX * w else 0f
+                            val localY = if (target.scaleY != 0f) v / target.scaleY + target.pivotY * h else 0f
+
+                            // 4. Normalize without clamping – allows pivots outside the element
+                            val normX = localX / w
+                            val normY = localY / h
+
+                            onPlacePivotLocal(normX, normY)
+                        }
+                    } else {
+                        onClearSelection()
+                    }
+                }
             }
     ) {
         Box(
@@ -72,6 +116,9 @@ fun CanvasArea(
                     val isInSelectedGroup = element.groupId in selectedGroups
                     val isItemSelected = selectedElementIds.contains(element.id) ||
                             (selectedElementId == element.id && selectedElementIds.isEmpty())
+
+                    val gradientConfig = gradientConfigs[element.id]  // Retrieve gradient for this element
+
                     Box(
                         modifier = if (isInSelectedGroup) {
                             Modifier.offset {
@@ -100,7 +147,12 @@ fun CanvasArea(
                                 onDeleteRequested = { onDeleteRequested(element.id) },
                                 onScaleChanged = { sx, sy -> onElementScaleChange(element.id, sx, sy) },
                                 proportionalEditing = proportionalEditing,
-                                onProportionalToggle = onProportionalToggle
+                                onProportionalToggle = onProportionalToggle,
+                                onStartPivotPlacement = { onStartPivotPlacement(element.id) },
+                                isPivotPlacementActive = isPivotPlacementActive,
+                                isActivePivotTarget = isPivotPlacementActive && pivotTargetId == element.id,
+                                onPlacePivotLocal = onPlacePivotLocal,
+                                gradientConfig = gradientConfig   // Pass gradient
                             )
                             element.content.startsWith("Image:") -> CanvasImageItem(
                                 element = element,
@@ -118,7 +170,12 @@ fun CanvasArea(
                                 onDeleteRequested = { onDeleteRequested(element.id) },
                                 onScaleChanged = { sx, sy -> onElementScaleChange(element.id, sx, sy) },
                                 proportionalEditing = proportionalEditing,
-                                onProportionalToggle = onProportionalToggle
+                                onProportionalToggle = onProportionalToggle,
+                                onStartPivotPlacement = { onStartPivotPlacement(element.id) },
+                                isPivotPlacementActive = isPivotPlacementActive,
+                                isActivePivotTarget = isPivotPlacementActive && pivotTargetId == element.id,
+                                onPlacePivotLocal = onPlacePivotLocal,
+                                gradientConfig = gradientConfig
                             )
                             else -> CanvasTextItem(
                                 element = element,
@@ -138,12 +195,18 @@ fun CanvasArea(
                                 onDeleteRequested = { onDeleteRequested(element.id) },
                                 onScaleChanged = { sx, sy -> onElementScaleChange(element.id, sx, sy) },
                                 proportionalEditing = proportionalEditing,
-                                onProportionalToggle = onProportionalToggle
+                                onProportionalToggle = onProportionalToggle,
+                                onStartPivotPlacement = { onStartPivotPlacement(element.id) },
+                                isPivotPlacementActive = isPivotPlacementActive,
+                                isActivePivotTarget = isPivotPlacementActive && pivotTargetId == element.id,
+                                onPlacePivotLocal = onPlacePivotLocal,
+                                gradientConfig = gradientConfig
                             )
                         }
                     }
                 }
             }
+
             Canvas(modifier = Modifier.fillMaxSize()) {
                 selectedGroups.forEach { groupId ->
                     val groupElements = elementsGrouped[groupId] ?: return@forEach

@@ -38,7 +38,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.color_wheel.ColorWheelDialog
 import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
+import com.fountofhopedotorg.fohbible.data.GradientConfig
 import com.fountofhopedotorg.fohbible.data.ThemeColors
+import com.fountofhopedotorg.fohbible.gfx_animator.adjustOffsetForPivotChange
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.theme.LocalAppTheme
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
@@ -93,6 +95,13 @@ fun CreatorScreen() {
     var initialPolygonString by rememberSaveable { mutableStateOf("") }
     var initialIsLineMode by rememberSaveable { mutableStateOf(false) }
     var dragGroupDelta by remember { mutableStateOf(Offset.Zero) }
+
+    // --- Pivot placement state ---
+    var isPivotPlacementActive by remember { mutableStateOf(false) }
+    var pivotTargetId by remember { mutableStateOf<String?>(null) }
+
+    // --- Gradient support (mirroring animatorGradientPairs) ---
+    var canvasGradientPairs by remember { mutableStateOf(mapOf<String, GradientConfig>()) }
 
     val onProportionalToggle: () -> Unit = remember {
         { viewModel.proportionalEditing = !viewModel.proportionalEditing }
@@ -186,6 +195,36 @@ fun CreatorScreen() {
         selectedElementId = members.firstOrNull()?.id
     }
 
+    // --- Pivot callbacks ---
+    val onStartPivotPlacement: (String) -> Unit = { elementId ->
+        isPivotPlacementActive = true
+        pivotTargetId = elementId
+    }
+
+    val onPlacePivotLocal: (Float, Float) -> Unit = { px, py ->
+        val id = pivotTargetId
+        if (id != null) {
+            val index = viewModel.canvasElements.indexOfFirst { it.id == id }
+            if (index != -1) {
+                val oldElement = viewModel.canvasElements[index]
+                val newOffset = adjustOffsetForPivotChange(
+                    element = oldElement,
+                    oldPivotX = oldElement.pivotX,
+                    oldPivotY = oldElement.pivotY,
+                    newPivotX = px,
+                    newPivotY = py
+                )
+                viewModel.canvasElements[index] = oldElement.copy(
+                    pivotX = px,
+                    pivotY = py,
+                    offset = newOffset
+                )
+            }
+            isPivotPlacementActive = false
+            pivotTargetId = null
+        }
+    }
+
     if (isLandscape) {
         Column(modifier = Modifier.fillMaxSize()) {
             Row(
@@ -236,13 +275,19 @@ fun CreatorScreen() {
                         graphicsLayer = graphicsLayer,
                         onElementScaleChange = { id, sx, sy -> viewModel.updateElementScale(id, sx, sy) },
                         proportionalEditing = viewModel.proportionalEditing,
-                        onProportionalToggle = onProportionalToggle
+                        onProportionalToggle = onProportionalToggle,
+                        // Pivot placement parameters
+                        isPivotPlacementActive = isPivotPlacementActive,
+                        pivotTargetId = pivotTargetId,
+                        onStartPivotPlacement = onStartPivotPlacement,
+                        onPlacePivotLocal = onPlacePivotLocal,
+                        // Gradient support
+                        gradientConfigs = canvasGradientPairs
                     )
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                // Elements panel (right, fixed proportion)
                 Column(
                     modifier = Modifier
                         .weight(0.6f)
@@ -359,7 +404,7 @@ fun CreatorScreen() {
                 onAddShape = { shape ->
                     val color = getRandomColor()
                     viewModel.addToCanvas(
-                        CanvasElement(content = "Shape: $shape", backgroundColor = color, width = 100f, height = 100f)
+                        CanvasElement(content = "Shape: $shape", backgroundColor = color, width = 200f, height = 200f)
                     )
                 },
                 onCustomPolygon = {
@@ -405,7 +450,7 @@ fun CreatorScreen() {
                     onAddShape = { shape ->
                         val color = getRandomColor()
                         viewModel.addToCanvas(
-                            CanvasElement(content = "Shape: $shape", backgroundColor = color, width = 100f, height = 100f)
+                            CanvasElement(content = "Shape: $shape", backgroundColor = color, width = 200f, height = 200f)
                         )
                     },
                     onCustomPolygon = {
@@ -489,7 +534,14 @@ fun CreatorScreen() {
                         elementsGrouped = elementsGrouped,
                         graphicsLayer = graphicsLayer,
                         proportionalEditing = viewModel.proportionalEditing,
-                        onProportionalToggle = onProportionalToggle
+                        onProportionalToggle = onProportionalToggle,
+                        // Pivot placement parameters
+                        isPivotPlacementActive = isPivotPlacementActive,
+                        pivotTargetId = pivotTargetId,
+                        onStartPivotPlacement = onStartPivotPlacement,
+                        onPlacePivotLocal = onPlacePivotLocal,
+                        // Gradient support
+                        gradientConfigs = canvasGradientPairs
                     )
 
                     Spacer(Modifier.height(4.dp))
@@ -719,30 +771,53 @@ fun CreatorScreen() {
         }
     )
 
+    // Gradient‑enabled ColorWheelDialog (mirrors animator)
     if (showColorPicker && elementToColorEditId != null) {
         val targetElement = viewModel.canvasElements.find { it.id == elementToColorEditId }
-        val initialColor = when {
-            targetElement == null -> Color.White
-            targetElement.content.startsWith("Shape:") || targetElement.content.startsWith("Image:") ->
-                targetElement.backgroundColor
-            else -> targetElement.textColor ?: Color.Black
-        }
+        val existingGradient = canvasGradientPairs[elementToColorEditId]
+        val isText = targetElement?.let {
+            !it.content.startsWith("Shape:") && !it.content.startsWith("Image:")
+        } ?: false
+
         ColorWheelDialog(
             onDismissRequest = {
                 showColorPicker = false
                 elementToColorEditId = null
             },
             onColorSelected = { color ->
-                val element = viewModel.canvasElements.find { it.id == elementToColorEditId }
-                if (element != null && !element.content.startsWith("Shape:") && !element.content.startsWith("Image:")) {
-                    viewModel.updateElementTextColor(elementToColorEditId!!, color)
+                val id = elementToColorEditId!!
+                // Remove gradient when choosing solid color
+                canvasGradientPairs = canvasGradientPairs - id
+                if (isText) {
+                    viewModel.updateElementTextColor(id, color)
                 } else {
-                    viewModel.updateElementColor(elementToColorEditId!!, color)
+                    viewModel.updateElementColor(id, color)
                 }
                 showColorPicker = false
                 elementToColorEditId = null
             },
-            initialColor = initialColor
+            initialColor = if (isText) targetElement.textColor ?: Color.Black
+            else targetElement?.backgroundColor ?: Color.White,
+            enableGradient = true,
+            onGradientSelected = { startColor, endColor, startOffset, endOffset ->
+                val id = elementToColorEditId!!
+                val gradient = GradientConfig(
+                    startColor = startColor,
+                    endColor = endColor,
+                    startOffset = startOffset,
+                    endOffset = endOffset
+                )
+                canvasGradientPairs = canvasGradientPairs + (id to gradient)
+                // Use start color as solid fallback
+                if (isText) {
+                    viewModel.updateElementTextColor(id, startColor)
+                } else {
+                    viewModel.updateElementColor(id, startColor)
+                }
+                showColorPicker = false
+                elementToColorEditId = null
+            },
+            initialGradientConfig = existingGradient
         )
     }
 
@@ -770,8 +845,8 @@ fun CreatorScreen() {
                         CanvasElement(
                             content = contentString,
                             backgroundColor = getRandomColor(),
-                            width = 100f,
-                            height = 100f
+                            width = 200f,
+                            height = 200f
                         )
                     )
                 }
