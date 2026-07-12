@@ -134,10 +134,14 @@ fun drawFrame(
         }
 
         canvas.withTranslation(x, y) {
-            translate(widthPx / 2f, heightPx / 2f)
+
+            val pivotOffsetX = element.pivotX * widthPx
+            val pivotOffsetY = element.pivotY * heightPx
+
+            translate(pivotOffsetX, pivotOffsetY)
             rotate(rotation)
             scale(scaleX, scaleY)
-            translate(-widthPx / 2f, -heightPx / 2f)
+            translate(-pivotOffsetX, -pivotOffsetY)
 
             if (element.shadowColor != null && element.shadowColor.alpha > 0f) {
                 val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
