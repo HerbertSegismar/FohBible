@@ -30,6 +30,7 @@ import kotlinx.coroutines.withContext
 import kotlin.math.*
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.withTranslation
+import com.fountofhopedotorg.fohbible.data.TweenType
 import com.fountofhopedotorg.fohbible.gfx_creator.generateThornCrownPaths
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
@@ -109,7 +110,10 @@ fun drawFrame(
             ((timeMs - prev.timestampMs).toFloat() / (next.timestampMs - prev.timestampMs)).coerceIn(0f, 1f)
         } else 0f
 
-        val progress = if (next != null) ease(rawProgress, next.tweenType) else rawProgress
+        val customPoints = if (next?.tweenType == TweenType.CUSTOM) next.customPoints else emptyList()
+        val progress = if (next != null) {
+            ease(rawProgress, next.tweenType, customPoints ?: emptyList())
+        } else rawProgress
 
         val x = lerp(prev?.x ?: element.offset.x, next?.x ?: element.offset.x, progress) * scaleFactor
         val y = lerp(prev?.y ?: element.offset.y, next?.y ?: element.offset.y, progress) * scaleFactor
@@ -134,10 +138,14 @@ fun drawFrame(
         }
 
         canvas.withTranslation(x, y) {
-            translate(widthPx / 2f, heightPx / 2f)
+
+            val pivotOffsetX = element.pivotX * widthPx
+            val pivotOffsetY = element.pivotY * heightPx
+
+            translate(pivotOffsetX, pivotOffsetY)
             rotate(rotation)
             scale(scaleX, scaleY)
-            translate(-widthPx / 2f, -heightPx / 2f)
+            translate(-pivotOffsetX, -pivotOffsetY)
 
             if (element.shadowColor != null && element.shadowColor.alpha > 0f) {
                 val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {

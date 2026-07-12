@@ -393,7 +393,9 @@ data class CanvasKeyframe(
     val color: Color? = null,
     val gradientConfig: GradientConfig? = null,
     val tweenType: TweenType = TweenType.LINEAR,
-    val customPoints: List<EasingPoint>? = null
+    val customPoints: List<EasingPoint>? = null,
+    val pivotX: Float? = null,
+    val pivotY: Float? = null
 )
 
 sealed class DisplayItem {
