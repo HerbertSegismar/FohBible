@@ -109,7 +109,6 @@ fun drawFrame(
         val rawProgress = if (next != null && prev != null && next.timestampMs != prev.timestampMs) {
             ((timeMs - prev.timestampMs).toFloat() / (next.timestampMs - prev.timestampMs)).coerceIn(0f, 1f)
         } else 0f
-
         val customPoints = if (next?.tweenType == TweenType.CUSTOM) next.customPoints else emptyList()
         val progress = if (next != null) {
             ease(rawProgress, next.tweenType, customPoints ?: emptyList())
