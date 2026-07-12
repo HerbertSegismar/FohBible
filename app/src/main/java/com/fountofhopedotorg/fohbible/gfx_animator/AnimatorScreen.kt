@@ -73,13 +73,15 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.PI
+import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
+import kotlin.math.sqrt
 import kotlin.time.Duration.Companion.microseconds
 import kotlin.time.Duration.Companion.milliseconds
 
-fun adjustOffsetForPivotChange(
+fun offsetForPivotChange(
     element: CanvasElement,
     oldPivotX: Float,
     oldPivotY: Float,
@@ -324,7 +326,7 @@ fun AnimatorScreen() {
             if (index != -1) {
                 val oldElement = viewModel.animatorCanvasElements[index]
 
-                val newOffset = adjustOffsetForPivotChange(
+                val newOffset = offsetForPivotChange(
                     element = oldElement,
                     oldPivotX = oldElement.pivotX,
                     oldPivotY = oldElement.pivotY,
@@ -421,22 +423,183 @@ fun AnimatorScreen() {
                     )
                 } else 0f
 
-                val newX = lerp(kfPrev?.x ?: element.offset.x, kfNext?.x ?: element.offset.x, progress)
-                val newY = lerp(kfPrev?.y ?: element.offset.y, kfNext?.y ?: element.offset.y, progress)
+                val startX = kfPrev?.x ?: element.offset.x
+                val startY = kfPrev?.y ?: element.offset.y
+                val endX   = kfNext?.x ?: element.offset.x
+                val endY   = kfNext?.y ?: element.offset.y
+
                 val newScaleX = lerp(kfPrev?.scaleX ?: element.scaleX, kfNext?.scaleX ?: element.scaleX, progress)
                 val newScaleY = lerp(kfPrev?.scaleY ?: element.scaleY, kfNext?.scaleY ?: element.scaleY, progress)
                 val newRotation = lerp(kfPrev?.rotation ?: element.rotation, kfNext?.rotation ?: element.rotation, progress)
 
+                val newPivotX = if (kfPrev?.pivotX != null || kfNext?.pivotX != null)
+                    lerp(kfPrev?.pivotX ?: element.pivotX, kfNext?.pivotX ?: element.pivotX, progress)
+                else element.pivotX
+
+                val newPivotY = if (kfPrev?.pivotY != null || kfNext?.pivotY != null)
+                    lerp(kfPrev?.pivotY ?: element.pivotY, kfNext?.pivotY ?: element.pivotY, progress)
+                else element.pivotY
+
+                if (kfNext?.ellipticalRotation == true && kfPrev != null) {
+                    val startOffset = Offset(startX, startY)
+                    val endOffset = Offset(endX, endY)
+                    val distance = (endOffset - startOffset).getDistance()
+
+                    val rotStart = kfPrev.rotation ?: element.rotation
+                    val rotEnd   = kfNext.rotation ?: element.rotation
+
+                    if (distance < 0.5f) {
+                        val orig = originalElementStates[element.id] ?: element
+                        val pivotX = kfPrev.pivotX ?: orig.pivotX
+                        val pivotY = kfPrev.pivotY ?: orig.pivotY
+                        val w = element.width
+                        val h = element.height
+
+                        val px = pivotX * w
+                        val py = pivotY * h
+
+                        val localCx = w / 2f - px
+                        val localCy = h / 2f - py
+
+                        val rotStartRad = rotStart * (PI / 180).toFloat()
+                        val cosR0 = cos(rotStartRad)
+                        val sinR0 = sin(rotStartRad)
+
+                        val startDx = localCx * cosR0 - localCy * sinR0
+                        val startDy = localCx * sinR0 + localCy * cosR0
+                        val r0 = sqrt(startDx * startDx + startDy * startDy)
+
+                        if (r0 < 0.5f) {
+                            viewModel.animatorCanvasElements[i] = element.copy(
+                                offset = startOffset,
+                                pivotX = pivotX, pivotY = pivotY,
+                                scaleX = newScaleX, scaleY = newScaleY,
+                                rotation = newRotation
+                            )
+                        } else {
+                            val stretchX = kfNext.ellipticalStretchX.coerceAtLeast(0.01f)
+                            val stretchY = kfNext.ellipticalStretchY.coerceAtLeast(0.01f)
+
+                            val startPhi = atan2(startDy * stretchX, startDx * stretchY)
+                            val mag = sqrt((startDx * stretchY) * (startDx * stretchY) + (startDy * stretchX) * (startDy * stretchX))
+                            val rBase = mag / (stretchX * stretchY)
+
+                            val a = rBase * stretchX
+                            val b = rBase * stretchY
+
+                            val currentRotRad = newRotation * (PI / 180).toFloat()
+                            val phi = startPhi + (currentRotRad - rotStartRad)
+
+                            val cosR = cos(currentRotRad)
+                            val sinR = sin(currentRotRad)
+                            val currentDx = localCx * cosR - localCy * sinR
+                            val currentDy = localCx * sinR + localCy * cosR
+
+                            val newOffsetX = startOffset.x + a * cos(phi) - currentDx
+                            val newOffsetY = startOffset.y + b * sin(phi) - currentDy
+
+                            viewModel.animatorCanvasElements[i] = element.copy(
+                                offset = Offset(newOffsetX, newOffsetY),
+                                pivotX = pivotX,
+                                pivotY = pivotY,
+                                scaleX = newScaleX,
+                                scaleY = newScaleY,
+                                rotation = newRotation
+                            )
+                        }
+                    } else {
+                        val center = Offset(
+                            (startOffset.x + endOffset.x) / 2f,
+                            (startOffset.y + endOffset.y) / 2f
+                        )
+                        val delta = endOffset - startOffset
+                        val halfDist = distance / 2f
+
+                        val u = if (distance > 0f) Offset(delta.x / distance, delta.y / distance) else Offset(1f, 0f)
+                        val v = Offset(-u.y, u.x)
+
+                        val stretchX = kfNext.ellipticalStretchX.coerceAtLeast(0.01f)
+                        val stretchY = kfNext.ellipticalStretchY.coerceAtLeast(0.01f)
+                        val b = halfDist * (stretchY / stretchX)
+
+                        val t = progress.coerceIn(0f, 1f)
+                        val deltaRot = rotEnd - rotStart
+                        val phi: Float = if (deltaRot < 0f) {
+                            Math.PI.toFloat() * (1f + t)
+                        } else {
+                            Math.PI.toFloat() * (1f - t)
+                        }
+
+                        val targetCenter = Offset(
+                            center.x + halfDist * cos(phi) * u.x + b * sin(phi) * v.x,
+                            center.y + halfDist * cos(phi) * u.y + b * sin(phi) * v.y
+                        )
+
+                        val w = element.width
+                        val h = element.height
+                        val px = newPivotX * w
+                        val py = newPivotY * h
+                        val localCx = w / 2f - px
+                        val localCy = h / 2f - py
+
+                        val rotRad = newRotation * (PI / 180).toFloat()
+                        val cosR = cos(rotRad)
+                        val sinR = sin(rotRad)
+                        val dx = localCx * cosR - localCy * sinR
+                        val dy = localCx * sinR + localCy * cosR
+
+                        viewModel.animatorCanvasElements[i] = element.copy(
+                            offset = Offset(targetCenter.x - dx, targetCenter.y - dy),
+                            pivotX = newPivotX,
+                            pivotY = newPivotY,
+                            scaleX = newScaleX,
+                            scaleY = newScaleY,
+                            rotation = newRotation
+                        )
+                    }
+                }
+                else {
+                    val newX = lerp(startX, endX, progress)
+                    val newY = lerp(startY, endY, progress)
+
+                    val orig = originalElementStates[element.id] ?: element
+                    val oldPivotX = orig.pivotX
+                    val oldPivotY = orig.pivotY
+
+                    val tempElement = CanvasElement(
+                        id = element.id,
+                        offset = Offset(newX, newY),
+                        width = element.width,
+                        height = element.height,
+                        scaleX = newScaleX,
+                        scaleY = newScaleY,
+                        rotation = newRotation,
+                        pivotX = newPivotX,
+                        pivotY = newPivotY,
+                        content = element.content,
+                        backgroundColor = element.backgroundColor,
+                        textColor = element.textColor
+                    )
+
+                    val finalOffset = offsetForPivotChange(
+                        element = tempElement,
+                        oldPivotX = oldPivotX,
+                        oldPivotY = oldPivotY,
+                        newPivotX = newPivotX,
+                        newPivotY = newPivotY
+                    )
+                    viewModel.animatorCanvasElements[i] = element.copy(
+                        offset = finalOffset,
+                        pivotX = newPivotX,
+                        pivotY = newPivotY,
+                        scaleX = newScaleX,
+                        scaleY = newScaleY,
+                        rotation = newRotation
+                    )
+                }
                 val newColor = if (kfPrev?.color != null && kfNext?.color != null) {
                     lerpColor(kfPrev.color, kfNext.color, progress)
                 } else kfNext?.color ?: kfPrev?.color
-
-                viewModel.animatorCanvasElements[i] = element.copy(
-                    offset = Offset(newX, newY),
-                    scaleX = newScaleX,
-                    scaleY = newScaleY,
-                    rotation = newRotation
-                )
 
                 if (newColor != null) {
                     val isText = !element.content.startsWith("Shape:") && !element.content.startsWith("Image:")

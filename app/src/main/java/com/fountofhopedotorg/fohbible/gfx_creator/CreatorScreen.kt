@@ -40,7 +40,7 @@ import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.GradientConfig
 import com.fountofhopedotorg.fohbible.data.ThemeColors
-import com.fountofhopedotorg.fohbible.gfx_animator.adjustOffsetForPivotChange
+import com.fountofhopedotorg.fohbible.gfx_animator.offsetForPivotChange
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.theme.LocalAppTheme
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
@@ -207,7 +207,7 @@ fun CreatorScreen() {
             val index = viewModel.canvasElements.indexOfFirst { it.id == id }
             if (index != -1) {
                 val oldElement = viewModel.canvasElements[index]
-                val newOffset = adjustOffsetForPivotChange(
+                val newOffset = offsetForPivotChange(
                     element = oldElement,
                     oldPivotX = oldElement.pivotX,
                     oldPivotY = oldElement.pivotY,

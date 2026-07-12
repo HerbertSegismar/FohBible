@@ -36,6 +36,36 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
 import java.io.File
 
+private fun adjustOffsetForPivotChange(
+    element: CanvasElement,
+    oldPivotX: Float,
+    oldPivotY: Float,
+    newPivotX: Float,
+    newPivotY: Float
+): Offset {
+    val w = element.width
+    val h = element.height
+
+    val dx = (newPivotX - oldPivotX) * w
+    val dy = (newPivotY - oldPivotY) * h
+
+    val scaledDx = dx * element.scaleX
+    val scaledDy = dy * element.scaleY
+
+    val rad = element.rotation * (PI / 180.0).toFloat()
+    val cosA = cos(rad)
+    val sinA = sin(rad)
+
+    val rotatedDx = scaledDx * cosA - scaledDy * sinA
+    val rotatedDy = scaledDx * sinA + scaledDy * cosA
+
+    val deltaOffsetX = rotatedDx - dx
+    val deltaOffsetY = rotatedDy - dy
+
+    return element.offset + Offset(deltaOffsetX, deltaOffsetY)
+}
+
+
 suspend fun loadImageBitmaps(
     elements: List<CanvasElement>,
     context: Context,
@@ -114,8 +144,11 @@ fun drawFrame(
             ease(rawProgress, next.tweenType, customPoints ?: emptyList())
         } else rawProgress
 
-        val x = lerp(prev?.x ?: element.offset.x, next?.x ?: element.offset.x, progress) * scaleFactor
-        val y = lerp(prev?.y ?: element.offset.y, next?.y ?: element.offset.y, progress) * scaleFactor
+        // Interpolated values
+        val startX = prev?.x ?: element.offset.x
+        val startY = prev?.y ?: element.offset.y
+        val endX   = next?.x ?: element.offset.x
+        val endY   = next?.y ?: element.offset.y
         val widthPx = element.width * scaleFactor
         val heightPx = element.height * scaleFactor
 
@@ -136,16 +169,132 @@ fun drawFrame(
             else -> gradientConfigs[element.id]
         }
 
-        canvas.withTranslation(x, y) {
+        // Pivot interpolation (needed for both elliptical and linear paths)
+        val originalPivotX = element.pivotX
+        val originalPivotY = element.pivotY
+        val newPivotX = lerp(prev?.pivotX ?: element.pivotX, next?.pivotX ?: element.pivotX, progress)
+        val newPivotY = lerp(prev?.pivotY ?: element.pivotY, next?.pivotY ?: element.pivotY, progress)
 
-            val pivotOffsetX = element.pivotX * widthPx
-            val pivotOffsetY = element.pivotY * heightPx
+        // Determine position (posX, posY) – possibly with elliptical arc
+        var posX: Float
+        var posY: Float
+
+        if (next?.ellipticalRotation == true && prev != null) {
+            val startOffset = Offset(startX, startY)
+            val endOffset = Offset(endX, endY)
+            val distance = (endOffset - startOffset).getDistance()
+            val rotStart = prev.rotation ?: element.rotation
+            val rotEnd = next.rotation ?: element.rotation
+            val currentRot = rotation   // already interpolated
+            val stretchX = next.ellipticalStretchX.coerceAtLeast(0.01f)
+            val stretchY = next.ellipticalStretchY.coerceAtLeast(0.01f)
+
+            if (distance < 0.5f) {
+                // Pivot is stationary – spin in place along an ellipse
+                val px = newPivotX * element.width
+                val py = newPivotY * element.height
+                val localCx = element.width / 2f - px
+                val localCy = element.height / 2f - py
+                val rotStartRad = rotStart * (PI.toFloat() / 180f)
+                val cosR0 = cos(rotStartRad)
+                val sinR0 = sin(rotStartRad)
+                val startDx = localCx * cosR0 - localCy * sinR0
+                val startDy = localCx * sinR0 + localCy * cosR0
+                val r0 = sqrt(startDx * startDx + startDy * startDy)
+                if (r0 < 0.5f) {
+                    posX = startOffset.x
+                    posY = startOffset.y
+                } else {
+                    val startPhi = atan2(startDy * stretchX, startDx * stretchY)
+                    val mag = sqrt((startDx * stretchY) * (startDx * stretchY) +
+                            (startDy * stretchX) * (startDy * stretchX))
+                    val rBase = mag / (stretchX * stretchY)
+                    val a = rBase * stretchX
+                    val b = rBase * stretchY
+                    val currentRotRad = currentRot * (PI.toFloat() / 180f)
+                    val phi = startPhi + (currentRotRad - rotStartRad)
+                    val cosR = cos(currentRotRad)
+                    val sinR = sin(currentRotRad)
+                    val currentDx = localCx * cosR - localCy * sinR
+                    val currentDy = localCx * sinR + localCy * cosR
+                    posX = startOffset.x + a * cos(phi) - currentDx
+                    posY = startOffset.y + b * sin(phi) - currentDy
+                }
+            } else {
+                // Travel along an elliptical arc between start and end
+                val center = Offset((startOffset.x + endOffset.x) / 2f,
+                    (startOffset.y + endOffset.y) / 2f)
+                val delta = endOffset - startOffset
+                val halfDist = distance / 2f
+                val u = if (distance > 0f) Offset(delta.x / distance, delta.y / distance) else Offset(1f, 0f)
+                val v = Offset(-u.y, u.x)
+                val b = halfDist * (stretchY / stretchX)
+                val t = progress.coerceIn(0f, 1f)
+                val deltaRot = rotEnd - rotStart
+                val phi: Float = if (deltaRot < 0f) {
+                    Math.PI.toFloat() * (1f + t)
+                } else {
+                    Math.PI.toFloat() * (1f - t)
+                }
+                val targetCenter = Offset(
+                    center.x + halfDist * cos(phi) * u.x + b * sin(phi) * v.x,
+                    center.y + halfDist * cos(phi) * u.y + b * sin(phi) * v.y
+                )
+                val px = newPivotX * element.width
+                val py = newPivotY * element.height
+                val localCx = element.width / 2f - px
+                val localCy = element.height / 2f - py
+                val rotRad = currentRot * (PI.toFloat() / 180f)
+                val cosR = cos(rotRad)
+                val sinR = sin(rotRad)
+                val dx = localCx * cosR - localCy * sinR
+                val dy = localCx * sinR + localCy * cosR
+                posX = targetCenter.x - dx
+                posY = targetCenter.y - dy
+            }
+            // Scale to export resolution
+            posX *= scaleFactor
+            posY *= scaleFactor
+        } else {
+            // Normal linear interpolation
+            val linearX = lerp(startX, endX, progress)
+            val linearY = lerp(startY, endY, progress)
+            // Adjust for pivot change to avoid visual jump
+            val tempElement = CanvasElement(
+                offset = Offset(linearX, linearY),
+                width = element.width,
+                height = element.height,
+                scaleX = scaleX,
+                scaleY = scaleY,
+                rotation = rotation,
+                pivotX = newPivotX,
+                pivotY = newPivotY,
+                content = element.content,
+                backgroundColor = element.backgroundColor,
+                textColor = element.textColor
+            )
+            val adjustedOffset = adjustOffsetForPivotChange(
+                element = tempElement,
+                oldPivotX = originalPivotX,
+                oldPivotY = originalPivotY,
+                newPivotX = newPivotX,
+                newPivotY = newPivotY
+            )
+            posX = adjustedOffset.x * scaleFactor
+            posY = adjustedOffset.y * scaleFactor
+        }
+
+        // Draw the element with the computed position and pivot
+        canvas.withTranslation(posX, posY) {
+            val pivotOffsetX = newPivotX * widthPx
+            val pivotOffsetY = newPivotY * heightPx
 
             translate(pivotOffsetX, pivotOffsetY)
             rotate(rotation)
             scale(scaleX, scaleY)
             translate(-pivotOffsetX, -pivotOffsetY)
 
+            // Shadow
             if (element.shadowColor != null && element.shadowColor.alpha > 0f) {
                 val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                     this.color = element.shadowColor.toArgb()
@@ -162,6 +311,7 @@ fun drawFrame(
                 }
             }
 
+            // Border
             if (element.borderThickness > 0f && element.borderColor != null) {
                 val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                     this.color = element.borderColor.toArgb()
@@ -176,6 +326,7 @@ fun drawFrame(
                 )
             }
 
+            // Fill / gradient
             val fillColorInt: Int = color?.toArgb()
                 ?: if (element.content.startsWith("Shape:") || element.content.startsWith("Image:"))
                     element.backgroundColor.toArgb()
@@ -268,7 +419,8 @@ suspend fun nativeExport(
         val savedPath = encoder.releaseAndSaveToGallery("NativeExport_${System.currentTimeMillis()}")
 
         withContext(Dispatchers.Main) {
-            if (savedPath == null) {Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show()
+            if (savedPath == null) {
+                Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show()
             }
         }
     } catch (_: Exception) {

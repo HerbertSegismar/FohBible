@@ -395,7 +395,10 @@ data class CanvasKeyframe(
     val tweenType: TweenType = TweenType.LINEAR,
     val customPoints: List<EasingPoint>? = null,
     val pivotX: Float? = null,
-    val pivotY: Float? = null
+    val pivotY: Float? = null,
+    val ellipticalRotation: Boolean = false,
+    val ellipticalStretchX: Float = 1f,
+    val ellipticalStretchY: Float = 0.5f
 )
 
 sealed class DisplayItem {

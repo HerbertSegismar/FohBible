@@ -98,6 +98,12 @@ fun KeyframeAnimationDialog(
     canvasHeight: Int
 ) {
     var scrollOffsetSaved by rememberSaveable("timelineScroll") { mutableIntStateOf(0) }
+    var pivotXState by remember { mutableFloatStateOf(element?.pivotX ?: 0f) }
+    var pivotYState by remember { mutableFloatStateOf(element?.pivotY ?: 0f) }
+
+    var ellipticalRotation by rememberSaveable(element?.id) { mutableStateOf(false) }
+    var ellipticalStretchX by rememberSaveable(element?.id) { mutableFloatStateOf(1f) }
+    var ellipticalStretchY by rememberSaveable(element?.id) { mutableFloatStateOf(0.5f) }
 
     val xMin = -0.05f * canvasWidth
     val xMax = 1.05f * canvasWidth
@@ -167,6 +173,11 @@ fun KeyframeAnimationDialog(
         timeInput = storedToDisplay(midpointStored).toString()
     }
 
+    LaunchedEffect(element.id) {
+        pivotXState = element.pivotX
+        pivotYState = element.pivotY
+    }
+
     var xInput by rememberSaveable(element.id) {
         mutableStateOf(formatPosition(element.offset.x))
     }
@@ -223,6 +234,11 @@ fun KeyframeAnimationDialog(
         val displayColor = kf.gradientConfig?.startColor ?: kf.color ?: initialElementColor
         pickedColorArgb = displayColor.toArgb().toLong()
         currentGradientConfig = kf.gradientConfig
+        pivotXState = kf.pivotX ?: element.pivotX
+        pivotYState = kf.pivotY ?: element.pivotY
+        ellipticalRotation = kf.ellipticalRotation
+        ellipticalStretchX = kf.ellipticalStretchX
+        ellipticalStretchY = kf.ellipticalStretchY
     }
 
     LaunchedEffect(element.id) {
@@ -525,7 +541,12 @@ fun KeyframeAnimationDialog(
                         x = x, y = y, scaleX = sx, scaleY = sy,
                         rotation = rot,
                         color = pickedColor,
-                        gradientConfig = currentGradientConfig
+                        gradientConfig = currentGradientConfig,
+                        pivotX = pivotXState,
+                        pivotY = pivotYState,
+                        ellipticalRotation = ellipticalRotation,
+                        ellipticalStretchX = ellipticalStretchX,
+                        ellipticalStretchY = ellipticalStretchY
                     )
                 )
 
@@ -1294,6 +1315,14 @@ fun KeyframeAnimationDialog(
                                 { String.format(Locale.US, "%.2f", it) })
                             ParameterSlider("Rot", rotationInput, { rotationInput = it }, -360f..360f, "°",
                                 { String.format(Locale.US, "%.1f", it) })
+                            EllipticalRotationSection(
+                                isEnabled = ellipticalRotation,
+                                onToggle = { ellipticalRotation = it },
+                                stretchX = ellipticalStretchX,
+                                onStretchXChange = { ellipticalStretchX = it.coerceIn(0.1f, 10f) },
+                                stretchY = ellipticalStretchY,
+                                onStretchYChange = { ellipticalStretchY = it.coerceIn(0.1f, 10f) }
+                            )
 
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -1339,6 +1368,14 @@ fun KeyframeAnimationDialog(
                             { String.format(Locale.US, "%.2f", it) })
                         ParameterSlider("Rot", rotationInput, { rotationInput = it }, -360f..360f, "°",
                             { String.format(Locale.US, "%.1f", it) })
+                        EllipticalRotationSection(
+                            isEnabled = ellipticalRotation,
+                            onToggle = { ellipticalRotation = it },
+                            stretchX = ellipticalStretchX,
+                            onStretchXChange = { ellipticalStretchX = it.coerceIn(0.1f, 10f) },
+                            stretchY = ellipticalStretchY,
+                            onStretchYChange = { ellipticalStretchY = it.coerceIn(0.1f, 10f) }
+                        )
 
                         Row(
                             verticalAlignment = Alignment.CenterVertically,

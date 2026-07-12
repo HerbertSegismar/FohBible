@@ -26,7 +26,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowRight
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -1081,75 +1083,80 @@ fun Mp4ExportSettingsDialog(
     var outputMode by remember { mutableStateOf(initialOutputMode) }
     var resolutionMultiplier by remember { mutableFloatStateOf(initialResolutionMultiplier) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Export Settings") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("Frame Rate: $frameRate fps")
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(30, 60, 120).forEach { fps ->
-                        FilterChip(
-                            selected = frameRate == fps,
-                            onClick = { frameRate = fps },
-                            label = { Text("$fps") }
-                        )
-                    }
-                }
-
-                Text("Bit Rate: ${bitRateMbps.roundToInt()} Mbps")
-                Slider(
-                    value = bitRateMbps,
-                    onValueChange = { bitRateMbps = it },
-                    valueRange = 5f..50f,
-                    steps = 44
-                )
-
-                Text("Export Mode:")
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = exportMode == "Screen",
-                        onClick = { exportMode = "Screen" },
-                        label = { Text("Screen Render") }
-                    )
-                    FilterChip(
-                        selected = exportMode == "Native",
-                        onClick = { exportMode = "Native" },
-                        label = { Text("Native Render") }
-                    )
-                }
-
-                if (exportMode == "Native") {
-                    Text("Resolution Multiplier:")
+    Column {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Export Settings") },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text("Frame Rate: $frameRate fps")
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(1f, 2f, 4f).forEach { mult ->
+                        listOf(30, 60, 120).forEach { fps ->
                             FilterChip(
-                                selected = resolutionMultiplier == mult,
-                                onClick = { resolutionMultiplier = mult },
-                                label = { Text("${mult.toInt()}x") }
+                                selected = frameRate == fps,
+                                onClick = { frameRate = fps },
+                                label = { Text("$fps") }
                             )
                         }
                     }
+
+                    Text("Bit Rate: ${bitRateMbps.roundToInt()} Mbps")
+                    Slider(
+                        value = bitRateMbps,
+                        onValueChange = { bitRateMbps = it },
+                        valueRange = 5f..50f,
+                        steps = 44
+                    )
+
+                    Text("Export Mode:")
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = exportMode == "Screen",
+                            onClick = { exportMode = "Screen" },
+                            label = { Text("Screen Render") }
+                        )
+                        FilterChip(
+                            selected = exportMode == "Native",
+                            onClick = { exportMode = "Native" },
+                            label = { Text("Native Render") }
+                        )
+                    }
+
+                    if (exportMode == "Native") {
+                        Text("Resolution Multiplier:")
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf(1f, 2f, 4f).forEach { mult ->
+                                FilterChip(
+                                    selected = resolutionMultiplier == mult,
+                                    onClick = { resolutionMultiplier = mult },
+                                    label = { Text("${mult.toInt()}x") }
+                                )
+                            }
+                        }
+                    }
                 }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onConfirm(
+                        frameRate,
+                        bitRateMbps.roundToInt(),
+                        exportMode,
+                        outputMode,
+                        resolutionMultiplier
+                    )
+                }) {
+                    Text("Export")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) { Text("Cancel") }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                onConfirm(
-                    frameRate,
-                    bitRateMbps.roundToInt(),
-                    exportMode,
-                    outputMode,
-                    resolutionMultiplier
-                )
-            }) {
-                Text("Export")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
-    )
+        )
+    }
 }
 
 @Composable
