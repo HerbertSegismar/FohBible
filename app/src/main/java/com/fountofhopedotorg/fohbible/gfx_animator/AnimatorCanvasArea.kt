@@ -13,6 +13,7 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -21,12 +22,12 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.fountofhopedotorg.fohbible.data.CanvasElement
+import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.gfx_creator.CanvasImageItem
 import com.fountofhopedotorg.fohbible.gfx_creator.CanvasSvgItem
 import com.fountofhopedotorg.fohbible.gfx_creator.CanvasTextItem
 import com.fountofhopedotorg.fohbible.gfx_creator.getGroupBoundingBox
-import com.fountofhopedotorg.fohbible.data.CanvasElement
-import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import kotlin.math.PI
 import kotlin.math.cos
@@ -58,7 +59,9 @@ fun AnimatorCanvasArea(
     isPivotPlacementActive: Boolean = false,
     pivotTargetId: String? = null,
     onStartPivotPlacement: (String) -> Unit = {},
-    onPlacePivotLocal: (Float, Float) -> Unit = { _, _ -> }
+    onPlacePivotLocal: (Float, Float) -> Unit = { _, _ -> },
+    canvasBackgroundColor: Color? = null,
+    canvasBackgroundBrush: Brush? = null,
 ) {
     val viewModel: AppViewModel = viewModel()
 
@@ -106,8 +109,17 @@ fun AnimatorCanvasArea(
             modifier = Modifier
                 .fillMaxSize()
                 .drawWithContent {
-                    val backgroundColor = if (isDark) Color(0xFF1E2937) else themeColors.primary.copy(0.1f)
-                    drawRect(color = backgroundColor)
+                    if (canvasBackgroundBrush != null) {
+                        drawRect(brush = canvasBackgroundBrush)
+                    } else if (canvasBackgroundColor != null) {
+                        if (canvasBackgroundColor != Color.Transparent) {
+                            drawRect(color = canvasBackgroundColor)
+                        }
+                    } else {
+                        val defaultBackgroundColor = if (isDark) Color(0xFF1E2937) else Color.White
+                        drawRect(color = defaultBackgroundColor)
+                    }
+
                     graphicsLayer.record {
                         this@drawWithContent.drawContent()
                     }

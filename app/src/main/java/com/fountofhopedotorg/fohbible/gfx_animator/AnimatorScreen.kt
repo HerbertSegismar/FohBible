@@ -120,10 +120,10 @@ fun AnimatorScreen() {
 
     val viewModel: AppViewModel = viewModel()
     val graphicsLayer = rememberGraphicsLayer()
+    var showCanvasSettingsDialog by remember { mutableStateOf(false) }
 
     var customWidthPx by rememberSaveable { mutableIntStateOf(if (isLandscape) 1920 else 1080) }
     var customHeightPx by rememberSaveable { mutableIntStateOf(if (isLandscape) 1080 else 1920) }
-    var showCanvasSizeDialog by remember { mutableStateOf(false) }
     val canvasWidthPx = customWidthPx
     val canvasHeightPx = customHeightPx
     val canvasWidthDp = with(density) { canvasWidthPx.toDp() }
@@ -382,13 +382,18 @@ fun AnimatorScreen() {
             }
             val width = graphicsLayer.size.width
             val height = graphicsLayer.size.height
+
+            // ✅ Updated: Background color and brush are passed here for Screen Recording
             encoder.value = ComposeVideoEncoder(
-                context,
-                width,
-                height,
+                context = context,
+                width = width,
+                height = height,
                 frameRate = selectedFrameRate,
-                bitRate = selectedBitRateMbps * 1_000_000
+                bitRate = selectedBitRateMbps * 1_000_000,
+                canvasBackgroundColor = viewModel.canvasBackgroundColor,
+                canvasBackgroundBrush = viewModel.canvasBackgroundBrush
             )
+
             originalElementStates = viewModel.animatorCanvasElements.associateBy { it.id }
             animationCurrentTimeUs = 0L
             lastCaptureTimeUs = 0L
@@ -707,7 +712,6 @@ fun AnimatorScreen() {
                                         scaleY = scale
                                         transformOrigin = TransformOrigin(0.5f, 0.5f)
                                     }
-                                    .background(Color.White)
                             ) {
                                 AnimatorCanvasArea(
                                     modifier = Modifier.fillMaxSize(),
@@ -755,7 +759,9 @@ fun AnimatorScreen() {
                                     isPivotPlacementActive = isPivotPlacementActive,
                                     pivotTargetId = pivotTargetId,
                                     onStartPivotPlacement = onStartPivotPlacement,
-                                    onPlacePivotLocal = onPlacePivotLocal
+                                    onPlacePivotLocal = onPlacePivotLocal,
+                                    canvasBackgroundColor = viewModel.canvasBackgroundColor,
+                                    canvasBackgroundBrush = viewModel.canvasBackgroundBrush,
                                 )
 
                                 if (isPlayingAnimation) {
@@ -907,7 +913,7 @@ fun AnimatorScreen() {
                     )
                 }
             }
-            ToolbarSection(
+            AnimatorToolbar(
                 onAddShape = { shape ->
                     val color = getRandomColor()
                     viewModel.addToAnimatorCanvas(
@@ -948,7 +954,7 @@ fun AnimatorScreen() {
                 onPlayPause = onPlayPause,
                 onTimelineClick = onTimelineClick,
                 enablePlayStop = enablePlayStop,
-                onCanvasSizeClick = { showCanvasSizeDialog = true }
+                onCanvasSettingsClick = { showCanvasSettingsDialog = true }
             )
         }
     } else {
@@ -960,7 +966,7 @@ fun AnimatorScreen() {
                     .width(40.dp)
                     .fillMaxHeight()
             ) {
-                ToolbarSection(
+                AnimatorToolbar(
                     onAddShape = { shape ->
                         val color = getRandomColor()
                         viewModel.addToAnimatorCanvas(
@@ -1001,7 +1007,7 @@ fun AnimatorScreen() {
                     onPlayPause = onPlayPause,
                     onTimelineClick = onTimelineClick,
                     enablePlayStop = enablePlayStop,
-                    onCanvasSizeClick = { showCanvasSizeDialog = true }
+                    onCanvasSettingsClick = { showCanvasSettingsDialog = true }
                 )
             }
 
@@ -1039,7 +1045,6 @@ fun AnimatorScreen() {
                                     scaleY = scale
                                     transformOrigin = TransformOrigin(0.5f, 0.5f)
                                 }
-                                .background(Color.White)
                         ) {
                             AnimatorCanvasArea(
                                 modifier = Modifier.fillMaxSize(),
@@ -1087,7 +1092,9 @@ fun AnimatorScreen() {
                                 isPivotPlacementActive = isPivotPlacementActive,
                                 pivotTargetId = pivotTargetId,
                                 onStartPivotPlacement = onStartPivotPlacement,
-                                onPlacePivotLocal = onPlacePivotLocal
+                                onPlacePivotLocal = onPlacePivotLocal,
+                                canvasBackgroundColor = viewModel.canvasBackgroundColor,
+                                canvasBackgroundBrush = viewModel.canvasBackgroundBrush,
                             )
 
                             if (isPlayingAnimation) {
@@ -1566,7 +1573,9 @@ fun AnimatorScreen() {
                                 viewModel.animatorCanvasElements.toList(),
                                 viewModel.animatorGradientPairs.toMap(),
                                 startTimeMs = startMs,
-                                endTimeMs = endMs
+                                endTimeMs = endMs,
+                                canvasBackgroundColor = viewModel.canvasBackgroundColor,
+                                canvasBackgroundBrush = viewModel.canvasBackgroundBrush,
                             ) { progress ->
                                 withContext(Dispatchers.Main) {
                                     offscreenExportProgress = progress
@@ -1590,16 +1599,27 @@ fun AnimatorScreen() {
         )
     }
 
-    if (showCanvasSizeDialog) {
-        CanvasSizeDialog(
+    if (showCanvasSettingsDialog) {
+        CanvasSettingsDialog(
             initialWidth = customWidthPx,
             initialHeight = customHeightPx,
-            onDismiss = { showCanvasSizeDialog = false },
-            onConfirm = { width, height ->
-                customWidthPx = width
-                customHeightPx = height
-                showCanvasSizeDialog = false
-            }
+            onDismiss = { showCanvasSettingsDialog = false },
+            onConfirmSize = { w, h ->
+                customWidthPx = w
+                customHeightPx = h
+            },
+            onSolidColorSelected = { color ->
+                viewModel.canvasBackgroundColor = color
+                viewModel.canvasBackgroundBrush = null
+            },
+            onGradientSelected = { brush ->
+                viewModel.canvasBackgroundColor = null
+                viewModel.canvasBackgroundBrush = brush
+            },
+            onTransparentSelected = {
+                viewModel.canvasBackgroundColor = Color.Transparent
+                viewModel.canvasBackgroundBrush = null
+            },
         )
     }
 

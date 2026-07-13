@@ -35,6 +35,10 @@ import com.fountofhopedotorg.fohbible.gfx_creator.generateThornCrownPaths
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
 import java.io.File
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color as ComposeColor
+import androidx.compose.ui.graphics.Canvas as ComposeCanvas
+import androidx.compose.ui.graphics.Paint as ComposePaint
 
 private fun adjustOffsetForPivotChange(
     element: CanvasElement,
@@ -124,10 +128,32 @@ fun drawFrame(
     timeMs: Long,
     gradientConfigs: Map<String, GradientConfig>,
     imageBitmaps: Map<String, Bitmap>,
-    scaleFactor: Float
+    scaleFactor: Float,
+    canvasWidth: Float,
+    canvasHeight: Float,
+    canvasBackgroundColor: ComposeColor?,
+    canvasBackgroundBrush: Brush?
 ) {
-    canvas.drawColor(Color.WHITE)
+    // 1. Draw the background cleanly without deprecated functions
+    if (canvasBackgroundBrush != null) {
+        val composeCanvas = ComposeCanvas(canvas)
+        val composePaint = ComposePaint()
+        canvasBackgroundBrush.applyTo(Size(canvasWidth, canvasHeight), composePaint, 1f)
 
+        composeCanvas.drawRect(
+            left = 0f,
+            top = 0f,
+            right = canvasWidth,
+            bottom = canvasHeight,
+            paint = composePaint
+        )
+    } else if (canvasBackgroundColor != null) {
+        canvas.drawColor(canvasBackgroundColor.toArgb())
+    } else {
+        canvas.drawColor(android.graphics.Color.WHITE)
+    }
+
+    // 2. Draw Elements
     for (element in elements) {
         if (timeMs < element.startTimeMs || timeMs > element.endTimeMs) {
             continue
@@ -190,7 +216,6 @@ fun drawFrame(
             val stretchY = next.ellipticalStretchY.coerceAtLeast(0.01f)
 
             if (distance < 0.5f) {
-                // Pivot is stationary – spin in place along an ellipse
                 val px = newPivotX * element.width
                 val py = newPivotY * element.height
                 val localCx = element.width / 2f - px
@@ -221,7 +246,6 @@ fun drawFrame(
                     posY = startOffset.y + b * sin(phi) - currentDy
                 }
             } else {
-                // Travel along an elliptical arc between start and end
                 val center = Offset((startOffset.x + endOffset.x) / 2f,
                     (startOffset.y + endOffset.y) / 2f)
                 val delta = endOffset - startOffset
@@ -252,14 +276,11 @@ fun drawFrame(
                 posX = targetCenter.x - dx
                 posY = targetCenter.y - dy
             }
-            // Scale to export resolution
             posX *= scaleFactor
             posY *= scaleFactor
         } else {
-            // Normal linear interpolation
             val linearX = lerp(startX, endX, progress)
             val linearY = lerp(startY, endY, progress)
-            // Adjust for pivot change to avoid visual jump
             val tempElement = CanvasElement(
                 offset = Offset(linearX, linearY),
                 width = element.width,
@@ -284,7 +305,6 @@ fun drawFrame(
             posY = adjustedOffset.y * scaleFactor
         }
 
-        // Draw the element with the computed position and pivot
         canvas.withTranslation(posX, posY) {
             val pivotOffsetX = newPivotX * widthPx
             val pivotOffsetY = newPivotY * heightPx
@@ -331,7 +351,7 @@ fun drawFrame(
                 ?: if (element.content.startsWith("Shape:") || element.content.startsWith("Image:"))
                     element.backgroundColor.toArgb()
                 else
-                    (element.textColor ?: androidx.compose.ui.graphics.Color.Black).toArgb()
+                    (element.textColor ?: ComposeColor.Black).toArgb()
 
             val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 if (gradient != null) {
@@ -369,6 +389,8 @@ suspend fun nativeExport(
     gradientConfigs: Map<String, GradientConfig>,
     startTimeMs: Long,
     endTimeMs: Long,
+    canvasBackgroundColor: ComposeColor? = null,
+    canvasBackgroundBrush: Brush? = null,
     onProgress: suspend (Float) -> Unit
 ) {
     val exportWidth = (canvasWidthPx * resolutionMultiplier).toInt()
@@ -392,12 +414,16 @@ suspend fun nativeExport(
 
             if (canvas != null) {
                 drawFrame(
-                    canvas,
-                    elements,
-                    currentTimeMs,
-                    gradientConfigs,
-                    imageBitmaps,
-                    resolutionMultiplier
+                    canvas = canvas,
+                    elements = elements,
+                    timeMs = currentTimeMs,
+                    gradientConfigs = gradientConfigs,
+                    imageBitmaps = imageBitmaps,
+                    scaleFactor = resolutionMultiplier,
+                    canvasWidth = exportWidth.toFloat(),
+                    canvasHeight = exportHeight.toFloat(),
+                    canvasBackgroundColor = canvasBackgroundColor,
+                    canvasBackgroundBrush = canvasBackgroundBrush
                 )
                 surface.unlockCanvasAndPost(canvas)
             }

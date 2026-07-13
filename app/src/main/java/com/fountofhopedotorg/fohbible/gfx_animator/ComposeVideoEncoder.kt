@@ -17,6 +17,14 @@ import java.util.LinkedList
 import androidx.core.graphics.createBitmap
 import kotlin.math.pow
 
+// Compose Graphics Imports
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color as ComposeColor
+import androidx.compose.ui.graphics.Canvas as ComposeCanvas
+import androidx.compose.ui.graphics.Paint as ComposePaint
+import androidx.compose.ui.graphics.toArgb
+
 @RequiresApi(Build.VERSION_CODES.Q)
 class ComposeVideoEncoder(
     private val context: Context,
@@ -25,7 +33,10 @@ class ComposeVideoEncoder(
     private val frameRate: Int = 120,
     private val bitRate: Int = 20_000_000,
     private val isDark: Boolean = false,
-    private val themePrimaryColorInt: Int = 0xFF000000.toInt()
+    private val themePrimaryColorInt: Int = 0xFF000000.toInt(),
+    // Added background properties from the ViewModel
+    private val canvasBackgroundColor: ComposeColor? = null,
+    private val canvasBackgroundBrush: Brush? = null
 ) {
     companion object {
         private const val PROFILE = CodecProfileLevel.HEVCProfileMain
@@ -187,17 +198,39 @@ class ComposeVideoEncoder(
 
         val canvas = surface.lockHardwareCanvas()
 
-        if (isDark) {
-            canvas.drawColor(0xFF1E2937.toInt())
+        // --- Render Background ---
+        if (canvasBackgroundBrush != null) {
+            val composeCanvas = ComposeCanvas(canvas)
+            val composePaint = ComposePaint()
+            canvasBackgroundBrush.applyTo(
+                Size(videoWidth.toFloat(), videoHeight.toFloat()),
+                composePaint,
+                1f
+            )
+            composeCanvas.drawRect(
+                left = 0f,
+                top = 0f,
+                right = videoWidth.toFloat(),
+                bottom = videoHeight.toFloat(),
+                paint = composePaint
+            )
+        } else if (canvasBackgroundColor != null) {
+            canvas.drawColor(canvasBackgroundColor.toArgb())
         } else {
-            canvas.drawColor(android.graphics.Color.WHITE)
-            val tintPaint = android.graphics.Paint().apply {
-                color = themePrimaryColorInt
-                alpha = 25
+            // Original Theme-based fallbacks if no custom canvas layout styling is set
+            if (isDark) {
+                canvas.drawColor(0xFF1E2937.toInt())
+            } else {
+                canvas.drawColor(android.graphics.Color.WHITE)
+                val tintPaint = android.graphics.Paint().apply {
+                    color = themePrimaryColorInt
+                    alpha = 25
+                }
+                canvas.drawRect(0f, 0f, videoWidth.toFloat(), videoHeight.toFloat(), tintPaint)
             }
-            canvas.drawRect(0f, 0f, videoWidth.toFloat(), videoHeight.toFloat(), tintPaint)
         }
 
+        // --- Render Elements / Overlay History ---
         val paint = android.graphics.Paint()
         frameHistory.forEachIndexed { index, histBitmap ->
             val distanceFromCurrent = frameHistory.size - 1 - index

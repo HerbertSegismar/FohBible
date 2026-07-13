@@ -11,18 +11,19 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.fountofhopedotorg.fohbible.Screen
-import com.fountofhopedotorg.fohbible.gfx_creator.getElementDisplayName
 import com.fountofhopedotorg.fohbible.data.BibleData
-import com.fountofhopedotorg.fohbible.data.CanvasKeyframe
 import com.fountofhopedotorg.fohbible.data.CanvasElement
+import com.fountofhopedotorg.fohbible.data.CanvasKeyframe
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.GradientConfig
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.data.Testament
+import com.fountofhopedotorg.fohbible.gfx_creator.getElementDisplayName
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
 import com.fountofhopedotorg.fohbible.utils.InteractiveModalUtils
 import kotlinx.coroutines.Dispatchers
@@ -102,6 +103,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         "nm9.jpg", "nm10.jpg", "nm11.jpg", "nm12.jpg", "nm13.jpg", "nm14.jpg",
         "om1.jpg", "om2.jpg", "om3.jpg", "om4.jpg", "om5.jpg"
     )
+
+    var canvasBackgroundColor by mutableStateOf<Color?>(null)
+    var canvasBackgroundBrush by mutableStateOf<Brush?>(null)
 
     val animatorGradientPairs = mutableStateMapOf<String, GradientConfig>()
     var animatorCanvasElements = mutableStateListOf<CanvasElement>()
