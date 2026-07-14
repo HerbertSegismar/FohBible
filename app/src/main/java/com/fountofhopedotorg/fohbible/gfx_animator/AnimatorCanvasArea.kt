@@ -77,23 +77,15 @@ fun AnimatorCanvasArea(
                             val py = tapOffset.y
                             val w = target.width
                             val h = target.height
-
-                            // 1. Shift to the element’s transform origin (current pivot)
                             val dx = px - target.offset.x - target.pivotX * w
                             val dy = py - target.offset.y - target.pivotY * h
-
-                            // 2. Inverse rotation
                             val rad = target.rotation * (PI / 180.0).toFloat()
                             val cosA = cos(rad)
                             val sinA = sin(rad)
                             val u = dx * cosA + dy * sinA
                             val v = -dx * sinA + dy * cosA
-
-                            // 3. Inverse scale and add back the current pivot
                             val localX = if (target.scaleX != 0f) u / target.scaleX + target.pivotX * w else 0f
                             val localY = if (target.scaleY != 0f) v / target.scaleY + target.pivotY * h else 0f
-
-                            // 4. Normalize without clamping – allows pivots outside the element
                             val normX = localX / w
                             val normY = localY / h
 

@@ -1309,9 +1309,9 @@ fun KeyframeAnimationDialog(
                         ) {
                             ParameterSlider("X", xInput, { xInput = it }, xMin..xMax, "px")
                             ParameterSlider("Y", yInput, { yInput = it }, yMin..yMax, "px")
-                            ParameterSlider("SX", scaleXInput, { scaleXInput = it }, 0.1f..25f, "",
+                            ParameterSlider("SX", scaleXInput, { scaleXInput = it }, 0.05f..25f, "",
                                 { String.format(Locale.US, "%.2f", it) })
-                            ParameterSlider("SY", scaleYInput, { scaleYInput = it }, 0.1f..25f, "",
+                            ParameterSlider("SY", scaleYInput, { scaleYInput = it }, 0.05f..25f, "",
                                 { String.format(Locale.US, "%.2f", it) })
                             ParameterSlider("Rot", rotationInput, { rotationInput = it }, -360f..360f, "°",
                                 { String.format(Locale.US, "%.1f", it) })
@@ -1362,9 +1362,9 @@ fun KeyframeAnimationDialog(
                         )
                         ParameterSlider("X", xInput, { xInput = it }, xMin..xMax, "px")
                         ParameterSlider("Y", yInput, { yInput = it }, yMin..yMax, "px")
-                        ParameterSlider("SX", scaleXInput, { scaleXInput = it }, 0.1f..25f, "",
+                        ParameterSlider("SX", scaleXInput, { scaleXInput = it }, 0.05f..25f, "",
                             { String.format(Locale.US, "%.2f", it) })
-                        ParameterSlider("SY", scaleYInput, { scaleYInput = it }, 0.1f..25f, "",
+                        ParameterSlider("SY", scaleYInput, { scaleYInput = it }, 0.05f..25f, "",
                             { String.format(Locale.US, "%.2f", it) })
                         ParameterSlider("Rot", rotationInput, { rotationInput = it }, -360f..360f, "°",
                             { String.format(Locale.US, "%.1f", it) })

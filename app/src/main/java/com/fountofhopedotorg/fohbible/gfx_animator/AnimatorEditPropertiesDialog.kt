@@ -146,7 +146,7 @@ fun AnimatorEditPropertiesDialog(
                             value = editScaleX,
                             onValueChange = { newValue ->
                                 val parsed = newValue.toFloatOrNull()
-                                if (parsed != null && parsed in 0.1f..25f) {
+                                if (parsed != null && parsed in 0.05f..25f) {
                                     editScaleX = newValue
                                     if (proportionalEnabled) {
                                         editScaleY = newValue
@@ -155,7 +155,7 @@ fun AnimatorEditPropertiesDialog(
                                     editScaleX = newValue
                                 }
                             },
-                            label = { Text("Scale X (0.1 – 25)") },
+                            label = { Text("Scale X (0.05 – 25)") },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                         )
@@ -163,7 +163,7 @@ fun AnimatorEditPropertiesDialog(
                             value = editScaleY,
                             onValueChange = { newValue ->
                                 val parsed = newValue.toFloatOrNull()
-                                if (parsed != null && parsed in 0.1f..25f) {
+                                if (parsed != null && parsed in 0.05f..25f) {
                                     editScaleY = newValue
                                     if (proportionalEnabled) {
                                         editScaleX = newValue
@@ -172,7 +172,7 @@ fun AnimatorEditPropertiesDialog(
                                     editScaleY = newValue
                                 }
                             },
-                            label = { Text("Scale Y (0.1 – 25)") },
+                            label = { Text("Scale Y (0.05 – 25)") },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                         )

@@ -13,9 +13,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.CropSquare
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Image
@@ -125,19 +125,19 @@ fun AnimatorToolbar(
             modifier = itemButtonSize,
             onClick = { onAddShape("Square") }
         ) {
-            SquareShape(modifier = Modifier.size(20.dp))
+            SquareShape(modifier = Modifier.size(16.dp))
         }
         ShapeSelectionCard(
             modifier = itemButtonSize,
             onClick = { onAddShape("Circle") }
         ) {
-            CircleShape(modifier = Modifier.size(20.dp))
+            CircleShape(modifier = Modifier.size(18.dp))
         }
         ShapeSelectionCard(
             modifier = itemButtonSize,
             onClick = { onAddShape("Triangle") }
         ) {
-            TriangleShape(modifier = Modifier.size(20.dp))
+            TriangleShape(modifier = Modifier.size(18.dp))
         }
         ShapeSelectionCard(
             modifier = itemButtonSize,
@@ -145,14 +145,14 @@ fun AnimatorToolbar(
         ) {
             PolygonShape(
                 points = pentagonPoints,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(18.dp)
             )
         }
         ShapeSelectionCard(
             modifier = itemButtonSize,
             onClick = { onAddShape("Line") }
         ) {
-            LineShape(modifier = Modifier.size(20.dp))
+            LineShape(modifier = Modifier.size(14.dp))
         }
         ShapeSelectionCard(
             modifier = itemButtonSize,
@@ -161,7 +161,7 @@ fun AnimatorToolbar(
             Icon(
                 imageVector = Icons.Default.ShapeLine,
                 contentDescription = "Custom Polygon",
-                modifier = standardIconSize,
+                modifier = Modifier.size(16.dp),
                 tint = getRandomColor().copy(0.8f)
             )
         }
@@ -319,7 +319,7 @@ fun AnimatorToolbar(
             onClick = onToggleFullScreen
         ) {
             Icon(
-                modifier = standardIconSize,
+                modifier = Modifier.size(24.dp),
                 imageVector = if (isFullScreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
                 contentDescription = if (isFullScreen) "Exit Fullscreen" else "Enter Fullscreen",
                 tint = fullscreenIconColor
@@ -331,9 +331,9 @@ fun AnimatorToolbar(
             onClick = onCanvasSettingsClick
         ) {
             Icon(
-                imageVector = Icons.Default.CropSquare,   // or Icons.Default.Settings
+                imageVector = Icons.Default.AspectRatio,
                 contentDescription = "Canvas Settings",
-                modifier = standardIconSize,
+                modifier = Modifier.size(18.dp),
                 tint = canvasSizeIconColor
             )
         }
