@@ -17,6 +17,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -37,8 +42,17 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.fountofhopedotorg.fohbible.color_wheel.ColorWheelDialog
 import com.fountofhopedotorg.fohbible.data.GradientConfig
+import com.fountofhopedotorg.fohbible.utils.availableFontFamilies
 import java.util.Locale
 
+/**
+ * Safely parses a float string, accepting both '.' and ',' as decimal separators.
+ */
+private fun parseFloatSafe(value: String): Float {
+    return value.replace(',', '.').toFloatOrNull() ?: 0f
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AnimatorEditPropertiesDialog(
     show: Boolean,
@@ -57,6 +71,9 @@ fun AnimatorEditPropertiesDialog(
     initialBorderThickness: Float = 2f,
     initialBorderColor: Color? = null,
     initialGradientConfig: GradientConfig? = null,
+    initialFontFamily: String? = null,
+    initialTextAlign: String? = null,
+    isTextElement: Boolean = false,
     onDismiss: () -> Unit,
     onApply: (
         elementId: String,
@@ -71,11 +88,14 @@ fun AnimatorEditPropertiesDialog(
         shadowOffsetY: Float,
         borderThickness: Float,
         borderColor: Color?,
-        gradientConfig: GradientConfig?
+        gradientConfig: GradientConfig?,
+        fontFamily: String?,
+        textAlign: String?
     ) -> Unit
 ) {
     if (show && elementId != null) {
         key(elementId) {
+            // Existing state
             val normalizedInitialRotation = remember(true, initialRotation) {
                 val degrees = initialRotation.toDoubleOrNull() ?: 0.0
                 ((degrees % 360) + 360) % 360
@@ -101,6 +121,10 @@ fun AnimatorEditPropertiesDialog(
                 mutableStateOf(initialGradientConfig)
             }
 
+            // New state for font and alignment
+            var editFontFamily by remember(show, initialFontFamily) { mutableStateOf(initialFontFamily ?: "system") }
+            var editTextAlign by remember(show, initialTextAlign) { mutableStateOf(initialTextAlign ?: "Center") }
+
             val scrollState = rememberScrollState()
 
             AlertDialog(
@@ -111,6 +135,7 @@ fun AnimatorEditPropertiesDialog(
                         modifier = Modifier.verticalScroll(scrollState),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        // --- Position ---
                         OutlinedTextField(
                             value = editX,
                             onValueChange = { editX = it },
@@ -126,6 +151,7 @@ fun AnimatorEditPropertiesDialog(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                         )
 
+                        // --- Proportional scaling toggle ---
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
@@ -142,6 +168,7 @@ fun AnimatorEditPropertiesDialog(
                             )
                         }
 
+                        // --- Scale ---
                         OutlinedTextField(
                             value = editScaleX,
                             onValueChange = { newValue ->
@@ -177,6 +204,7 @@ fun AnimatorEditPropertiesDialog(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                         )
 
+                        // --- Rotation ---
                         OutlinedTextField(
                             value = editRotation,
                             onValueChange = { editRotation = it },
@@ -185,6 +213,7 @@ fun AnimatorEditPropertiesDialog(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                         )
 
+                        // --- Color ---
                         OutlinedTextField(
                             value = " ",
                             onValueChange = {},
@@ -204,6 +233,7 @@ fun AnimatorEditPropertiesDialog(
                             }
                         )
 
+                        // --- Shadow ---
                         Text("Shadow", style = MaterialTheme.typography.titleSmall)
 
                         OutlinedTextField(
@@ -244,6 +274,7 @@ fun AnimatorEditPropertiesDialog(
                             )
                         }
 
+                        // --- Border ---
                         Text("Border", style = MaterialTheme.typography.titleSmall)
 
                         OutlinedTextField(
@@ -272,6 +303,66 @@ fun AnimatorEditPropertiesDialog(
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                         )
+
+                        // --- Text Style (Font & Alignment) – SHOWN ONLY FOR TEXT ELEMENTS ---
+                        if (isTextElement) {
+                            Text("Text Style", style = MaterialTheme.typography.titleSmall)
+
+                            var fontExpanded by remember { mutableStateOf(false) }
+                            ExposedDropdownMenuBox(
+                                expanded = fontExpanded,
+                                onExpandedChange = { fontExpanded = it }
+                            ) {
+                                OutlinedTextField(
+                                    value = editFontFamily,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("Font") },
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = fontExpanded) },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true),
+                                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = fontExpanded,
+                                    onDismissRequest = { fontExpanded = false }
+                                ) {
+                                    availableFontFamilies.forEach { font ->
+                                        DropdownMenuItem(
+                                            text = { Text(font) },
+                                            onClick = {
+                                                editFontFamily = font
+                                                fontExpanded = false
+                                            },
+                                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                                        )
+                                    }
+                                }
+                            }
+
+                            Text("Alignment")
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                val alignments = listOf("Left", "Center", "Right")
+                                alignments.forEach { align ->
+                                    TextButton(
+                                        onClick = { editTextAlign = align },
+                                        modifier = Modifier
+                                            .background(
+                                                if (editTextAlign == align) MaterialTheme.colorScheme.primaryContainer
+                                                else Color.Transparent,
+                                                RoundedCornerShape(4.dp)
+                                            )
+                                    ) {
+                                        Text(
+                                            align,
+                                            color = if (editTextAlign == align) MaterialTheme.colorScheme.onPrimaryContainer
+                                            else MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 },
                 confirmButton = {
@@ -282,9 +373,12 @@ fun AnimatorEditPropertiesDialog(
                         } catch (_: NumberFormatException) { 0.0 }
                         val rotationToApply = rotationValue.toString()
                         val shadowColor = editShadowColor
-                        val shadowOffsetX = editShadowOffsetX.toFloatOrNull() ?: 0f
-                        val shadowOffsetY = editShadowOffsetY.toFloatOrNull() ?: 0f
-                        val borderThickness = editBorderThickness.toFloatOrNull() ?: 0f
+
+                        // FIX: Use the safe parser that accepts both '.' and ',' as decimal separators
+                        val shadowOffsetX = parseFloatSafe(editShadowOffsetX)
+                        val shadowOffsetY = parseFloatSafe(editShadowOffsetY)
+                        val borderThickness = parseFloatSafe(editBorderThickness)
+
                         val borderColor = editBorderColor
 
                         onApply(
@@ -300,7 +394,9 @@ fun AnimatorEditPropertiesDialog(
                             shadowOffsetY,
                             borderThickness,
                             borderColor,
-                            editGradientConfig
+                            editGradientConfig,
+                            editFontFamily,
+                            editTextAlign
                         )
                     }) { Text("Apply") }
                 },
@@ -309,6 +405,7 @@ fun AnimatorEditPropertiesDialog(
                 }
             )
 
+            // Color pickers
             if (showEditColorPicker) {
                 ColorWheelDialog(
                     onDismissRequest = { showEditColorPicker = false },

@@ -279,7 +279,9 @@ data class CanvasElement(
     val startTimeMs: Long = 0L,
     val endTimeMs: Long = Long.MAX_VALUE,
     val pivotX: Float = 0.5f,
-    val pivotY: Float = 0.5f
+    val pivotY: Float = 0.5f,
+    val fontFamily: String? = null,
+    val textAlign: String? = null,
 )
 
 data class BezierNode(

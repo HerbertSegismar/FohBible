@@ -152,7 +152,7 @@ fun CanvasArea(
                                 isPivotPlacementActive = isPivotPlacementActive,
                                 isActivePivotTarget = isPivotPlacementActive && pivotTargetId == element.id,
                                 onPlacePivotLocal = onPlacePivotLocal,
-                                gradientConfig = gradientConfig   // Pass gradient
+                                gradientConfig = gradientConfig
                             )
                             element.content.startsWith("Image:") -> CanvasImageItem(
                                 element = element,

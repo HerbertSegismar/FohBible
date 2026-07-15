@@ -787,13 +787,13 @@ fun AnimatorScreen() {
 
                 Spacer(modifier = Modifier.width(10.dp))
 
-                // Right panel – now fully handled by AnimatorCanvasElementsPanel
+                // Right panel – fully handled by AnimatorCanvasElementsPanel
                 Column(
                     modifier = Modifier
                         .weight(0.8f)
                         .fillMaxHeight()
                         .padding(top = 20.dp)
-                        .verticalScroll(rememberScrollState())   // outer scroll for whole panel
+                        .verticalScroll(rememberScrollState())
                 ) {
                     AnimatorCanvasElementsPanel(
                         elements = viewModel.animatorCanvasElements,
@@ -854,21 +854,22 @@ fun AnimatorScreen() {
                             )
                         },
                         onEditProperties = { element ->
+                            val isText = !element.content.startsWith("Shape:") && !element.content.startsWith("Image:")
                             viewModel.animatorEditPropertiesElementId = element.id
                             viewModel.animatorEditX = element.offset.x.toString()
                             viewModel.animatorEditY = element.offset.y.toString()
                             viewModel.animatorEditScaleX = element.scaleX.toString()
                             viewModel.animatorEditScaleY = element.scaleY.toString()
                             viewModel.animatorEditRotation = element.rotation.toString()
-                            viewModel.animatorEditColorForDialog = if (!element.content.startsWith("Shape:") && !element.content.startsWith("Image:"))
-                                element.textColor ?: Color.Black
-                            else
-                                element.backgroundColor
+                            viewModel.animatorEditColorForDialog = if (isText) element.textColor ?: Color.Black else element.backgroundColor
                             viewModel.animatorEditShadowColorForDialog = element.shadowColor
                             viewModel.animatorEditShadowOffsetX = element.shadowOffsetX
                             viewModel.animatorEditShadowOffsetY = element.shadowOffsetY
                             viewModel.animatorEditBorderThickness = element.borderThickness
                             viewModel.animatorEditBorderColorForDialog = element.borderColor
+                            viewModel.animatorEditFontFamily = element.fontFamily ?: "system"
+                            viewModel.animatorEditTextAlign = element.textAlign ?: "Center"
+                            viewModel.animatorEditIsTextElement = isText   // NEW
                             viewModel.animatorShowEditPropertiesDialog = true
                         },
                         onAnimateKeyframes = { element ->
@@ -905,7 +906,6 @@ fun AnimatorScreen() {
                             viewModel.animatorGroupRenameText = currentName
                         },
                         gradientConfigs = viewModel.animatorGradientPairs,
-                        // --- new parameters for inline toggle ---
                         isFineTunerMode = isFineTunerMode,
                         onToggleFineTunerMode = { isFineTunerMode = !isFineTunerMode },
                         viewModel = viewModel,
@@ -1119,7 +1119,7 @@ fun AnimatorScreen() {
 
                 Spacer(Modifier.height(12.dp))
 
-                // Bottom panel – fully handled by the panel
+                // Bottom panel
                 Column(
                     modifier = Modifier
                         .weight(0.25f)
@@ -1185,21 +1185,22 @@ fun AnimatorScreen() {
                             )
                         },
                         onEditProperties = { element ->
+                            val isText = !element.content.startsWith("Shape:") && !element.content.startsWith("Image:")
                             viewModel.animatorEditPropertiesElementId = element.id
                             viewModel.animatorEditX = element.offset.x.toString()
                             viewModel.animatorEditY = element.offset.y.toString()
                             viewModel.animatorEditScaleX = element.scaleX.toString()
                             viewModel.animatorEditScaleY = element.scaleY.toString()
                             viewModel.animatorEditRotation = element.rotation.toString()
-                            viewModel.animatorEditColorForDialog = if (!element.content.startsWith("Shape:") && !element.content.startsWith("Image:"))
-                                element.textColor ?: Color.Black
-                            else
-                                element.backgroundColor
+                            viewModel.animatorEditColorForDialog = if (isText) element.textColor ?: Color.Black else element.backgroundColor
                             viewModel.animatorEditShadowColorForDialog = element.shadowColor
                             viewModel.animatorEditShadowOffsetX = element.shadowOffsetX
                             viewModel.animatorEditShadowOffsetY = element.shadowOffsetY
                             viewModel.animatorEditBorderThickness = element.borderThickness
                             viewModel.animatorEditBorderColorForDialog = element.borderColor
+                            viewModel.animatorEditFontFamily = element.fontFamily ?: "system"
+                            viewModel.animatorEditTextAlign = element.textAlign ?: "Center"
+                            viewModel.animatorEditIsTextElement = isText   // NEW
                             viewModel.animatorShowEditPropertiesDialog = true
                         },
                         onAnimateKeyframes = { element ->
@@ -1236,7 +1237,6 @@ fun AnimatorScreen() {
                             viewModel.animatorGroupRenameText = currentName
                         },
                         gradientConfigs = viewModel.animatorGradientPairs,
-                        // --- new parameters for inline toggle ---
                         isFineTunerMode = isFineTunerMode,
                         onToggleFineTunerMode = { isFineTunerMode = !isFineTunerMode },
                         viewModel = viewModel,
@@ -1248,7 +1248,6 @@ fun AnimatorScreen() {
         }
     }
 
-    // --- Dialog code remains unchanged ---
     when (val dialog = viewModel.animatorDialogType) {
         is AnimatorDialogType.Edit -> {
             AnimatorEditElementDialog(
@@ -1488,6 +1487,9 @@ fun AnimatorScreen() {
         initialBorderThickness = viewModel.animatorEditBorderThickness,
         initialBorderColor = viewModel.animatorEditBorderColorForDialog,
         initialGradientConfig = existingGradient,
+        initialFontFamily = viewModel.animatorEditFontFamily,
+        initialTextAlign = viewModel.animatorEditTextAlign,
+        isTextElement = viewModel.animatorEditIsTextElement,   // NEW – controls visibility
         onDismiss = {
             viewModel.animatorShowEditPropertiesDialog = false
             viewModel.animatorEditPropertiesElementId = null
@@ -1495,7 +1497,7 @@ fun AnimatorScreen() {
         onApply = { id, x, y, scaleX, scaleY, rot, color,
                     shadowColor, shadowOffsetX, shadowOffsetY,
                     borderThickness, borderColor,
-                    gradientConfig ->
+                    gradientConfig, fontFamily, textAlign ->
             val currentElement = viewModel.animatorCanvasElements.find { it.id == id }
             if (currentElement != null) {
                 val isText = !currentElement.content.startsWith("Shape:") && !currentElement.content.startsWith("Image:")
@@ -1516,6 +1518,14 @@ fun AnimatorScreen() {
                     borderThickness = borderThickness,
                     borderColor = borderColor
                 )
+                // Apply font and alignment directly
+                val idx = viewModel.animatorCanvasElements.indexOfFirst { it.id == id }
+                if (idx != -1) {
+                    viewModel.animatorCanvasElements[idx] = currentElement.copy(
+                        fontFamily = fontFamily,
+                        textAlign = textAlign
+                    )
+                }
                 if (gradientConfig != null) {
                     viewModel.animatorGradientPairs[id] = gradientConfig
                     viewModel.updateAnimatorElementColor(id, gradientConfig.startColor)

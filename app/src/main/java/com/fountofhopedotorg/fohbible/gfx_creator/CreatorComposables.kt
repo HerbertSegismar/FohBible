@@ -86,6 +86,7 @@ import com.fountofhopedotorg.fohbible.data.BezierNodeData
 import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.GradientConfig
 import com.fountofhopedotorg.fohbible.gfx_animator.PivotHandle
+import com.fountofhopedotorg.fohbible.utils.getFontFamily
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.absoluteValue
@@ -996,6 +997,13 @@ fun CanvasTextItem(
     isPivotPlacementActive: Boolean = false,
     isActivePivotTarget: Boolean = false
 ) {
+    val fontFamily = getFontFamily(element.fontFamily ?: "system")
+    val textAlignment = when (element.textAlign) {
+        "Left"   -> TextAlign.Left
+        "Right"  -> TextAlign.Right
+        "Center" -> TextAlign.Center
+        else     -> TextAlign.Center
+    }
     val density = LocalDensity.current.density
     var offset by remember(element.offset) { mutableStateOf(element.offset) }
     var baseSize by remember { mutableStateOf(IntSize.Zero) }
@@ -1024,7 +1032,6 @@ fun CanvasTextItem(
                 }
                 .onSizeChanged { baseSize = it }
                 .then(
-                    // Disable interactions while placing a pivot
                     if (!isLocked && !isPivotPlacementActive) {
                         Modifier
                             .pointerInput(Unit) {
@@ -1070,7 +1077,6 @@ fun CanvasTextItem(
                         val oldW = currentWidth
                         val oldH = currentHeight
                         if ((newW - oldW).absoluteValue > 1f || (newH - oldH).absoluteValue > 1f) {
-                            // Keep the pivot point stationary in screen space
                             val px = element.pivotX
                             val py = element.pivotY
                             val deltaOffsetX = px * (oldW - newW)
@@ -1090,91 +1096,104 @@ fun CanvasTextItem(
                         )
                     } else null
 
-                    if (element.borderThickness > 0f && element.borderColor != null) {
+                    val borderColor = element.borderColor
+                    val hasBorder = element.borderThickness > 0f && borderColor != null && borderColor.alpha > 0f
+
+                    val commonModifier = Modifier
+                        .padding(lockedPadding)
+                        .widthIn(max = lockedMaxWidth)
+
+                    val baseTextStyle = TextStyle(
+                        fontSize = lockedFontSize,
+                        fontFamily = fontFamily,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = textAlignment
+                    )
+
+                    // LAYER 1: Dedicated Shadow Layer
+                    // Draws a solid text behind everything purely to cast a clean shadow.
+                    val needsDedicatedShadow = textShadow != null && (hasBorder || gradientConfig != null)
+                    if (needsDedicatedShadow) {
                         Text(
                             text = element.content,
-                            color = element.borderColor,
-                            fontSize = lockedFontSize,
-                            fontWeight = FontWeight.Medium,
-                            textAlign = TextAlign.Center,
-                            style = TextStyle(
-                                shadow = textShadow,
+                            color = element.textColor ?: Color.Black,
+                            style = baseTextStyle.copy(shadow = textShadow),
+                            modifier = commonModifier
+                        )
+                    }
+
+                    // LAYER 2: Border Layer
+                    // Stroked outline that expands outwards
+                    if (hasBorder) {
+                        Text(
+                            text = element.content,
+                            color = borderColor,
+                            style = baseTextStyle.copy(
                                 drawStyle = Stroke(
                                     width = element.borderThickness,
                                     join = StrokeJoin.Round
                                 )
                             ),
-                            modifier = Modifier
-                                .padding(lockedPadding)
-                                .widthIn(max = lockedMaxWidth)
+                            modifier = commonModifier
                         )
                     }
 
+                    // LAYER 3: Base Fill Text (Solid or Gradient Mask)
                     if (gradientConfig != null) {
                         Box(
                             modifier = Modifier
-                                .padding(lockedPadding)
-                                .widthIn(max = lockedMaxWidth)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                                    .drawWithContent {
-                                        drawRect(
-                                            brush = Brush.linearGradient(
-                                                colors = listOf(gradientConfig.startColor, gradientConfig.endColor),
-                                                start = Offset(
-                                                    gradientConfig.startOffset.x * size.width,
-                                                    gradientConfig.startOffset.y * size.height
-                                                ),
-                                                end = Offset(
-                                                    gradientConfig.endOffset.x * size.width,
-                                                    gradientConfig.endOffset.y * size.height
-                                                )
+                                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                                .drawWithContent {
+                                    drawRect(
+                                        brush = Brush.linearGradient(
+                                            colors = listOf(gradientConfig.startColor, gradientConfig.endColor),
+                                            start = Offset(
+                                                gradientConfig.startOffset.x * size.width,
+                                                gradientConfig.startOffset.y * size.height
+                                            ),
+                                            end = Offset(
+                                                gradientConfig.endOffset.x * size.width,
+                                                gradientConfig.endOffset.y * size.height
                                             )
                                         )
-                                        val paint = Paint().apply {
-                                            xfermode = PorterDuffXfermode(
-                                                PorterDuff.Mode.DST_IN
-                                            )
-                                        }
-                                        drawContext.canvas.nativeCanvas.saveLayer(
-                                            RectF(0f, 0f, size.width, size.height),
-                                            paint
+                                    )
+                                    val paint = Paint().apply {
+                                        xfermode = PorterDuffXfermode(
+                                            PorterDuff.Mode.DST_IN
                                         )
-                                        drawContent()
-                                        drawContext.canvas.nativeCanvas.restore()
                                     }
-                            ) {
-                                Text(
-                                    text = element.content,
-                                    color = Color.White,
-                                    fontSize = lockedFontSize,
-                                    fontWeight = FontWeight.Medium,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
+                                    drawContext.canvas.nativeCanvas.saveLayer(
+                                        RectF(0f, 0f, size.width, size.height),
+                                        paint
+                                    )
+                                    drawContent()
+                                    drawContext.canvas.nativeCanvas.restore()
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = element.content,
+                                color = Color.Black, // Mask shape, color is overridden by gradient
+                                style = baseTextStyle,
+                                modifier = commonModifier // Added here directly so dimensions identically match layers 1 & 2
+                            )
                         }
                     } else {
+                        // Solid Fill text
                         Text(
                             text = element.content,
                             color = element.textColor ?: Color.Black,
-                            fontSize = lockedFontSize,
-                            fontWeight = FontWeight.Medium,
-                            textAlign = TextAlign.Center,
-                            style = TextStyle(
-                                shadow = if (element.borderThickness > 0f && element.borderColor != null) null else textShadow
+                            style = baseTextStyle.copy(
+                                // Don't draw shadow again if we already drew Layer 1
+                                shadow = if (needsDedicatedShadow) null else textShadow
                             ),
-                            modifier = Modifier
-                                .padding(lockedPadding)
-                                .widthIn(max = lockedMaxWidth)
+                            modifier = commonModifier
                         )
                     }
                 }
             }
         }
 
-        // Handles and PivotHandle (hidden during pivot placement except the pivot indicator)
         if (isSelected && baseSize != IntSize.Zero && !isLocked) {
             if (!isPivotPlacementActive) {
                 CanvasItemSelectionHandles(

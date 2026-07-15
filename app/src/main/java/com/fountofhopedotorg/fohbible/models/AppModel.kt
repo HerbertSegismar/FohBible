@@ -34,6 +34,9 @@ import java.util.UUID
 
 @Stable
 class AppViewModel(application: Application) : AndroidViewModel(application) {
+    var animatorEditIsTextElement by mutableStateOf(false)
+    var animatorEditFontFamily: String? by mutableStateOf(null)
+    var animatorEditTextAlign: String? by mutableStateOf(null)
     var canvasElements = mutableStateListOf<CanvasElement>()
     var animatorKeyframeTargetElementId: String? by mutableStateOf(null)
     var animatorShowKeyframeDialog: Boolean by mutableStateOf(false)

@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.graphics.Canvas as ComposeCanvas
 import androidx.compose.ui.graphics.Paint as ComposePaint
+import com.fountofhopedotorg.fohbible.utils.Fonts
 
 private fun adjustOffsetForPivotChange(
     element: CanvasElement,
@@ -67,6 +68,17 @@ private fun adjustOffsetForPivotChange(
     val deltaOffsetY = rotatedDy - dy
 
     return element.offset + Offset(deltaOffsetX, deltaOffsetY)
+}
+
+private suspend fun preloadFonts(
+    elements: List<CanvasElement>,
+    context: Context
+): Map<String, Typeface> = withContext(Dispatchers.IO) {
+    val neededFonts = elements
+        .filter { !it.content.startsWith("Shape:") && !it.content.startsWith("Image:") }
+        .map { it.fontFamily ?: "system" }
+        .toSet()
+    neededFonts.associateWith { Fonts.getTypeface(context.applicationContext, it) }
 }
 
 
@@ -132,9 +144,9 @@ fun drawFrame(
     canvasWidth: Float,
     canvasHeight: Float,
     canvasBackgroundColor: ComposeColor?,
-    canvasBackgroundBrush: Brush?
+    canvasBackgroundBrush: Brush?,
+    fontCache: Map<String, Typeface> = emptyMap()
 ) {
-    // 1. Draw the background cleanly without deprecated functions
     if (canvasBackgroundBrush != null) {
         val composeCanvas = ComposeCanvas(canvas)
         val composePaint = ComposePaint()
@@ -153,7 +165,6 @@ fun drawFrame(
         canvas.drawColor(android.graphics.Color.WHITE)
     }
 
-    // 2. Draw Elements
     for (element in elements) {
         if (timeMs < element.startTimeMs || timeMs > element.endTimeMs) {
             continue
@@ -170,7 +181,6 @@ fun drawFrame(
             ease(rawProgress, next.tweenType, customPoints ?: emptyList())
         } else rawProgress
 
-        // Interpolated values
         val startX = prev?.x ?: element.offset.x
         val startY = prev?.y ?: element.offset.y
         val endX   = next?.x ?: element.offset.x
@@ -195,13 +205,11 @@ fun drawFrame(
             else -> gradientConfigs[element.id]
         }
 
-        // Pivot interpolation (needed for both elliptical and linear paths)
         val originalPivotX = element.pivotX
         val originalPivotY = element.pivotY
         val newPivotX = lerp(prev?.pivotX ?: element.pivotX, next?.pivotX ?: element.pivotX, progress)
         val newPivotY = lerp(prev?.pivotY ?: element.pivotY, next?.pivotY ?: element.pivotY, progress)
 
-        // Determine position (posX, posY) – possibly with elliptical arc
         var posX: Float
         var posY: Float
 
@@ -314,7 +322,6 @@ fun drawFrame(
             scale(scaleX, scaleY)
             translate(-pivotOffsetX, -pivotOffsetY)
 
-            // Shadow
             if (element.shadowColor != null && element.shadowColor.alpha > 0f) {
                 val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                     this.color = element.shadowColor.toArgb()
@@ -326,12 +333,12 @@ fun drawFrame(
                 ) {
                     drawElementContent(
                         this, element, widthPx, heightPx, shadowPaint, gradient = null,
-                        density = scaleFactor, imageBitmaps = imageBitmaps, strokeOnly = false
+                        density = scaleFactor, imageBitmaps = imageBitmaps, strokeOnly = false,
+                        fontCache = fontCache
                     )
                 }
             }
 
-            // Border
             if (element.borderThickness > 0f && element.borderColor != null) {
                 val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                     this.color = element.borderColor.toArgb()
@@ -342,11 +349,11 @@ fun drawFrame(
                 }
                 drawElementContent(
                     this, element, widthPx, heightPx, borderPaint, gradient = null,
-                    density = scaleFactor, imageBitmaps = imageBitmaps, strokeOnly = true
+                    density = scaleFactor, imageBitmaps = imageBitmaps, strokeOnly = true,
+                    fontCache = fontCache
                 )
             }
 
-            // Fill / gradient
             val fillColorInt: Int = color?.toArgb()
                 ?: if (element.content.startsWith("Shape:") || element.content.startsWith("Image:"))
                     element.backgroundColor.toArgb()
@@ -371,7 +378,8 @@ fun drawFrame(
 
             drawElementContent(
                 this, element, widthPx, heightPx, fillPaint, gradient = gradient,
-                density = scaleFactor, imageBitmaps = imageBitmaps, strokeOnly = false
+                density = scaleFactor, imageBitmaps = imageBitmaps, strokeOnly = false,
+                fontCache = fontCache
             )
         }
     }
@@ -397,6 +405,7 @@ suspend fun nativeExport(
     val exportHeight = (canvasHeightPx * resolutionMultiplier).toInt()
 
     val imageBitmaps = loadImageBitmaps(elements, context, exportWidth.toFloat(), exportHeight.toFloat())
+    val fontCache = preloadFonts(elements, context)
 
     val frameDurationMs = 1000L / frameRate
     var currentTimeMs = startTimeMs
@@ -423,7 +432,8 @@ suspend fun nativeExport(
                     canvasWidth = exportWidth.toFloat(),
                     canvasHeight = exportHeight.toFloat(),
                     canvasBackgroundColor = canvasBackgroundColor,
-                    canvasBackgroundBrush = canvasBackgroundBrush
+                    canvasBackgroundBrush = canvasBackgroundBrush,
+                    fontCache = fontCache
                 )
                 surface.unlockCanvasAndPost(canvas)
             }
@@ -603,6 +613,34 @@ class OffscreenVideoEncoder(
     }
 }
 
+private fun wrapTextToLines(text: String, paint: Paint, maxWidth: Float): List<String> {
+    val result = mutableListOf<String>()
+    val paragraphs = text.split("\n")
+
+    for (paragraph in paragraphs) {
+        if (paragraph.isEmpty()) {
+            result.add("")               // preserve empty lines from consecutive \n
+            continue
+        }
+        var start = 0
+        val len = paragraph.length
+        while (start < len) {
+            val count = paint.breakText(paragraph, start, len, true, maxWidth, null)
+            var end = start + count
+            if (end < len) {
+                // try to break at a space
+                val spaceIdx = paragraph.lastIndexOf(' ', end)
+                if (spaceIdx in (start + 1) until end) {
+                    end = spaceIdx
+                }
+            }
+            result.add(paragraph.substring(start, end).trim())
+            start = if (end < len && paragraph[end] == ' ') end + 1 else end
+        }
+    }
+    return result
+}
+
 @RequiresApi(Build.VERSION_CODES.O)
 private fun drawElementContent(
     canvas: Canvas,
@@ -613,30 +651,68 @@ private fun drawElementContent(
     gradient: GradientConfig?,
     density: Float,
     imageBitmaps: Map<String, Bitmap>,
-    strokeOnly: Boolean
+    strokeOnly: Boolean,
+    fontCache: Map<String, Typeface> = emptyMap()
 ) {
     val isText = !element.content.startsWith("Shape:") && !element.content.startsWith("Image:")
     if (isText) {
-        if (strokeOnly) {
-            val strokePaint = Paint(paint)
-            strokePaint.style = Paint.Style.STROKE
-            strokePaint.strokeWidth = element.borderThickness * density
-            canvas.drawText(element.content, 0f, 60f * density, strokePaint)
-        } else {
-            val textPaint = Paint(paint).apply {
-                textSize = 60f * density
-                typeface = Typeface.DEFAULT
-                textAlign = Paint.Align.LEFT
+        val fontFamily = element.fontFamily ?: "system"
+        val typeface = fontCache[fontFamily] ?: Typeface.DEFAULT
+
+        val textPaint = Paint(paint).apply {
+            textSize = 60f * density
+            this.typeface = typeface
+        }
+
+        // Wrap text to fit width, respecting newlines
+        val lines = wrapTextToLines(element.content, textPaint, width)
+        if (lines.isEmpty()) return
+
+        val lineHeight = textPaint.fontSpacing
+        val totalTextHeight = lineHeight * lines.size
+        val fm = textPaint.fontMetrics
+        val startY = (height - totalTextHeight) / 2f + (-fm.ascent)
+
+        for ((index, line) in lines.withIndex()) {
+            val lineWidth = textPaint.measureText(line)
+
+            val x: Float = when (element.textAlign) {
+                "Left" -> {
+                    textPaint.textAlign = Paint.Align.LEFT
+                    (width - lineWidth) / 2f
+                }
+                "Right" -> {
+                    textPaint.textAlign = Paint.Align.RIGHT
+                    width - (width - lineWidth) / 2f
+                }
+                "Center", null -> {
+                    textPaint.textAlign = Paint.Align.CENTER
+                    width / 2f
+                }
+                else -> {
+                    textPaint.textAlign = Paint.Align.CENTER
+                    width / 2f
+                }
             }
-            if (gradient != null && paint.shader == null) {
-                textPaint.shader = LinearGradient(
-                    0f, 0f, width, height,
-                    gradient.startColor.toArgb(),
-                    gradient.endColor.toArgb(),
-                    Shader.TileMode.CLAMP
-                )
+            val y = startY + index * lineHeight
+
+            if (strokeOnly) {
+                val strokePaint = Paint(textPaint).apply {
+                    style = Paint.Style.STROKE
+                    strokeWidth = element.borderThickness * density
+                }
+                canvas.drawText(line, x, y, strokePaint)
+            } else {
+                if (gradient != null && paint.shader == null) {
+                    textPaint.shader = LinearGradient(
+                        0f, 0f, width, height,
+                        gradient.startColor.toArgb(),
+                        gradient.endColor.toArgb(),
+                        Shader.TileMode.CLAMP
+                    )
+                }
+                canvas.drawText(line, x, y, textPaint)
             }
-            canvas.drawText(element.content, 0f, textPaint.textSize, textPaint)
         }
         return
     }
