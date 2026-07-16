@@ -602,8 +602,7 @@ class OffscreenVideoEncoder(
 
             outputFile.delete()
             return uri.toString()
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (_: Exception) {
             return null
         }
     }
@@ -619,7 +618,7 @@ private fun wrapTextToLines(text: String, paint: Paint, maxWidth: Float): List<S
 
     for (paragraph in paragraphs) {
         if (paragraph.isEmpty()) {
-            result.add("")               // preserve empty lines from consecutive \n
+            result.add("")
             continue
         }
         var start = 0
@@ -628,7 +627,6 @@ private fun wrapTextToLines(text: String, paint: Paint, maxWidth: Float): List<S
             val count = paint.breakText(paragraph, start, len, true, maxWidth, null)
             var end = start + count
             if (end < len) {
-                // try to break at a space
                 val spaceIdx = paragraph.lastIndexOf(' ', end)
                 if (spaceIdx in (start + 1) until end) {
                     end = spaceIdx
@@ -664,7 +662,6 @@ private fun drawElementContent(
             this.typeface = typeface
         }
 
-        // Wrap text to fit width, respecting newlines
         val lines = wrapTextToLines(element.content, textPaint, width)
         if (lines.isEmpty()) return
 
@@ -674,16 +671,15 @@ private fun drawElementContent(
         val startY = (height - totalTextHeight) / 2f + (-fm.ascent)
 
         for ((index, line) in lines.withIndex()) {
-            val lineWidth = textPaint.measureText(line)
 
             val x: Float = when (element.textAlign) {
                 "Left" -> {
                     textPaint.textAlign = Paint.Align.LEFT
-                    (width - lineWidth) / 2f
+                    0f
                 }
                 "Right" -> {
                     textPaint.textAlign = Paint.Align.RIGHT
-                    width - (width - lineWidth) / 2f
+                    width
                 }
                 "Center", null -> {
                     textPaint.textAlign = Paint.Align.CENTER

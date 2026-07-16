@@ -250,7 +250,14 @@ fun KeyframeAnimationDialog(
                     scaleX = element.scaleX, scaleY = element.scaleY,
                     rotation = element.rotation,
                     color = initialElementColor,
-                    gradientConfig = null
+                    gradientConfig = null,
+                    shadowColor = element.shadowColor,
+                    shadowOffsetX = element.shadowOffsetX,
+                    shadowOffsetY = element.shadowOffsetY,
+                    borderThickness = element.borderThickness,
+                    borderColor = element.borderColor,
+                    fontFamily = element.fontFamily,
+                    textAlign = element.textAlign
                 )
             )
         }
@@ -546,7 +553,14 @@ fun KeyframeAnimationDialog(
                         pivotY = pivotYState,
                         ellipticalRotation = ellipticalRotation,
                         ellipticalStretchX = ellipticalStretchX,
-                        ellipticalStretchY = ellipticalStretchY
+                        ellipticalStretchY = ellipticalStretchY,
+                        shadowColor = element.shadowColor,
+                        shadowOffsetX = element.shadowOffsetX,
+                        shadowOffsetY = element.shadowOffsetY,
+                        borderThickness = element.borderThickness,
+                        borderColor = element.borderColor,
+                        fontFamily = element.fontFamily,
+                        textAlign = element.textAlign
                     )
                 )
 

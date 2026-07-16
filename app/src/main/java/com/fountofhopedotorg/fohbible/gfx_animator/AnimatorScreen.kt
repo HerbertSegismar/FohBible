@@ -72,6 +72,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.UUID
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -878,7 +879,13 @@ fun AnimatorScreen() {
                         },
                         onToggleVisibility = { viewModel.toggleAnimatorVisibility(it) },
                         onToggleLock = { viewModel.toggleAnimatorLock(it) },
-                        onDuplicate = { viewModel.addToAnimatorCanvas(CanvasElement(content = it.content)) },
+                        onDuplicate = { element ->
+                            val newId = UUID.randomUUID().toString()
+                            viewModel.addToAnimatorCanvas(element.copy(id = newId))
+                            viewModel.animatorGradientPairs[element.id]?.let { existingGradient ->
+                                viewModel.animatorGradientPairs[newId] = existingGradient.copy()
+                            }
+                        },
                         onDelete = {
                             val idx = viewModel.animatorCanvasElements.indexOf(it)
                             if (idx != -1) viewModel.removeFromAnimatorCanvas(idx)
@@ -958,7 +965,6 @@ fun AnimatorScreen() {
             )
         }
     } else {
-        // Portrait layout
         Row(modifier = Modifier.fillMaxSize().padding(top = 20.dp)) {
 
             Column(
@@ -1119,7 +1125,6 @@ fun AnimatorScreen() {
 
                 Spacer(Modifier.height(12.dp))
 
-                // Bottom panel
                 Column(
                     modifier = Modifier
                         .weight(0.25f)
@@ -1200,7 +1205,7 @@ fun AnimatorScreen() {
                             viewModel.animatorEditBorderColorForDialog = element.borderColor
                             viewModel.animatorEditFontFamily = element.fontFamily ?: "system"
                             viewModel.animatorEditTextAlign = element.textAlign ?: "Center"
-                            viewModel.animatorEditIsTextElement = isText   // NEW
+                            viewModel.animatorEditIsTextElement = isText
                             viewModel.animatorShowEditPropertiesDialog = true
                         },
                         onAnimateKeyframes = { element ->
@@ -1209,7 +1214,13 @@ fun AnimatorScreen() {
                         },
                         onToggleVisibility = { viewModel.toggleAnimatorVisibility(it) },
                         onToggleLock = { viewModel.toggleAnimatorLock(it) },
-                        onDuplicate = { viewModel.addToAnimatorCanvas(CanvasElement(content = it.content)) },
+                        onDuplicate = { element ->
+                            val newId = UUID.randomUUID().toString()
+                            viewModel.addToAnimatorCanvas(element.copy(id = newId))
+                            viewModel.animatorGradientPairs[element.id]?.let { existingGradient ->
+                                viewModel.animatorGradientPairs[newId] = existingGradient.copy()
+                            }
+                        },
                         onDelete = {
                             val idx = viewModel.animatorCanvasElements.indexOf(it)
                             if (idx != -1) viewModel.removeFromAnimatorCanvas(idx)
@@ -1489,7 +1500,7 @@ fun AnimatorScreen() {
         initialGradientConfig = existingGradient,
         initialFontFamily = viewModel.animatorEditFontFamily,
         initialTextAlign = viewModel.animatorEditTextAlign,
-        isTextElement = viewModel.animatorEditIsTextElement,   // NEW – controls visibility
+        isTextElement = viewModel.animatorEditIsTextElement,
         onDismiss = {
             viewModel.animatorShowEditPropertiesDialog = false
             viewModel.animatorEditPropertiesElementId = null
@@ -1498,34 +1509,31 @@ fun AnimatorScreen() {
                     shadowColor, shadowOffsetX, shadowOffsetY,
                     borderThickness, borderColor,
                     gradientConfig, fontFamily, textAlign ->
-            val currentElement = viewModel.animatorCanvasElements.find { it.id == id }
-            if (currentElement != null) {
-                val isText = !currentElement.content.startsWith("Shape:") && !currentElement.content.startsWith("Image:")
-                viewModel.applyAllAnimatorElementProperties(
-                    id = id,
-                    x = x.toFloatOrNull() ?: currentElement.offset.x,
-                    y = y.toFloatOrNull() ?: currentElement.offset.y,
-                    width = currentElement.width,
-                    height = currentElement.height,
-                    rotation = rot.toFloatOrNull() ?: currentElement.rotation,
-                    scaleX = scaleX.toFloatOrNull()?.coerceIn(0.05f, 25f) ?: currentElement.scaleX,
-                    scaleY = scaleY.toFloatOrNull()?.coerceIn(0.05f, 25f) ?: currentElement.scaleY,
-                    color = color,
-                    isTextElement = isText,
+
+            val index = viewModel.animatorCanvasElements.indexOfFirst { it.id == id }
+            if (index != -1) {
+                val element = viewModel.animatorCanvasElements[index]
+                val isText = !element.content.startsWith("Shape:") && !element.content.startsWith("Image:")
+
+                viewModel.animatorCanvasElements[index] = element.copy(
+                    offset = Offset(
+                        x.toFloatOrNull() ?: element.offset.x,
+                        y.toFloatOrNull() ?: element.offset.y
+                    ),
+                    scaleX = scaleX.toFloatOrNull()?.coerceIn(0.05f, 25f) ?: element.scaleX,
+                    scaleY = scaleY.toFloatOrNull()?.coerceIn(0.05f, 25f) ?: element.scaleY,
+                    rotation = rot.toFloatOrNull() ?: element.rotation,
+                    backgroundColor = if (isText) element.backgroundColor else color,
+                    textColor = if (isText) color else element.textColor,
                     shadowColor = shadowColor,
                     shadowOffsetX = shadowOffsetX,
                     shadowOffsetY = shadowOffsetY,
                     borderThickness = borderThickness,
-                    borderColor = borderColor
+                    borderColor = borderColor,
+                    fontFamily = fontFamily,
+                    textAlign = textAlign
                 )
-                // Apply font and alignment directly
-                val idx = viewModel.animatorCanvasElements.indexOfFirst { it.id == id }
-                if (idx != -1) {
-                    viewModel.animatorCanvasElements[idx] = currentElement.copy(
-                        fontFamily = fontFamily,
-                        textAlign = textAlign
-                    )
-                }
+
                 if (gradientConfig != null) {
                     viewModel.animatorGradientPairs[id] = gradientConfig
                     viewModel.updateAnimatorElementColor(id, gradientConfig.startColor)
@@ -1533,6 +1541,7 @@ fun AnimatorScreen() {
                     viewModel.animatorGradientPairs.remove(id)
                 }
             }
+
             viewModel.animatorShowEditPropertiesDialog = false
             viewModel.animatorEditPropertiesElementId = null
         }

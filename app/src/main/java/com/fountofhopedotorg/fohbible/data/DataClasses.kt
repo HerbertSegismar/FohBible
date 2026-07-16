@@ -400,7 +400,14 @@ data class CanvasKeyframe(
     val pivotY: Float? = null,
     val ellipticalRotation: Boolean = false,
     val ellipticalStretchX: Float = 1f,
-    val ellipticalStretchY: Float = 0.5f
+    val ellipticalStretchY: Float = 0.5f,
+    val shadowColor: Color? = null,
+    val shadowOffsetX: Float? = null,
+    val shadowOffsetY: Float? = null,
+    val borderThickness: Float? = null,
+    val borderColor: Color? = null,
+    val fontFamily: String? = null,
+    val textAlign: String? = null
 )
 
 sealed class DisplayItem {
