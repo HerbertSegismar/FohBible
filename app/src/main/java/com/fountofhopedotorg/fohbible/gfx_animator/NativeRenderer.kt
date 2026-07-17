@@ -145,7 +145,8 @@ fun drawFrame(
     canvasHeight: Float,
     canvasBackgroundColor: ComposeColor?,
     canvasBackgroundBrush: Brush?,
-    fontCache: Map<String, Typeface> = emptyMap()
+    fontCache: Map<String, Typeface> = emptyMap(),
+    textSizePxBase: Float = 60f   // <-- base text size in pixels (at 1× resolution)
 ) {
     if (canvasBackgroundBrush != null) {
         val composeCanvas = ComposeCanvas(canvas)
@@ -219,7 +220,6 @@ fun drawFrame(
             val distance = (endOffset - startOffset).getDistance()
             val rotStart = prev.rotation ?: element.rotation
             val rotEnd = next.rotation ?: element.rotation
-            val currentRot = rotation   // already interpolated
             val stretchX = next.ellipticalStretchX.coerceAtLeast(0.01f)
             val stretchY = next.ellipticalStretchY.coerceAtLeast(0.01f)
 
@@ -244,7 +244,7 @@ fun drawFrame(
                     val rBase = mag / (stretchX * stretchY)
                     val a = rBase * stretchX
                     val b = rBase * stretchY
-                    val currentRotRad = currentRot * (PI.toFloat() / 180f)
+                    val currentRotRad = rotation * (PI.toFloat() / 180f)
                     val phi = startPhi + (currentRotRad - rotStartRad)
                     val cosR = cos(currentRotRad)
                     val sinR = sin(currentRotRad)
@@ -276,7 +276,7 @@ fun drawFrame(
                 val py = newPivotY * element.height
                 val localCx = element.width / 2f - px
                 val localCy = element.height / 2f - py
-                val rotRad = currentRot * (PI.toFloat() / 180f)
+                val rotRad = rotation * (PI.toFloat() / 180f)
                 val cosR = cos(rotRad)
                 val sinR = sin(rotRad)
                 val dx = localCx * cosR - localCy * sinR
@@ -313,6 +313,9 @@ fun drawFrame(
             posY = adjustedOffset.y * scaleFactor
         }
 
+        // --- calculate the final text size for this export resolution ---
+        val textSizePx = textSizePxBase * scaleFactor
+
         canvas.withTranslation(posX, posY) {
             val pivotOffsetX = newPivotX * widthPx
             val pivotOffsetY = newPivotY * heightPx
@@ -334,7 +337,7 @@ fun drawFrame(
                     drawElementContent(
                         this, element, widthPx, heightPx, shadowPaint, gradient = null,
                         density = scaleFactor, imageBitmaps = imageBitmaps, strokeOnly = false,
-                        fontCache = fontCache
+                        fontCache = fontCache, textSizePx = textSizePx
                     )
                 }
             }
@@ -350,7 +353,7 @@ fun drawFrame(
                 drawElementContent(
                     this, element, widthPx, heightPx, borderPaint, gradient = null,
                     density = scaleFactor, imageBitmaps = imageBitmaps, strokeOnly = true,
-                    fontCache = fontCache
+                    fontCache = fontCache, textSizePx = textSizePx
                 )
             }
 
@@ -379,7 +382,7 @@ fun drawFrame(
             drawElementContent(
                 this, element, widthPx, heightPx, fillPaint, gradient = gradient,
                 density = scaleFactor, imageBitmaps = imageBitmaps, strokeOnly = false,
-                fontCache = fontCache
+                fontCache = fontCache, textSizePx = textSizePx
             )
         }
     }
@@ -407,6 +410,9 @@ suspend fun nativeExport(
     val imageBitmaps = loadImageBitmaps(elements, context, exportWidth.toFloat(), exportHeight.toFloat())
     val fontCache = preloadFonts(elements, context)
 
+    // Correct base text size: 60sp * fontScale = physical pixels at 1× resolution
+    val textSizePxBase = 60f * context.resources.configuration.fontScale
+
     val frameDurationMs = 1000L / frameRate
     var currentTimeMs = startTimeMs
     val totalDurationMs = (endTimeMs - startTimeMs).coerceAtLeast(1L)
@@ -433,7 +439,8 @@ suspend fun nativeExport(
                     canvasHeight = exportHeight.toFloat(),
                     canvasBackgroundColor = canvasBackgroundColor,
                     canvasBackgroundBrush = canvasBackgroundBrush,
-                    fontCache = fontCache
+                    fontCache = fontCache,
+                    textSizePxBase = textSizePxBase   // pass the correct base size
                 )
                 surface.unlockCanvasAndPost(canvas)
             }
@@ -650,19 +657,24 @@ private fun drawElementContent(
     density: Float,
     imageBitmaps: Map<String, Bitmap>,
     strokeOnly: Boolean,
-    fontCache: Map<String, Typeface> = emptyMap()
+    fontCache: Map<String, Typeface> = emptyMap(),
+    textSizePx: Float = 60f   // <-- final text size in pixels for this export resolution
 ) {
     val isText = !element.content.startsWith("Shape:") && !element.content.startsWith("Image:")
     if (isText) {
         val fontFamily = element.fontFamily ?: "system"
         val typeface = fontCache[fontFamily] ?: Typeface.DEFAULT
 
+        // Exactly match the Compose preview: 24dp padding, 750dp max width
+        val paddingPx = 24f * density
+        val maxWidthPx = 750f * density
+
         val textPaint = Paint(paint).apply {
-            textSize = 60f * density
+            textSize = textSizePx   // correct, already scaled for export resolution
             this.typeface = typeface
         }
 
-        val lines = wrapTextToLines(element.content, textPaint, width)
+        val lines = wrapTextToLines(element.content, textPaint, maxWidthPx)
         if (lines.isEmpty()) return
 
         val lineHeight = textPaint.fontSpacing
@@ -671,15 +683,14 @@ private fun drawElementContent(
         val startY = (height - totalTextHeight) / 2f + (-fm.ascent)
 
         for ((index, line) in lines.withIndex()) {
-
             val x: Float = when (element.textAlign) {
                 "Left" -> {
                     textPaint.textAlign = Paint.Align.LEFT
-                    0f
+                    paddingPx
                 }
                 "Right" -> {
                     textPaint.textAlign = Paint.Align.RIGHT
-                    width
+                    width - paddingPx
                 }
                 "Center", null -> {
                     textPaint.textAlign = Paint.Align.CENTER
@@ -701,7 +712,7 @@ private fun drawElementContent(
             } else {
                 if (gradient != null && paint.shader == null) {
                     textPaint.shader = LinearGradient(
-                        0f, 0f, width, height,
+                        paddingPx, 0f, width - paddingPx, height,
                         gradient.startColor.toArgb(),
                         gradient.endColor.toArgb(),
                         Shader.TileMode.CLAMP

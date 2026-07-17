@@ -1110,8 +1110,6 @@ fun CanvasTextItem(
                         textAlign = textAlignment
                     )
 
-                    // LAYER 1: Dedicated Shadow Layer
-                    // Draws a solid text behind everything purely to cast a clean shadow.
                     val needsDedicatedShadow = textShadow != null && (hasBorder || gradientConfig != null)
                     if (needsDedicatedShadow) {
                         Text(
@@ -1122,8 +1120,6 @@ fun CanvasTextItem(
                         )
                     }
 
-                    // LAYER 2: Border Layer
-                    // Stroked outline that expands outwards
                     if (hasBorder) {
                         Text(
                             text = element.content,
@@ -1138,7 +1134,6 @@ fun CanvasTextItem(
                         )
                     }
 
-                    // LAYER 3: Base Fill Text (Solid or Gradient Mask)
                     if (gradientConfig != null) {
                         Box(
                             modifier = Modifier
@@ -1173,18 +1168,16 @@ fun CanvasTextItem(
                         ) {
                             Text(
                                 text = element.content,
-                                color = Color.Black, // Mask shape, color is overridden by gradient
+                                color = Color.Black,
                                 style = baseTextStyle,
-                                modifier = commonModifier // Added here directly so dimensions identically match layers 1 & 2
+                                modifier = commonModifier
                             )
                         }
                     } else {
-                        // Solid Fill text
                         Text(
                             text = element.content,
                             color = element.textColor ?: Color.Black,
                             style = baseTextStyle.copy(
-                                // Don't draw shadow again if we already drew Layer 1
                                 shadow = if (needsDedicatedShadow) null else textShadow
                             ),
                             modifier = commonModifier

@@ -384,7 +384,6 @@ fun AnimatorScreen() {
             val width = graphicsLayer.size.width
             val height = graphicsLayer.size.height
 
-            // ✅ Updated: Background color and brush are passed here for Screen Recording
             encoder.value = ComposeVideoEncoder(
                 context = context,
                 width = width,
@@ -788,7 +787,6 @@ fun AnimatorScreen() {
 
                 Spacer(modifier = Modifier.width(10.dp))
 
-                // Right panel – fully handled by AnimatorCanvasElementsPanel
                 Column(
                     modifier = Modifier
                         .weight(0.8f)
@@ -870,7 +868,7 @@ fun AnimatorScreen() {
                             viewModel.animatorEditBorderColorForDialog = element.borderColor
                             viewModel.animatorEditFontFamily = element.fontFamily ?: "system"
                             viewModel.animatorEditTextAlign = element.textAlign ?: "Center"
-                            viewModel.animatorEditIsTextElement = isText   // NEW
+                            viewModel.animatorEditIsTextElement = isText
                             viewModel.animatorShowEditPropertiesDialog = true
                         },
                         onAnimateKeyframes = { element ->
