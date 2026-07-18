@@ -20,8 +20,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -52,6 +50,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.color_wheel.ColorWheelDialog
+import com.fountofhopedotorg.fohbible.data.AnimatorTab
 import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.GradientConfig
@@ -163,7 +162,7 @@ fun AnimatorScreen() {
     var isPivotPlacementActive by remember { mutableStateOf(false) }
     var pivotTargetId by remember { mutableStateOf<String?>(null) }
 
-    var isFineTunerMode by remember { mutableStateOf(false) }
+    var activeTab by remember { mutableStateOf(AnimatorTab.LAYERS) }
 
     val cancelExport: () -> Unit = remember { { isPlayingAnimation = false } }
 
@@ -303,8 +302,6 @@ fun AnimatorScreen() {
             highlightIcon = theme.primaryColor
         )
     }
-
-    val mainScrollState = rememberScrollState()
 
     val onSaveVideo: () -> Unit = remember {
         {
@@ -792,7 +789,6 @@ fun AnimatorScreen() {
                         .weight(0.8f)
                         .fillMaxHeight()
                         .padding(top = 20.dp)
-                        .verticalScroll(rememberScrollState())
                 ) {
                     AnimatorCanvasElementsPanel(
                         elements = viewModel.animatorCanvasElements,
@@ -911,10 +907,30 @@ fun AnimatorScreen() {
                             viewModel.animatorGroupRenameText = currentName
                         },
                         gradientConfigs = viewModel.animatorGradientPairs,
-                        isFineTunerMode = isFineTunerMode,
-                        onToggleFineTunerMode = { isFineTunerMode = !isFineTunerMode },
+
+                        // --- New unified tab control ---
+                        activeTab = activeTab,
+                        onTabSelected = { activeTab = it },
+                        // --- End of tab control ---
+
                         viewModel = viewModel,
-                        fineTunerSelectedElementId = viewModel.animatorSelectedElementId
+                        fineTunerSelectedElementId = viewModel.animatorSelectedElementId,
+
+                        // Keyframe save callback (unchanged)
+                        onSaveKeyframes = { elementId, keyframes, startMs, endMs ->
+                            val index = viewModel.animatorCanvasElements.indexOfFirst { it.id == elementId }
+                            if (index != -1) {
+                                val existing = viewModel.animatorCanvasElements[index]
+                                viewModel.animatorCanvasElements[index] = existing.copy(
+                                    keyframes = keyframes,
+                                    startTimeMs = startMs,
+                                    endTimeMs = endMs
+                                )
+                            }
+                        },
+                        timeMultiplier = 1f,
+                        canvasWidth = canvasWidthPx,
+                        canvasHeight = canvasHeightPx
                     )
                 }
             }
@@ -1127,7 +1143,6 @@ fun AnimatorScreen() {
                     modifier = Modifier
                         .weight(0.25f)
                         .fillMaxWidth()
-                        .verticalScroll(mainScrollState)
                 ) {
                     AnimatorCanvasElementsPanel(
                         elements = viewModel.animatorCanvasElements,
@@ -1246,10 +1261,29 @@ fun AnimatorScreen() {
                             viewModel.animatorGroupRenameText = currentName
                         },
                         gradientConfigs = viewModel.animatorGradientPairs,
-                        isFineTunerMode = isFineTunerMode,
-                        onToggleFineTunerMode = { isFineTunerMode = !isFineTunerMode },
+
+                        // --- New unified tab control ---
+                        activeTab = activeTab,
+                        onTabSelected = { activeTab = it },
+                        // --- End of tab control ---
+
                         viewModel = viewModel,
-                        fineTunerSelectedElementId = viewModel.animatorSelectedElementId
+                        fineTunerSelectedElementId = viewModel.animatorSelectedElementId,
+
+                        onSaveKeyframes = { elementId, keyframes, startMs, endMs ->
+                            val index = viewModel.animatorCanvasElements.indexOfFirst { it.id == elementId }
+                            if (index != -1) {
+                                val existing = viewModel.animatorCanvasElements[index]
+                                viewModel.animatorCanvasElements[index] = existing.copy(
+                                    keyframes = keyframes,
+                                    startTimeMs = startMs,
+                                    endTimeMs = endMs
+                                )
+                            }
+                        },
+                        timeMultiplier = 1f,
+                        canvasWidth = canvasWidthPx,
+                        canvasHeight = canvasHeightPx
                     )
                     Spacer(Modifier.height(16.dp))
                 }

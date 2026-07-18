@@ -1,4 +1,4 @@
-package com.fountofhopedotorg.fohbible.gfx_animator
+package com.fountofhopedotorg.fohbible.data
 
 import android.content.res.Configuration.ORIENTATION_LANDSCAPE
 import androidx.compose.foundation.*
@@ -13,7 +13,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,76 +40,46 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import com.fountofhopedotorg.fohbible.color_wheel.ColorWheelDialog
-import com.fountofhopedotorg.fohbible.data.CanvasKeyframe
-import com.fountofhopedotorg.fohbible.data.CanvasElement
-import com.fountofhopedotorg.fohbible.data.GradientConfig
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.material3.HorizontalDivider
-import com.fountofhopedotorg.fohbible.data.EasingPoint
-import com.fountofhopedotorg.fohbible.data.TweenType
+import com.fountofhopedotorg.fohbible.gfx_animator.CustomEasingEditor
+import com.fountofhopedotorg.fohbible.gfx_animator.EllipticalRotationSection
+import com.fountofhopedotorg.fohbible.gfx_animator.GradientConfigNullableSaver
+import com.fountofhopedotorg.fohbible.gfx_animator.MAX_VISIBLE_DURATION_MS
+import com.fountofhopedotorg.fohbible.gfx_animator.formatPosition
+import com.fountofhopedotorg.fohbible.gfx_animator.formatRotation
+import com.fountofhopedotorg.fohbible.gfx_animator.formatScale
 import java.util.Locale
 
-val GradientConfigNullableSaver = Saver<GradientConfig?, String>(
-    save = { config ->
-        if (config != null) {
-            listOf(
-                config.startColor.toArgb(),
-                config.endColor.toArgb(),
-                config.startOffset.x,
-                config.startOffset.y,
-                config.endOffset.x,
-                config.endOffset.y
-            ).joinToString(",")
-        } else {
-            "NULL"
-        }
-    },
-    restore = { str ->
-        if (str == "NULL") null
-        else {
-            val parts = str.split(",").map { it.toFloatOrNull() ?: 0f }
-            if (parts.size < 6) null
-            else GradientConfig(
-                startColor = Color(parts[0].toInt()),
-                endColor = Color(parts[1].toInt()),
-                startOffset = Offset(parts[2], parts[3]),
-                endOffset = Offset(parts[4], parts[5])
-            )
-        }
-    }
-)
-
-const val MAX_VISIBLE_DURATION_MS = 10_000L
-
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun KeyframeAnimationDialog(
+fun KeyframeAnimationContent(
     element: CanvasElement?,
     allElements: List<CanvasElement>,
     onElementSelected: (CanvasElement) -> Unit,
-    onDismiss: () -> Unit,
-    onSaveKeyframes: (String, List<CanvasKeyframe>, Long, Long) -> Unit,
+    onCancel: () -> Unit,
+    onSave: (elementId: String, keyframes: List<CanvasKeyframe>, startMs: Long, endMs: Long) -> Unit,
     timeMultiplier: Float,
     initialGradientConfig: GradientConfig? = null,
     canvasWidth: Int,
     canvasHeight: Int
 ) {
-    var scrollOffsetSaved by rememberSaveable("timelineScroll") { mutableIntStateOf(0) }
-    var pivotXState by remember { mutableFloatStateOf(element?.pivotX ?: 0f) }
-    var pivotYState by remember { mutableFloatStateOf(element?.pivotY ?: 0f) }
+    if (element == null) return
 
-    var ellipticalRotation by rememberSaveable(element?.id) { mutableStateOf(false) }
-    var ellipticalStretchX by rememberSaveable(element?.id) { mutableFloatStateOf(1f) }
-    var ellipticalStretchY by rememberSaveable(element?.id) { mutableFloatStateOf(0.5f) }
+    var scrollOffsetSaved by rememberSaveable("timelineScroll") { mutableIntStateOf(0) }
+    var pivotXState by remember { mutableFloatStateOf(element.pivotX) }
+    var pivotYState by remember { mutableFloatStateOf(element.pivotY) }
+    var ellipticalRotation by rememberSaveable(element.id) { mutableStateOf(false) }
+    var ellipticalStretchX by rememberSaveable(element.id) { mutableFloatStateOf(1f) }
+    var ellipticalStretchY by rememberSaveable(element.id) { mutableFloatStateOf(0.5f) }
 
     val xMin = -0.05f * canvasWidth
     val xMax = 1.05f * canvasWidth
     val yMin = -0.05f * canvasHeight
     val yMax = 1.05f * canvasHeight
 
-    if (element == null) return
     fun storedToDisplay(storedMs: Long): Long = (storedMs / timeMultiplier).roundToInt().toLong()
     fun displayToStored(displayMs: Long): Long = (displayMs * timeMultiplier).roundToInt().toLong()
 
@@ -128,11 +97,10 @@ fun KeyframeAnimationDialog(
         mutableStateOf(effectiveInitialGradientConfig)
     }
     var editingKeyframeTimestamp by rememberSaveable(element.id) { mutableStateOf<Long?>(null) }
-
     var editingSegmentIndex by remember { mutableStateOf<Int?>(null) }
 
     var trimStartMs by rememberSaveable(element.id) { mutableLongStateOf(element.startTimeMs) }
-    var trimEndMs   by rememberSaveable(element.id) {
+    var trimEndMs by rememberSaveable(element.id) {
         mutableLongStateOf(if (element.endTimeMs == Long.MAX_VALUE) 5_000L else element.endTimeMs)
     }
 
@@ -178,29 +146,17 @@ fun KeyframeAnimationDialog(
         pivotYState = element.pivotY
     }
 
-    var xInput by rememberSaveable(element.id) {
-        mutableStateOf(formatPosition(element.offset.x))
-    }
-    var yInput by rememberSaveable(element.id) {
-        mutableStateOf(formatPosition(element.offset.y))
-    }
-    var scaleXInput by rememberSaveable(element.id) {
-        mutableStateOf(formatScale(element.scaleX))
-    }
-    var scaleYInput by rememberSaveable(element.id) {
-        mutableStateOf(formatScale(element.scaleY))
-    }
-    var rotationInput by rememberSaveable(element.id) {
-        mutableStateOf(formatRotation(element.rotation))
-    }
+    var xInput by rememberSaveable(element.id) { mutableStateOf(formatPosition(element.offset.x)) }
+    var yInput by rememberSaveable(element.id) { mutableStateOf(formatPosition(element.offset.y)) }
+    var scaleXInput by rememberSaveable(element.id) { mutableStateOf(formatScale(element.scaleX)) }
+    var scaleYInput by rememberSaveable(element.id) { mutableStateOf(formatScale(element.scaleY)) }
+    var rotationInput by rememberSaveable(element.id) { mutableStateOf(formatRotation(element.rotation)) }
 
     var pickedColorArgb by rememberSaveable(element.id) {
         mutableLongStateOf(initialElementColor.toArgb().toLong())
     }
 
-    var showColorDialog by rememberSaveable(element.id) {
-        mutableStateOf(false)
-    }
+    var showColorDialog by rememberSaveable(element.id) { mutableStateOf(false) }
 
     val pickedColor = Color(pickedColorArgb.toInt())
 
@@ -213,7 +169,7 @@ fun KeyframeAnimationDialog(
         { newElement ->
             val oldElement = currentElement
             if (newElement.id != oldElement.id) {
-                onSaveKeyframes(
+                onSave(
                     oldElement.id,
                     currentLocalKeyframes.sortedBy { it.timestampMs },
                     currentTrimStartMs,
@@ -308,6 +264,9 @@ fun KeyframeAnimationDialog(
         }
     }
 
+    // -------------------------------
+    // 2. Sub‑composables (unchanged)
+    // -------------------------------
     @Composable
     fun KeyframeListCompact() {
         if (localKeyframes.isEmpty()) {
@@ -955,6 +914,7 @@ fun KeyframeAnimationDialog(
                                     trackRectHeight
                                 )
                             )
+
                             var secTime = 0L
                             val secondsTickHeight = 6.dp.toPx()
                             while (secTime <= universalDurationMs) {
@@ -967,16 +927,10 @@ fun KeyframeAnimationDialog(
                                         strokeWidth = 1.5.dp.toPx()
                                     )
                                     val label = "${secTime / 1000}s"
-                                    val textLayoutResult = textMeasurer.measure(
-                                        text = label,
-                                        style = markerTextStyle
-                                    )
+                                    val textLayoutResult = textMeasurer.measure(text = label, style = markerTextStyle)
                                     val textX = x - textLayoutResult.size.width / 2f
                                     val textY = trackEndY - textLayoutResult.size.height - 2.dp.toPx()
-                                    drawText(
-                                        textLayoutResult = textLayoutResult,
-                                        topLeft = Offset(textX, textY)
-                                    )
+                                    drawText(textLayoutResult = textLayoutResult, topLeft = Offset(textX, textY))
                                 }
                                 secTime += 1000L
                             }
@@ -1063,8 +1017,7 @@ fun KeyframeAnimationDialog(
                             }
                         }
 
-                        val selectedTrackIndex =
-                            elements.indexOfFirst { it.id == selectedElement?.id }
+                        val selectedTrackIndex = elements.indexOfFirst { it.id == selectedElement?.id }
                         if (selectedTrackIndex >= 0) {
                             val trackTop = selectedTrackIndex * trackHeightPx
                             val trackBottom = trackTop + trackHeightPx - trackPaddingPx
@@ -1173,8 +1126,7 @@ fun KeyframeAnimationDialog(
                 var selectedType by remember(editingSegmentIndex) { mutableStateOf(laterKf.tweenType) }
                 var customPoints by remember(editingSegmentIndex) {
                     mutableStateOf(
-                        laterKf.customPoints
-                            ?: listOf(EasingPoint(x = 0f, y = 0f), EasingPoint(x = 1f, y = 1f))
+                        laterKf.customPoints ?: listOf(EasingPoint(x = 0f, y = 0f), EasingPoint(x = 1f, y = 1f))
                     )
                 }
 
@@ -1290,152 +1242,146 @@ fun KeyframeAnimationDialog(
         }
     }
 
+    // -------------------------------
+    // 3. Layout (exactly as before, but wrapped in a Column with a button row at the bottom)
+    // -------------------------------
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == ORIENTATION_LANDSCAPE
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 4.dp),
-        title = {},
-        text = {
-            val portraitScrollState = rememberScrollState()
-            val leftColumnScrollState = rememberScrollState()
-            val rightColumnScrollState = rememberScrollState()
+    val portraitScrollState = rememberScrollState()
+    val leftColumnScrollState = rememberScrollState()
+    val rightColumnScrollState = rememberScrollState()
 
-            Column(modifier = Modifier.fillMaxSize()) {
-                TimelineHeader()
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+    Column(modifier = Modifier.fillMaxSize()) {
+        TimelineHeader()
+        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
-                if (isLandscape) {
+        if (isLandscape) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .imePadding(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .weight(0.6f)
+                        .verticalScroll(leftColumnScrollState),
+                ) {
+                    UnifiedTimelineTrack(
+                        elements = allElements,
+                        selectedElement = element,
+                        onElementSelected = autoSaveAndSelect,
+                        universalDurationMs = universalDurationMs,
+                        scrollState = timelineScrollState
+                    )
+                }
+                Column(
+                    modifier = Modifier
+                        .weight(0.4f)
+                        .verticalScroll(rightColumnScrollState),
+                ) {
+                    ParameterSlider("X", xInput, { xInput = it }, xMin..xMax, "px")
+                    ParameterSlider("Y", yInput, { yInput = it }, yMin..yMax, "px")
+                    ParameterSlider("SX", scaleXInput, { scaleXInput = it }, 0.05f..25f, "",
+                        { String.format(Locale.US, "%.2f", it) })
+                    ParameterSlider("SY", scaleYInput, { scaleYInput = it }, 0.05f..25f, "",
+                        { String.format(Locale.US, "%.2f", it) })
+                    ParameterSlider("Rot", rotationInput, { rotationInput = it }, -360f..360f, "°",
+                        { String.format(Locale.US, "%.1f", it) })
+                    EllipticalRotationSection(
+                        isEnabled = ellipticalRotation,
+                        onToggle = { ellipticalRotation = it },
+                        stretchX = ellipticalStretchX,
+                        onStretchXChange = { ellipticalStretchX = it.coerceIn(0.1f, 10f) },
+                        stretchY = ellipticalStretchY,
+                        onStretchYChange = { ellipticalStretchY = it.coerceIn(0.1f, 10f) }
+                    )
+
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                            .imePadding(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Column(
-                            modifier = Modifier
-                                .weight(0.6f)
-                                .verticalScroll(leftColumnScrollState),
-                        ) {
-                            UnifiedTimelineTrack(
-                                elements = allElements,
-                                selectedElement = element,
-                                onElementSelected = autoSaveAndSelect,
-                                universalDurationMs = universalDurationMs,
-                                scrollState = timelineScrollState
-                            )
-                        }
-                        Column(
-                            modifier = Modifier
-                                .weight(0.4f)
-                                .verticalScroll(rightColumnScrollState),
-                        ) {
-                            ParameterSlider("X", xInput, { xInput = it }, xMin..xMax, "px")
-                            ParameterSlider("Y", yInput, { yInput = it }, yMin..yMax, "px")
-                            ParameterSlider("SX", scaleXInput, { scaleXInput = it }, 0.05f..25f, "",
-                                { String.format(Locale.US, "%.2f", it) })
-                            ParameterSlider("SY", scaleYInput, { scaleYInput = it }, 0.05f..25f, "",
-                                { String.format(Locale.US, "%.2f", it) })
-                            ParameterSlider("Rot", rotationInput, { rotationInput = it }, -360f..360f, "°",
-                                { String.format(Locale.US, "%.1f", it) })
-                            EllipticalRotationSection(
-                                isEnabled = ellipticalRotation,
-                                onToggle = { ellipticalRotation = it },
-                                stretchX = ellipticalStretchX,
-                                onStretchXChange = { ellipticalStretchX = it.coerceIn(0.1f, 10f) },
-                                stretchY = ellipticalStretchY,
-                                onStretchYChange = { ellipticalStretchY = it.coerceIn(0.1f, 10f) }
-                            )
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                            ) {
-                                ColorSwatch(modifier = Modifier.weight(1f))
-                                InsertUpdateButton(modifier = Modifier.height(33.dp))
-                            }
-                            Text("Keyframes", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 2.dp))
-                            KeyframeListCompact()
-                        }
+                        ColorSwatch(modifier = Modifier.weight(1f))
+                        InsertUpdateButton(modifier = Modifier.height(33.dp))
                     }
-                } else {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                            .imePadding()
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .verticalScroll(portraitScrollState),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            UnifiedTimelineTrack(
-                                elements = allElements,
-                                selectedElement = element,
-                                onElementSelected = autoSaveAndSelect,
-                                universalDurationMs = universalDurationMs,
-                                scrollState = timelineScrollState
-                            )
-                        }
-                        Text(
-                            if (editingKeyframeTimestamp != null) "Editing Keyframe" else "New Keyframe",
-                            style = MaterialTheme.typography.labelMedium
-                        )
-                        ParameterSlider("X", xInput, { xInput = it }, xMin..xMax, "px")
-                        ParameterSlider("Y", yInput, { yInput = it }, yMin..yMax, "px")
-                        ParameterSlider("SX", scaleXInput, { scaleXInput = it }, 0.05f..25f, "",
-                            { String.format(Locale.US, "%.2f", it) })
-                        ParameterSlider("SY", scaleYInput, { scaleYInput = it }, 0.05f..25f, "",
-                            { String.format(Locale.US, "%.2f", it) })
-                        ParameterSlider("Rot", rotationInput, { rotationInput = it }, -360f..360f, "°",
-                            { String.format(Locale.US, "%.1f", it) })
-                        EllipticalRotationSection(
-                            isEnabled = ellipticalRotation,
-                            onToggle = { ellipticalRotation = it },
-                            stretchX = ellipticalStretchX,
-                            onStretchXChange = { ellipticalStretchX = it.coerceIn(0.1f, 10f) },
-                            stretchY = ellipticalStretchY,
-                            onStretchYChange = { ellipticalStretchY = it.coerceIn(0.1f, 10f) }
-                        )
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth().padding(bottom = 6.dp)
-                        ) {
-                            ColorSwatch(modifier = Modifier.weight(1f))
-                            InsertUpdateButton(modifier = Modifier.height(30.dp))
-                        }
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                        Text("Keyframes", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp))
-                        KeyframeListCompact()
-                    }
+                    Text("Keyframes", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 2.dp))
+                    KeyframeListCompact()
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                onSaveKeyframes(
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .imePadding()
+                    .verticalScroll(portraitScrollState),
+            ) {
+                UnifiedTimelineTrack(
+                    elements = allElements,
+                    selectedElement = element,
+                    onElementSelected = autoSaveAndSelect,
+                    universalDurationMs = universalDurationMs,
+                    scrollState = timelineScrollState
+                )
+                Text(
+                    if (editingKeyframeTimestamp != null) "Editing Keyframe" else "New Keyframe",
+                    style = MaterialTheme.typography.labelMedium
+                )
+                ParameterSlider("X", xInput, { xInput = it }, xMin..xMax, "px")
+                ParameterSlider("Y", yInput, { yInput = it }, yMin..yMax, "px")
+                ParameterSlider("SX", scaleXInput, { scaleXInput = it }, 0.05f..25f, "",
+                    { String.format(Locale.US, "%.2f", it) })
+                ParameterSlider("SY", scaleYInput, { scaleYInput = it }, 0.05f..25f, "",
+                    { String.format(Locale.US, "%.2f", it) })
+                ParameterSlider("Rot", rotationInput, { rotationInput = it }, -360f..360f, "°",
+                    { String.format(Locale.US, "%.1f", it) })
+                EllipticalRotationSection(
+                    isEnabled = ellipticalRotation,
+                    onToggle = { ellipticalRotation = it },
+                    stretchX = ellipticalStretchX,
+                    onStretchXChange = { ellipticalStretchX = it.coerceIn(0.1f, 10f) },
+                    stretchY = ellipticalStretchY,
+                    onStretchYChange = { ellipticalStretchY = it.coerceIn(0.1f, 10f) }
+                )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)
+                ) {
+                    ColorSwatch(modifier = Modifier.weight(1f))
+                    InsertUpdateButton(modifier = Modifier.height(30.dp))
+                }
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                Text("Keyframes", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp))
+                KeyframeListCompact()
+            }
+        }
+
+        // Bottom button row – new
+        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextButton(onClick = onCancel) {
+                Text("Cancel")
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Button(onClick = {
+                onSave(
                     element.id,
                     localKeyframes.sortedBy { it.timestampMs },
                     trimStartMs,
                     trimEndMs
                 )
-                onDismiss()
             }) {
-                Text("Save")
+                Text("Save", color = Color.White)
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        },
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    )
+        }
+    }
 }

@@ -69,9 +69,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import com.fountofhopedotorg.fohbible.data.AnimatorTab
 import com.fountofhopedotorg.fohbible.data.CanvasElement
+import com.fountofhopedotorg.fohbible.data.CanvasKeyframe
 import com.fountofhopedotorg.fohbible.data.DisplayItem
 import com.fountofhopedotorg.fohbible.data.GradientConfig
+import com.fountofhopedotorg.fohbible.data.KeyframeAnimationContent
 import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.gfx_creator.ElementThumbnail
 import com.fountofhopedotorg.fohbible.gfx_creator.ReorderHandle
@@ -107,10 +110,19 @@ fun AnimatorCanvasElementsPanel(
     onRenameGroup: ((groupId: String, currentName: String) -> Unit)? = null,
     onAnimateKeyframes: ((CanvasElement) -> Unit)? = null,
     gradientConfigs: Map<String, GradientConfig> = emptyMap(),
-    isFineTunerMode: Boolean = false,
-    onToggleFineTunerMode: () -> Unit = {},
+
+    // --- Unified tab selection (replaces isFineTunerMode / isKeyframeMode) ---
+    activeTab: AnimatorTab = AnimatorTab.LAYERS,
+    onTabSelected: (AnimatorTab) -> Unit = {},
+
     viewModel: AppViewModel? = null,
-    fineTunerSelectedElementId: String? = null
+    fineTunerSelectedElementId: String? = null,
+
+    // Keyframe save callback
+    onSaveKeyframes: ((elementId: String, keyframes: List<CanvasKeyframe>, startMs: Long, endMs: Long) -> Unit)? = null,
+    timeMultiplier: Float = 1f,
+    canvasWidth: Int = 1000,
+    canvasHeight: Int = 1000
 ) {
     val groupedElements = elements.groupBy { it.groupId }
     val expandedGroups = remember { mutableStateMapOf<String, Boolean>() }
@@ -187,28 +199,37 @@ fun AnimatorCanvasElementsPanel(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            // --- Tabs row – clean, direct selection ---
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    "Elements",
-                    modifier = Modifier.clickable {
-                        if (isFineTunerMode) onToggleFineTunerMode()
-                    },
-                    color = if (!isFineTunerMode) themeColors.primary
+                    "Layers",
+                    modifier = Modifier.clickable { onTabSelected(AnimatorTab.LAYERS) },
+                    color = if (activeTab == AnimatorTab.LAYERS) themeColors.primary
                     else themeColors.textColor.copy(alpha = 0.3f),
                     style = MaterialTheme.typography.titleMedium
                 )
                 Spacer(Modifier.width(12.dp))
+
                 Text(
                     "Fine Tuner",
-                    modifier = Modifier.clickable {
-                        if (!isFineTunerMode) onToggleFineTunerMode()
-                    },
-                    color = if (isFineTunerMode) themeColors.primary
+                    modifier = Modifier.clickable { onTabSelected(AnimatorTab.FINE_TUNER) },
+                    color = if (activeTab == AnimatorTab.FINE_TUNER) themeColors.primary
+                    else themeColors.textColor.copy(alpha = 0.3f),
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Spacer(Modifier.width(12.dp))
+
+                Text(
+                    "Keyframe",
+                    modifier = Modifier.clickable { onTabSelected(AnimatorTab.KEYFRAME) },
+                    color = if (activeTab == AnimatorTab.KEYFRAME) themeColors.primary
                     else themeColors.textColor.copy(alpha = 0.3f),
                     style = MaterialTheme.typography.titleMedium
                 )
             }
-            if (!isFineTunerMode) {
+
+            // Collapse/Expand icon only for Layers tab
+            if (activeTab == AnimatorTab.LAYERS) {
                 Icon(
                     imageVector = if (showTree) Icons.Default.ArrowDropDown
                     else Icons.AutoMirrored.Filled.ArrowRight,
@@ -219,221 +240,253 @@ fun AnimatorCanvasElementsPanel(
             }
         }
 
-        if (isFineTunerMode) {
-            if (viewModel != null) {
-                FineTunerPanel(
-                    viewModel = viewModel,
-                    selectedElementId = fineTunerSelectedElementId,
-                    elements = elements
-                )
-            } else {
-                Text(
-                    "Fine Tuner unavailable",
-                    modifier = Modifier.padding(8.dp),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                )
+        // --- Content area based on the active tab ---
+        when (activeTab) {
+            AnimatorTab.KEYFRAME -> {
+                val activeElementId = selectedElementId ?: fineTunerSelectedElementId
+                val activeElement = elements.find { it.id == activeElementId }
+
+                if (activeElement != null) {
+                    KeyframeAnimationContent(
+                        element = activeElement,
+                        allElements = elements,
+                        onElementSelected = { onSingleSelect(it) },
+                        onCancel = { onTabSelected(AnimatorTab.LAYERS) },  // return to layers
+                        onSave = { id, keyframes, startMs, endMs ->
+                            onSaveKeyframes?.invoke(id, keyframes, startMs, endMs)
+                        },
+                        timeMultiplier = timeMultiplier,
+                        initialGradientConfig = gradientConfigs[activeElement.id],
+                        canvasWidth = canvasWidth,
+                        canvasHeight = canvasHeight
+                    )
+                } else {
+                    Text(
+                        "Select an element from Layers to animate.",
+                        modifier = Modifier.padding(8.dp),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                }
             }
-        } else {
-            AnimatedVisibility(visible = showTree) {
-                Column {
-                    if (displayItems.isEmpty()) {
-                        Text(
-                            "No elements on canvas yet.",
-                            modifier = Modifier.padding(vertical = 8.dp),
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                        )
-                    } else {
-                        var draggedDisplayIndex by remember { mutableStateOf<Int?>(null) }
-                        var dragOffset by remember { mutableFloatStateOf(0f) }
-                        val itemHeightPx = remember(density) { with(density) { 56.dp.toPx() } }
-                        val listState = rememberLazyListState()
 
-                        LazyColumn(
-                            state = listState,
-                            modifier = Modifier.heightIn(max = 500.dp)
-                        ) {
-                            items(
-                                count = displayItems.size,
-                                key = { index ->
-                                    when (val item = displayItems[index]) {
-                                        is DisplayItem.GroupHeader -> "header-${item.groupId}"
-                                        is DisplayItem.ElementItem -> item.element.id
-                                        is DisplayItem.ActionRow -> "action-row"
+            AnimatorTab.FINE_TUNER -> {
+                if (viewModel != null) {
+                    FineTunerPanel(
+                        viewModel = viewModel,
+                        selectedElementId = fineTunerSelectedElementId,
+                        elements = elements
+                    )
+                } else {
+                    Text(
+                        "Fine Tuner unavailable",
+                        modifier = Modifier.padding(8.dp),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                }
+            }
+
+            AnimatorTab.LAYERS -> {
+                AnimatedVisibility(visible = showTree) {
+                    Column {
+                        if (displayItems.isEmpty()) {
+                            Text(
+                                "No elements on canvas yet.",
+                                modifier = Modifier.padding(vertical = 8.dp),
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            )
+                        } else {
+                            var draggedDisplayIndex by remember { mutableStateOf<Int?>(null) }
+                            var dragOffset by remember { mutableFloatStateOf(0f) }
+                            val itemHeightPx = remember(density) { with(density) { 56.dp.toPx() } }
+                            val listState = rememberLazyListState()
+
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier.heightIn(max = 500.dp)
+                            ) {
+                                items(
+                                    count = displayItems.size,
+                                    key = { index ->
+                                        when (val item = displayItems[index]) {
+                                            is DisplayItem.GroupHeader -> "header-${item.groupId}"
+                                            is DisplayItem.ElementItem -> item.element.id
+                                            is DisplayItem.ActionRow -> "action-row"
+                                        }
                                     }
-                                }
-                            ) { displayIndex ->
-                                when (val displayItem = displayItems[displayIndex]) {
-                                    is DisplayItem.GroupHeader -> {
-                                        val isGroupSelected =
-                                            selectedElementId == displayItem.groupId ||
-                                                    selectedElementIds.contains(displayItem.groupId) ||
-                                                    elements.any {
-                                                        it.groupId == displayItem.groupId &&
-                                                                (it.id == selectedElementId || selectedElementIds.contains(
-                                                                    it.id
-                                                                ))
-                                                    }
+                                ) { displayIndex ->
+                                    when (val displayItem = displayItems[displayIndex]) {
+                                        is DisplayItem.GroupHeader -> {
+                                            val isGroupSelected =
+                                                selectedElementId == displayItem.groupId ||
+                                                        selectedElementIds.contains(displayItem.groupId) ||
+                                                        elements.any {
+                                                            it.groupId == displayItem.groupId &&
+                                                                    (it.id == selectedElementId || selectedElementIds.contains(
+                                                                        it.id
+                                                                    ))
+                                                        }
 
-                                        AnimatorGroupHeaderRow(
-                                            groupName = displayItem.groupName,
-                                            isExpanded = displayItem.isExpanded,
-                                            isSelected = isGroupSelected,
-                                            onToggleExpand = {
-                                                expandedGroups[displayItem.groupId] =
-                                                    !(expandedGroups[displayItem.groupId] ?: false)
-                                            },
-                                            onTap = { onGroupHeaderTap(displayItem.groupId) },
-                                            themeColors = themeColors
-                                        )
-                                    }
-
-                                    is DisplayItem.ElementItem -> {
-                                        val element = displayItem.element
-                                        val gradConfig = gradientConfigs[element.id]
-                                        val originalIndex = displayItem.originalIndex
-                                        val isGrouped = displayItem.isGrouped
-                                        val groupId = displayItem.groupId
-                                        val isVisible = if (isGrouped && groupId != null) {
-                                            expandedGroups[groupId] ?: false
-                                        } else {
-                                            true
+                                            AnimatorGroupHeaderRow(
+                                                groupName = displayItem.groupName,
+                                                isExpanded = displayItem.isExpanded,
+                                                isSelected = isGroupSelected,
+                                                onToggleExpand = {
+                                                    expandedGroups[displayItem.groupId] =
+                                                        !(expandedGroups[displayItem.groupId] ?: false)
+                                                },
+                                                onTap = { onGroupHeaderTap(displayItem.groupId) },
+                                                themeColors = themeColors
+                                            )
                                         }
 
-                                        AnimatedVisibility(
-                                            visible = isVisible,
-                                            enter = expandVertically() + fadeIn(),
-                                            exit = shrinkVertically() + fadeOut(),
-                                            modifier = Modifier.animateItem()
-                                        ) {
-                                            val itemModifier =
-                                                if (isGrouped) Modifier.padding(start = 16.dp) else Modifier
-                                            val bounds = groupBounds[groupId]
-                                            val isUpEnabled =
-                                                bounds != null && displayIndex > bounds.first
-                                            val isDownEnabled =
-                                                bounds != null && displayIndex < bounds.second
+                                        is DisplayItem.ElementItem -> {
+                                            val element = displayItem.element
+                                            val gradConfig = gradientConfigs[element.id]
+                                            val originalIndex = displayItem.originalIndex
+                                            val isGrouped = displayItem.isGrouped
+                                            val groupId = displayItem.groupId
+                                            val isVisible = if (isGrouped && groupId != null) {
+                                                expandedGroups[groupId] ?: false
+                                            } else {
+                                                true
+                                            }
 
-                                            AnimatorCanvasElementItem(
-                                                elements = elements,
-                                                onReorder = onReorder,
-                                                element = element,
-                                                originalIndex = originalIndex,
-                                                isSelected = selectedElementId == element.id,
-                                                isDragTarget = draggedDisplayIndex == displayIndex,
-                                                isUpEnabled = isUpEnabled,
-                                                isDownEnabled = isDownEnabled,
-                                                dragOffset = if (draggedDisplayIndex == displayIndex) dragOffset else 0f,
-                                                selectedElementIds = selectedElementIds,
-                                                isGrouped = isGrouped,
-                                                onRowTap = { onSingleSelect(element) },
-                                                onToggleGroupSelection = {
-                                                    onToggleGroupSelection(
-                                                        element
-                                                    )
-                                                },
-                                                onDragStart = { offset ->
-                                                    draggedDisplayIndex = displayIndex
-                                                    dragOffset = offset.y
-                                                },
-                                                onDrag = { change, dragAmount ->
-                                                    change.consume()
-                                                    dragOffset += dragAmount.y
-                                                },
-                                                onDragEnd = {
-                                                    val fromDisplayIndex = draggedDisplayIndex
-                                                    if (fromDisplayIndex != null) {
-                                                        val draggedItem =
-                                                            displayItems[fromDisplayIndex] as? DisplayItem.ElementItem
-                                                        if (draggedItem != null) {
-                                                            val itemBounds =
-                                                                groupBounds[draggedItem.groupId]
-                                                            if (itemBounds != null) {
-                                                                val rawTargetIdx =
-                                                                    (fromDisplayIndex + (dragOffset / itemHeightPx).roundToInt())
-                                                                val targetDisplayIdx =
-                                                                    rawTargetIdx.coerceIn(
-                                                                        itemBounds.first,
-                                                                        itemBounds.second
-                                                                    )
+                                            AnimatedVisibility(
+                                                visible = isVisible,
+                                                enter = expandVertically() + fadeIn(),
+                                                exit = shrinkVertically() + fadeOut(),
+                                                modifier = Modifier.animateItem()
+                                            ) {
+                                                val itemModifier =
+                                                    if (isGrouped) Modifier.padding(start = 16.dp) else Modifier
+                                                val bounds = groupBounds[groupId]
+                                                val isUpEnabled =
+                                                    bounds != null && displayIndex > bounds.first
+                                                val isDownEnabled =
+                                                    bounds != null && displayIndex < bounds.second
 
-                                                                if (targetDisplayIdx != fromDisplayIndex) {
-                                                                    val targetItem =
-                                                                        displayItems[targetDisplayIdx] as DisplayItem.ElementItem
-                                                                    onReorder(
-                                                                        draggedItem.originalIndex,
-                                                                        targetItem.originalIndex
-                                                                    )
+                                                AnimatorCanvasElementItem(
+                                                    elements = elements,
+                                                    onReorder = onReorder,
+                                                    element = element,
+                                                    originalIndex = originalIndex,
+                                                    isSelected = selectedElementId == element.id,
+                                                    isDragTarget = draggedDisplayIndex == displayIndex,
+                                                    isUpEnabled = isUpEnabled,
+                                                    isDownEnabled = isDownEnabled,
+                                                    dragOffset = if (draggedDisplayIndex == displayIndex) dragOffset else 0f,
+                                                    selectedElementIds = selectedElementIds,
+                                                    isGrouped = isGrouped,
+                                                    onRowTap = { onSingleSelect(element) },
+                                                    onToggleGroupSelection = {
+                                                        onToggleGroupSelection(
+                                                            element
+                                                        )
+                                                    },
+                                                    onDragStart = { offset ->
+                                                        draggedDisplayIndex = displayIndex
+                                                        dragOffset = offset.y
+                                                    },
+                                                    onDrag = { change, dragAmount ->
+                                                        change.consume()
+                                                        dragOffset += dragAmount.y
+                                                    },
+                                                    onDragEnd = {
+                                                        val fromDisplayIndex = draggedDisplayIndex
+                                                        if (fromDisplayIndex != null) {
+                                                            val draggedItem =
+                                                                displayItems[fromDisplayIndex] as? DisplayItem.ElementItem
+                                                            if (draggedItem != null) {
+                                                                val itemBounds =
+                                                                    groupBounds[draggedItem.groupId]
+                                                                if (itemBounds != null) {
+                                                                    val rawTargetIdx =
+                                                                        (fromDisplayIndex + (dragOffset / itemHeightPx).roundToInt())
+                                                                    val targetDisplayIdx =
+                                                                        rawTargetIdx.coerceIn(
+                                                                            itemBounds.first,
+                                                                            itemBounds.second
+                                                                        )
+
+                                                                    if (targetDisplayIdx != fromDisplayIndex) {
+                                                                        val targetItem =
+                                                                            displayItems[targetDisplayIdx] as DisplayItem.ElementItem
+                                                                        onReorder(
+                                                                            draggedItem.originalIndex,
+                                                                            targetItem.originalIndex
+                                                                        )
+                                                                    }
                                                                 }
                                                             }
                                                         }
+                                                        draggedDisplayIndex = null
+                                                        dragOffset = 0f
+                                                    },
+                                                    onDragCancel = {
+                                                        draggedDisplayIndex = null
+                                                        dragOffset = 0f
+                                                    },
+                                                    onEdit = { onEditElement(element) },
+                                                    onCustomPolygonEdit = { onCustomPolygonEdit(element) },
+                                                    onVisibilityToggle = { onToggleVisibility(element.id) },
+                                                    onLockToggle = { onToggleLock(element.id) },
+                                                    onDuplicate = { onDuplicate(element) },
+                                                    onDelete = { onDelete(element) },
+                                                    themeColors = themeColors,
+                                                    gradientConfig = gradConfig,
+                                                    modifier = itemModifier
+                                                )
+                                            }
+                                        }
+
+                                        is DisplayItem.ActionRow -> {
+                                            val hasGroup =
+                                                elements.any { it.groupId != null && it.id in selectedElementIds }
+                                            AnimatorGroupActionRow(
+                                                selectedCount = selectedElementIds.size,
+                                                hasGroup = hasGroup,
+                                                onGroup = {
+                                                    onGroup(
+                                                        "Group ${selectedElementIds.size}",
+                                                        selectedElementIds.toList()
+                                                    )
+                                                },
+                                                onUngroup = { onUngroup(selectedElementIds) },
+                                                onRename = {
+                                                    val selectedElements =
+                                                        elements.filter { it.id in selectedElementIds }
+                                                    val uniqueGroupIds =
+                                                        selectedElements.mapNotNull { it.groupId }
+                                                            .distinct()
+                                                    if (hasGroup && uniqueGroupIds.isNotEmpty()) {
+                                                        onRenameGroup?.invoke(
+                                                            uniqueGroupIds.first(),
+                                                            groupNames[uniqueGroupIds.first()]
+                                                                ?: "Group"
+                                                        )
+                                                    } else if (selectedElementIds.size == 1) {
+                                                        val element = selectedElements.firstOrNull()
+                                                        if (element != null) onRename(element)
                                                     }
-                                                    draggedDisplayIndex = null
-                                                    dragOffset = 0f
                                                 },
-                                                onDragCancel = {
-                                                    draggedDisplayIndex = null
-                                                    dragOffset = 0f
+                                                onEditProperties = {
+                                                    if (selectedElementIds.size == 1) {
+                                                        val element =
+                                                            elements.find { it.id == selectedElementIds.first() }
+                                                        if (element != null) onEditProperties(element)
+                                                    }
                                                 },
-                                                onEdit = { onEditElement(element) },
-                                                onCustomPolygonEdit = { onCustomPolygonEdit(element) },
-                                                onVisibilityToggle = { onToggleVisibility(element.id) },
-                                                onLockToggle = { onToggleLock(element.id) },
-                                                onDuplicate = { onDuplicate(element) },
-                                                onDelete = { onDelete(element) },
-                                                themeColors = themeColors,
-                                                gradientConfig = gradConfig,
-                                                modifier = itemModifier
+                                                onClearSelection = onClearSelection,
+                                                modifier = Modifier.animateItem(),
+                                                onAnimate = {
+                                                    if (selectedElementIds.size == 1) {
+                                                        val element =
+                                                            elements.first { it.id in selectedElementIds }
+                                                        onAnimateKeyframes?.invoke(element)
+                                                    }
+                                                }
                                             )
                                         }
-                                    }
-
-                                    is DisplayItem.ActionRow -> {
-                                        val hasGroup =
-                                            elements.any { it.groupId != null && it.id in selectedElementIds }
-                                        VideoGroupActionRow(
-                                            selectedCount = selectedElementIds.size,
-                                            hasGroup = hasGroup,
-                                            onGroup = {
-                                                onGroup(
-                                                    "Group ${selectedElementIds.size}",
-                                                    selectedElementIds.toList()
-                                                )
-                                            },
-                                            onUngroup = { onUngroup(selectedElementIds) },
-                                            onRename = {
-                                                val selectedElements =
-                                                    elements.filter { it.id in selectedElementIds }
-                                                val uniqueGroupIds =
-                                                    selectedElements.mapNotNull { it.groupId }
-                                                        .distinct()
-                                                if (hasGroup && uniqueGroupIds.isNotEmpty()) {
-                                                    onRenameGroup?.invoke(
-                                                        uniqueGroupIds.first(),
-                                                        groupNames[uniqueGroupIds.first()]
-                                                            ?: "Group"
-                                                    )
-                                                } else if (selectedElementIds.size == 1) {
-                                                    val element = selectedElements.firstOrNull()
-                                                    if (element != null) onRename(element)
-                                                }
-                                            },
-                                            onEditProperties = {
-                                                if (selectedElementIds.size == 1) {
-                                                    val element =
-                                                        elements.find { it.id == selectedElementIds.first() }
-                                                    if (element != null) onEditProperties(element)
-                                                }
-                                            },
-                                            onClearSelection = onClearSelection,
-                                            modifier = Modifier.animateItem(),
-                                            onAnimate = {
-                                                if (selectedElementIds.size == 1) {
-                                                    val element =
-                                                        elements.first { it.id in selectedElementIds }
-                                                    onAnimateKeyframes?.invoke(element)
-                                                }
-                                            }
-                                        )
                                     }
                                 }
                             }
@@ -648,7 +701,7 @@ private fun AnimatorGroupHeaderRow(
 }
 
 @Composable
-private fun VideoGroupActionRow(
+private fun AnimatorGroupActionRow(
     selectedCount: Int,
     hasGroup: Boolean,
     onGroup: () -> Unit,

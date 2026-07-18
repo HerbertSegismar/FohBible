@@ -443,3 +443,9 @@ data class EasingPoint(
     val handleOut: Offset = Offset.Zero,
     val handleIn: Offset = Offset.Zero
 )
+
+enum class AnimatorTab {
+    LAYERS,
+    FINE_TUNER,
+    KEYFRAME
+}

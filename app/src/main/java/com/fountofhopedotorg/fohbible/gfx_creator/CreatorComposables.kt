@@ -523,7 +523,6 @@ fun CanvasItemSelectionHandles(
     val latestPivotX by rememberUpdatedState(pivotX)
     val latestPivotY by rememberUpdatedState(pivotY)
 
-    // Offset helper that uses pivot as origin
     fun offsetAt(localX: Float, localY: Float): IntOffset {
         val pivotLocalX = latestPivotX * baseSize.width
         val pivotLocalY = latestPivotY * baseSize.height
@@ -540,7 +539,6 @@ fun CanvasItemSelectionHandles(
         )
     }
 
-    // Delete handle (top-left)
     Box(
         modifier = Modifier
             .offset { offsetAt(0f, 0f) }
@@ -553,7 +551,6 @@ fun CanvasItemSelectionHandles(
         Icon(Icons.Default.Close, "Delete", tint = Color.Red, modifier = Modifier.requiredSizePx(handleSizePx, handleSizePx))
     }
 
-    // Color picker handle (bottom-left)
     Box(
         modifier = Modifier
             .offset { offsetAt(0f, baseSize.height.toFloat()) }
@@ -566,7 +563,6 @@ fun CanvasItemSelectionHandles(
         Icon(Icons.Default.Palette, "Change Color", tint = Color.Blue, modifier = Modifier.requiredSizePx(handleSizePx, handleSizePx))
     }
 
-    // Rotate handle (top-right)
     Box(
         modifier = Modifier
             .offset { offsetAt(baseSize.width.toFloat(), 0f) }
@@ -611,7 +607,6 @@ fun CanvasItemSelectionHandles(
         Icon(Icons.Default.Refresh, "Rotate", tint = Color.DarkGray, modifier = Modifier.requiredSizePx(handleSizePx, handleSizePx))
     }
 
-    // Scale handle (bottom-right)
     Box(
         modifier = Modifier
             .offset { offsetAt(baseSize.width.toFloat(), baseSize.height.toFloat()) }
@@ -675,7 +670,6 @@ fun CanvasItemSelectionHandles(
         )
     }
 
-    // Proportional toggle handle (top-center)
     Box(
         modifier = Modifier
             .offset { offsetAt(baseSize.width.toFloat() / 2f, 0f) }
@@ -796,7 +790,6 @@ fun CanvasSvgItem(
                 }
                 .onSizeChanged { baseSize = it }
                 .then(
-                    // Disable all interactions while placing a pivot
                     if (!isLocked && !isPivotPlacementActive) {
                         Modifier
                             .pointerInput(Unit) {
@@ -829,7 +822,6 @@ fun CanvasSvgItem(
                     .requiredSizePx(currentWidth, currentHeight),
                 contentAlignment = Alignment.Center
             ) {
-                // Shadow layer
                 if (element.shadowColor != null && element.shadowColor.alpha > 0f) {
                     val shadowModifier = Modifier
                         .fillMaxSize()
@@ -864,7 +856,6 @@ fun CanvasSvgItem(
                     }
                 }
 
-                // Main shape
                 val mainModifier = Modifier.fillMaxSize()
                 when {
                     element.content == "Shape: Square" -> SquareShape(mainModifier, element.backgroundColor, gradientConfig = gradientConfig)
@@ -888,12 +879,12 @@ fun CanvasSvgItem(
                             nodes = parsedData.first,
                             modifier = mainModifier,
                             color = element.backgroundColor,
-                            closed = !isCustomLine
+                            closed = !isCustomLine,
+                            gradientConfig = gradientConfig
                         )
                     }
                 }
 
-                // Border
                 if (element.borderThickness > 0f && element.borderColor != null) {
                     val borderColor = element.borderColor
                     val strokeWidthPx = element.borderThickness
@@ -929,7 +920,6 @@ fun CanvasSvgItem(
                     }
                 }
 
-                // Selection highlight
                 if (isSelected) {
                     Box(
                         modifier = Modifier
@@ -940,7 +930,6 @@ fun CanvasSvgItem(
             }
         }
 
-        // Handles and PivotHandle (hidden during pivot placement except the pivot indicator)
         if (isSelected && baseSize != IntSize.Zero && !isLocked) {
             if (!isPivotPlacementActive) {
                 CanvasItemSelectionHandles(
@@ -1278,7 +1267,6 @@ fun CanvasImageItem(
                 }
                 .onSizeChanged { baseSize = it }
                 .then(
-                    // Disable interactions while placing a pivot
                     if (!isLocked && !isPivotPlacementActive) {
                         Modifier
                             .pointerInput(Unit) {
@@ -1357,7 +1345,6 @@ fun CanvasImageItem(
             }
         }
 
-        // Handles and PivotHandle (hidden during pivot placement except the pivot indicator)
         if (isSelected && baseSize != IntSize.Zero && !isLocked) {
             if (!isPivotPlacementActive) {
                 CanvasItemSelectionHandles(
@@ -1386,7 +1373,7 @@ fun CanvasImageItem(
                 isActive = isActivePivotTarget,
                 onStartPivotPlacement = onStartPivotPlacement,
                 onPlacePivotLocal = onPlacePivotLocal,
-                currentRotation = rotation,          // variable name in image item is “rotation”
+                currentRotation = rotation,
                 currentScaleX = scaleX,
                 currentScaleY = scaleY,
                 elementWidth = element.width,
