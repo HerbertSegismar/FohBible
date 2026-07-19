@@ -110,15 +110,11 @@ fun AnimatorCanvasElementsPanel(
     onRenameGroup: ((groupId: String, currentName: String) -> Unit)? = null,
     onAnimateKeyframes: ((CanvasElement) -> Unit)? = null,
     gradientConfigs: Map<String, GradientConfig> = emptyMap(),
-
-    // --- Unified tab selection (replaces isFineTunerMode / isKeyframeMode) ---
     activeTab: AnimatorTab = AnimatorTab.LAYERS,
     onTabSelected: (AnimatorTab) -> Unit = {},
 
     viewModel: AppViewModel? = null,
     fineTunerSelectedElementId: String? = null,
-
-    // Keyframe save callback
     onSaveKeyframes: ((elementId: String, keyframes: List<CanvasKeyframe>, startMs: Long, endMs: Long) -> Unit)? = null,
     timeMultiplier: Float = 1f,
     canvasWidth: Int = 1000,
@@ -240,7 +236,6 @@ fun AnimatorCanvasElementsPanel(
             }
         }
 
-        // --- Content area based on the active tab ---
         when (activeTab) {
             AnimatorTab.KEYFRAME -> {
                 val activeElementId = selectedElementId ?: fineTunerSelectedElementId
@@ -251,7 +246,7 @@ fun AnimatorCanvasElementsPanel(
                         element = activeElement,
                         allElements = elements,
                         onElementSelected = { onSingleSelect(it) },
-                        onCancel = { onTabSelected(AnimatorTab.LAYERS) },  // return to layers
+                        onCancel = { onTabSelected(AnimatorTab.LAYERS) },
                         onSave = { id, keyframes, startMs, endMs ->
                             onSaveKeyframes?.invoke(id, keyframes, startMs, endMs)
                         },
@@ -262,9 +257,9 @@ fun AnimatorCanvasElementsPanel(
                     )
                 } else {
                     Text(
-                        "Select an element from Layers to animate.",
+                        text =  "Select an element to animate",
                         modifier = Modifier.padding(8.dp),
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
             }
@@ -290,9 +285,9 @@ fun AnimatorCanvasElementsPanel(
                     Column {
                         if (displayItems.isEmpty()) {
                             Text(
-                                "No elements on canvas yet.",
-                                modifier = Modifier.padding(vertical = 8.dp),
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                text =  "No elements on canvas yet",
+                                modifier = Modifier.padding(8.dp),
+                                style = MaterialTheme.typography.bodySmall
                             )
                         } else {
                             var draggedDisplayIndex by remember { mutableStateOf<Int?>(null) }

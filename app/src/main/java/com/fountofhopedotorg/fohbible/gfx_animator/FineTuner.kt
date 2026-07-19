@@ -12,6 +12,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,7 +37,7 @@ fun FineTunerPanel(
         Text(
             text = "Select an element to fine‑tune",
             modifier = Modifier.padding(8.dp),
-            style = MaterialTheme.typography.bodySmall
+            style = MaterialTheme.typography.bodySmall,
         )
         return
     }
@@ -126,25 +127,39 @@ private fun CompactPropertyField(
                     onValueChange(it.coerceIn(valueRange))
                 }
             },
-            label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+            label = {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall
+                )
+            },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
             textStyle = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.weight(1f).height(52.dp)
+            modifier = Modifier.weight(1f).height(52.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = MaterialTheme.colorScheme.secondary,
+                unfocusedTextColor = MaterialTheme.colorScheme.primary,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                focusedLabelColor = MaterialTheme.colorScheme.secondary,
+                unfocusedLabelColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                cursorColor = MaterialTheme.colorScheme.primary
+            )
         )
 
         IconButton(
             onClick = { onValueChange((value - step).coerceIn(valueRange)) },
             modifier = Modifier.size(25.dp)
         ) {
-            Text("-", style = MaterialTheme.typography.titleMedium)
+            Text("-", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
         }
 
         IconButton(
             onClick = { onValueChange((value + step).coerceIn(valueRange)) },
             modifier = Modifier.size(25.dp)
         ) {
-            Text("+", style = MaterialTheme.typography.titleMedium)
+            Text("+", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
         }
     }
 }

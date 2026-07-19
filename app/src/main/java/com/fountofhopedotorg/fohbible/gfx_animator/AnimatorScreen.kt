@@ -681,7 +681,7 @@ fun AnimatorScreen() {
             ) {
                 Box(
                     modifier = Modifier
-                        .weight(1.7f)
+                        .weight(0.6f)
                         .fillMaxHeight()
                 ) {
                     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -786,9 +786,8 @@ fun AnimatorScreen() {
 
                 Column(
                     modifier = Modifier
-                        .weight(0.8f)
+                        .weight(0.4f)
                         .fillMaxHeight()
-                        .padding(top = 20.dp)
                 ) {
                     AnimatorCanvasElementsPanel(
                         elements = viewModel.animatorCanvasElements,
@@ -1039,7 +1038,7 @@ fun AnimatorScreen() {
                 BoxWithConstraints(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(0.7f)
+                        .weight(0.6f)
                 ) {
                     val containerWidthDp = maxWidth
                     val containerHeightDp = maxHeight
@@ -1137,11 +1136,9 @@ fun AnimatorScreen() {
                     }
                 }
 
-                Spacer(Modifier.height(12.dp))
-
                 Column(
                     modifier = Modifier
-                        .weight(0.25f)
+                        .weight(0.4f)
                         .fillMaxWidth()
                 ) {
                     AnimatorCanvasElementsPanel(

@@ -27,7 +27,6 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
@@ -264,9 +263,6 @@ fun KeyframeAnimationContent(
         }
     }
 
-    // -------------------------------
-    // 2. Sub‑composables (unchanged)
-    // -------------------------------
     @Composable
     fun KeyframeListCompact() {
         if (localKeyframes.isEmpty()) {
@@ -554,12 +550,6 @@ fun KeyframeAnimationContent(
     @Composable
     fun TimelineHeader() {
         Column(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                "Timeline Animation",
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(bottom = 4.dp)
-            )
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -623,7 +613,8 @@ fun KeyframeAnimationContent(
         selectedElement: CanvasElement?,
         onElementSelected: (CanvasElement) -> Unit,
         universalDurationMs: Long,
-        scrollState: ScrollState = rememberScrollState()
+        scrollState: ScrollState = rememberScrollState(),
+        onExtendDuration: (Long) -> Unit = {}
     ) {
         val currentStoredMs = displayToStored(timeInput.toLongOrNull() ?: 0L)
         var isHandleDragging by remember { mutableStateOf(false) }
@@ -645,6 +636,10 @@ fun KeyframeAnimationContent(
         val secondsLineColor = Color.Gray.copy(alpha = 0.6f)
         val millisLineColor = Color.Gray.copy(alpha = 0.2f)
         val markerTextStyle = MaterialTheme.typography.labelSmall.copy(color = Color.Gray.copy(alpha = 0.7f))
+
+        // Capture the latest duration so we can read it inside the gesture loop without causing
+        // the entire pointerInput block to restart on every duration change.
+        val currentDurationMs by rememberUpdatedState(universalDurationMs)
 
         BoxWithConstraints(
             modifier = Modifier
@@ -770,120 +765,112 @@ fun KeyframeAnimationContent(
                                         val hitKeyframe = findKeyframeAt(downPos)
                                         val hitSegmentIndex = if (hitKeyframe == null) findTweenSegmentAt(downPos) else null
 
-                                        var longPressHandled = false
-                                        var isTap = true
-                                        var dragTriggered = false
+                                        var isTap = false
+                                        var isDrag = false
+                                        var isLongPress = false
                                         var lastPosition = downPos
                                         val touchSlop = viewConfiguration.touchSlop
 
-                                        var initialEvent: PointerEvent? = null
-
-                                        if (hitKeyframe != null) {
-                                            val timeoutResult =
-                                                withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
-                                                    awaitPointerEvent(PointerEventPass.Main)
+                                        val timeoutResult = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+                                            while (true) {
+                                                val event = awaitPointerEvent(PointerEventPass.Main)
+                                                val change = event.changes.firstOrNull { it.id == down.id }
+                                                if (change == null || !change.pressed) {
+                                                    isTap = true
+                                                    break
                                                 }
-                                            if (timeoutResult == null) {
-                                                longPressHandled = true
+                                                if ((change.position - downPos).getDistance() > touchSlop) {
+                                                    isDrag = true
+                                                    lastPosition = change.position
+                                                    break
+                                                }
+                                            }
+                                            true
+                                        }
+
+                                        if (timeoutResult == null) {
+                                            isLongPress = true
+                                        }
+
+                                        if (isLongPress) {
+                                            if (hitKeyframe != null) {
+                                                // Handle Keyframe edit long press
                                                 editingKeyframeTimestamp = hitKeyframe.timestampMs
                                                 populateFromKeyframe(hitKeyframe)
 
                                                 while (true) {
-                                                    val upEvent = awaitPointerEvent()
-                                                    if (!upEvent.changes.any { it.id == down.id && it.pressed }) break
-                                                }
-                                                continue
-                                            } else {
-                                                initialEvent = timeoutResult
-                                            }
-                                        }
-
-                                        if (hitSegmentIndex != null) {
-                                            editingSegmentIndex = hitSegmentIndex
-                                            while (true) {
-                                                val event = awaitPointerEvent()
-                                                if (!event.changes.any { it.id == down.id && it.pressed }) break
-                                            }
-                                            continue
-                                        }
-
-                                        while (true) {
-                                            val event = if (initialEvent != null) {
-                                                val e = initialEvent
-                                                initialEvent = null
-                                                e
-                                            } else {
-                                                awaitPointerEvent()
-                                            }
-
-                                            val change = event.changes.firstOrNull { it.id == down.id }
-                                            if (change == null || !change.pressed) break
-
-                                            val currentPos = change.position
-                                            val dragDistance = (currentPos - downPos).getDistance()
-
-                                            if (dragDistance > touchSlop) {
-                                                isTap = false
-                                                val dx = currentPos.x - downPos.x
-                                                val dy = currentPos.y - downPos.y
-                                                if (insideSelectedBlock && kotlin.math.abs(dx) > kotlin.math.abs(dy)) {
-                                                    dragTriggered = true
-                                                    change.consume()
-                                                    lastPosition = currentPos
-                                                }
-                                            }
-
-                                            if (dragTriggered) break
-                                        }
-
-                                        if (dragTriggered) {
-                                            isBlockDragActive = true
-                                            var activeStartMs = trimStartMs
-                                            var activeEndMs = trimEndMs
-                                            val dragDuration = activeEndMs - activeStartMs
-
-                                            try {
-                                                while (true) {
                                                     val event = awaitPointerEvent()
-                                                    val dragChange = event.changes.firstOrNull { it.id == down.id }
-                                                    if (dragChange == null || !dragChange.pressed) break
+                                                    if (!event.changes.any { it.id == down.id && it.pressed }) break
+                                                }
+                                            } else if (insideSelectedBlock) {
+                                                // Long press inside element block activates block drag
+                                                isBlockDragActive = true
+                                                var activeStartMs = trimStartMs
+                                                var activeEndMs = trimEndMs
+                                                val dragDuration = activeEndMs - activeStartMs
 
-                                                    dragChange.consume()
-                                                    val currentPosition = dragChange.position
-                                                    val dx = currentPosition.x - lastPosition.x
-                                                    lastPosition = currentPosition
+                                                val movedIndices = localKeyframes.indices.filter { i ->
+                                                    val ts = localKeyframes[i].timestampMs
+                                                    ts in activeStartMs..activeEndMs
+                                                }
+                                                val offsets = movedIndices.map { localKeyframes[it].timestampMs - activeStartMs }
 
-                                                    val timeDelta =
-                                                        ((dx / safeTrackWidth) * universalDurationMs).roundToLong()
-                                                    if (timeDelta != 0L) {
-                                                        var newStart = activeStartMs + timeDelta
-                                                        var newEnd = activeEndMs + timeDelta
-                                                        if (newStart < 0L) {
-                                                            newStart = 0L
-                                                            newEnd = dragDuration
-                                                        } else if (newEnd > universalDurationMs) {
-                                                            newEnd = universalDurationMs
-                                                            newStart = universalDurationMs - dragDuration
+                                                try {
+                                                    while (true) {
+                                                        val event = awaitPointerEvent()
+                                                        val dragChange = event.changes.firstOrNull { it.id == down.id }
+                                                        if (dragChange == null || !dragChange.pressed) break
+
+                                                        dragChange.consume()
+                                                        val currentPosition = dragChange.position
+                                                        val dx = currentPosition.x - lastPosition.x
+                                                        lastPosition = currentPosition
+
+                                                        val timeDelta = ((dx / safeTrackWidth) * universalDurationMs).roundToLong()
+                                                        if (timeDelta != 0L) {
+                                                            var newStart = activeStartMs + timeDelta
+                                                            var newEnd = activeEndMs + timeDelta
+                                                            if (newStart < 0L) {
+                                                                newStart = 0L
+                                                                newEnd = dragDuration
+                                                            }
+                                                            activeStartMs = newStart
+                                                            activeEndMs = newEnd
+                                                            trimStartMs = newStart
+                                                            trimEndMs = newEnd
+
+                                                            for ((i, idx) in movedIndices.withIndex()) {
+                                                                val newTimestamp = newStart + offsets[i]
+                                                                localKeyframes[idx] = localKeyframes[idx].copy(timestampMs = newTimestamp)
+                                                            }
                                                         }
-                                                        activeStartMs = newStart
-                                                        activeEndMs = newEnd
-                                                        trimStartMs = newStart
-                                                        trimEndMs = newEnd
+                                                    }
+                                                } finally {
+                                                    isBlockDragActive = false
+                                                    if (trimEndMs > currentDurationMs) {
+                                                        onExtendDuration(trimEndMs)
                                                     }
                                                 }
-                                            } finally {
-                                                isBlockDragActive = false
+                                            } else {
+                                                while (true) {
+                                                    val event = awaitPointerEvent()
+                                                    if (!event.changes.any { it.id == down.id && it.pressed }) break
+                                                }
                                             }
-                                        }
-
-                                        if (isTap) {
-                                            var newTime = pxToTime(downPos.x)
-                                            if (isDownOnSelectedTrack) {
-                                                newTime = newTime.coerceIn(trimStartMs, trimEndMs)
-                                            }
-                                            timeInput = storedToDisplay(newTime).toString()
-                                            if (downTrackIndex in elements.indices) {
-                                                onElementSelected(elements[downTrackIndex])
+                                        } else if (isTap) {
+                                            if (hitSegmentIndex != null) {
+                                                // Short tap on segment opens tween dialog
+                                                editingSegmentIndex = hitSegmentIndex
+                                            } else {
+                                                // Short tap anywhere else moves playhead
+                                                var newTime = pxToTime(downPos.x)
+                                                if (isDownOnSelectedTrack) {
+                                                    newTime = newTime.coerceIn(trimStartMs, trimEndMs)
+                                                }
+                                                timeInput = storedToDisplay(newTime).toString()
+                                                if (downTrackIndex in elements.indices) {
+                                                    onElementSelected(elements[downTrackIndex])
+                                                }
                                             }
                                         }
                                     }
@@ -1242,145 +1229,80 @@ fun KeyframeAnimationContent(
         }
     }
 
-    // -------------------------------
-    // 3. Layout (exactly as before, but wrapped in a Column with a button row at the bottom)
-    // -------------------------------
-    val configuration = LocalConfiguration.current
-    val isLandscape = configuration.orientation == ORIENTATION_LANDSCAPE
-
     val portraitScrollState = rememberScrollState()
-    val leftColumnScrollState = rememberScrollState()
-    val rightColumnScrollState = rememberScrollState()
 
     Column(modifier = Modifier.fillMaxSize()) {
         TimelineHeader()
         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
-        if (isLandscape) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .imePadding()
+                .verticalScroll(portraitScrollState),
+        ) {
+            UnifiedTimelineTrack(
+                elements = allElements,
+                selectedElement = element,
+                onElementSelected = autoSaveAndSelect,
+                universalDurationMs = universalDurationMs,
+                scrollState = timelineScrollState,
+                onExtendDuration = { newDuration -> handleUniversalDurationChange(newDuration)  }
+            )
+            Text(
+                if (editingKeyframeTimestamp != null) "Editing Keyframe" else "New Keyframe",
+                style = MaterialTheme.typography.labelMedium
+            )
+            ParameterSlider("X", xInput, { xInput = it }, xMin..xMax, "px")
+            ParameterSlider("Y", yInput, { yInput = it }, yMin..yMax, "px")
+            ParameterSlider("SX", scaleXInput, { scaleXInput = it }, 0.05f..25f, "",
+                { String.format(Locale.US, "%.2f", it) })
+            ParameterSlider("SY", scaleYInput, { scaleYInput = it }, 0.05f..25f, "",
+                { String.format(Locale.US, "%.2f", it) })
+            ParameterSlider("Rot", rotationInput, { rotationInput = it }, -360f..360f, "°",
+                { String.format(Locale.US, "%.1f", it) })
+            EllipticalRotationSection(
+                isEnabled = ellipticalRotation,
+                onToggle = { ellipticalRotation = it },
+                stretchX = ellipticalStretchX,
+                onStretchXChange = { ellipticalStretchX = it.coerceIn(0.1f, 10f) },
+                stretchY = ellipticalStretchY,
+                onStretchYChange = { ellipticalStretchY = it.coerceIn(0.1f, 10f) }
+            )
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)
+            ) {
+                ColorSwatch(modifier = Modifier.weight(1f))
+                InsertUpdateButton(modifier = Modifier.height(30.dp))
+            }
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+            Text("Keyframes", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp))
+            KeyframeListCompact()
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
-                    .imePadding(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
-                    modifier = Modifier
-                        .weight(0.6f)
-                        .verticalScroll(leftColumnScrollState),
-                ) {
-                    UnifiedTimelineTrack(
-                        elements = allElements,
-                        selectedElement = element,
-                        onElementSelected = autoSaveAndSelect,
-                        universalDurationMs = universalDurationMs,
-                        scrollState = timelineScrollState
+                TextButton(onClick = onCancel) {
+                    Text("Cancel")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(onClick = {
+                    onSave(
+                        element.id,
+                        localKeyframes.sortedBy { it.timestampMs },
+                        trimStartMs,
+                        trimEndMs
                     )
+                }) {
+                    Text("Save", color = Color.White)
                 }
-                Column(
-                    modifier = Modifier
-                        .weight(0.4f)
-                        .verticalScroll(rightColumnScrollState),
-                ) {
-                    ParameterSlider("X", xInput, { xInput = it }, xMin..xMax, "px")
-                    ParameterSlider("Y", yInput, { yInput = it }, yMin..yMax, "px")
-                    ParameterSlider("SX", scaleXInput, { scaleXInput = it }, 0.05f..25f, "",
-                        { String.format(Locale.US, "%.2f", it) })
-                    ParameterSlider("SY", scaleYInput, { scaleYInput = it }, 0.05f..25f, "",
-                        { String.format(Locale.US, "%.2f", it) })
-                    ParameterSlider("Rot", rotationInput, { rotationInput = it }, -360f..360f, "°",
-                        { String.format(Locale.US, "%.1f", it) })
-                    EllipticalRotationSection(
-                        isEnabled = ellipticalRotation,
-                        onToggle = { ellipticalRotation = it },
-                        stretchX = ellipticalStretchX,
-                        onStretchXChange = { ellipticalStretchX = it.coerceIn(0.1f, 10f) },
-                        stretchY = ellipticalStretchY,
-                        onStretchYChange = { ellipticalStretchY = it.coerceIn(0.1f, 10f) }
-                    )
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        ColorSwatch(modifier = Modifier.weight(1f))
-                        InsertUpdateButton(modifier = Modifier.height(33.dp))
-                    }
-                    Text("Keyframes", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 2.dp))
-                    KeyframeListCompact()
-                }
-            }
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .imePadding()
-                    .verticalScroll(portraitScrollState),
-            ) {
-                UnifiedTimelineTrack(
-                    elements = allElements,
-                    selectedElement = element,
-                    onElementSelected = autoSaveAndSelect,
-                    universalDurationMs = universalDurationMs,
-                    scrollState = timelineScrollState
-                )
-                Text(
-                    if (editingKeyframeTimestamp != null) "Editing Keyframe" else "New Keyframe",
-                    style = MaterialTheme.typography.labelMedium
-                )
-                ParameterSlider("X", xInput, { xInput = it }, xMin..xMax, "px")
-                ParameterSlider("Y", yInput, { yInput = it }, yMin..yMax, "px")
-                ParameterSlider("SX", scaleXInput, { scaleXInput = it }, 0.05f..25f, "",
-                    { String.format(Locale.US, "%.2f", it) })
-                ParameterSlider("SY", scaleYInput, { scaleYInput = it }, 0.05f..25f, "",
-                    { String.format(Locale.US, "%.2f", it) })
-                ParameterSlider("Rot", rotationInput, { rotationInput = it }, -360f..360f, "°",
-                    { String.format(Locale.US, "%.1f", it) })
-                EllipticalRotationSection(
-                    isEnabled = ellipticalRotation,
-                    onToggle = { ellipticalRotation = it },
-                    stretchX = ellipticalStretchX,
-                    onStretchXChange = { ellipticalStretchX = it.coerceIn(0.1f, 10f) },
-                    stretchY = ellipticalStretchY,
-                    onStretchYChange = { ellipticalStretchY = it.coerceIn(0.1f, 10f) }
-                )
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)
-                ) {
-                    ColorSwatch(modifier = Modifier.weight(1f))
-                    InsertUpdateButton(modifier = Modifier.height(30.dp))
-                }
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                Text("Keyframes", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp))
-                KeyframeListCompact()
-            }
-        }
-
-        // Bottom button row – new
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            TextButton(onClick = onCancel) {
-                Text("Cancel")
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            Button(onClick = {
-                onSave(
-                    element.id,
-                    localKeyframes.sortedBy { it.timestampMs },
-                    trimStartMs,
-                    trimEndMs
-                )
-            }) {
-                Text("Save", color = Color.White)
             }
         }
     }
