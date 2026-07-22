@@ -67,6 +67,9 @@ fun KeyframeAnimationContent(
 ) {
     if (element == null) return
 
+    var hasUnsavedChanges by remember { mutableStateOf(true) }
+    var isInitialState by remember { mutableStateOf(true) }
+
     var scrollOffsetSaved by rememberSaveable("timelineScroll") { mutableIntStateOf(0) }
     var pivotXState by remember { mutableFloatStateOf(element.pivotX) }
     var pivotYState by remember { mutableFloatStateOf(element.pivotY) }
@@ -81,6 +84,8 @@ fun KeyframeAnimationContent(
 
     fun storedToDisplay(storedMs: Long): Long = (storedMs / timeMultiplier).roundToInt().toLong()
     fun displayToStored(displayMs: Long): Long = (displayMs * timeMultiplier).roundToInt().toLong()
+
+    val initialElementCount = remember { allElements.size }
 
     val effectiveInitialGradientConfig = remember(element) {
         element.keyframes.minByOrNull { it.timestampMs }?.gradientConfig ?: initialGradientConfig
@@ -143,6 +148,26 @@ fun KeyframeAnimationContent(
     LaunchedEffect(element.id) {
         pivotXState = element.pivotX
         pivotYState = element.pivotY
+    }
+
+    LaunchedEffect(allElements.size) {
+        if (allElements.size != initialElementCount) {
+            onSave(
+                element.id,
+                localKeyframes.sortedBy { it.timestampMs },
+                trimStartMs,
+                trimEndMs
+            )
+            onCancel()
+        }
+    }
+
+    LaunchedEffect(localKeyframes.toList(), trimStartMs, trimEndMs) {
+        if (isInitialState) {
+            isInitialState = false
+            return@LaunchedEffect
+        }
+        hasUnsavedChanges = true
     }
 
     var xInput by rememberSaveable(element.id) { mutableStateOf(formatPosition(element.offset.x)) }
@@ -636,9 +661,6 @@ fun KeyframeAnimationContent(
         val secondsLineColor = Color.Gray.copy(alpha = 0.6f)
         val millisLineColor = Color.Gray.copy(alpha = 0.2f)
         val markerTextStyle = MaterialTheme.typography.labelSmall.copy(color = Color.Gray.copy(alpha = 0.7f))
-
-        // Capture the latest duration so we can read it inside the gesture loop without causing
-        // the entire pointerInput block to restart on every duration change.
         val currentDurationMs by rememberUpdatedState(universalDurationMs)
 
         BoxWithConstraints(
@@ -1293,14 +1315,18 @@ fun KeyframeAnimationContent(
                     Text("Cancel")
                 }
                 Spacer(modifier = Modifier.width(8.dp))
-                Button(onClick = {
-                    onSave(
-                        element.id,
-                        localKeyframes.sortedBy { it.timestampMs },
-                        trimStartMs,
-                        trimEndMs
-                    )
-                }) {
+                Button(
+                    onClick = {
+                        onSave(
+                            element.id,
+                            localKeyframes.sortedBy { it.timestampMs },
+                            trimStartMs,
+                            trimEndMs
+                        )
+                        hasUnsavedChanges = false
+                    },
+                    enabled = hasUnsavedChanges
+                ) {
                     Text("Save", color = Color.White)
                 }
             }

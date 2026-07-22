@@ -81,7 +81,6 @@ private suspend fun preloadFonts(
     neededFonts.associateWith { Fonts.getTypeface(context.applicationContext, it) }
 }
 
-
 suspend fun loadImageBitmaps(
     elements: List<CanvasElement>,
     context: Context,
@@ -105,11 +104,6 @@ suspend fun loadImageBitmaps(
                 .data(uri)
                 .size(w, h)
                 .allowHardware(false)
-                .listener(
-                    onError = { _, result ->
-                        android.util.Log.e("NativeExport", "Failed to load image ${el.id}: $uriString, ${result.throwable}")
-                    }
-                )
                 .build()
 
             val drawable = loader.execute(request).drawable
@@ -124,9 +118,6 @@ suspend fun loadImageBitmaps(
                     }
                 }
                 map[el.id] = bmp
-                android.util.Log.d("NativeExport", "Loaded image ${el.id} (${bmp.width}x${bmp.height})")
-            } else {
-                android.util.Log.w("NativeExport", "Drawable is null for ${el.id}: $uriString")
             }
         }
     }
@@ -146,7 +137,7 @@ fun drawFrame(
     canvasBackgroundColor: ComposeColor?,
     canvasBackgroundBrush: Brush?,
     fontCache: Map<String, Typeface> = emptyMap(),
-    textSizePxBase: Float = 60f   // <-- base text size in pixels (at 1× resolution)
+    textSizePxBase: Float = 60f
 ) {
     if (canvasBackgroundBrush != null) {
         val composeCanvas = ComposeCanvas(canvas)
@@ -206,8 +197,6 @@ fun drawFrame(
             else -> gradientConfigs[element.id]
         }
 
-        val originalPivotX = element.pivotX
-        val originalPivotY = element.pivotY
         val newPivotX = lerp(prev?.pivotX ?: element.pivotX, next?.pivotX ?: element.pivotX, progress)
         val newPivotY = lerp(prev?.pivotY ?: element.pivotY, next?.pivotY ?: element.pivotY, progress)
 
@@ -302,10 +291,12 @@ fun drawFrame(
                 backgroundColor = element.backgroundColor,
                 textColor = element.textColor
             )
+            val prevPivotX = prev?.pivotX ?: element.pivotX
+            val prevPivotY = prev?.pivotY ?: element.pivotY
             val adjustedOffset = adjustOffsetForPivotChange(
                 element = tempElement,
-                oldPivotX = originalPivotX,
-                oldPivotY = originalPivotY,
+                oldPivotX = prevPivotX,
+                oldPivotY = prevPivotY,
                 newPivotX = newPivotX,
                 newPivotY = newPivotY
             )
@@ -313,7 +304,6 @@ fun drawFrame(
             posY = adjustedOffset.y * scaleFactor
         }
 
-        // --- calculate the final text size for this export resolution ---
         val textSizePx = textSizePxBase * scaleFactor
 
         canvas.withTranslation(posX, posY) {
@@ -409,8 +399,6 @@ suspend fun nativeExport(
 
     val imageBitmaps = loadImageBitmaps(elements, context, exportWidth.toFloat(), exportHeight.toFloat())
     val fontCache = preloadFonts(elements, context)
-
-    // Correct base text size: 60sp * fontScale = physical pixels at 1× resolution
     val textSizePxBase = 60f * context.resources.configuration.fontScale
 
     val frameDurationMs = 1000L / frameRate
@@ -421,11 +409,10 @@ suspend fun nativeExport(
         context, exportWidth, exportHeight, frameRate,
         bitRateMbps * 1_000_000, mimeType = "video/hevc"
     )
-    val surface = encoder.inputSurface
 
     try {
         while (currentTimeMs <= endTimeMs && currentCoroutineContext().isActive) {
-            val canvas = surface.lockCanvas(null)
+            val canvas = encoder.inputSurface.lockCanvas(null)
 
             if (canvas != null) {
                 drawFrame(
@@ -440,9 +427,9 @@ suspend fun nativeExport(
                     canvasBackgroundColor = canvasBackgroundColor,
                     canvasBackgroundBrush = canvasBackgroundBrush,
                     fontCache = fontCache,
-                    textSizePxBase = textSizePxBase   // pass the correct base size
+                    textSizePxBase = textSizePxBase
                 )
-                surface.unlockCanvasAndPost(canvas)
+                encoder.inputSurface.unlockCanvasAndPost(canvas)
             }
 
             encoder.drainEncoder {}
@@ -466,7 +453,10 @@ suspend fun nativeExport(
                 Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show()
             }
         }
-    } catch (_: Exception) {
+    } catch (e: Exception) {
+        withContext(Dispatchers.Main) {
+            Toast.makeText(context, "Export error: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
     } finally {
         encoder.release()
         imageBitmaps.values.forEach { it.recycle() }
@@ -481,14 +471,15 @@ class OffscreenVideoEncoder(
     private val bitRate: Int,
     private val mimeType: String = "video/hevc"
 ) {
-    private lateinit var codec: MediaCodec
-    private lateinit var muxer: MediaMuxer
+    private var codec: MediaCodec? = null
+    private var muxer: MediaMuxer? = null
     private var trackIndex = -1
     private var muxerStarted = false
-
     private var encodedFrameCount = 0L
+    private var released = false
 
     private val outputFile = File(context.cacheDir, "temp_native_video.mp4")
+
     lateinit var inputSurface: Surface
         private set
 
@@ -523,17 +514,18 @@ class OffscreenVideoEncoder(
         }
 
         codec = MediaCodec.createByCodecName(codecInfo.name)
-        codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
-        inputSurface = codec.createInputSurface()
+        codec!!.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+        inputSurface = codec!!.createInputSurface()
         muxer = MediaMuxer(outputFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
-        codec.start()
+        codec!!.start()
     }
 
     fun signalEndOfStream() {
-        codec.signalEndOfInputStream()
+        codec?.signalEndOfInputStream()
     }
 
     fun drainEncoder(outputDone: () -> Unit) {
+        val codec = this.codec ?: return
         val bufferInfo = MediaCodec.BufferInfo()
         while (true) {
             val outputIndex = codec.dequeueOutputBuffer(bufferInfo, 10_000)
@@ -549,8 +541,8 @@ class OffscreenVideoEncoder(
 
                 if (bufferInfo.size > 0) {
                     if (!muxerStarted) {
-                        trackIndex = muxer.addTrack(codec.outputFormat)
-                        muxer.start()
+                        trackIndex = muxer!!.addTrack(codec.outputFormat)
+                        muxer!!.start()
                         muxerStarted = true
                     }
 
@@ -560,7 +552,7 @@ class OffscreenVideoEncoder(
 
                     encodedData.position(bufferInfo.offset)
                     encodedData.limit(bufferInfo.offset + bufferInfo.size)
-                    muxer.writeSampleData(trackIndex, encodedData, bufferInfo)
+                    muxer!!.writeSampleData(trackIndex, encodedData, bufferInfo)
                 }
 
                 codec.releaseOutputBuffer(outputIndex, false)
@@ -571,8 +563,8 @@ class OffscreenVideoEncoder(
                 }
             } else if (outputIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                 if (!muxerStarted) {
-                    trackIndex = muxer.addTrack(codec.outputFormat)
-                    muxer.start()
+                    trackIndex = muxer!!.addTrack(codec.outputFormat)
+                    muxer!!.start()
                     muxerStarted = true
                 }
             }
@@ -580,11 +572,24 @@ class OffscreenVideoEncoder(
     }
 
     fun releaseAndSaveToGallery(fileName: String): String? {
+        if (released) return null
+        released = true
+
         try {
-            codec.stop()
-            codec.release()
-            muxer.stop()
-            muxer.release()
+            codec?.stop()
+            codec?.release()
+            codec = null
+
+            if (muxerStarted) {
+                muxer?.stop()
+            }
+            muxer?.release()
+            muxer = null
+
+            if (!muxerStarted) {
+                outputFile.delete()
+                return null
+            }
 
             val displayName = "$fileName.mp4"
             val contentValues = ContentValues().apply {
@@ -598,11 +603,10 @@ class OffscreenVideoEncoder(
             val uri = resolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, contentValues)
                 ?: throw Exception("Failed to create MediaStore entry")
 
-            uri.let { it ->
-                resolver.openOutputStream(it)?.use { outputStream ->
-                    outputFile.inputStream().use { it.copyTo(outputStream) }
-                }
+            resolver.openOutputStream(uri)?.use { outputStream ->
+                outputFile.inputStream().use { it.copyTo(outputStream) }
             }
+
             contentValues.clear()
             contentValues.put(MediaStore.Video.Media.IS_PENDING, 0)
             resolver.update(uri, contentValues, null, null)
@@ -610,11 +614,24 @@ class OffscreenVideoEncoder(
             outputFile.delete()
             return uri.toString()
         } catch (_: Exception) {
+            outputFile.delete()
             return null
         }
     }
 
     fun release() {
+        if (released) return
+        released = true
+        try {
+            codec?.stop()
+            codec?.release()
+            codec = null
+        } catch (_: Exception) {}
+        try {
+            if (muxerStarted) muxer?.stop()
+            muxer?.release()
+            muxer = null
+        } catch (_: Exception) {}
         if (outputFile.exists()) outputFile.delete()
     }
 }
@@ -658,19 +675,18 @@ private fun drawElementContent(
     imageBitmaps: Map<String, Bitmap>,
     strokeOnly: Boolean,
     fontCache: Map<String, Typeface> = emptyMap(),
-    textSizePx: Float = 60f   // <-- final text size in pixels for this export resolution
+    textSizePx: Float = 60f
 ) {
     val isText = !element.content.startsWith("Shape:") && !element.content.startsWith("Image:")
     if (isText) {
         val fontFamily = element.fontFamily ?: "system"
         val typeface = fontCache[fontFamily] ?: Typeface.DEFAULT
 
-        // Exactly match the Compose preview: 24dp padding, 750dp max width
         val paddingPx = 24f * density
         val maxWidthPx = 750f * density
 
         val textPaint = Paint(paint).apply {
-            textSize = textSizePx   // correct, already scaled for export resolution
+            textSize = textSizePx
             this.typeface = typeface
         }
 
