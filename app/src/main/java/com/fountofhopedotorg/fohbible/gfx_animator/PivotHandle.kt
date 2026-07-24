@@ -50,12 +50,11 @@ fun PivotHandle(
     elementWidth: Float,
     elementHeight: Float
 ) {
-    val handleSizePx = 48f
+    val handleSizePx = 60f
     val handleRadiusPx = handleSizePx / 2f
     val pivotLocalX = pivotX * baseSize.width
     val pivotLocalY = pivotY * baseSize.height
 
-    // Keep the latest values inside the gesture lambdas so they don’t go stale
     val latestPivotX by rememberUpdatedState(pivotX)
     val latestPivotY by rememberUpdatedState(pivotY)
     val latestRotation by rememberUpdatedState(currentRotation)
@@ -64,8 +63,8 @@ fun PivotHandle(
     val latestElementWidth by rememberUpdatedState(elementWidth)
     val latestElementHeight by rememberUpdatedState(elementHeight)
 
-    val bgColor = if (isActive) MaterialTheme.colorScheme.primary else Color(0xFFE0E0E0)
-    val iconColor = if (isActive) MaterialTheme.colorScheme.onPrimary else Color.Black
+    val bgColor = if (isActive) MaterialTheme.colorScheme.secondary else Color.White
+    val iconColor = Color.Red
     val borderColor = if (isActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
 
     Box(
@@ -88,7 +87,6 @@ fun PivotHandle(
                     val cosA = cos(rad)
                     val sinA = sin(rad)
 
-                    // Inverse rotation of the screen‑space drag delta
                     val localDx = dragAmount.x * cosA + dragAmount.y * sinA
                     val localDy = -dragAmount.x * sinA + dragAmount.y * cosA
 

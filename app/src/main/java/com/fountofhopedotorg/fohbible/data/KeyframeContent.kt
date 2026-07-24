@@ -1066,6 +1066,26 @@ fun KeyframeAnimationContent(
                             onDragStateChanged(isDragging)
                         }
 
+                        LaunchedEffect(
+                            element.offset.x, element.offset.y,
+                            element.scaleX, element.scaleY,
+                            element.rotation,
+                            element.backgroundColor, element.textColor
+                        ) {
+                            if (editingKeyframeTimestamp == null) {
+                                xInput = formatPosition(element.offset.x)
+                                yInput = formatPosition(element.offset.y)
+                                scaleXInput = formatScale(element.scaleX)
+                                scaleYInput = formatScale(element.scaleY)
+                                rotationInput = formatRotation(element.rotation)
+
+                                val newColor = element.backgroundColor.takeIf { it != Color.Unspecified }
+                                    ?: element.textColor
+                                    ?: Color.Black
+                                pickedColorArgb = newColor.toArgb().toLong()
+                            }
+                        }
+
                         val xOffset = if (isLeft) tempDragPx - handleWidthPx else tempDragPx
 
                         Box(
