@@ -176,6 +176,9 @@ fun AnimatorScreen(
             if (isPlayingAnimation) {
                 isPlayingAnimation = false
             } else {
+                viewModel.animatorSelectedElementIds = emptySet()
+                viewModel.animatorSelectedElementId = null
+
                 originalElementStates = viewModel.animatorCanvasElements
                     .filter { it.keyframes.isNotEmpty() }
                     .associateBy { it.id }
@@ -362,7 +365,6 @@ fun AnimatorScreen(
 
                 val trimmed = jsonString.trim()
                 if (trimmed.startsWith("{")) {
-                    // Full project format
                     val root = JSONObject(trimmed)
                     if (root.has("elements")) {
                         val elementsArray = root.getJSONArray("elements")
@@ -378,12 +380,17 @@ fun AnimatorScreen(
                         viewModel.animatorCanvasElements.addAll(loadedElements)
                         viewModel.animatorGradientPairs.clear()
                         viewModel.animatorGradientPairs.putAll(loadedGradients)
-                        // (background restoration can be added later)
+
+                        val loadedCanvasWidth = root.optInt("canvasWidth", 0).takeIf { it > 0 }
+                        val loadedCanvasHeight = root.optInt("canvasHeight", 0).takeIf { it > 0 }
+                        if (loadedCanvasWidth != null && loadedCanvasHeight != null) {
+                            customWidthPx = loadedCanvasWidth
+                            customHeightPx = loadedCanvasHeight
+                        }
                     } else {
                         Toast.makeText(context, "Invalid project format", Toast.LENGTH_SHORT).show()
                     }
                 } else if (trimmed.startsWith("[")) {
-                    // Old array format
                     val jsonArray = JSONArray(trimmed)
                     val loadedElements = (0 until jsonArray.length()).map { i ->
                         CanvasElement.fromJson(jsonArray.getJSONObject(i))
@@ -1038,6 +1045,12 @@ fun AnimatorScreen(
                 onPlayPause = onPlayPause,
                 onTimelineClick = onTimelineClick,
                 enablePlayStop = enablePlayStop,
+                canvasWidthPx = canvasWidthPx,
+                canvasHeightPx = canvasHeightPx,
+                onLoadCanvasSize = { w, h ->
+                    customWidthPx = w
+                    customHeightPx = h
+                },
                 onCanvasSettingsClick = { showCanvasSettingsDialog = true }
             )
         }
@@ -1090,6 +1103,12 @@ fun AnimatorScreen(
                     onPlayPause = onPlayPause,
                     onTimelineClick = onTimelineClick,
                     enablePlayStop = enablePlayStop,
+                    canvasWidthPx = canvasWidthPx,
+                    canvasHeightPx = canvasHeightPx,
+                    onLoadCanvasSize = { w, h ->
+                        customWidthPx = w
+                        customHeightPx = h
+                    },
                     onCanvasSettingsClick = { showCanvasSettingsDialog = true }
                 )
             }
@@ -1568,7 +1587,9 @@ fun AnimatorScreen(
             timeMultiplier = 1f,
             initialGradientConfig = elementGradient,
             canvasWidth = customWidthPx,
-            canvasHeight = customHeightPx
+            canvasHeight = customHeightPx,
+            themeColors = themeColors,
+            gradientConfigs = viewModel.animatorGradientPairs
         )
     }
 

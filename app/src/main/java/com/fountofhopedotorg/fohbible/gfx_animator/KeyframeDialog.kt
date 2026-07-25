@@ -18,7 +18,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.CanvasKeyframe
 import com.fountofhopedotorg.fohbible.data.GradientConfig
-import com.fountofhopedotorg.fohbible.data.KeyframeAnimationContent
+import com.fountofhopedotorg.fohbible.data.ThemeColors
 
 val GradientConfigNullableSaver = Saver<GradientConfig?, String>(
     save = { config ->
@@ -63,7 +63,9 @@ fun KeyframeAnimationDialog(
     timeMultiplier: Float,
     initialGradientConfig: GradientConfig? = null,
     canvasWidth: Int,
-    canvasHeight: Int
+    canvasHeight: Int,
+    themeColors: ThemeColors,                           // NEW
+    gradientConfigs: Map<String, GradientConfig> = emptyMap()  // NEW
 ) {
     if (element == null) return
 
@@ -78,20 +80,22 @@ fun KeyframeAnimationDialog(
             )
         },
         text = {
-        KeyframeAnimationContent(
-            element = element,
-            allElements = allElements,
-            onElementSelected = onElementSelected,
-            onCancel = onDismiss,
-            onSave = { elementId, keyframes, startMs, endMs ->
-                onSaveKeyframes(elementId, keyframes, startMs, endMs)
-                onDismiss()
-            },
-            timeMultiplier = timeMultiplier,
-            initialGradientConfig = initialGradientConfig,
-            canvasWidth = canvasWidth,
-            canvasHeight = canvasHeight
-        )
+            KeyframeAnimationContent(
+                element = element,
+                allElements = allElements,
+                onElementSelected = onElementSelected,
+                onCancel = onDismiss,
+                onSave = { elementId, keyframes, startMs, endMs ->
+                    onSaveKeyframes(elementId, keyframes, startMs, endMs)
+                    onDismiss()
+                },
+                timeMultiplier = timeMultiplier,
+                initialGradientConfig = initialGradientConfig,
+                canvasWidth = canvasWidth,
+                canvasHeight = canvasHeight,
+                themeColors = themeColors,               // pass through
+                gradientConfigs = gradientConfigs        // pass through
+            )
         },
         confirmButton = {},
         dismissButton = {},

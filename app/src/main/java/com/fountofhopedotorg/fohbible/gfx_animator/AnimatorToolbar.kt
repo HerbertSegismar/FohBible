@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.data.CanvasElement
+import com.fountofhopedotorg.fohbible.data.GradientConfig
 import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.gfx_creator.ArrowRightShape
 import com.fountofhopedotorg.fohbible.gfx_creator.CircleShape
@@ -89,6 +90,7 @@ import com.fountofhopedotorg.fohbible.gfx_creator.saveCanvasAsSVG
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import kotlinx.coroutines.launch
 import org.json.JSONArray
+import org.json.JSONObject
 import java.io.File
 import androidx.compose.ui.platform.LocalLocale
 
@@ -110,6 +112,9 @@ fun AnimatorToolbar(
     onPlayPause: () -> Unit = {},
     onTimelineClick: () -> Unit = {},
     enablePlayStop: Boolean = false,
+    canvasWidthPx: Int,
+    canvasHeightPx: Int,
+    onLoadCanvasSize: (width: Int, height: Int) -> Unit,
     onCanvasSettingsClick: () -> Unit = {}
 ) {
     var showMoreShapes by remember { mutableStateOf(false) }
@@ -390,7 +395,8 @@ fun AnimatorToolbar(
             secondItems()
         }
     }
-// ── Save Template Dialog (improved) ──
+
+    // ── Save Template Dialog (updated) ──
     if (showSaveTemplateDialog) {
         var name by remember { mutableStateOf(templateFileName) }
         val templatesDir = remember { getTemplatesFolder(context) }
@@ -400,7 +406,7 @@ fun AnimatorToolbar(
         AlertDialog(
             onDismissRequest = {
                 showSaveTemplateDialog = false
-                templateFileName = name  // keep current name
+                templateFileName = name
             },
             title = { Text("Save Template") },
             text = {
@@ -442,10 +448,26 @@ fun AnimatorToolbar(
                         showSaveTemplateDialog = false
                         coroutineScope.launch {
                             try {
-                                val jsonArray = JSONArray()
-                                viewModel.animatorCanvasElements.forEach { jsonArray.put(it.toJson()) }
+                                // elements
+                                val elementsArray = JSONArray()
+                                viewModel.animatorCanvasElements.forEach { elementsArray.put(it.toJson()) }
+
+                                // gradients
+                                val gradientsObj = JSONObject()
+                                viewModel.animatorGradientPairs.forEach { (id, gradient) ->
+                                    gradientsObj.put(id, gradient.toJson())
+                                }
+
+                                // canvas size
+                                val root = JSONObject().apply {
+                                    put("canvasWidth", canvasWidthPx)
+                                    put("canvasHeight", canvasHeightPx)
+                                    put("elements", elementsArray)
+                                    put("gradients", gradientsObj)
+                                }
+
                                 val file = File(templatesDir, "$name.foh")
-                                file.writeText(jsonArray.toString())
+                                file.writeText(root.toString())
                                 Toast.makeText(context, "Saved ${file.name}", Toast.LENGTH_SHORT).show()
                             } catch (e: Exception) {
                                 Toast.makeText(context, "Save failed: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -464,6 +486,7 @@ fun AnimatorToolbar(
         )
     }
 
+    // ── Load Template Dialog (updated) ──
     if (showLoadTemplateDialog) {
         LaunchedEffect(true) {
             templateFilesState.value = getTemplateFiles(context)
@@ -485,15 +508,54 @@ fun AnimatorToolbar(
                         showLoadTemplateDialog = false
                         coroutineScope.launch {
                             try {
-                                val jsonArray = JSONArray(file.readText())
-                                val loaded = (0 until jsonArray.length()).map { i ->
-                                    CanvasElement.fromJson(jsonArray.getJSONObject(i))
+                                val jsonString = file.readText().trim()
+                                val loadedElements: List<CanvasElement>
+                                val loadedGradients = mutableMapOf<String, GradientConfig>()
+                                var loadedCanvasWidth: Int? = null
+                                var loadedCanvasHeight: Int? = null
+
+                                if (jsonString.startsWith("{")) {
+                                    // New full-project format
+                                    val root = JSONObject(jsonString)
+                                    if (root.has("elements")) {
+                                        val elementsArray = root.getJSONArray("elements")
+                                        loadedElements = (0 until elementsArray.length()).map {
+                                            CanvasElement.fromJson(elementsArray.getJSONObject(it))
+                                        }
+                                    } else {
+                                        loadedElements = emptyList()
+                                    }
+                                    if (root.has("gradients")) {
+                                        val gradObj = root.getJSONObject("gradients")
+                                        gradObj.keys().forEach { id ->
+                                            loadedGradients[id] = GradientConfig.fromJson(gradObj.getJSONObject(id))
+                                        }
+                                    }
+                                    loadedCanvasWidth = root.optInt("canvasWidth", 0).takeIf { it > 0 }
+                                    loadedCanvasHeight = root.optInt("canvasHeight", 0).takeIf { it > 0 }
+                                } else if (jsonString.startsWith("[")) {
+                                    // Old array format (backward compatibility)
+                                    val jsonArray = JSONArray(jsonString)
+                                    loadedElements = (0 until jsonArray.length()).map {
+                                        CanvasElement.fromJson(jsonArray.getJSONObject(it))
+                                    }
+                                } else {
+                                    Toast.makeText(context, "Unknown file format", Toast.LENGTH_SHORT).show()
+                                    return@launch
                                 }
+
                                 viewModel.animatorCanvasElements.clear()
-                                viewModel.animatorCanvasElements.addAll(loaded)
+                                viewModel.animatorCanvasElements.addAll(loadedElements)
                                 viewModel.animatorGradientPairs.clear()
+                                viewModel.animatorGradientPairs.putAll(loadedGradients)
                                 viewModel.animatorSelectedElementIds = emptySet()
                                 viewModel.animatorSelectedElementId = null
+
+                                // Apply canvas size if found
+                                if (loadedCanvasWidth != null && loadedCanvasHeight != null) {
+                                    onLoadCanvasSize(loadedCanvasWidth, loadedCanvasHeight)
+                                }
+
                                 Toast.makeText(context, "Loaded ${file.name}", Toast.LENGTH_SHORT).show()
                             } catch (e: Exception) {
                                 Toast.makeText(context, "Failed: ${e.message}", Toast.LENGTH_SHORT).show()

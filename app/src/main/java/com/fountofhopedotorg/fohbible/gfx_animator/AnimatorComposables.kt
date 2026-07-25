@@ -74,7 +74,6 @@ import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.CanvasKeyframe
 import com.fountofhopedotorg.fohbible.data.DisplayItem
 import com.fountofhopedotorg.fohbible.data.GradientConfig
-import com.fountofhopedotorg.fohbible.data.KeyframeAnimationContent
 import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.gfx_creator.ElementThumbnail
 import com.fountofhopedotorg.fohbible.gfx_creator.ReorderHandle
@@ -241,27 +240,21 @@ fun AnimatorCanvasElementsPanel(
                 val activeElementId = selectedElementId ?: fineTunerSelectedElementId
                 val activeElement = elements.find { it.id == activeElementId }
 
-                if (activeElement != null) {
-                    KeyframeAnimationContent(
-                        element = activeElement,
-                        allElements = elements,
-                        onElementSelected = { onSingleSelect(it) },
-                        onCancel = { onTabSelected(AnimatorTab.LAYERS) },
-                        onSave = { id, keyframes, startMs, endMs ->
-                            onSaveKeyframes?.invoke(id, keyframes, startMs, endMs)
-                        },
-                        timeMultiplier = timeMultiplier,
-                        initialGradientConfig = gradientConfigs[activeElement.id],
-                        canvasWidth = canvasWidth,
-                        canvasHeight = canvasHeight
-                    )
-                } else {
-                    Text(
-                        text =  "Select an element to animate",
-                        modifier = Modifier.padding(8.dp),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
+                KeyframeAnimationContent(
+                    element = activeElement,
+                    allElements = elements,
+                    onElementSelected = { onSingleSelect(it) },
+                    onCancel = { onTabSelected(AnimatorTab.LAYERS) },
+                    onSave = { id, keyframes, startMs, endMs ->
+                        onSaveKeyframes?.invoke(id, keyframes, startMs, endMs)
+                    },
+                    timeMultiplier = timeMultiplier,
+                    initialGradientConfig = gradientConfigs[activeElement?.id],
+                    canvasWidth = canvasWidth,
+                    canvasHeight = canvasHeight,
+                    themeColors = themeColors,
+                    gradientConfigs = gradientConfigs
+                )
             }
 
             AnimatorTab.FINE_TUNER -> {
@@ -269,7 +262,8 @@ fun AnimatorCanvasElementsPanel(
                     FineTunerPanel(
                         viewModel = viewModel,
                         selectedElementId = fineTunerSelectedElementId,
-                        elements = elements
+                        elements = elements,
+                        themeColors = themeColors
                     )
                 } else {
                     Text(

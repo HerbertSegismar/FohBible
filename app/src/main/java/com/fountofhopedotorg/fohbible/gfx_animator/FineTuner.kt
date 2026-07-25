@@ -1,104 +1,179 @@
 package com.fountofhopedotorg.fohbible.gfx_animator
 
 import android.annotation.SuppressLint
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.fountofhopedotorg.fohbible.data.CanvasElement
+import com.fountofhopedotorg.fohbible.data.ThemeColors
+import com.fountofhopedotorg.fohbible.gfx_creator.ElementThumbnail
+import com.fountofhopedotorg.fohbible.gfx_creator.getElementDisplayName
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 
 @Composable
 fun FineTunerPanel(
     viewModel: AppViewModel,
     selectedElementId: String?,
-    elements: List<CanvasElement>
+    elements: List<CanvasElement>,
+    themeColors: ThemeColors
 ) {
     val element = elements.find { it.id == selectedElementId }
-    if (element == null) {
-        Text(
-            text = "Select an element to fine‑tune",
-            modifier = Modifier.padding(8.dp),
-            style = MaterialTheme.typography.bodySmall,
-        )
-        return
-    }
 
-    val updateProps = { x: Float?, y: Float?, rot: Float? ->
-        viewModel.updateAnimatorElementProperties(
-            id = element.id,
-            x = x ?: element.offset.x,
-            y = y ?: element.offset.y,
-            width = element.width,
-            height = element.height,
-            rotation = rot ?: element.rotation
-        )
-    }
-
-    val updateScale = { sx: Float?, sy: Float? ->
-        viewModel.updateAnimatorElementScale(
-            id = element.id,
-            scaleX = sx ?: element.scaleX,
-            scaleY = sy ?: element.scaleY
-        )
+    val displayName: (CanvasElement) -> String = { elem ->
+        getElementDisplayName(elem, elements.indexOf(elem), elements)
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            CompactPropertyField(
-                label = "X", value = element.offset.x, format = ::formatPosition,
-                onValueChange = { updateProps(it, null, null) },
-                modifier = Modifier.weight(1f)
+        if (elements.isEmpty()) {
+            Text(
+                "No elements on canvas",
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(8.dp)
             )
-            CompactPropertyField(
-                label = "Y", value = element.offset.y, format = ::formatPosition,
-                onValueChange = { updateProps(null, it, null) },
-                modifier = Modifier.weight(1f)
-            )
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 300.dp),
+                contentPadding = PaddingValues(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                items(elements) { elem ->
+                    val isSelected = elem.id == selectedElementId
+                    val bgColor = if (isSelected)
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                    else
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+
+                    val gradientConfig = viewModel.animatorGradientPairs[elem.id]
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(bgColor)
+                            .then(if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp)) else Modifier)
+                            .clickable {
+                                viewModel.animatorSelectedElementIds = emptySet()
+                                viewModel.animatorSelectedElementId = elem.id
+                            }
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 32.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier.size(28.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                ElementThumbnail(
+                                    element = elem,
+                                    themeColors = themeColors,
+                                    gradientConfig = gradientConfig
+                                )
+                            }
+
+                            Spacer(Modifier.width(6.dp))
+
+                            Text(
+                                text = displayName(elem),
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                textAlign = TextAlign.Start,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+            }
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (element == null) {
+            if (elements.isNotEmpty()) {
+                Text(
+                    "Select an element to fine‑tune",
+                    modifier = Modifier.padding(8.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        } else {
+            val updateProps = { x: Float?, y: Float?, rot: Float? ->
+                viewModel.updateAnimatorElementProperties(
+                    id = element.id,
+                    x = x ?: element.offset.x,
+                    y = y ?: element.offset.y,
+                    width = element.width,
+                    height = element.height,
+                    rotation = rot ?: element.rotation
+                )
+            }
+
+            val updateScale = { sx: Float?, sy: Float? ->
+                viewModel.updateAnimatorElementScale(
+                    id = element.id,
+                    scaleX = sx ?: element.scaleX,
+                    scaleY = sy ?: element.scaleY
+                )
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                CompactPropertyField(
+                    label = "X", value = element.offset.x, format = ::formatPosition,
+                    onValueChange = { updateProps(it, null, null) },
+                    modifier = Modifier.weight(1f)
+                )
+                CompactPropertyField(
+                    label = "Y", value = element.offset.y, format = ::formatPosition,
+                    onValueChange = { updateProps(null, it, null) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                CompactPropertyField(
+                    label = "Scale X", value = element.scaleX, step = 0.1f,
+                    valueRange = 0.1f..25f, format = ::formatScale,
+                    onValueChange = { updateScale(it, null) },
+                    modifier = Modifier.weight(1f)
+                )
+                CompactPropertyField(
+                    label = "Scale Y", value = element.scaleY, step = 0.1f,
+                    valueRange = 0.1f..25f, format = ::formatScale,
+                    onValueChange = { updateScale(null, it) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
             CompactPropertyField(
-                label = "Scale X", value = element.scaleX, step = 0.1f,
-                valueRange = 0.1f..25f, format = ::formatScale,
-                onValueChange = { updateScale(it, null) },
-                modifier = Modifier.weight(1f)
-            )
-            CompactPropertyField(
-                label = "Scale Y", value = element.scaleY, step = 0.1f,
-                valueRange = 0.1f..25f, format = ::formatScale,
-                onValueChange = { updateScale(null, it) },
-                modifier = Modifier.weight(1f)
+                label = "Rotation°", value = element.rotation, format = ::formatPosition,
+                onValueChange = { updateProps(null, null, it) },
+                modifier = Modifier.fillMaxWidth()
             )
         }
-
-        CompactPropertyField(
-            label = "Rotation°", value = element.rotation, format = ::formatPosition,
-            onValueChange = { updateProps(null, null, it) },
-            modifier = Modifier.fillMaxWidth()
-        )
     }
 }
 
