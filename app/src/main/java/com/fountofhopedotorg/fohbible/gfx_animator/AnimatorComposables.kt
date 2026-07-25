@@ -854,7 +854,8 @@ fun SaveAsMenuWithVideo(
     onSaveJpg: () -> Unit,
     onSavePdf: () -> Unit,
     onSaveSvg: () -> Unit,
-    onSaveVideo: () -> Unit
+    onSaveVideo: () -> Unit,
+    onSaveTemplate: () -> Unit,
 ) {
     Box {
         DropdownMenu(
@@ -863,37 +864,30 @@ fun SaveAsMenuWithVideo(
         ) {
             DropdownMenuItem(
                 text = { Text("PNG") },
-                onClick = {
-                    onDismiss()
-                    onSavePng()
-                }
+                onClick = { onDismiss(); onSavePng() }
             )
             DropdownMenuItem(
                 text = { Text("JPG") },
-                onClick = {
-                    onDismiss()
-                    onSaveJpg()
-                }
+                onClick = { onDismiss(); onSaveJpg() }
             )
             DropdownMenuItem(
                 text = { Text("PDF") },
-                onClick = {
-                    onDismiss()
-                    onSavePdf()
-                }
+                onClick = { onDismiss(); onSavePdf() }
             )
             DropdownMenuItem(
                 text = { Text("SVG") },
-                onClick = {
-                    onDismiss()
-                    onSaveSvg()
-                }
+                onClick = { onDismiss(); onSaveSvg() }
             )
             DropdownMenuItem(
                 text = { Text("MP4") },
+                onClick = { onDismiss(); onSaveVideo() }
+            )
+
+            DropdownMenuItem(
+                text = { Text("Template") },
                 onClick = {
                     onDismiss()
-                    onSaveVideo()
+                    onSaveTemplate()
                 }
             )
         }

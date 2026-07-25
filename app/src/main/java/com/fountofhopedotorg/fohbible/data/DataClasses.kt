@@ -13,6 +13,9 @@ import androidx.compose.ui.unit.TextUnit
 import com.fountofhopedotorg.fohbible.MainActivity
 import com.fountofhopedotorg.fohbible.theme.DefaultPrimaryColor
 import java.util.UUID
+import org.json.JSONArray
+import org.json.JSONObject
+import androidx.compose.ui.graphics.toArgb
 
 data class PassageSelection(
     val bookNumber: Int,
@@ -253,37 +256,6 @@ data class Droplet(
     val tailLength: Float = 0f
 )
 
-data class CanvasElement(
-    val id: String = UUID.randomUUID().toString(),
-    val content: String,
-    val offset: Offset = Offset.Zero,
-    val width: Float = 200f,
-    val height: Float = 200f,
-    val rotation: Float = 0f,
-    val backgroundColor: Color = Color.White,
-    val position: Offset = Offset.Zero,
-    val isVisible: Boolean = true,
-    val isLocked: Boolean = false,
-    val customName: String? = null,
-    val groupId: String? = null,
-    val scaleX: Float = 1f,
-    val scaleY: Float = 1f,
-    val textColor: Color? = null,
-    val shadowColor: Color? = null,
-    val shadowOffsetX: Float = 2f,
-    val shadowOffsetY: Float = 2f,
-    val borderThickness: Float = 1f,
-    val borderColor: Color? = null,
-    val keyframes: List<CanvasKeyframe> = emptyList(),
-    val alpha: Float = 1f,
-    val startTimeMs: Long = 0L,
-    val endTimeMs: Long = Long.MAX_VALUE,
-    val pivotX: Float = 0.5f,
-    val pivotY: Float = 0.5f,
-    val fontFamily: String? = null,
-    val textAlign: String? = null,
-)
-
 data class BezierNode(
     val anchor: Offset,
     val handleIn: Offset,
@@ -378,38 +350,6 @@ data class Letter(
 
 data class CrownStructure(val vinePath: Path, val thornsPath: Path)
 
-data class GradientConfig(
-    val startColor: Color,
-    val endColor: Color,
-    val startOffset: Offset,
-    val endOffset: Offset
-)
-
-data class CanvasKeyframe(
-    val timestampMs: Long,
-    val x: Float? = null,
-    val y: Float? = null,
-    val scaleX: Float? = null,
-    val scaleY: Float? = null,
-    val rotation: Float? = null,
-    val color: Color? = null,
-    val gradientConfig: GradientConfig? = null,
-    val tweenType: TweenType = TweenType.LINEAR,
-    val customPoints: List<EasingPoint>? = null,
-    val pivotX: Float? = null,
-    val pivotY: Float? = null,
-    val ellipticalRotation: Boolean = false,
-    val ellipticalStretchX: Float = 1f,
-    val ellipticalStretchY: Float = 0.5f,
-    val shadowColor: Color? = null,
-    val shadowOffsetX: Float? = null,
-    val shadowOffsetY: Float? = null,
-    val borderThickness: Float? = null,
-    val borderColor: Color? = null,
-    val fontFamily: String? = null,
-    val textAlign: String? = null
-)
-
 sealed class DisplayItem {
     data class GroupHeader(
         val groupId: String,
@@ -436,16 +376,265 @@ enum class TweenType {
     CUSTOM
 }
 
+enum class AnimatorTab {
+    LAYERS,
+    FINE_TUNER,
+    KEYFRAME
+}
+
+data class CanvasElement(
+    val id: String = UUID.randomUUID().toString(),
+    val content: String,
+    val offset: Offset = Offset.Zero,
+    val width: Float = 200f,
+    val height: Float = 200f,
+    val rotation: Float = 0f,
+    val backgroundColor: Color = Color.White,
+    val position: Offset = Offset.Zero,
+    val isVisible: Boolean = true,
+    val isLocked: Boolean = false,
+    val customName: String? = null,
+    val groupId: String? = null,
+    val scaleX: Float = 1f,
+    val scaleY: Float = 1f,
+    val textColor: Color? = null,
+    val shadowColor: Color? = null,
+    val shadowOffsetX: Float = 2f,
+    val shadowOffsetY: Float = 2f,
+    val borderThickness: Float = 1f,
+    val borderColor: Color? = null,
+    val keyframes: List<CanvasKeyframe> = emptyList(),
+    val alpha: Float = 1f,
+    val startTimeMs: Long = 0L,
+    val endTimeMs: Long = Long.MAX_VALUE,
+    val pivotX: Float = 0.5f,
+    val pivotY: Float = 0.5f,
+    val fontFamily: String? = null,
+    val textAlign: String? = null,
+) {
+    fun toJson(): JSONObject = JSONObject().apply {
+        put("id", id)
+        put("content", content)
+        put("offsetX", offset.x)
+        put("offsetY", offset.y)
+        put("width", width.toDouble())
+        put("height", height.toDouble())
+        put("rotation", rotation.toDouble())
+        put("backgroundColor", backgroundColor.toArgb())
+        put("positionX", position.x)
+        put("positionY", position.y)
+        put("isVisible", isVisible)
+        put("isLocked", isLocked)
+        put("customName", customName ?: JSONObject.NULL)
+        put("groupId", groupId ?: JSONObject.NULL)
+        put("scaleX", scaleX.toDouble())
+        put("scaleY", scaleY.toDouble())
+        put("textColor", textColor?.toArgb() ?: JSONObject.NULL)
+        put("shadowColor", shadowColor?.toArgb() ?: JSONObject.NULL)
+        put("shadowOffsetX", shadowOffsetX.toDouble())
+        put("shadowOffsetY", shadowOffsetY.toDouble())
+        put("borderThickness", borderThickness.toDouble())
+        put("borderColor", borderColor?.toArgb() ?: JSONObject.NULL)
+        put("keyframes", JSONArray().also { arr ->
+            keyframes.forEach { arr.put(it.toJson()) }
+        })
+        put("alpha", alpha.toDouble())
+        put("startTimeMs", startTimeMs)
+        put("endTimeMs", endTimeMs)
+        put("pivotX", pivotX.toDouble())
+        put("pivotY", pivotY.toDouble())
+        put("fontFamily", fontFamily ?: JSONObject.NULL)
+        put("textAlign", textAlign ?: JSONObject.NULL)
+    }
+
+    companion object {
+        fun fromJson(json: JSONObject): CanvasElement {
+            return CanvasElement(
+                id = json.getString("id"),
+                content = json.getString("content"),
+                offset = Offset(
+                    json.getDouble("offsetX").toFloat(),
+                    json.getDouble("offsetY").toFloat()
+                ),
+                width = json.getDouble("width").toFloat(),
+                height = json.getDouble("height").toFloat(),
+                rotation = json.getDouble("rotation").toFloat(),
+                backgroundColor = Color(json.getInt("backgroundColor")),
+                position = Offset(
+                    json.getDouble("positionX").toFloat(),
+                    json.getDouble("positionY").toFloat()
+                ),
+                isVisible = json.getBoolean("isVisible"),
+                isLocked = json.getBoolean("isLocked"),
+                customName = if (json.isNull("customName")) null else json.getString("customName"),
+                groupId = if (json.isNull("groupId")) null else json.getString("groupId"),
+                scaleX = json.getDouble("scaleX").toFloat(),
+                scaleY = json.getDouble("scaleY").toFloat(),
+                textColor = if (json.isNull("textColor")) null else Color(json.getInt("textColor")),
+                shadowColor = if (json.isNull("shadowColor")) null else Color(json.getInt("shadowColor")),
+                shadowOffsetX = json.getDouble("shadowOffsetX").toFloat(),
+                shadowOffsetY = json.getDouble("shadowOffsetY").toFloat(),
+                borderThickness = json.getDouble("borderThickness").toFloat(),
+                borderColor = if (json.isNull("borderColor")) null else Color(json.getInt("borderColor")),
+                keyframes = json.optJSONArray("keyframes")?.let { arr ->
+                    (0 until arr.length()).map { CanvasKeyframe.fromJson(arr.getJSONObject(it)) }
+                } ?: emptyList(),
+                alpha = json.getDouble("alpha").toFloat(),
+                startTimeMs = json.getLong("startTimeMs"),
+                endTimeMs = json.getLong("endTimeMs"),
+                pivotX = json.getDouble("pivotX").toFloat(),
+                pivotY = json.getDouble("pivotY").toFloat(),
+                fontFamily = if (json.isNull("fontFamily")) null else json.getString("fontFamily"),
+                textAlign = if (json.isNull("textAlign")) null else json.getString("textAlign")
+            )
+        }
+    }
+}
+
+data class CanvasKeyframe(
+    val timestampMs: Long,
+    val x: Float? = null,
+    val y: Float? = null,
+    val scaleX: Float? = null,
+    val scaleY: Float? = null,
+    val rotation: Float? = null,
+    val color: Color? = null,
+    val gradientConfig: GradientConfig? = null,
+    val tweenType: TweenType = TweenType.LINEAR,
+    val customPoints: List<EasingPoint>? = null,
+    val pivotX: Float? = null,
+    val pivotY: Float? = null,
+    val ellipticalRotation: Boolean = false,
+    val ellipticalStretchX: Float = 1f,
+    val ellipticalStretchY: Float = 0.5f,
+    val shadowColor: Color? = null,
+    val shadowOffsetX: Float? = null,
+    val shadowOffsetY: Float? = null,
+    val borderThickness: Float? = null,
+    val borderColor: Color? = null,
+    val fontFamily: String? = null,
+    val textAlign: String? = null
+) {
+    fun toJson(): JSONObject = JSONObject().apply {
+        put("timestampMs", timestampMs)
+        put("x", x?.toDouble() ?: JSONObject.NULL)
+        put("y", y?.toDouble() ?: JSONObject.NULL)
+        put("scaleX", scaleX?.toDouble() ?: JSONObject.NULL)
+        put("scaleY", scaleY?.toDouble() ?: JSONObject.NULL)
+        put("rotation", rotation?.toDouble() ?: JSONObject.NULL)
+        put("color", color?.toArgb() ?: JSONObject.NULL)
+        put("gradientConfig", gradientConfig?.toJson() ?: JSONObject.NULL)
+        put("tweenType", tweenType.name)
+        put("customPoints", customPoints?.let { points ->
+            JSONArray().also { arr -> points.forEach { arr.put(it.toJson()) } }
+        } ?: JSONObject.NULL)
+        put("pivotX", pivotX?.toDouble() ?: JSONObject.NULL)
+        put("pivotY", pivotY?.toDouble() ?: JSONObject.NULL)
+        put("ellipticalRotation", ellipticalRotation)
+        put("ellipticalStretchX", ellipticalStretchX.toDouble())
+        put("ellipticalStretchY", ellipticalStretchY.toDouble())
+        put("shadowColor", shadowColor?.toArgb() ?: JSONObject.NULL)
+        put("shadowOffsetX", shadowOffsetX?.toDouble() ?: JSONObject.NULL)
+        put("shadowOffsetY", shadowOffsetY?.toDouble() ?: JSONObject.NULL)
+        put("borderThickness", borderThickness?.toDouble() ?: JSONObject.NULL)
+        put("borderColor", borderColor?.toArgb() ?: JSONObject.NULL)
+        put("fontFamily", fontFamily ?: JSONObject.NULL)
+        put("textAlign", textAlign ?: JSONObject.NULL)
+    }
+
+    companion object {
+        fun fromJson(json: JSONObject): CanvasKeyframe {
+            return CanvasKeyframe(
+                timestampMs = json.getLong("timestampMs"),
+                x = if (json.isNull("x")) null else json.getDouble("x").toFloat(),
+                y = if (json.isNull("y")) null else json.getDouble("y").toFloat(),
+                scaleX = if (json.isNull("scaleX")) null else json.getDouble("scaleX").toFloat(),
+                scaleY = if (json.isNull("scaleY")) null else json.getDouble("scaleY").toFloat(),
+                rotation = if (json.isNull("rotation")) null else json.getDouble("rotation").toFloat(),
+                color = if (json.isNull("color")) null else Color(json.getInt("color")),
+                gradientConfig = if (json.isNull("gradientConfig")) null else GradientConfig.fromJson(json.getJSONObject("gradientConfig")),
+                tweenType = TweenType.valueOf(json.getString("tweenType")),
+                customPoints = json.optJSONArray("customPoints")?.let { arr ->
+                    (0 until arr.length()).map { EasingPoint.fromJson(arr.getJSONObject(it)) }
+                },
+                pivotX = if (json.isNull("pivotX")) null else json.getDouble("pivotX").toFloat(),
+                pivotY = if (json.isNull("pivotY")) null else json.getDouble("pivotY").toFloat(),
+                ellipticalRotation = json.optBoolean("ellipticalRotation", false),
+                ellipticalStretchX = json.optDouble("ellipticalStretchX", 1.0).toFloat(),
+                ellipticalStretchY = json.optDouble("ellipticalStretchY", 0.5).toFloat(),
+                shadowColor = if (json.isNull("shadowColor")) null else Color(json.getInt("shadowColor")),
+                shadowOffsetX = if (json.isNull("shadowOffsetX")) null else json.getDouble("shadowOffsetX").toFloat(),
+                shadowOffsetY = if (json.isNull("shadowOffsetY")) null else json.getDouble("shadowOffsetY").toFloat(),
+                borderThickness = if (json.isNull("borderThickness")) null else json.getDouble("borderThickness").toFloat(),
+                borderColor = if (json.isNull("borderColor")) null else Color(json.getInt("borderColor")),
+                fontFamily = if (json.isNull("fontFamily")) null else json.getString("fontFamily"),
+                textAlign = if (json.isNull("textAlign")) null else json.getString("textAlign")
+            )
+        }
+    }
+}
+
+data class GradientConfig(
+    val startColor: Color,
+    val endColor: Color,
+    val startOffset: Offset,
+    val endOffset: Offset
+) {
+    fun toJson(): JSONObject = JSONObject().apply {
+        put("startColor", startColor.toArgb())
+        put("endColor", endColor.toArgb())
+        put("startOffsetX", startOffset.x)
+        put("startOffsetY", startOffset.y)
+        put("endOffsetX", endOffset.x)
+        put("endOffsetY", endOffset.y)
+    }
+
+    companion object {
+        fun fromJson(json: JSONObject): GradientConfig = GradientConfig(
+            startColor = Color(json.getInt("startColor")),
+            endColor = Color(json.getInt("endColor")),
+            startOffset = Offset(
+                json.getDouble("startOffsetX").toFloat(),
+                json.getDouble("startOffsetY").toFloat()
+            ),
+            endOffset = Offset(
+                json.getDouble("endOffsetX").toFloat(),
+                json.getDouble("endOffsetY").toFloat()
+            )
+        )
+    }
+}
+
 data class EasingPoint(
     val x: Float,
     val y: Float,
     val isSmooth: Boolean = false,
     val handleOut: Offset = Offset.Zero,
     val handleIn: Offset = Offset.Zero
-)
+) {
+    fun toJson(): JSONObject = JSONObject().apply {
+        put("x", x.toDouble())
+        put("y", y.toDouble())
+        put("isSmooth", isSmooth)
+        put("handleOutX", handleOut.x)
+        put("handleOutY", handleOut.y)
+        put("handleInX", handleIn.x)
+        put("handleInY", handleIn.y)
+    }
 
-enum class AnimatorTab {
-    LAYERS,
-    FINE_TUNER,
-    KEYFRAME
+    companion object {
+        fun fromJson(json: JSONObject): EasingPoint = EasingPoint(
+            x = json.getDouble("x").toFloat(),
+            y = json.getDouble("y").toFloat(),
+            isSmooth = json.optBoolean("isSmooth", false),
+            handleOut = Offset(
+                json.getDouble("handleOutX").toFloat(),
+                json.getDouble("handleOutY").toFloat()
+            ),
+            handleIn = Offset(
+                json.getDouble("handleInX").toFloat(),
+                json.getDouble("handleInY").toFloat()
+            )
+        )
+    }
 }
