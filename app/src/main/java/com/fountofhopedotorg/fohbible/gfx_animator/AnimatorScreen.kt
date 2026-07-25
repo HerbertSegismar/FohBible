@@ -71,6 +71,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import java.util.UUID
 import kotlin.math.PI
 import kotlin.math.atan2
@@ -80,6 +81,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.time.Duration.Companion.microseconds
 import kotlin.time.Duration.Companion.milliseconds
+import org.json.JSONObject
 
 fun offsetForPivotChange(
     element: CanvasElement,
@@ -112,7 +114,10 @@ fun offsetForPivotChange(
 
 @RequiresApi(Build.VERSION_CODES.Q)
 @Composable
-fun AnimatorScreen() {
+fun AnimatorScreen(
+    templateUriToLoad: Uri? = null,
+    onTemplateConsumed: () -> Unit = {}
+) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -342,6 +347,65 @@ fun AnimatorScreen() {
             pivotTargetId = null
         }
     }
+
+    LaunchedEffect(templateUriToLoad) {
+        templateUriToLoad?.let { uri ->
+            try {
+                val jsonString = withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(uri)?.bufferedReader()?.readText() ?: ""
+                }
+                if (jsonString.isBlank()) {
+                    Toast.makeText(context, "Empty template", Toast.LENGTH_SHORT).show()
+                    onTemplateConsumed()
+                    return@LaunchedEffect
+                }
+
+                val trimmed = jsonString.trim()
+                if (trimmed.startsWith("{")) {
+                    // Full project format
+                    val root = JSONObject(trimmed)
+                    if (root.has("elements")) {
+                        val elementsArray = root.getJSONArray("elements")
+                        val loadedElements = (0 until elementsArray.length()).map { i ->
+                            CanvasElement.fromJson(elementsArray.getJSONObject(i))
+                        }
+                        val gradientsObj = root.optJSONObject("gradients")
+                        val loadedGradients = mutableMapOf<String, GradientConfig>()
+                        gradientsObj?.keys()?.forEach { id ->
+                            loadedGradients[id] = GradientConfig.fromJson(gradientsObj.getJSONObject(id))
+                        }
+                        viewModel.animatorCanvasElements.clear()
+                        viewModel.animatorCanvasElements.addAll(loadedElements)
+                        viewModel.animatorGradientPairs.clear()
+                        viewModel.animatorGradientPairs.putAll(loadedGradients)
+                        // (background restoration can be added later)
+                    } else {
+                        Toast.makeText(context, "Invalid project format", Toast.LENGTH_SHORT).show()
+                    }
+                } else if (trimmed.startsWith("[")) {
+                    // Old array format
+                    val jsonArray = JSONArray(trimmed)
+                    val loadedElements = (0 until jsonArray.length()).map { i ->
+                        CanvasElement.fromJson(jsonArray.getJSONObject(i))
+                    }
+                    viewModel.animatorCanvasElements.clear()
+                    viewModel.animatorCanvasElements.addAll(loadedElements)
+                    viewModel.animatorGradientPairs.clear()
+                } else {
+                    Toast.makeText(context, "Unknown file format", Toast.LENGTH_SHORT).show()
+                }
+
+                viewModel.animatorSelectedElementIds = emptySet()
+                viewModel.animatorSelectedElementId = null
+                Toast.makeText(context, "Template loaded", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(context, "Failed to open template: ${e.message}", Toast.LENGTH_SHORT).show()
+            } finally {
+                onTemplateConsumed()
+            }
+        }
+    }
+
 
     LaunchedEffect(isPlayingAnimation) {
         if (!isPlayingAnimation) {

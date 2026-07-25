@@ -3,6 +3,7 @@ package com.fountofhopedotorg.fohbible
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
@@ -157,19 +158,58 @@ private val DISABLED_VERSIONS_KEY = stringPreferencesKey("disabled_versions")
 val ComponentActivity.appDataStore: DataStore<Preferences> by preferencesDataStore(name = "app_preferences")
 
 class MainActivity : ComponentActivity() {
+    private var pendingTemplateUri: Uri? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Handle the intent that started the activity (e.g., user tapped a .foh file)
+        handleIntent(intent)
+
         setContent {
             val viewModel: AppViewModel = viewModel()
-            FohBibleApp(this, viewModel)
+
+            // State to hold a URI that the animator screen should load
+            var animatorTemplateUri by remember { mutableStateOf<Uri?>(null) }
+
+            // Whenever a new pending URI arrives, pass it to the composable and consume it
+            LaunchedEffect(pendingTemplateUri) {
+                pendingTemplateUri?.let {
+                    animatorTemplateUri = it
+                    pendingTemplateUri = null
+                }
+            }
+
+            FohBibleApp(
+                activity = this,
+                viewModel = viewModel,
+                animatorTemplateUri = animatorTemplateUri,
+                onAnimatorTemplateConsumed = { animatorTemplateUri = null }
+            )
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        if (intent?.action == Intent.ACTION_VIEW && intent.data != null) {
+            pendingTemplateUri = intent.data
         }
     }
 }
 
 @SuppressLint("NewApi")
 @Composable
-fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
+fun FohBibleApp(
+    activity: MainActivity,
+    viewModel: AppViewModel,
+    animatorTemplateUri: Uri? = null,
+    onAnimatorTemplateConsumed: () -> Unit = {}
+) {
     var bibleInfoData by remember { mutableStateOf<BibleVersionInfo?>(null) }
     var isLoadingVersionInfo by remember { mutableStateOf(false) }
     var secondaryDbHelper by remember { mutableStateOf<DatabaseHelper?>(null) }
@@ -204,6 +244,7 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
             insetsController.show(WindowInsetsCompat.Type.systemBars())
         }
     }
+
     LaunchedEffect(isLandscape) {
         toggleFullscreen()
     }
@@ -376,6 +417,14 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
         secondaryDbHelper = DatabaseHelper(activity, viewModel.secondaryDbName)
     }
 
+    LaunchedEffect(animatorTemplateUri) {
+        if (animatorTemplateUri != null) {
+            if (viewModel.navigationStack.last() !is Screen.Animator) {
+                viewModel.navigateTo(Screen.Animator)
+            }
+        }
+    }
+
     DisposableEffect(Unit) {
         onDispose {
             dbHelper?.close()
@@ -543,7 +592,10 @@ fun FohBibleApp(activity: MainActivity, viewModel: AppViewModel) {
                                 viewModel.navigateTo(Screen.Reader(passage))
                             }
                         )
-                        Screen.Animator -> AnimatorScreen()
+                        Screen.Animator -> AnimatorScreen(
+                            templateUriToLoad = animatorTemplateUri,
+                            onTemplateConsumed = onAnimatorTemplateConsumed
+                        )
                     }
                     if (viewModel.showNavigationModal) {
                         NavigationModal(
