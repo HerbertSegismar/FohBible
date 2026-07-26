@@ -12,6 +12,7 @@ import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
@@ -22,9 +23,13 @@ import com.fountofhopedotorg.fohbible.data.BezierNode
 import com.fountofhopedotorg.fohbible.data.BoundingBox
 import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.CrownStructure
+import com.fountofhopedotorg.fohbible.data.GradientConfig
 import com.fountofhopedotorg.fohbible.data.ProcessingOptions
 import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.data.Verse
+import com.fountofhopedotorg.fohbible.gfx_animator.drawFrame
+import com.fountofhopedotorg.fohbible.gfx_animator.loadImageBitmaps
+import com.fountofhopedotorg.fohbible.gfx_animator.preloadFonts
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +41,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.random.Random
+import androidx.core.graphics.createBitmap
 
 
 fun buildReferenceString(
@@ -146,36 +152,51 @@ suspend fun saveCanvasAsPDF(
 
 @RequiresApi(Build.VERSION_CODES.Q)
 suspend fun saveCanvasAsSVG(
-    graphicsLayer: GraphicsLayer,
     context: Context,
-    canvasElements: List<CanvasElement>? = null
+    canvasWidthPx: Int,                          // true canvas width in pixels
+    canvasHeightPx: Int,                         // true canvas height in pixels
+    elements: List<CanvasElement>,
+    gradientConfigs: Map<String, GradientConfig>,
+    canvasBackgroundColor: Color? = null,
+    canvasBackgroundBrush: Brush? = null
 ) {
     try {
-        val bitmap = graphicsLayer.toImageBitmap().asAndroidBitmap()
-        val bitmapWidth = bitmap.width
-        val bitmapHeight = bitmap.height
-        val density = context.resources.displayMetrics.density
-        val canvasDpWidth = bitmapWidth / density
-        val canvasDpHeight = bitmapHeight / density
-        val scaleDownFactor = 1f / density
+        val allShapes = elements.all { it.content.startsWith("Shape:") }
 
-        val allShapes = canvasElements != null && canvasElements.all { it.content.startsWith("Shape:") }
+        val svgContent: String
 
-        val svgContent = if (allShapes) {
-            buildVectorSvg(canvasElements, canvasDpWidth, canvasDpHeight)
+        if (allShapes) {
+            svgContent = buildVectorSvg(elements, canvasWidthPx.toFloat(), canvasHeightPx.toFloat())
         } else {
+            val bitmap = renderCanvasToBitmap(
+                context = context,
+                canvasWidthPx = canvasWidthPx,
+                canvasHeightPx = canvasHeightPx,
+                elements = elements,
+                gradientConfigs = gradientConfigs,
+                canvasBackgroundColor = canvasBackgroundColor,
+                canvasBackgroundBrush = canvasBackgroundBrush,
+                timeMs = 0L                    // static snapshot (no animation)
+            )
+
+            // Encode to base64 PNG and embed in SVG at true canvas size
             val outputStream = ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
             val base64String = Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
-            """
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $canvasDpWidth $canvasDpHeight" width="$canvasDpWidth" height="$canvasDpHeight">
-                    <g transform="scale($scaleDownFactor)">
-                        <image width="$bitmapWidth" height="$bitmapHeight" href="data:image/png;base64,$base64String" />
-                    </g>
+
+            svgContent = """
+                <svg xmlns="http://www.w3.org/2000/svg" 
+                     viewBox="0 0 $canvasWidthPx $canvasHeightPx" 
+                     width="$canvasWidthPx" height="$canvasHeightPx">
+                    <image width="$canvasWidthPx" height="$canvasHeightPx" 
+                           href="data:image/png;base64,$base64String" />
                 </svg>
             """.trimIndent()
+
+            bitmap.recycle()
         }
 
+        // --- Save to MediaStore (unchanged) ---
         val fileName = "foh_canvas_${System.currentTimeMillis()}.svg"
         val resolver = context.contentResolver
         val contentValues = ContentValues().apply {
@@ -201,6 +222,48 @@ suspend fun saveCanvasAsSVG(
             Toast.makeText(context, "Failed to save SVG", Toast.LENGTH_SHORT).show()
         }
     }
+}
+
+/**
+ * Renders the canvas to a full-resolution Bitmap, using the same
+ * draw pipeline as the off‑screen video export.
+ */
+@RequiresApi(Build.VERSION_CODES.O)
+private suspend fun renderCanvasToBitmap(
+    context: Context,
+    canvasWidthPx: Int,
+    canvasHeightPx: Int,
+    elements: List<CanvasElement>,
+    gradientConfigs: Map<String, GradientConfig>,
+    canvasBackgroundColor: Color?,
+    canvasBackgroundBrush: Brush?,
+    timeMs: Long
+): Bitmap = withContext(Dispatchers.IO) {
+    val scaleFactor = 1f   // we render at exact pixel size
+    val imageBitmaps = loadImageBitmaps(elements, context, canvasWidthPx.toFloat(), canvasHeightPx.toFloat())
+    val fontCache = preloadFonts(elements, context)
+    val textSizePxBase = 60f * context.resources.configuration.fontScale
+
+    val bitmap = createBitmap(canvasWidthPx, canvasHeightPx)
+    val canvas = android.graphics.Canvas(bitmap)
+
+    drawFrame(
+        canvas = canvas,
+        elements = elements,
+        timeMs = timeMs,
+        gradientConfigs = gradientConfigs,
+        imageBitmaps = imageBitmaps,
+        scaleFactor = scaleFactor,
+        canvasWidth = canvasWidthPx.toFloat(),
+        canvasHeight = canvasHeightPx.toFloat(),
+        canvasBackgroundColor = canvasBackgroundColor,
+        canvasBackgroundBrush = canvasBackgroundBrush,
+        fontCache = fontCache,
+        textSizePxBase = textSizePxBase
+    )
+
+    imageBitmaps.values.forEach { it.recycle() }
+    bitmap
 }
 
 private fun buildVectorSvg(

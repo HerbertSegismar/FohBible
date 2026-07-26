@@ -307,7 +307,15 @@ fun AnimatorToolbar(
                 onSavePng = { coroutineScope.launch { saveCanvasAsImage(graphicsLayer, context, "PNG") } },
                 onSaveJpg = { coroutineScope.launch { saveCanvasAsImage(graphicsLayer, context, "JPG") } },
                 onSavePdf = { coroutineScope.launch { saveCanvasAsPDF(graphicsLayer, context) } },
-                onSaveSvg = { coroutineScope.launch { saveCanvasAsSVG(graphicsLayer, context, viewModel.animatorCanvasElements) } },
+                onSaveSvg = { coroutineScope.launch { saveCanvasAsSVG(
+                    context = context,
+                    canvasWidthPx = canvasWidthPx,          // the user‑defined width
+                    canvasHeightPx = canvasHeightPx,        // the user‑defined height
+                    elements = viewModel.animatorCanvasElements,
+                    gradientConfigs = viewModel.animatorGradientPairs,
+                    canvasBackgroundColor = viewModel.canvasBackgroundColor,
+                    canvasBackgroundBrush = viewModel.canvasBackgroundBrush
+                ) } },
                 onSaveVideo = onSaveVideo,
                 onSaveTemplate = { showSaveTemplateDialog = true }
             )

@@ -25,7 +25,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Note
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Bookmark
@@ -89,7 +88,6 @@ import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun UsefulSpaceGrid(
-    onCreateSermonMaterialsClick: () -> Unit,
     onTakeBibleQuizClick: () -> Unit,
     onLearnHebrewClick: () -> Unit,
     onLearnGreekClick: () -> Unit,
@@ -142,7 +140,7 @@ fun UsefulSpaceGrid(
                 ) {
                     for (col in 0..2) {
                         val index = row * 3 + col
-                        val isOccupied = index < 6
+                        val isOccupied = index < 5
 
                         Box(
                             modifier = Modifier
@@ -163,12 +161,11 @@ fun UsefulSpaceGrid(
                                         indication = ripple(bounded = true, color = Color.White),
                                         onClick = {
                                             when (index) {
-                                                0 -> onCreateSermonMaterialsClick()
-                                                1 -> onTakeBibleQuizClick()
-                                                2 -> onLearnHebrewClick()
-                                                3 -> onLearnGreekClick()
-                                                4 -> onOpenDictionaryClick()
-                                                5 -> onOpenVideoEditorClick()
+                                                0 -> onTakeBibleQuizClick()
+                                                1 -> onLearnHebrewClick()
+                                                2 -> onLearnGreekClick()
+                                                3 -> onOpenDictionaryClick()
+                                                4 -> onOpenVideoEditorClick()
                                             }
                                         }
                                     ) else Modifier
@@ -183,12 +180,11 @@ fun UsefulSpaceGrid(
                                 ) {
                                     Icon(
                                         imageVector = when (index) {
-                                            0 -> Icons.AutoMirrored.Filled.Note
-                                            1 -> Icons.Filled.QuestionAnswer
+                                            0 -> Icons.Filled.QuestionAnswer
+                                            1 -> Icons.Filled.School
                                             2 -> Icons.Filled.School
-                                            3 -> Icons.Filled.School
-                                            4 -> Icons.Filled.Book
-                                            5 -> Icons.Filled.PlayArrow
+                                            3 -> Icons.Filled.Book
+                                            4 -> Icons.Filled.PlayArrow
                                             else -> Icons.Filled.School
                                         },
                                         contentDescription = null,
@@ -200,12 +196,11 @@ fun UsefulSpaceGrid(
                                     Spacer(Modifier.height(8.dp))
                                     Text(
                                         text = when (index) {
-                                            0 -> "GFX Creator"
-                                            1 -> "Bible Quiz"
-                                            2 -> "Learn Hebrew"
-                                            3 -> "Learn Greek"
-                                            4 -> "Dictionary"
-                                            5 -> "GFX Animator"
+                                            0 -> "Bible Quiz"
+                                            1 -> "Learn Hebrew"
+                                            2 -> "Learn Greek"
+                                            3 -> "Dictionary"
+                                            4 -> "GFX Animator"
                                             else -> ""
                                         },
                                         style = textStyle,

@@ -70,7 +70,7 @@ private fun adjustOffsetForPivotChange(
     return element.offset + Offset(deltaOffsetX, deltaOffsetY)
 }
 
-private suspend fun preloadFonts(
+suspend fun preloadFonts(
     elements: List<CanvasElement>,
     context: Context
 ): Map<String, Typeface> = withContext(Dispatchers.IO) {

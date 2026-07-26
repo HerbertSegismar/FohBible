@@ -81,7 +81,6 @@ import com.fountofhopedotorg.fohbible.modals.VersionSelectionModal
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.data.BibleVersionInfo
 import com.fountofhopedotorg.fohbible.data.BibleVersionInfoRepository
-import com.fountofhopedotorg.fohbible.gfx_creator.CreatorScreen
 import com.fountofhopedotorg.fohbible.dictionary.DictionaryScreen
 import com.fountofhopedotorg.fohbible.learn.LearnGreekScreen
 import com.fountofhopedotorg.fohbible.learn.LearnHebrewScreen
@@ -454,7 +453,6 @@ fun FohBibleApp(
                 contentWindowInsets = WindowInsets(hInset, vInset, hInset, vInset),
                 topBar = {
                     if ((currentScreen !is Screen.Reader || !viewModel.isReaderFullScreen) &&
-                        (currentScreen !is Screen.Creator || !viewModel.isCreatorFullScreen) &&
                         (currentScreen !is Screen.Animator || !viewModel.isAnimatorFullScreen)) {
                         Surface(
                             modifier = Modifier.padding(horizontal = hInset),
@@ -527,7 +525,6 @@ fun FohBibleApp(
                                 }
                             },
                             databaseHelper = dbHelper,
-                            onOpenCreatorClick = { viewModel.navigateTo(Screen.Creator) },
                             onTakeBibleQuizClick = { viewModel.navigateTo(Screen.Quiz) },
                             onLearnHebrewClick = {viewModel.navigateTo(Screen.LearnHebrew)},
                             onLearnGreekClick = {viewModel.navigateTo(Screen.LearnGreek)},
@@ -581,7 +578,6 @@ fun FohBibleApp(
                                 viewModel.currentVersionAbbr = BibleVersionUtils.versionMap[newVersionKey] ?: "Bible"
                             }
                         )
-                        Screen.Creator -> CreatorScreen()
                         Screen.Quiz -> BibleQuizScreen()
                         Screen.LearnHebrew -> LearnHebrewScreen()
                         Screen.LearnGreek -> LearnGreekScreen()
@@ -853,7 +849,6 @@ sealed class Screen {
     object Notes : Screen()
     object Settings : Screen()
     object Search : Screen()
-    object Creator : Screen()
     object Quiz : Screen()
     object LearnHebrew : Screen()
     object LearnGreek : Screen()

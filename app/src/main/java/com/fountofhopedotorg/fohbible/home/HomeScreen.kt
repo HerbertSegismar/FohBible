@@ -94,7 +94,6 @@ fun HomeScreen(
     onNavigateToReader: (PassageSelection) -> Unit,
     onNavigateToScreen: (Screen) -> Unit,
     databaseHelper: DatabaseHelper? = null,
-    onOpenCreatorClick: () -> Unit = {},
     onTakeBibleQuizClick: () -> Unit,
     onLearnHebrewClick: () -> Unit,
     onLearnGreekClick: () -> Unit,
@@ -221,7 +220,6 @@ fun HomeScreen(
         item {
             Spacer(Modifier.height(16.dp))
             UsefulSpaceGrid(
-                onCreateSermonMaterialsClick = onOpenCreatorClick,
                 onTakeBibleQuizClick = onTakeBibleQuizClick,
                 onLearnHebrewClick = onLearnHebrewClick,
                 onLearnGreekClick = onLearnGreekClick,

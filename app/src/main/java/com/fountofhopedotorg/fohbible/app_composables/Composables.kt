@@ -393,7 +393,6 @@ fun HomeAppBar(
         is Screen.Notes -> "Notes"
         is Screen.Settings -> "Settings"
         is Screen.Search -> "Search"
-        is Screen.Creator -> "Creator"
         is Screen.Quiz -> "Quiz"
         is Screen.LearnHebrew -> "Learn Hebrew"
         is Screen.LearnGreek -> "Learn Greek"
