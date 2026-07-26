@@ -10,8 +10,6 @@ import android.provider.MediaStore
 import android.util.Base64
 import android.widget.Toast
 import androidx.annotation.RequiresApi
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -42,7 +40,9 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.random.Random
 import androidx.core.graphics.createBitmap
-
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.PathSegment
 
 fun buildReferenceString(
     bookName: String,
@@ -153,8 +153,8 @@ suspend fun saveCanvasAsPDF(
 @RequiresApi(Build.VERSION_CODES.Q)
 suspend fun saveCanvasAsSVG(
     context: Context,
-    canvasWidthPx: Int,                          // true canvas width in pixels
-    canvasHeightPx: Int,                         // true canvas height in pixels
+    canvasWidthPx: Int,
+    canvasHeightPx: Int,
     elements: List<CanvasElement>,
     gradientConfigs: Map<String, GradientConfig>,
     canvasBackgroundColor: Color? = null,
@@ -166,7 +166,7 @@ suspend fun saveCanvasAsSVG(
         val svgContent: String
 
         if (allShapes) {
-            svgContent = buildVectorSvg(elements, canvasWidthPx.toFloat(), canvasHeightPx.toFloat())
+            svgContent = buildVectorSvg(elements, canvasWidthPx.toFloat(), canvasHeightPx.toFloat(), gradientConfigs)
         } else {
             val bitmap = renderCanvasToBitmap(
                 context = context,
@@ -176,10 +176,9 @@ suspend fun saveCanvasAsSVG(
                 gradientConfigs = gradientConfigs,
                 canvasBackgroundColor = canvasBackgroundColor,
                 canvasBackgroundBrush = canvasBackgroundBrush,
-                timeMs = 0L                    // static snapshot (no animation)
+                timeMs = 0L
             )
 
-            // Encode to base64 PNG and embed in SVG at true canvas size
             val outputStream = ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
             val base64String = Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
@@ -224,10 +223,6 @@ suspend fun saveCanvasAsSVG(
     }
 }
 
-/**
- * Renders the canvas to a full-resolution Bitmap, using the same
- * draw pipeline as the off‑screen video export.
- */
 @RequiresApi(Build.VERSION_CODES.O)
 private suspend fun renderCanvasToBitmap(
     context: Context,
@@ -239,7 +234,7 @@ private suspend fun renderCanvasToBitmap(
     canvasBackgroundBrush: Brush?,
     timeMs: Long
 ): Bitmap = withContext(Dispatchers.IO) {
-    val scaleFactor = 1f   // we render at exact pixel size
+    val scaleFactor = 1f
     val imageBitmaps = loadImageBitmaps(elements, context, canvasWidthPx.toFloat(), canvasHeightPx.toFloat())
     val fontCache = preloadFonts(elements, context)
     val textSizePxBase = 60f * context.resources.configuration.fontScale
@@ -269,65 +264,147 @@ private suspend fun renderCanvasToBitmap(
 private fun buildVectorSvg(
     elements: List<CanvasElement>,
     canvasWidth: Float,
-    canvasHeight: Float
+    canvasHeight: Float,
+    gradientConfigs: Map<String, GradientConfig>
 ): String {
     val sb = StringBuilder()
     sb.append("""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $canvasWidth $canvasHeight" width="$canvasWidth" height="$canvasHeight">""")
-    sb.append("\n  <rect width=\"100%\" height=\"100%\" fill=\"white\" />\n")
+
+    val gradDefs = StringBuilder()
+    val elementGradientIds = mutableMapOf<String, String>()
+
+    for (element in elements) {
+        val gradConfig = gradientConfigs[element.id] ?: continue
+        val gradId = "grad-${element.id}"
+        elementGradientIds[element.id] = gradId
+
+        val startColor = gradConfig.startColor
+        val endColor = gradConfig.endColor
+
+        gradDefs.append("""
+        <linearGradient id="$gradId" gradientUnits="objectBoundingBox"
+                        x1="${gradConfig.startOffset.x}" y1="${gradConfig.startOffset.y}"
+                        x2="${gradConfig.endOffset.x}"   y2="${gradConfig.endOffset.y}">
+            <stop offset="0%" stop-color="${colorToHex(startColor)}" stop-opacity="${startColor.alpha}" />
+            <stop offset="100%" stop-color="${colorToHex(endColor)}" stop-opacity="${endColor.alpha}" />
+        </linearGradient>
+        """.trimIndent())
+    }
+
+    sb.append("\n  <defs>\n$gradDefs  </defs>\n")
+    sb.append("  <rect width=\"100%\" height=\"100%\" fill=\"white\" />\n")
 
     for (element in elements) {
         if (!element.isVisible) continue
         val x = element.offset.x
         val y = element.offset.y
-        val w = element.width * element.scaleX
-        val h = element.height * element.scaleY
+        val w = element.width
+        val h = element.height
         val color = colorToHex(element.backgroundColor)
+        val alpha = element.backgroundColor.alpha
         val rot = element.rotation
 
-        val cx = w / 2f
-        val cy = h / 2f
+        val cx = element.pivotX * w
+        val cy = element.pivotY * h
+
         val transform = buildString {
             append("translate($x, $y)")
-            if (rot != 0f) append(" rotate($rot, $cx, $cy)")
+            append(" translate($cx, $cy)")
+            if (rot != 0f) append(" rotate($rot)")
+            if (element.scaleX != 1f || element.scaleY != 1f)
+                append(" scale(${element.scaleX}, ${element.scaleY})")
+            append(" translate(${-cx}, ${-cy})")
         }
 
-        val shape = buildShapeSvg(element, w, h, color)
+        if (element.content.trim() == "Shape: ThornCrown") {
+            val seed = element.id.hashCode().toLong()
+            val size = Size(w, h)
+            val crown = generateThornCrownPaths(seed, size)
+
+            val strokeWidthScale = minOf(w, h) / 938f
+            val vineStrokeWidth = 8f * strokeWidthScale
+
+            val vineD = pathToSvgPathData(crown.vinePath)
+            val thornsD = pathToSvgPathData(crown.thornsPath)
+
+            val fillAttr = if (element.id in elementGradientIds) {
+                "fill=\"url(#${elementGradientIds[element.id]})\""
+            } else {
+                "fill=\"$color\" fill-opacity=\"$alpha\""
+            }
+
+            sb.append("  <g transform=\"$transform\">\n")
+            sb.append("    <path d=\"$vineD\" fill=\"none\" stroke=\"$color\" stroke-opacity=\"$alpha\" stroke-width=\"$vineStrokeWidth\" stroke-linecap=\"round\" stroke-linejoin=\"round\" />\n")
+            sb.append("    <path d=\"$thornsD\" $fillAttr />\n")
+            sb.append("  </g>\n")
+            continue
+        }
+
+        val gradId = elementGradientIds[element.id]
+        val shape = buildShapeSvg(element, w, h, color, gradId)
         if (shape.isNotEmpty()) {
-            sb.append("  <g transform=\"$transform\">$shape</g>\n")
+            sb.append("  <g transform=\"$transform\">\n    $shape\n  </g>\n")
         }
     }
     sb.append("</svg>")
     return sb.toString()
 }
 
-private fun buildShapeSvg(element: CanvasElement, w: Float, h: Float, hexColor: String): String {
+private fun pathToSvgPathData(path: Path): String {
+    val sb = StringBuilder()
+    val iterator = path.iterator()
+    val points = FloatArray(8)
+
+    while (iterator.hasNext()) {
+        val type = iterator.next(points)
+        when (type) {
+            PathSegment.Type.Move -> sb.append("M ${points[0]} ${points[1]} ")
+            PathSegment.Type.Line -> sb.append("L ${points[0]} ${points[1]} ")
+            PathSegment.Type.Quadratic -> sb.append("Q ${points[0]} ${points[1]} ${points[2]} ${points[3]} ")
+            PathSegment.Type.Conic -> sb.append("Q ${points[0]} ${points[1]} ${points[2]} ${points[3]} ") // Map to Quad
+            PathSegment.Type.Cubic -> sb.append("C ${points[0]} ${points[1]} ${points[2]} ${points[3]} ${points[4]} ${points[5]} ")
+            PathSegment.Type.Close -> sb.append("Z ")
+            PathSegment.Type.Done -> {}
+        }
+    }
+    return sb.toString().trim()
+}
+
+private fun buildShapeSvg(
+    element: CanvasElement,
+    w: Float,
+    h: Float,
+    hexColor: String,
+    gradientId: String? = null
+): String {
     val content = element.content.trim()
     val alpha = element.backgroundColor.alpha
 
-    return when {
+    val fillAttr = if (gradientId != null) {
+        "fill=\"url(#$gradientId)\""
+    } else {
+        "fill=\"$hexColor\" fill-opacity=\"$alpha\""
+    }
+
+    when {
         content.startsWith("Shape: Square") -> {
-            """<rect x="0" y="0" width="$w" height="$h" fill="$hexColor" fill-opacity="$alpha" />"""
+            return """<rect x="0" y="0" width="$w" height="$h" $fillAttr />"""
         }
         content.startsWith("Shape: Circle") -> {
-            """<ellipse cx="${w / 2}" cy="${h / 2}" rx="${w / 2}" ry="${h / 2}" fill="$hexColor" fill-opacity="$alpha" />"""
+            return """<ellipse cx="${w / 2}" cy="${h / 2}" rx="${w / 2}" ry="${h / 2}" $fillAttr />"""
         }
         content.startsWith("Shape: Triangle") -> {
             val points = "${w / 2},0 $w,$h 0,$h"
-            """<polygon points="$points" fill="$hexColor" fill-opacity="$alpha" />"""
+            return """<polygon points="$points" $fillAttr />"""
         }
         content.startsWith("Shape: Pentagon") -> {
             val pts = listOf(
-                0.5f to 0f,
-                1f to 0.4f,
-                0.8f to 1f,
-                0.2f to 1f,
-                0f to 0.4f
+                0.5f to 0f, 1f to 0.4f, 0.8f to 1f, 0.2f to 1f, 0f to 0.4f
             )
-            val pointsStr = pts.joinToString(" ") { (px, py) ->
-                "${px * w},${py * h}"
-            }
-            """<polygon points="$pointsStr" fill="$hexColor" fill-opacity="$alpha" />"""
+            val pointsStr = pts.joinToString(" ") { (px, py) -> "${px * w},${py * h}" }
+            return """<polygon points="$pointsStr" $fillAttr />"""
         }
+
         content.startsWith("Shape: Line") || content.startsWith("Shape:CustomLine:") -> {
             val pointsData = if (content.startsWith("Shape: Line")) {
                 getSerializedPointsForShape("Line")
@@ -337,19 +414,32 @@ private fun buildShapeSvg(element: CanvasElement, w: Float, h: Float, hexColor: 
             val segments = pointsData.split(";").filter { it.isNotEmpty() }
             if (segments.size >= 2) {
                 val d = buildPathD(segments, w, h, close = false)
-                """<path d="$d" fill="none" stroke="$hexColor" stroke-opacity="$alpha" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />"""
-            } else ""
+                return """<path d="$d" fill="none" stroke="$hexColor" stroke-opacity="$alpha" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />"""
+            }
         }
+
         content.startsWith("Shape:CustomPolygon:") -> {
             val serialized = content.removePrefix("Shape:CustomPolygon:")
             val segments = serialized.split(";").filter { it.isNotEmpty() }
             if (segments.size >= 2) {
                 val d = buildPathD(segments, w, h, close = true)
-                """<path d="$d" fill="$hexColor" fill-opacity="$alpha" stroke="$hexColor" stroke-opacity="$alpha" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />"""
-            } else ""
+                return """<path d="$d" $fillAttr stroke="$hexColor" stroke-opacity="$alpha" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />"""
+            }
         }
-        else -> ""
+
+        content.startsWith("Shape:") -> {
+            val shapeName = content.removePrefix("Shape:").trim()
+            val pointsData = getSerializedPointsForShape(shapeName)
+            if (pointsData.isNotEmpty()) {
+                val segments = pointsData.split(";").filter { it.isNotEmpty() }
+                if (segments.size >= 2) {
+                    val d = buildPathD(segments, w, h, close = true)
+                    return """<path d="$d" $fillAttr stroke="$hexColor" stroke-opacity="$alpha" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />"""
+                }
+            }
+        }
     }
+    return ""
 }
 
 private fun buildPathD(segments: List<String>, w: Float, h: Float, close: Boolean): String {
@@ -466,7 +556,7 @@ private fun elementCategory(element: CanvasElement): String {
         content == "Shape: ArrowRight"        -> "Arrow"
         content == "Shape: Octagon"           -> "Octagon"
         content == "Shape: Cross"             -> "Cross"
-        content == "Shape: ThornCrown"        -> "Thorn Crown" 
+        content == "Shape: ThornCrown"        -> "Thorn Crown"
         content == "Shape: Moon"              -> "Moon"
         content == "Shape: DavidStar"         -> "David Star"
         content == "Shape: Gear"              -> "Gear"

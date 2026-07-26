@@ -791,7 +791,7 @@ private fun drawElementContent(
     path?.let { canvas.drawPath(it, paint) }
 }
 
-private fun createPathForShape(content: String, width: Float, height: Float): Path? {
+fun createPathForShape(content: String, width: Float, height: Float): Path? {
     return when {
         content == "Shape: Square" -> {
             Path().apply { addRect(0f, 0f, width, height, Path.Direction.CW) }

@@ -309,8 +309,8 @@ fun AnimatorToolbar(
                 onSavePdf = { coroutineScope.launch { saveCanvasAsPDF(graphicsLayer, context) } },
                 onSaveSvg = { coroutineScope.launch { saveCanvasAsSVG(
                     context = context,
-                    canvasWidthPx = canvasWidthPx,          // the user‑defined width
-                    canvasHeightPx = canvasHeightPx,        // the user‑defined height
+                    canvasWidthPx = canvasWidthPx,
+                    canvasHeightPx = canvasHeightPx,
                     elements = viewModel.animatorCanvasElements,
                     gradientConfigs = viewModel.animatorGradientPairs,
                     canvasBackgroundColor = viewModel.canvasBackgroundColor,
@@ -404,7 +404,6 @@ fun AnimatorToolbar(
         }
     }
 
-    // ── Save Template Dialog (updated) ──
     if (showSaveTemplateDialog) {
         var name by remember { mutableStateOf(templateFileName) }
         val templatesDir = remember { getTemplatesFolder(context) }
@@ -456,17 +455,14 @@ fun AnimatorToolbar(
                         showSaveTemplateDialog = false
                         coroutineScope.launch {
                             try {
-                                // elements
                                 val elementsArray = JSONArray()
                                 viewModel.animatorCanvasElements.forEach { elementsArray.put(it.toJson()) }
 
-                                // gradients
                                 val gradientsObj = JSONObject()
                                 viewModel.animatorGradientPairs.forEach { (id, gradient) ->
                                     gradientsObj.put(id, gradient.toJson())
                                 }
 
-                                // canvas size
                                 val root = JSONObject().apply {
                                     put("canvasWidth", canvasWidthPx)
                                     put("canvasHeight", canvasHeightPx)
@@ -494,7 +490,6 @@ fun AnimatorToolbar(
         )
     }
 
-    // ── Load Template Dialog (updated) ──
     if (showLoadTemplateDialog) {
         LaunchedEffect(true) {
             templateFilesState.value = getTemplateFiles(context)
@@ -523,7 +518,6 @@ fun AnimatorToolbar(
                                 var loadedCanvasHeight: Int? = null
 
                                 if (jsonString.startsWith("{")) {
-                                    // New full-project format
                                     val root = JSONObject(jsonString)
                                     if (root.has("elements")) {
                                         val elementsArray = root.getJSONArray("elements")
@@ -542,7 +536,6 @@ fun AnimatorToolbar(
                                     loadedCanvasWidth = root.optInt("canvasWidth", 0).takeIf { it > 0 }
                                     loadedCanvasHeight = root.optInt("canvasHeight", 0).takeIf { it > 0 }
                                 } else if (jsonString.startsWith("[")) {
-                                    // Old array format (backward compatibility)
                                     val jsonArray = JSONArray(jsonString)
                                     loadedElements = (0 until jsonArray.length()).map {
                                         CanvasElement.fromJson(jsonArray.getJSONObject(it))
@@ -559,7 +552,6 @@ fun AnimatorToolbar(
                                 viewModel.animatorSelectedElementIds = emptySet()
                                 viewModel.animatorSelectedElementId = null
 
-                                // Apply canvas size if found
                                 if (loadedCanvasWidth != null && loadedCanvasHeight != null) {
                                     onLoadCanvasSize(loadedCanvasWidth, loadedCanvasHeight)
                                 }
