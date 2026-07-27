@@ -194,7 +194,6 @@ fun AnimatorCanvasElementsPanel(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // --- Tabs row – clean, direct selection ---
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     "Layers",
@@ -223,7 +222,6 @@ fun AnimatorCanvasElementsPanel(
                 )
             }
 
-            // Collapse/Expand icon only for Layers tab
             if (activeTab == AnimatorTab.LAYERS) {
                 Icon(
                     imageVector = if (showTree) Icons.Default.ArrowDropDown

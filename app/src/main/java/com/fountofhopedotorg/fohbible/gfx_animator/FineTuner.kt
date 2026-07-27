@@ -1,6 +1,5 @@
 package com.fountofhopedotorg.fohbible.gfx_animator
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -179,13 +178,13 @@ fun FineTunerPanel(
 
 @Composable
 private fun CompactPropertyField(
+    modifier: Modifier = Modifier,
     label: String,
     value: Float,
     step: Float = 1f,
     valueRange: ClosedFloatingPointRange<Float> = -Float.MAX_VALUE..Float.MAX_VALUE,
     format: (Float) -> String,
     onValueChange: (Float) -> Unit,
-    @SuppressLint("ModifierParameter") modifier: Modifier = Modifier
 ) {
     var textValue by remember(value) { mutableStateOf(format(value)) }
 

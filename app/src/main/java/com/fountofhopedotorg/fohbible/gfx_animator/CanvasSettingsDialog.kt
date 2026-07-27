@@ -152,7 +152,7 @@ fun CanvasSettingsDialog(
                             Spacer(modifier = Modifier.height(16.dp))
 
                             when (selectedBgTab) {
-                                0 -> { // Solid Color tab
+                                0 -> {
                                     Column {
                                         Text("Select a Solid Color:", style = MaterialTheme.typography.bodyMedium)
                                         Spacer(modifier = Modifier.height(8.dp))

@@ -45,9 +45,6 @@ import com.fountofhopedotorg.fohbible.data.GradientConfig
 import com.fountofhopedotorg.fohbible.utils.availableFontFamilies
 import java.util.Locale
 
-/**
- * Safely parses a float string, accepting both '.' and ',' as decimal separators.
- */
 private fun parseFloatSafe(value: String): Float {
     return value.replace(',', '.').toFloatOrNull() ?: 0f
 }
@@ -95,7 +92,6 @@ fun AnimatorEditPropertiesDialog(
 ) {
     if (show && elementId != null) {
         key(elementId) {
-            // Existing state
             val normalizedInitialRotation = remember(true, initialRotation) {
                 val degrees = initialRotation.toDoubleOrNull() ?: 0.0
                 ((degrees % 360) + 360) % 360
@@ -121,7 +117,6 @@ fun AnimatorEditPropertiesDialog(
                 mutableStateOf(initialGradientConfig)
             }
 
-            // New state for font and alignment
             var editFontFamily by remember(show, initialFontFamily) { mutableStateOf(initialFontFamily ?: "system") }
             var editTextAlign by remember(show, initialTextAlign) { mutableStateOf(initialTextAlign ?: "Center") }
 
@@ -135,7 +130,6 @@ fun AnimatorEditPropertiesDialog(
                         modifier = Modifier.verticalScroll(scrollState),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // --- Position ---
                         OutlinedTextField(
                             value = editX,
                             onValueChange = { editX = it },
@@ -151,7 +145,6 @@ fun AnimatorEditPropertiesDialog(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                         )
 
-                        // --- Proportional scaling toggle ---
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
@@ -168,7 +161,6 @@ fun AnimatorEditPropertiesDialog(
                             )
                         }
 
-                        // --- Scale ---
                         OutlinedTextField(
                             value = editScaleX,
                             onValueChange = { newValue ->
@@ -204,7 +196,6 @@ fun AnimatorEditPropertiesDialog(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                         )
 
-                        // --- Rotation ---
                         OutlinedTextField(
                             value = editRotation,
                             onValueChange = { editRotation = it },
@@ -213,7 +204,6 @@ fun AnimatorEditPropertiesDialog(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                         )
 
-                        // --- Color ---
                         OutlinedTextField(
                             value = " ",
                             onValueChange = {},
@@ -233,7 +223,6 @@ fun AnimatorEditPropertiesDialog(
                             }
                         )
 
-                        // --- Shadow ---
                         Text("Shadow", style = MaterialTheme.typography.titleSmall)
 
                         OutlinedTextField(
@@ -274,7 +263,6 @@ fun AnimatorEditPropertiesDialog(
                             )
                         }
 
-                        // --- Border ---
                         Text("Border", style = MaterialTheme.typography.titleSmall)
 
                         OutlinedTextField(
@@ -304,7 +292,6 @@ fun AnimatorEditPropertiesDialog(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                         )
 
-                        // --- Text Style (Font & Alignment) – SHOWN ONLY FOR TEXT ELEMENTS ---
                         if (isTextElement) {
                             Text("Text Style", style = MaterialTheme.typography.titleSmall)
 
@@ -374,7 +361,6 @@ fun AnimatorEditPropertiesDialog(
                         val rotationToApply = rotationValue.toString()
                         val shadowColor = editShadowColor
 
-                        // FIX: Use the safe parser that accepts both '.' and ',' as decimal separators
                         val shadowOffsetX = parseFloatSafe(editShadowOffsetX)
                         val shadowOffsetY = parseFloatSafe(editShadowOffsetY)
                         val borderThickness = parseFloatSafe(editBorderThickness)
@@ -405,7 +391,6 @@ fun AnimatorEditPropertiesDialog(
                 }
             )
 
-            // Color pickers
             if (showEditColorPicker) {
                 ColorWheelDialog(
                     onDismissRequest = { showEditColorPicker = false },

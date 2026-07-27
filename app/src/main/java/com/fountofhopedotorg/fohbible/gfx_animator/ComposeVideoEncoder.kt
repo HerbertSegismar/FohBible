@@ -34,7 +34,6 @@ class ComposeVideoEncoder(
     private val bitRate: Int = 20_000_000,
     private val isDark: Boolean = false,
     private val themePrimaryColorInt: Int = 0xFF000000.toInt(),
-    // Added background properties from the ViewModel
     private val canvasBackgroundColor: ComposeColor? = null,
     private val canvasBackgroundBrush: Brush? = null
 ) {
@@ -198,7 +197,6 @@ class ComposeVideoEncoder(
 
         val canvas = surface.lockHardwareCanvas()
 
-        // --- Render Background ---
         if (canvasBackgroundBrush != null) {
             val composeCanvas = ComposeCanvas(canvas)
             val composePaint = ComposePaint()
@@ -217,7 +215,6 @@ class ComposeVideoEncoder(
         } else if (canvasBackgroundColor != null) {
             canvas.drawColor(canvasBackgroundColor.toArgb())
         } else {
-            // Original Theme-based fallbacks if no custom canvas layout styling is set
             if (isDark) {
                 canvas.drawColor(0xFF1E2937.toInt())
             } else {
@@ -230,7 +227,6 @@ class ComposeVideoEncoder(
             }
         }
 
-        // --- Render Elements / Overlay History ---
         val paint = android.graphics.Paint()
         frameHistory.forEachIndexed { index, histBitmap ->
             val distanceFromCurrent = frameHistory.size - 1 - index

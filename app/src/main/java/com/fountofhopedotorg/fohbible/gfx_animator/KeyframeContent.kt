@@ -67,9 +67,6 @@ fun KeyframeAnimationContent(
     themeColors: ThemeColors,
     gradientConfigs: Map<String, GradientConfig> = emptyMap()
 ) {
-    // -------------------------------------------------------------------
-    // 1. State declarations – safe when element == null
-    // -------------------------------------------------------------------
     var hasUnsavedChanges by remember { mutableStateOf(true) }
     var isInitialState by remember { mutableStateOf(true) }
 
@@ -152,9 +149,6 @@ fun KeyframeAnimationContent(
         mutableStateOf(storedToDisplay(initialCenterMs).toString())
     }
 
-    // -------------------------------------------------------------------
-    // 2. Side effects – guarded when element is required
-    // -------------------------------------------------------------------
     LaunchedEffect(trimStartMs, trimEndMs) {
         val midpointStored = trimStartMs + (trimEndMs - trimStartMs) / 2
         timeInput = storedToDisplay(midpointStored).toString()
@@ -317,11 +311,8 @@ fun KeyframeAnimationContent(
         }
     }
 
-    // -------------------------------------------------------------------
-    // 3. Inner composable functions – fully expanded
-    // -------------------------------------------------------------------
     @Composable
-    fun KeyframeListCompact() {
+    fun KeyframeList() {
         if (localKeyframes.isEmpty()) {
             Text("No keyframes", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
             return
@@ -1314,10 +1305,6 @@ fun KeyframeAnimationContent(
             )
         }
     }
-
-    // -------------------------------------------------------------------
-    // 4. Main UI composition – timeline always shown, editor conditional
-    // -------------------------------------------------------------------
     val portraitScrollState = rememberScrollState()
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -1331,7 +1318,6 @@ fun KeyframeAnimationContent(
                 .imePadding()
                 .verticalScroll(portraitScrollState),
         ) {
-            // Timeline track is always visible
             UnifiedTimelineTrack(
                 elements = allElements,
                 selectedElement = element,
@@ -1342,8 +1328,6 @@ fun KeyframeAnimationContent(
                 themeColors = themeColors,
                 gradientConfigs = gradientConfigs
             )
-
-            // Show detailed editing controls only when an element is selected
             if (element != null) {
                 Text(
                     if (editingKeyframeTimestamp != null) "Editing Keyframe" else "New Keyframe",
@@ -1375,7 +1359,7 @@ fun KeyframeAnimationContent(
                 }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                 Text("Keyframes", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp))
-                KeyframeListCompact()
+                KeyframeList()
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                 Row(
                     modifier = Modifier

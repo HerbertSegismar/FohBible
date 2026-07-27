@@ -123,3 +123,4 @@ private fun cubicBezierDerivative(p0: Float, p1: Float, p2: Float, p3: Float, t:
 private fun evaluateCubicBezier(y0: Float, y1: Float, y2: Float, y3: Float, t: Float) =
     cubicBezierValue(y0, y1, y2, y3, t)
 
+

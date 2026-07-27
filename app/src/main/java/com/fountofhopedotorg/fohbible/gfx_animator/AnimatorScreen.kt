@@ -977,16 +977,10 @@ fun AnimatorScreen(
                             viewModel.animatorGroupRenameText = currentName
                         },
                         gradientConfigs = viewModel.animatorGradientPairs,
-
-                        // --- New unified tab control ---
                         activeTab = activeTab,
                         onTabSelected = { activeTab = it },
-                        // --- End of tab control ---
-
                         viewModel = viewModel,
                         fineTunerSelectedElementId = viewModel.animatorSelectedElementId,
-
-                        // Keyframe save callback (unchanged)
                         onSaveKeyframes = { elementId, keyframes, startMs, endMs ->
                             val index = viewModel.animatorCanvasElements.indexOfFirst { it.id == elementId }
                             if (index != -1) {
@@ -1341,12 +1335,8 @@ fun AnimatorScreen(
                             viewModel.animatorGroupRenameText = currentName
                         },
                         gradientConfigs = viewModel.animatorGradientPairs,
-
-                        // --- New unified tab control ---
                         activeTab = activeTab,
                         onTabSelected = { activeTab = it },
-                        // --- End of tab control ---
-
                         viewModel = viewModel,
                         fineTunerSelectedElementId = viewModel.animatorSelectedElementId,
 

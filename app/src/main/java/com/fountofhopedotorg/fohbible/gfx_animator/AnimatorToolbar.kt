@@ -270,7 +270,6 @@ fun AnimatorToolbar(
     }
 
     val secondItems: @Composable () -> Unit = {
-        // Mode buttons
         modes.forEach { (mode, icon, color) ->
             val isSelected = selectedInputMode == mode
             IconButton(
