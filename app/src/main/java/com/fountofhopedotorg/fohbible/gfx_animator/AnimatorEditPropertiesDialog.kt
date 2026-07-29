@@ -71,6 +71,8 @@ fun AnimatorEditPropertiesDialog(
     initialFontFamily: String? = null,
     initialTextAlign: String? = null,
     isTextElement: Boolean = false,
+    initialPivotX: Float = 0.5f,
+    initialPivotY: Float = 0.5f,
     onDismiss: () -> Unit,
     onApply: (
         elementId: String,
@@ -87,7 +89,9 @@ fun AnimatorEditPropertiesDialog(
         borderColor: Color?,
         gradientConfig: GradientConfig?,
         fontFamily: String?,
-        textAlign: String?
+        textAlign: String?,
+        pivotX: Float,
+        pivotY: Float
     ) -> Unit
 ) {
     if (show && elementId != null) {
@@ -102,10 +106,12 @@ fun AnimatorEditPropertiesDialog(
             var editScaleX by remember(show, initialScaleX) { mutableStateOf(formatScale(initialScaleX.toFloatOrNull() ?: 1f)) }
             var editScaleY by remember(show, initialScaleY) { mutableStateOf(formatScale(initialScaleY.toFloatOrNull() ?: 1f)) }
             var editRotation by remember(show, normalizedInitialRotation) { mutableStateOf(formatRotation(normalizedInitialRotation.toFloatOrNull() ?: 0f)) }
-            var editShadowOffsetX by remember(show, initialShadowOffsetX) { mutableStateOf(String.format(
-                Locale.US, "%.1f", initialShadowOffsetX)) }
+            var editShadowOffsetX by remember(show, initialShadowOffsetX) { mutableStateOf(String.format(Locale.US, "%.1f", initialShadowOffsetX)) }
             var editShadowOffsetY by remember(show, initialShadowOffsetY) { mutableStateOf(String.format(Locale.US, "%.1f", initialShadowOffsetY)) }
             var editBorderThickness by remember(show, initialBorderThickness) { mutableStateOf(String.format(Locale.US, "%.1f", initialBorderThickness)) }
+
+            var editPivotX by remember(show, initialPivotX) { mutableStateOf(String.format(Locale.US, "%.3f", initialPivotX)) }
+            var editPivotY by remember(show, initialPivotY) { mutableStateOf(String.format(Locale.US, "%.3f", initialPivotY)) }
 
             var editBorderColor by remember(show, initialBorderColor) { mutableStateOf(initialBorderColor) }
             var editColor by remember(show, initialColor) { mutableStateOf(initialColor) }
@@ -203,6 +209,26 @@ fun AnimatorEditPropertiesDialog(
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                         )
+
+                        Text("Pivot", style = MaterialTheme.typography.titleSmall)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                value = editPivotX,
+                                onValueChange = { editPivotX = it },
+                                label = { Text("X") },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                modifier = Modifier.weight(1f)
+                            )
+                            OutlinedTextField(
+                                value = editPivotY,
+                                onValueChange = { editPivotY = it },
+                                label = { Text("Y") },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
 
                         OutlinedTextField(
                             value = " ",
@@ -364,8 +390,10 @@ fun AnimatorEditPropertiesDialog(
                         val shadowOffsetX = parseFloatSafe(editShadowOffsetX)
                         val shadowOffsetY = parseFloatSafe(editShadowOffsetY)
                         val borderThickness = parseFloatSafe(editBorderThickness)
-
                         val borderColor = editBorderColor
+
+                        val pivotXValue = parseFloatSafe(editPivotX)
+                        val pivotYValue = parseFloatSafe(editPivotY)
 
                         onApply(
                             elementId,
@@ -382,7 +410,9 @@ fun AnimatorEditPropertiesDialog(
                             borderColor,
                             editGradientConfig,
                             editFontFamily,
-                            editTextAlign
+                            editTextAlign,
+                            pivotXValue,
+                            pivotYValue
                         )
                     }) { Text("Apply") }
                 },

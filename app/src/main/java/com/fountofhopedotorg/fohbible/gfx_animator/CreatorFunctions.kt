@@ -1,8 +1,9 @@
-package com.fountofhopedotorg.fohbible.gfx_creator
+package com.fountofhopedotorg.fohbible.gfx_animator
 
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.pdf.PdfDocument
 import android.os.Build
 import android.os.Environment
@@ -25,9 +26,6 @@ import com.fountofhopedotorg.fohbible.data.GradientConfig
 import com.fountofhopedotorg.fohbible.data.ProcessingOptions
 import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.data.Verse
-import com.fountofhopedotorg.fohbible.gfx_animator.drawFrame
-import com.fountofhopedotorg.fohbible.gfx_animator.loadImageBitmaps
-import com.fountofhopedotorg.fohbible.gfx_animator.preloadFonts
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.utils.VerseTextProcessor
 import kotlinx.coroutines.Dispatchers
@@ -43,6 +41,7 @@ import androidx.core.graphics.createBitmap
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.PathSegment
+import kotlin.math.sqrt
 
 fun buildReferenceString(
     bookName: String,
@@ -240,7 +239,7 @@ private suspend fun renderCanvasToBitmap(
     val textSizePxBase = 60f * context.resources.configuration.fontScale
 
     val bitmap = createBitmap(canvasWidthPx, canvasHeightPx)
-    val canvas = android.graphics.Canvas(bitmap)
+    val canvas = Canvas(bitmap)
 
     drawFrame(
         canvas = canvas,
@@ -727,7 +726,7 @@ fun getSerializedPointsForShape(shapeType: String): String {
             val cx = 0.5f
             val cy = 0.5f
             val rOut = 0.5f
-            val rIn = rOut / kotlin.math.sqrt(3f)
+            val rIn = rOut / sqrt(3f)
             val curveFactor = 0.85f
             val vertices = (0 until 12).map { i ->
                 val angleRad = (-90f + (i * 30f)) * Math.PI.toFloat() / 180f

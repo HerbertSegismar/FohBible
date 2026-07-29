@@ -18,8 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.layout
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -27,13 +25,6 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
-
-fun Modifier.requiredSizePx(width: Float, height: Float) = this.layout { measurable, _ ->
-    val w = width.roundToInt().coerceAtLeast(0)
-    val h = height.roundToInt().coerceAtLeast(0)
-    val placeable = measurable.measure(Constraints.fixed(w, h))
-    layout(placeable.width, placeable.height) { placeable.placeRelative(0, 0) }
-}
 
 @Composable
 fun PivotHandle(

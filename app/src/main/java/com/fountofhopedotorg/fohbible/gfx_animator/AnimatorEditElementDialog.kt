@@ -1,8 +1,5 @@
 package com.fountofhopedotorg.fohbible.gfx_animator
 
-import com.fountofhopedotorg.fohbible.gfx_creator.buildProcessedContent
-import com.fountofhopedotorg.fohbible.gfx_creator.buildReferenceString
-import com.fountofhopedotorg.fohbible.gfx_creator.getRandomColor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState

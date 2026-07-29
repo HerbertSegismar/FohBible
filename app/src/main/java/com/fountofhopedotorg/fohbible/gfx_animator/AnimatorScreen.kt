@@ -55,12 +55,6 @@ import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.GradientConfig
 import com.fountofhopedotorg.fohbible.data.ThemeColors
-import com.fountofhopedotorg.fohbible.gfx_creator.CustomPolygonDialog
-import com.fountofhopedotorg.fohbible.gfx_creator.GroupDialog
-import com.fountofhopedotorg.fohbible.gfx_creator.RenameDialog
-import com.fountofhopedotorg.fohbible.gfx_creator.getElementDisplayName
-import com.fountofhopedotorg.fohbible.gfx_creator.getRandomColor
-import com.fountofhopedotorg.fohbible.gfx_creator.getSerializedPointsForShape
 import com.fountofhopedotorg.fohbible.models.AnimatorDialogType
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.theme.LocalAppTheme
@@ -935,6 +929,8 @@ fun AnimatorScreen(
                             viewModel.animatorEditFontFamily = element.fontFamily ?: "system"
                             viewModel.animatorEditTextAlign = element.textAlign ?: "Center"
                             viewModel.animatorEditIsTextElement = isText
+                            viewModel.animatorEditPivotX = element.pivotX
+                            viewModel.animatorEditPivotY = element.pivotY
                             viewModel.animatorShowEditPropertiesDialog = true
                         },
                         onAnimateKeyframes = { element ->
@@ -1293,6 +1289,8 @@ fun AnimatorScreen(
                             viewModel.animatorEditFontFamily = element.fontFamily ?: "system"
                             viewModel.animatorEditTextAlign = element.textAlign ?: "Center"
                             viewModel.animatorEditIsTextElement = isText
+                            viewModel.animatorEditPivotX = element.pivotX
+                            viewModel.animatorEditPivotY = element.pivotY
                             viewModel.animatorShowEditPropertiesDialog = true
                         },
                         onAnimateKeyframes = { element ->
@@ -1605,6 +1603,8 @@ fun AnimatorScreen(
         initialFontFamily = viewModel.animatorEditFontFamily,
         initialTextAlign = viewModel.animatorEditTextAlign,
         isTextElement = viewModel.animatorEditIsTextElement,
+        initialPivotX = viewModel.animatorEditPivotX,
+        initialPivotY = viewModel.animatorEditPivotY,
         onDismiss = {
             viewModel.animatorShowEditPropertiesDialog = false
             viewModel.animatorEditPropertiesElementId = null
@@ -1612,7 +1612,7 @@ fun AnimatorScreen(
         onApply = { id, x, y, scaleX, scaleY, rot, color,
                     shadowColor, shadowOffsetX, shadowOffsetY,
                     borderThickness, borderColor,
-                    gradientConfig, fontFamily, textAlign ->
+                    gradientConfig, fontFamily, textAlign,  pivotX, pivotY ->
 
             val index = viewModel.animatorCanvasElements.indexOfFirst { it.id == id }
             if (index != -1) {
@@ -1635,7 +1635,9 @@ fun AnimatorScreen(
                     borderThickness = borderThickness,
                     borderColor = borderColor,
                     fontFamily = fontFamily,
-                    textAlign = textAlign
+                    textAlign = textAlign,
+                    pivotX = pivotX,
+                    pivotY = pivotY
                 )
 
                 if (gradientConfig != null) {

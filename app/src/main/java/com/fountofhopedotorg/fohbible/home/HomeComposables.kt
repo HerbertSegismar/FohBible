@@ -71,7 +71,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.fountofhopedotorg.fohbible.R
-import com.fountofhopedotorg.fohbible.gfx_creator.getRandomColor
+import com.fountofhopedotorg.fohbible.gfx_animator.getRandomColor
 import com.fountofhopedotorg.fohbible.data.BibleData
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection

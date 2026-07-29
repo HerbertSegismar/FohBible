@@ -23,6 +23,7 @@ import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.GradientConfig
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.data.Testament
+import com.fountofhopedotorg.fohbible.gfx_animator.offsetForPivotChange
 import com.fountofhopedotorg.fohbible.utils.BibleVersionUtils
 import com.fountofhopedotorg.fohbible.utils.InteractiveModalUtils
 import kotlinx.coroutines.Dispatchers
@@ -113,6 +114,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     var animatorEditShadowOffsetX by mutableFloatStateOf(0f)
     var animatorEditShadowOffsetY by mutableFloatStateOf(0f)
     var animatorEditBorderThickness by mutableFloatStateOf(0f)
+    var animatorEditPivotX by mutableFloatStateOf(0.5f)
+    var animatorEditPivotY by mutableFloatStateOf(0.5f)
+
     var animatorEditBorderColorForDialog by mutableStateOf<Color?>(null)
     var animatorSelectedInputMode by mutableStateOf("Add SVG")
     var animatorDialogType by mutableStateOf<AnimatorDialogType?>(null)
@@ -400,6 +404,25 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             animatorCanvasElements[index] = old.copy(
                 startTimeMs = startMs,
                 endTimeMs = endMs
+            )
+        }
+    }
+
+    fun updateAnimatorElementPivot(id: String, newPivotX: Float, newPivotY: Float) {
+        val index = animatorCanvasElements.indexOfFirst { it.id == id }
+        if (index != -1) {
+            val element = animatorCanvasElements[index]
+            val newOffset = offsetForPivotChange(
+                element = element,
+                oldPivotX = element.pivotX,
+                oldPivotY = element.pivotY,
+                newPivotX = newPivotX,
+                newPivotY = newPivotY
+            )
+            animatorCanvasElements[index] = element.copy(
+                pivotX = newPivotX,
+                pivotY = newPivotY,
+                offset = newOffset
             )
         }
     }

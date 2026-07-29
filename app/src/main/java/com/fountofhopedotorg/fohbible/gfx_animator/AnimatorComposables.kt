@@ -75,9 +75,6 @@ import com.fountofhopedotorg.fohbible.data.CanvasKeyframe
 import com.fountofhopedotorg.fohbible.data.DisplayItem
 import com.fountofhopedotorg.fohbible.data.GradientConfig
 import com.fountofhopedotorg.fohbible.data.ThemeColors
-import com.fountofhopedotorg.fohbible.gfx_creator.ElementThumbnail
-import com.fountofhopedotorg.fohbible.gfx_creator.ReorderHandle
-import com.fountofhopedotorg.fohbible.gfx_creator.getElementDisplayName
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import kotlin.math.roundToInt
 

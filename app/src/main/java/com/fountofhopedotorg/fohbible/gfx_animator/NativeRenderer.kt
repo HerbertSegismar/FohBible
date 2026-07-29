@@ -31,7 +31,6 @@ import kotlin.math.*
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.withTranslation
 import com.fountofhopedotorg.fohbible.data.TweenType
-import com.fountofhopedotorg.fohbible.gfx_creator.generateThornCrownPaths
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
 import java.io.File

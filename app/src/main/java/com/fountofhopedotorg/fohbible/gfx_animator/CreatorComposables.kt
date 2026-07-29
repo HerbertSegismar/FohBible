@@ -1,4 +1,4 @@
-package com.fountofhopedotorg.fohbible.gfx_creator
+package com.fountofhopedotorg.fohbible.gfx_animator
 
 import android.graphics.Paint
 import android.graphics.PorterDuff
@@ -85,7 +85,6 @@ import coil.size.Size as Size2
 import com.fountofhopedotorg.fohbible.data.BezierNodeData
 import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.GradientConfig
-import com.fountofhopedotorg.fohbible.gfx_animator.PivotHandle
 import com.fountofhopedotorg.fohbible.utils.getFontFamily
 import kotlin.math.PI
 import kotlin.math.abs

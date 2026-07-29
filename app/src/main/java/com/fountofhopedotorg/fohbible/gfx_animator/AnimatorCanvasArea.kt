@@ -24,10 +24,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.ThemeColors
-import com.fountofhopedotorg.fohbible.gfx_creator.CanvasImageItem
-import com.fountofhopedotorg.fohbible.gfx_creator.CanvasSvgItem
-import com.fountofhopedotorg.fohbible.gfx_creator.CanvasTextItem
-import com.fountofhopedotorg.fohbible.gfx_creator.getGroupBoundingBox
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import kotlin.math.PI
 import kotlin.math.cos

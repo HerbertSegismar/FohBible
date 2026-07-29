@@ -54,6 +54,9 @@ fun lerpGradient(a: GradientConfig, b: GradientConfig, fraction: Float): Gradien
 fun formatPosition(value: Float) = String.format(Locale.US, "%.1f", value)
 fun formatScale(value: Float): String = String.format(Locale.US, "%.2f", value)
 fun formatRotation(value: Float): String = String.format(Locale.US, "%.1f", value)
+fun formatPivot(value: Float): String {
+    return String.format(Locale.US,"%.2f", value)
+}
 
 fun ease(
     t: Float,

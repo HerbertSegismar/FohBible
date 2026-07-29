@@ -21,8 +21,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.ThemeColors
-import com.fountofhopedotorg.fohbible.gfx_creator.ElementThumbnail
-import com.fountofhopedotorg.fohbible.gfx_creator.getElementDisplayName
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 
 @Composable
@@ -139,6 +137,16 @@ fun FineTunerPanel(
                 )
             }
 
+            val updatePivot = { px: Float?, py: Float? ->
+                val newPivotX = px ?: element.pivotX
+                val newPivotY = py ?: element.pivotY
+                viewModel.updateAnimatorElementPivot(
+                    id = element.id,
+                    newPivotX = newPivotX,
+                    newPivotY = newPivotY
+                )
+            }
+
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 CompactPropertyField(
                     label = "X", value = element.offset.x, format = ::formatPosition,
@@ -172,6 +180,23 @@ fun FineTunerPanel(
                 onValueChange = { updateProps(null, null, it) },
                 modifier = Modifier.fillMaxWidth()
             )
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                CompactPropertyField(
+                    label = "Pivot X", value = element.pivotX,
+                    step = 0.05f,
+                    format = ::formatPivot,
+                    onValueChange = { updatePivot(it, null) },
+                    modifier = Modifier.weight(1f)
+                )
+                CompactPropertyField(
+                    label = "Pivot Y", value = element.pivotY,
+                    step = 0.05f,
+                    format = ::formatPivot,
+                    onValueChange = { updatePivot(null, it) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
     }
 }

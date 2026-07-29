@@ -1,4 +1,4 @@
-package com.fountofhopedotorg.fohbible.gfx_creator
+package com.fountofhopedotorg.fohbible.gfx_animator
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -182,7 +183,7 @@ fun HybridJoystick(
             Text(
                 text = amountText,
                 color = Color.White.copy(if (enabled) 1f else 0.5f),
-                style = androidx.compose.ui.text.TextStyle(fontSize = 12.sp)
+                style = TextStyle(fontSize = 12.sp)
             )
         }
     }

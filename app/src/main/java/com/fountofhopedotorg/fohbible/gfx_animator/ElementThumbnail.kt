@@ -1,4 +1,4 @@
-package com.fountofhopedotorg.fohbible.gfx_creator
+package com.fountofhopedotorg.fohbible.gfx_animator
 
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -22,11 +22,23 @@ fun ElementThumbnail(element: CanvasElement, themeColors: ThemeColors, gradientC
             val shapeColor = element.backgroundColor
             when {
                 shapeContent.startsWith("Square") ->
-                    SquareShape(modifier = Modifier.size(18.dp), color = shapeColor, gradientConfig = gradientConfig)
+                    SquareShape(
+                        modifier = Modifier.size(18.dp),
+                        color = shapeColor,
+                        gradientConfig = gradientConfig
+                    )
                 shapeContent.startsWith("Circle") ->
-                    CircleShape(modifier = Modifier.size(18.dp), color = shapeColor, gradientConfig = gradientConfig)
+                    CircleShape(
+                        modifier = Modifier.size(18.dp),
+                        color = shapeColor,
+                        gradientConfig = gradientConfig
+                    )
                 shapeContent.startsWith("Triangle") ->
-                    TriangleShape(modifier = Modifier.size(18.dp), color = shapeColor, gradientConfig = gradientConfig)
+                    TriangleShape(
+                        modifier = Modifier.size(18.dp),
+                        color = shapeColor,
+                        gradientConfig = gradientConfig
+                    )
                 shapeContent.startsWith("Pentagon") ->
                     PolygonShape(
                         points = listOf(
@@ -38,29 +50,77 @@ fun ElementThumbnail(element: CanvasElement, themeColors: ThemeColors, gradientC
                         gradientConfig = gradientConfig
                     )
                 shapeContent.startsWith("Line") ->
-                    LineShape(modifier = Modifier.size(18.dp), color = shapeColor, gradientConfig = gradientConfig)
+                    LineShape(
+                        modifier = Modifier.size(18.dp),
+                        color = shapeColor,
+                        gradientConfig = gradientConfig
+                    )
                 shapeContent.startsWith("Hexagon") ->
-                    HexagonShape(modifier = Modifier.size(18.dp), color = shapeColor, gradientConfig = gradientConfig)
+                    HexagonShape(
+                        modifier = Modifier.size(18.dp),
+                        color = shapeColor,
+                        gradientConfig = gradientConfig
+                    )
                 shapeContent.startsWith("Star") ->
-                    StarShape(modifier = Modifier.size(18.dp), color = shapeColor, gradientConfig = gradientConfig)
+                    StarShape(
+                        modifier = Modifier.size(18.dp),
+                        color = shapeColor,
+                        gradientConfig = gradientConfig
+                    )
                 shapeContent.startsWith("Diamond") ->
-                    DiamondShape(modifier = Modifier.size(18.dp), color = shapeColor, gradientConfig = gradientConfig)
+                    DiamondShape(
+                        modifier = Modifier.size(18.dp),
+                        color = shapeColor,
+                        gradientConfig = gradientConfig
+                    )
                 shapeContent.startsWith("Heart") ->
-                    HeartShape(modifier = Modifier.size(18.dp), color = shapeColor, gradientConfig = gradientConfig)
+                    HeartShape(
+                        modifier = Modifier.size(18.dp),
+                        color = shapeColor,
+                        gradientConfig = gradientConfig
+                    )
                 shapeContent.startsWith("ArrowRight") ->
-                    ArrowRightShape(modifier = Modifier.size(18.dp), color = shapeColor, gradientConfig = gradientConfig)
+                    ArrowRightShape(
+                        modifier = Modifier.size(18.dp),
+                        color = shapeColor,
+                        gradientConfig = gradientConfig
+                    )
                 shapeContent.startsWith("Octagon") ->
-                    OctagonShape(modifier = Modifier.size(18.dp), color = shapeColor, gradientConfig = gradientConfig)
+                    OctagonShape(
+                        modifier = Modifier.size(18.dp),
+                        color = shapeColor,
+                        gradientConfig = gradientConfig
+                    )
                 shapeContent.startsWith("Cross") ->
-                    CrossShape(modifier = Modifier.size(18.dp), color = shapeColor, gradientConfig = gradientConfig)
+                    CrossShape(
+                        modifier = Modifier.size(18.dp),
+                        color = shapeColor,
+                        gradientConfig = gradientConfig
+                    )
                 shapeContent.startsWith("ThornCrown") ->
-                    ThornCrownShape(modifier = Modifier.size(22.dp), thornColor = shapeColor, gradientConfig = gradientConfig)
+                    ThornCrownShape(
+                        modifier = Modifier.size(22.dp),
+                        thornColor = shapeColor,
+                        gradientConfig = gradientConfig
+                    )
                 shapeContent.startsWith("Moon") ->
-                    MoonShape(modifier = Modifier.size(18.dp), color = shapeColor, gradientConfig = gradientConfig)
+                    MoonShape(
+                        modifier = Modifier.size(18.dp),
+                        color = shapeColor,
+                        gradientConfig = gradientConfig
+                    )
                 shapeContent.startsWith("DavidStar") ->
-                    DavidStarShape(modifier = Modifier.size(18.dp), color = shapeColor, gradientConfig = gradientConfig)
+                    DavidStarShape(
+                        modifier = Modifier.size(18.dp),
+                        color = shapeColor,
+                        gradientConfig = gradientConfig
+                    )
                 shapeContent.startsWith("Gear") ->
-                    GearShape(modifier = Modifier.size(18.dp), color = shapeColor, gradientConfig = gradientConfig)
+                    GearShape(
+                        modifier = Modifier.size(18.dp),
+                        color = shapeColor,
+                        gradientConfig = gradientConfig
+                    )
                 shapeContent.startsWith("CustomLine:") -> {
                     val pointsData = shapeContent.removePrefix("CustomLine:")
                     CustomPathPreview(

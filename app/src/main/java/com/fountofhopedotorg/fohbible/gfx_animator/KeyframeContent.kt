@@ -49,7 +49,6 @@ import com.fountofhopedotorg.fohbible.data.EasingPoint
 import com.fountofhopedotorg.fohbible.data.GradientConfig
 import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.data.TweenType
-import com.fountofhopedotorg.fohbible.gfx_creator.ElementThumbnail
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
