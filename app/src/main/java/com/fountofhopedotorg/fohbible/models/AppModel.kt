@@ -82,6 +82,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         "om1.jpg", "om2.jpg", "om3.jpg", "om4.jpg", "om5.jpg"
     )
 
+
+    var animatorColorWheel by mutableStateOf(false)
     var canvasBackgroundColor by mutableStateOf<Color?>(null)
     var canvasBackgroundBrush by mutableStateOf<Brush?>(null)
 

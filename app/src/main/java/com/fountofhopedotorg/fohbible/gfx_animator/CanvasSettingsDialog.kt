@@ -43,8 +43,10 @@ import androidx.compose.ui.graphics.LinearGradientShader
 import androidx.compose.ui.graphics.Shader
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.color_wheel.ColorWheelDialog
 import com.fountofhopedotorg.fohbible.data.GradientConfig
+import com.fountofhopedotorg.fohbible.models.AppViewModel
 
 @Composable
 fun CanvasSettingsDialog(
@@ -56,6 +58,7 @@ fun CanvasSettingsDialog(
     onGradientSelected: (Brush) -> Unit,
     onTransparentSelected: () -> Unit
 ) {
+    val viewModel: AppViewModel = viewModel()
     var selectedMainTab by remember { mutableIntStateOf(0) }
     val mainTabs = listOf("Size", "Background")
 
@@ -292,8 +295,9 @@ fun CanvasSettingsDialog(
     )
 
     if (showAdvancedColorPicker) {
+        viewModel.animatorColorWheel = true
         ColorWheelDialog(
-            onDismissRequest = { showAdvancedColorPicker = false },
+            onDismissRequest = { showAdvancedColorPicker = false; viewModel.animatorColorWheel = false },
             onColorSelected = { color ->
                 showAdvancedColorPicker = false
                 onSolidColorSelected(color)

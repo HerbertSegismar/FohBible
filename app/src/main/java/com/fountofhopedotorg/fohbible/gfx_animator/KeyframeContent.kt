@@ -43,12 +43,14 @@ import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.material3.HorizontalDivider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.CanvasKeyframe
 import com.fountofhopedotorg.fohbible.data.EasingPoint
 import com.fountofhopedotorg.fohbible.data.GradientConfig
 import com.fountofhopedotorg.fohbible.data.ThemeColors
 import com.fountofhopedotorg.fohbible.data.TweenType
+import com.fountofhopedotorg.fohbible.models.AppViewModel
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -66,6 +68,7 @@ fun KeyframeAnimationContent(
     themeColors: ThemeColors,
     gradientConfigs: Map<String, GradientConfig> = emptyMap()
 ) {
+    val viewModel: AppViewModel = viewModel()
     var hasUnsavedChanges by remember { mutableStateOf(true) }
     var isInitialState by remember { mutableStateOf(true) }
 
@@ -480,32 +483,34 @@ fun KeyframeAnimationContent(
             modifier = modifier.padding(vertical = 2.dp)
         ) {
             Text("Color", style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(40.dp))
+            val density = LocalDensity.current
+            val swatchSizePx = with(density) { 28.dp.toPx() }
             Box(
                 modifier = Modifier
                     .size(28.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .then(
-                        if (currentGradientConfig != null) {
-                            Modifier.background(
-                                brush = Brush.linearGradient(
-                                    colors = listOf(
-                                        currentGradientConfig!!.startColor,
-                                        currentGradientConfig!!.endColor
-                                    ),
-                                    start = currentGradientConfig!!.startOffset,
-                                    end = currentGradientConfig!!.endOffset
-                                )
+                    .background(
+                        brush = if (currentGradientConfig != null) {
+                            val cfg = currentGradientConfig!!
+                            val startPx = Offset(cfg.startOffset.x * swatchSizePx, cfg.startOffset.y * swatchSizePx)
+                            val endPx = Offset(cfg.endOffset.x * swatchSizePx, cfg.endOffset.y * swatchSizePx)
+                            Brush.linearGradient(
+                                colors = listOf(cfg.startColor, cfg.endColor),
+                                start = startPx,
+                                end = endPx
                             )
                         } else {
-                            Modifier.background(pickedColor)
-                        }
+                            // Solid colour as a uniform gradient
+                            Brush.horizontalGradient(listOf(pickedColor, pickedColor))
+                        },
+                        shape = RoundedCornerShape(4.dp)
                     )
                     .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
                     .clickable { showColorDialog = true }
             )
             if (showColorDialog) {
+                viewModel.animatorColorWheel = true
                 ColorWheelDialog(
-                    onDismissRequest = { showColorDialog = false },
+                    onDismissRequest = { showColorDialog = false; viewModel.animatorColorWheel = false },
                     onColorSelected = { color ->
                         pickedColorArgb = color.toArgb().toLong()
                         currentGradientConfig = null

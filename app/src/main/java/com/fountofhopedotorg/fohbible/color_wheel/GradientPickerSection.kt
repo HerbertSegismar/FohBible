@@ -6,19 +6,27 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.drag
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Gradient
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
@@ -29,6 +37,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -55,91 +64,112 @@ fun GradientPickerSection(
     val activeSizeDp = 32.dp
     val inactiveSizeDp = 24.dp
 
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .aspectRatio(1f)
-            .onSizeChanged { boxSizePx = it }
-    ) {
-        if (boxSizePx != IntSize.Zero) {
-            Canvas(modifier = Modifier.matchParentSize()) {
-                if (isSolidColor) {
-                    drawRect(color = startColor)
-                } else {
-                    val startPx = Offset(startOffset.x * boxSizePx.width, startOffset.y * boxSizePx.height)
-                    val endPx = Offset(endOffset.x * boxSizePx.width, endOffset.y * boxSizePx.height)
-                    drawRect(
-                        brush = Brush.linearGradient(
-                            start = startPx,
-                            end = endPx,
-                            colors = listOf(startColor, endColor)
-                        )
-                    )
-                }
-            }
+    Column {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                Icons.Filled.Gradient,
+                contentDescription = "Color Type",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp)
+            )
+            Text(
+                text = if (isSolidColor) "Solid Color" else "Gradient Color",
+                style = MaterialTheme.typography.titleSmall.copy(
+                    fontWeight = FontWeight.SemiBold
+                ),
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
 
-        if (boxSizePx != IntSize.Zero) {
-            val isStartActive = activeButton == GradientButton.START
-            val startSizeDp = if (isStartActive) activeSizeDp else inactiveSizeDp
-            val startRadiusPx = with(density) { (startSizeDp / 2).toPx() }
+        Box(
+            modifier = modifier
+                .fillMaxWidth(0.6f)
+                .aspectRatio(1f)
+                .onSizeChanged { boxSizePx = it }
+        ) {
+            if (boxSizePx != IntSize.Zero) {
+                Canvas(modifier = Modifier.matchParentSize()) {
+                    if (isSolidColor) {
+                        drawRect(color = startColor)
+                    } else {
+                        val startPx = Offset(startOffset.x * boxSizePx.width, startOffset.y * boxSizePx.height)
+                        val endPx = Offset(endOffset.x * boxSizePx.width, endOffset.y * boxSizePx.height)
+                        drawRect(
+                            brush = Brush.linearGradient(
+                                start = startPx,
+                                end = endPx,
+                                colors = listOf(startColor, endColor)
+                            )
+                        )
+                    }
+                }
+            }
 
-            val startPos = Offset(
-                startOffset.x * boxSizePx.width - startRadiusPx,
-                startOffset.y * boxSizePx.height - startRadiusPx
-            )
+            if (boxSizePx != IntSize.Zero) {
+                val isStartActive = activeButton == GradientButton.START
+                val startSizeDp = if (isStartActive) activeSizeDp else inactiveSizeDp
+                val startRadiusPx = with(density) { (startSizeDp / 2).toPx() }
 
-            Box(
-                modifier = Modifier
-                    .offset { IntOffset(startPos.x.roundToInt(), startPos.y.roundToInt()) }
-                    .size(startSizeDp)
-                    .clip(CircleShape)
-                    .background(if (isSolidColor) startColor else endColor)
-                    .border(
-                        width = 2.dp,
-                        color = if (isStartActive) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                        shape = CircleShape
-                    )
-                    .draggableGradientButton(
-                        offset = startOffset,
-                        boxSizePx = boxSizePx,
-                        dragThresholdPx = with(density) { 10.dp.toPx() },
-                        onOffsetChange = onStartOffsetChange,
-                        onClick = { onButtonClick(GradientButton.START) }
-                    )
-            )
-
-            if (!isSolidColor) {
-                val isEndActive = activeButton == GradientButton.END
-                val endSizeDp = if (isEndActive) activeSizeDp else inactiveSizeDp
-                val endRadiusPx = with(density) { (endSizeDp / 2).toPx() }
-
-                val endPos = Offset(
-                    endOffset.x * boxSizePx.width - endRadiusPx,
-                    endOffset.y * boxSizePx.height - endRadiusPx
+                val startPos = Offset(
+                    startOffset.x * boxSizePx.width - startRadiusPx,
+                    startOffset.y * boxSizePx.height - startRadiusPx
                 )
 
                 Box(
                     modifier = Modifier
-                        .offset { IntOffset(endPos.x.roundToInt(), endPos.y.roundToInt()) }
-                        .size(endSizeDp)
+                        .offset { IntOffset(startPos.x.roundToInt(), startPos.y.roundToInt()) }
+                        .size(startSizeDp)
                         .clip(CircleShape)
-                        .background(startColor)
+                        .background(if (isSolidColor) startColor else endColor)
                         .border(
                             width = 2.dp,
-                            color = if (isEndActive) MaterialTheme.colorScheme.primary
+                            color = if (isStartActive) MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
                             shape = CircleShape
                         )
                         .draggableGradientButton(
-                            offset = endOffset,
+                            offset = startOffset,
                             boxSizePx = boxSizePx,
                             dragThresholdPx = with(density) { 10.dp.toPx() },
-                            onOffsetChange = onEndOffsetChange,
-                            onClick = { onButtonClick(GradientButton.END) }
+                            onOffsetChange = onStartOffsetChange,
+                            onClick = { onButtonClick(GradientButton.START) }
                         )
                 )
+
+                if (!isSolidColor) {
+                    val isEndActive = activeButton == GradientButton.END
+                    val endSizeDp = if (isEndActive) activeSizeDp else inactiveSizeDp
+                    val endRadiusPx = with(density) { (endSizeDp / 2).toPx() }
+
+                    val endPos = Offset(
+                        endOffset.x * boxSizePx.width - endRadiusPx,
+                        endOffset.y * boxSizePx.height - endRadiusPx
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .offset { IntOffset(endPos.x.roundToInt(), endPos.y.roundToInt()) }
+                            .size(endSizeDp)
+                            .clip(CircleShape)
+                            .background(startColor)
+                            .border(
+                                width = 2.dp,
+                                color = if (isEndActive) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                shape = CircleShape
+                            )
+                            .draggableGradientButton(
+                                offset = endOffset,
+                                boxSizePx = boxSizePx,
+                                dragThresholdPx = with(density) { 10.dp.toPx() },
+                                onOffsetChange = onEndOffsetChange,
+                                onClick = { onButtonClick(GradientButton.END) }
+                            )
+                    )
+                }
             }
         }
     }

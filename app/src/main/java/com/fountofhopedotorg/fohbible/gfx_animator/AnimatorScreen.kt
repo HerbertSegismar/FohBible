@@ -1473,6 +1473,7 @@ fun AnimatorScreen(
     )
 
     if (viewModel.animatorShowColorPicker && viewModel.animatorElementToColorEditId != null) {
+        viewModel.animatorColorWheel = true
         val targetElement = viewModel.animatorCanvasElements.find { it.id == viewModel.animatorElementToColorEditId }
         val existingGradient = viewModel.animatorGradientPairs[viewModel.animatorElementToColorEditId]
         val isText = targetElement?.content?.let {
@@ -1483,6 +1484,7 @@ fun AnimatorScreen(
             onDismissRequest = {
                 viewModel.animatorShowColorPicker = false
                 viewModel.animatorElementToColorEditId = null
+                viewModel.animatorColorWheel = false
             },
             onColorSelected = { color ->
                 val elementId = viewModel.animatorElementToColorEditId!!

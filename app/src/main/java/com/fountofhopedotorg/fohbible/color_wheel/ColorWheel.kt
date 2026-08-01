@@ -149,7 +149,6 @@ fun ColorWheelDialog(
                                 .fillMaxSize()
                                 .padding(padding)
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(20.dp)
                         ) {
                             Column(
                                 modifier = Modifier.weight(0.3f),
@@ -163,8 +162,8 @@ fun ColorWheelDialog(
                                 )
                             }
                             Column(
-                                modifier = Modifier.weight(0.32f),
-                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.weight(0.32f).padding(end = 20.dp),
+                                verticalArrangement = Arrangement.spacedBy(20.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 ColorAdjustmentsSection(
@@ -185,26 +184,49 @@ fun ColorWheelDialog(
                                         updateColor(adjustOpacity(selectedColor, it))
                                     }
                                 )
-                                if (gradientEnabled) {
-                                    GradientPickerSection(
-                                        startColor = gradientStartColor,
-                                        endColor = gradientEndColor,
-                                        startOffset = gradientStartOffset,
-                                        endOffset = gradientEndOffset,
-                                        isSolidColor = isSolidColor,
-                                        onStartOffsetChange = { gradientStartOffset = it },
-                                        onEndOffsetChange = { gradientEndOffset = it },
-                                        onButtonClick = { button ->
-                                            activeGradientButton = button
-                                            updateColor(
-                                                if (button == GradientButton.START) gradientStartColor
-                                                else gradientEndColor
-                                            )
-                                        },
-                                        activeButton = activeGradientButton,
-                                        modifier = Modifier.size(155.dp)
-                                    )
-                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                ColorPreviewSection(
+                                    selectedColor = selectedColor,
+                                    isSolidColor = isSolidColor,
+                                    onSolidColorToggle = {
+                                        isSolidColor = it
+                                        activeGradientButton = if (it) {
+                                            null
+                                        } else {
+                                            GradientButton.START
+                                        }
+                                    },
+                                    hexTextFieldValue = hexTextFieldValue,
+                                    isValidHex = isValidHex,
+                                    lightBackground = lightBackground,
+                                    darkBackground = darkBackground,
+                                    startColor = gradientStartColor,
+                                    endColor = gradientEndColor,
+                                    startOffset = gradientStartOffset,
+                                    endOffset = gradientEndOffset,
+                                    onHexTextFieldValueChange = { newValue ->
+                                        val processed = processHexInput(newValue.text, newValue.selection)
+                                        hexTextFieldValue = processed
+                                        if (processed.text.length > 1 && validateHex(processed.text)) {
+                                            try {
+                                                val colorInt = if (processed.text.length == 4) {
+                                                    val hexValue = processed.text.substring(1)
+                                                    val expanded = "#${hexValue[0]}${hexValue[0]}${hexValue[1]}${hexValue[1]}${hexValue[2]}${hexValue[2]}"
+                                                    expanded.toColorInt()
+                                                } else {
+                                                    processed.text.toColorInt()
+                                                }
+                                                updateColor(Color(colorInt))
+                                            } catch (_: Exception) {
+                                                isValidHex = false
+                                            }
+                                        } else if (processed.text == "#") {
+                                            isValidHex = false
+                                        } else {
+                                            isValidHex = false
+                                        }
+                                    }
+                                )
                             }
                             Column(
                                 modifier = Modifier
@@ -213,55 +235,36 @@ fun ColorWheelDialog(
                                 verticalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Column(
-                                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                                    verticalArrangement = Arrangement.spacedBy(5.dp)
                                 ) {
-                                    ColorPreviewSection(
-                                        selectedColor = selectedColor,
-                                        isSolidColor = isSolidColor,
-                                        onSolidColorToggle = {
-                                            isSolidColor = it
-                                            activeGradientButton = if (it) {
-                                                null
-                                            } else {
-                                                GradientButton.START
-                                            }
-                                        },
-                                        hexTextFieldValue = hexTextFieldValue,
-                                        isValidHex = isValidHex,
-                                        lightBackground = lightBackground,
-                                        darkBackground = darkBackground,
-                                        startColor = gradientStartColor,
-                                        endColor = gradientEndColor,
-                                        startOffset = gradientStartOffset,
-                                        endOffset = gradientEndOffset,
-                                        onHexTextFieldValueChange = { newValue ->
-                                            val processed = processHexInput(newValue.text, newValue.selection)
-                                            hexTextFieldValue = processed
-                                            if (processed.text.length > 1 && validateHex(processed.text)) {
-                                                try {
-                                                    val colorInt = if (processed.text.length == 4) {
-                                                        val hexValue = processed.text.substring(1)
-                                                        val expanded = "#${hexValue[0]}${hexValue[0]}${hexValue[1]}${hexValue[1]}${hexValue[2]}${hexValue[2]}"
-                                                        expanded.toColorInt()
-                                                    } else {
-                                                        processed.text.toColorInt()
-                                                    }
-                                                    updateColor(Color(colorInt))
-                                                } catch (_: Exception) {
-                                                    isValidHex = false
-                                                }
-                                            } else if (processed.text == "#") {
-                                                isValidHex = false
-                                            } else {
-                                                isValidHex = false
-                                            }
-                                        }
-                                    )
-                                    ColorPaletteSection(
-                                        colorPalette = colorPalette,
-                                        selectedColor = selectedColor,
-                                        onColorClick = { color -> updateColor(color) }
-                                    )
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        GradientPickerSection(
+                                            startColor = gradientStartColor,
+                                            endColor = gradientEndColor,
+                                            startOffset = gradientStartOffset,
+                                            endOffset = gradientEndOffset,
+                                            isSolidColor = isSolidColor,
+                                            onStartOffsetChange = { gradientStartOffset = it },
+                                            onEndOffsetChange = { gradientEndOffset = it },
+                                            onButtonClick = { button ->
+                                                activeGradientButton = button
+                                                updateColor(
+                                                    if (button == GradientButton.START) gradientStartColor
+                                                    else gradientEndColor
+                                                )
+                                            },
+                                            activeButton = activeGradientButton,
+                                            modifier = Modifier.padding(top = 12.dp)
+                                        )
+                                        ColorPaletteSection(
+                                            colorPalette = colorPalette,
+                                            selectedColor = selectedColor,
+                                            onColorClick = { color -> updateColor(color) }
+                                        )
+                                    }
                                 }
                                 ActionButtonsSection(
                                     selectedColor = selectedColor,
@@ -282,6 +285,7 @@ fun ColorWheelDialog(
                                         }
                                     }
                                 )
+                                Spacer(modifier = Modifier.height(4.dp))
                             }
                         }
                     } else {
@@ -363,13 +367,10 @@ fun ColorWheelDialog(
                                         updateColor(adjustOpacity(selectedColor, it))
                                     }
                                 )
-                                ColorPaletteSection(
-                                    colorPalette = colorPalette,
-                                    selectedColor = selectedColor,
-                                    onColorClick = { color -> updateColor(color) }
-                                )
-
-                                if (gradientEnabled) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
                                     GradientPickerSection(
                                         startColor = gradientStartColor,
                                         endColor = gradientEndColor,
@@ -388,6 +389,12 @@ fun ColorWheelDialog(
                                         activeButton = activeGradientButton,
                                         modifier = Modifier.padding(top = 12.dp)
                                     )
+                                    ColorPaletteSection(
+                                        colorPalette = colorPalette,
+                                        selectedColor = selectedColor,
+                                        onColorClick = { color -> updateColor(color) }
+                                    )
+
                                 }
 
                                 ActionButtonsSection(

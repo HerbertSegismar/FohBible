@@ -37,11 +37,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.color_wheel.ColorWheelDialog
 import com.fountofhopedotorg.fohbible.data.GradientConfig
+import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.utils.availableFontFamilies
 import java.util.Locale
 
@@ -94,6 +99,7 @@ fun AnimatorEditPropertiesDialog(
         pivotY: Float
     ) -> Unit
 ) {
+    val viewModel: AppViewModel = viewModel()
     if (show && elementId != null) {
         key(elementId) {
             val normalizedInitialRotation = remember(true, initialRotation) {
@@ -238,11 +244,27 @@ fun AnimatorEditPropertiesDialog(
                             modifier = Modifier.fillMaxWidth(),
                             textStyle = LocalTextStyle.current.copy(color = Color.Transparent),
                             leadingIcon = {
+                                val density = LocalDensity.current
+                                val swatchSizePx = with(density) { 32.dp.toPx() }
                                 Box(
                                     modifier = Modifier
                                         .padding(start = 12.dp)
                                         .size(32.dp)
-                                        .background(editColor, RoundedCornerShape(6.dp))
+                                        .background(
+                                            brush = if (editGradientConfig != null) {
+                                                val cfg = editGradientConfig!!
+                                                val startPx = Offset(cfg.startOffset.x * swatchSizePx, cfg.startOffset.y * swatchSizePx)
+                                                val endPx = Offset(cfg.endOffset.x * swatchSizePx, cfg.endOffset.y * swatchSizePx)
+                                                Brush.linearGradient(
+                                                    colors = listOf(cfg.startColor, cfg.endColor),
+                                                    start = startPx,
+                                                    end = endPx
+                                                )
+                                            } else {
+                                                Brush.horizontalGradient(listOf(editColor, editColor))
+                                            },
+                                            shape = RoundedCornerShape(6.dp)
+                                        )
                                         .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(6.dp))
                                         .clickable { showEditColorPicker = true }
                                 )
@@ -422,8 +444,9 @@ fun AnimatorEditPropertiesDialog(
             )
 
             if (showEditColorPicker) {
+                viewModel.animatorColorWheel = true
                 ColorWheelDialog(
-                    onDismissRequest = { showEditColorPicker = false },
+                    onDismissRequest = { showEditColorPicker = false; viewModel.animatorColorWheel = false },
                     onColorSelected = { selectedColor ->
                         editColor = selectedColor
                         editGradientConfig = null

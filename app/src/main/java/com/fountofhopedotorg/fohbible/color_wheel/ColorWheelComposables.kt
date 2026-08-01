@@ -75,6 +75,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.modals.ColorOptionItem
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.theme.LocalAppTheme
@@ -222,7 +223,7 @@ fun FixedHeader(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
+                .height(48.dp)
                 .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -336,6 +337,8 @@ fun ColorPreviewSection(
     onHexTextFieldValueChange: (TextFieldValue) -> Unit
 ) {
 
+    val viewModel: AppViewModel = viewModel()
+
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -362,21 +365,25 @@ fun ColorPreviewSection(
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "Solid",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Checkbox(
-                    checked = isSolidColor,
-                    onCheckedChange = onSolidColorToggle,
-                    modifier = Modifier.size(24.dp),
-                    colors = CheckboxDefaults.colors(checkmarkColor = Color.White)
-                )
+            if (viewModel.animatorColorWheel) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Solid",
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = FontWeight.SemiBold
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Checkbox(
+                        checked = isSolidColor,
+                        onCheckedChange = onSolidColorToggle,
+                        modifier = Modifier.size(24.dp),
+                        colors = CheckboxDefaults.colors(checkmarkColor = Color.White)
+                    )
+                }
             }
+
         }
 
         Row(
@@ -670,7 +677,7 @@ fun ColorPaletteSection(
     onColorClick: (Color) -> Unit
 ) {
     Column(
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
