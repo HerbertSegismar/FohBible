@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BrightnessMedium
+import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Colorize
@@ -54,11 +55,16 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -336,8 +342,18 @@ fun ColorPreviewSection(
     onSolidColorToggle: (Boolean) -> Unit,
     onHexTextFieldValueChange: (TextFieldValue) -> Unit
 ) {
-
     val viewModel: AppViewModel = viewModel()
+
+    var localHex by remember { mutableStateOf(hexTextFieldValue) }
+    var isFocused by remember { mutableStateOf(false) }
+
+    LaunchedEffect(selectedColor) {
+        if (!isFocused) {
+            val newHex = TextFieldValue(colorToHexString(selectedColor))
+            localHex = newHex
+            onHexTextFieldValueChange(newHex)
+        }
+    }
 
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -352,16 +368,14 @@ fun ColorPreviewSection(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Icon(
-                    Icons.Filled.CheckCircle,
+                    Icons.Filled.Brush,
                     contentDescription = "Selected Color",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp),
                 )
                 Text(
                     text = "Selected Color",
-                    style = MaterialTheme.typography.titleSmall.copy(
-                        fontWeight = FontWeight.SemiBold
-                    ),
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
@@ -369,9 +383,7 @@ fun ColorPreviewSection(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "Solid",
-                        style = MaterialTheme.typography.titleSmall.copy(
-                            fontWeight = FontWeight.SemiBold
-                        ),
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.width(4.dp))
@@ -383,7 +395,6 @@ fun ColorPreviewSection(
                     )
                 }
             }
-
         }
 
         Row(
@@ -395,11 +406,7 @@ fun ColorPreviewSection(
                 modifier = Modifier
                     .size(30.dp)
                     .clip(CircleShape)
-                    .border(
-                        2.dp,
-                        MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
-                        CircleShape
-                    )
+                    .border(2.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), CircleShape)
                     .backgroundWithGradient(
                         isSolidColor = isSolidColor,
                         solidColor = selectedColor,
@@ -415,12 +422,23 @@ fun ColorPreviewSection(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 TextField(
-                    value = hexTextFieldValue,
-                    onValueChange = onHexTextFieldValueChange,
-                    modifier = Modifier.fillMaxWidth(),
+                    value = localHex,
+                    onValueChange = { newValue ->
+                        localHex = newValue
+                        onHexTextFieldValueChange(newValue)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { focusState ->
+                            isFocused = focusState.isFocused
+                            if (!focusState.isFocused && !isValidHex) {
+                                localHex = TextFieldValue(colorToHexString(selectedColor))
+                                onHexTextFieldValueChange(localHex)
+                            }
+                        },
                     singleLine = true,
-                    placeholder = { Text("HEX") },
-                    isError = !isValidHex && hexTextFieldValue.text.length > 1,
+                    placeholder = { Text("input color hex value") },
+                    isError = !isValidHex && localHex.text.length > 1,
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.1f),
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.05f),
@@ -435,7 +453,7 @@ fun ColorPreviewSection(
                     )
                 )
 
-                if (!isValidHex && hexTextFieldValue.text.length > 1) {
+                if (!isValidHex && localHex.text.length > 1) {
                     Text(
                         text = "Invalid hex code",
                         color = MaterialTheme.colorScheme.error,

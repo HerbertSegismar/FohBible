@@ -427,7 +427,7 @@ fun ColorWheelDialog(
     }
 }
 
-private fun colorToHexString(color: Color): String {
+fun colorToHexString(color: Color): String {
     return if (color.alpha == 1f) {
         String.format("#%06X", color.toArgb() and 0xFFFFFF)
     } else {
