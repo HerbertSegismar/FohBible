@@ -763,8 +763,6 @@ fun AnimatorScreen(
                             CheckerboardBackground(
                                 modifier = Modifier.fillMaxSize(),
                                 tileSizeDp = 8.dp,
-                                color1 = Color(0xFFCCCCCC),
-                                color2 = Color(0xFF999999)
                             )
                             Box(
                                 modifier = Modifier
@@ -1028,7 +1026,6 @@ fun AnimatorScreen(
                     viewModel.isAnimatorFullScreen = !viewModel.isAnimatorFullScreen
                 },
                 onChooseFromGallery = { imagePickerLauncher.launch("image/*") },
-                graphicsLayer = graphicsLayer,
                 isLandscape = true,
                 onSaveVideo = onSaveVideo,
                 isPlayingAnimation = isPlayingAnimation,
@@ -1086,7 +1083,6 @@ fun AnimatorScreen(
                         viewModel.isAnimatorFullScreen = !viewModel.isAnimatorFullScreen
                     },
                     onChooseFromGallery = { imagePickerLauncher.launch("image/*") },
-                    graphicsLayer = graphicsLayer,
                     isLandscape = false,
                     onSaveVideo = onSaveVideo,
                     isPlayingAnimation = isPlayingAnimation,
@@ -1126,8 +1122,6 @@ fun AnimatorScreen(
                         CheckerboardBackground(
                             modifier = Modifier.fillMaxSize(),
                             tileSizeDp = 8.dp,
-                            color1 = Color(0xFFCCCCCC),
-                            color2 = Color(0xFF999999)
                         )
                         Box(
                             modifier = Modifier

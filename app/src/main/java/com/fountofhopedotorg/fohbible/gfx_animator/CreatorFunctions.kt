@@ -4,6 +4,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import android.os.Build
 import android.os.Environment
@@ -13,10 +14,7 @@ import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.asAndroidBitmap
-import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.unit.sp
 import com.fountofhopedotorg.fohbible.data.BezierNode
 import com.fountofhopedotorg.fohbible.data.BoundingBox
@@ -42,6 +40,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.PathSegment
 import kotlin.math.sqrt
+import androidx.compose.ui.graphics.Color as ComposeColor
 
 fun buildReferenceString(
     bookName: String,
@@ -58,13 +57,40 @@ fun buildReferenceString(
 }
 
 suspend fun saveCanvasAsImage(
-    graphicsLayer: GraphicsLayer,
     context: Context,
+    elements: List<CanvasElement>,
+    gradientConfigs: Map<String, GradientConfig>,
+    imageBitmaps: Map<String, Bitmap>,
+    fontCache: Map<String, Typeface>,
+    canvasWidthPx: Int,
+    canvasHeightPx: Int,
+    scaleFactor: Float = 1f,
+    canvasBackgroundColor: ComposeColor? = null,
+    canvasBackgroundBrush: Brush? = null,
+    timeMs: Long = 0L,
     format: String = "JPG"
 ) {
     try {
-        val bitmap: ImageBitmap = graphicsLayer.toImageBitmap()
-        val androidBitmap = bitmap.asAndroidBitmap()
+        val exportWidth = (canvasWidthPx * scaleFactor).roundToInt()
+        val exportHeight = (canvasHeightPx * scaleFactor).roundToInt()
+
+        val bitmap = createBitmap(exportWidth, exportHeight)
+        val canvas = Canvas(bitmap)
+
+        drawFrame(
+            canvas = canvas,
+            elements = elements,
+            timeMs = timeMs,
+            gradientConfigs = gradientConfigs,
+            imageBitmaps = imageBitmaps,
+            scaleFactor = scaleFactor,
+            canvasWidth = exportWidth.toFloat(),
+            canvasHeight = exportHeight.toFloat(),
+            canvasBackgroundColor = canvasBackgroundColor,
+            canvasBackgroundBrush = canvasBackgroundBrush,
+            fontCache = fontCache,
+            textSizePxBase = 60f * context.resources.configuration.fontScale
+        )
 
         val fileName = "foh_canvas_${System.currentTimeMillis()}.${format.lowercase()}"
         val resolver = context.contentResolver
@@ -81,15 +107,17 @@ suspend fun saveCanvasAsImage(
             withContext(Dispatchers.IO) {
                 resolver.openOutputStream(uri).use { out ->
                     if (out != null) {
-                        if (format == "JPG") androidBitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
-                        else androidBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                        if (format == "JPG") bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                        else bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
                     }
                 }
             }
+            bitmap.recycle()
             withContext(Dispatchers.Main) {
                 Toast.makeText(context, "Saved to Pictures/FOHBible", Toast.LENGTH_LONG).show()
             }
         } else {
+            bitmap.recycle()
             throw Exception("Failed to create MediaStore entry.")
         }
     } catch (_: Exception) {
@@ -101,27 +129,48 @@ suspend fun saveCanvasAsImage(
 
 @RequiresApi(Build.VERSION_CODES.Q)
 suspend fun saveCanvasAsPDF(
-    graphicsLayer: GraphicsLayer,
-    context: Context
+    context: Context,
+    elements: List<CanvasElement>,
+    gradientConfigs: Map<String, GradientConfig>,
+    imageBitmaps: Map<String, Bitmap>,
+    fontCache: Map<String, Typeface>,
+    canvasWidthPx: Int,
+    canvasHeightPx: Int,
+    scaleFactor: Float = 1f,
+    canvasBackgroundColor: ComposeColor? = null,
+    canvasBackgroundBrush: Brush? = null,
+    timeMs: Long = 0L
 ) {
     try {
-        val bitmap = graphicsLayer.toImageBitmap().asAndroidBitmap()
-        val softwareBitmap = if (bitmap.config == Bitmap.Config.HARDWARE) {
-            bitmap.copy(Bitmap.Config.ARGB_8888, false)
-        } else {
-            bitmap
-        }
+        val exportWidth = (canvasWidthPx * scaleFactor).roundToInt()
+        val exportHeight = (canvasHeightPx * scaleFactor).roundToInt()
+
+        val bitmap = createBitmap(exportWidth, exportHeight)
+        val canvas = Canvas(bitmap)
+
+        drawFrame(
+            canvas = canvas,
+            elements = elements,
+            timeMs = timeMs,
+            gradientConfigs = gradientConfigs,
+            imageBitmaps = imageBitmaps,
+            scaleFactor = scaleFactor,
+            canvasWidth = exportWidth.toFloat(),
+            canvasHeight = exportHeight.toFloat(),
+            canvasBackgroundColor = canvasBackgroundColor,
+            canvasBackgroundBrush = canvasBackgroundBrush,
+            fontCache = fontCache,
+            textSizePxBase = 60f * context.resources.configuration.fontScale
+        )
 
         val pdfDocument = PdfDocument()
-        val pageInfo = PdfDocument.PageInfo.Builder(softwareBitmap.width, softwareBitmap.height, 1).create()
+        val pageInfo = PdfDocument.PageInfo.Builder(exportWidth, exportHeight, 1).create()
         val page = pdfDocument.startPage(pageInfo)
-
-        page.canvas.drawBitmap(softwareBitmap, 0f, 0f, null)
+        page.canvas.drawBitmap(bitmap, 0f, 0f, null)
         pdfDocument.finishPage(page)
 
         val fileName = "foh_canvas_${System.currentTimeMillis()}.pdf"
         val resolver = context.contentResolver
-
         val contentValues = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
             put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
@@ -142,6 +191,7 @@ suspend fun saveCanvasAsPDF(
         }
 
         pdfDocument.close()
+        bitmap.recycle()
     } catch (_: Exception) {
         withContext(Dispatchers.Main) {
             Toast.makeText(context, "Failed to save PDF", Toast.LENGTH_SHORT).show()

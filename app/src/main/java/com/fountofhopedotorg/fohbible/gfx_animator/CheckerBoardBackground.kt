@@ -1,6 +1,7 @@
 package com.fountofhopedotorg.fohbible.gfx_animator
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -14,8 +15,8 @@ import kotlin.math.roundToInt
 fun CheckerboardBackground(
     modifier: Modifier = Modifier,
     tileSizeDp: Dp = 20.dp,
-    color1: Color = Color(0xFFCCCCCC),
-    color2: Color = Color(0xFF666666)
+    color1: Color = MaterialTheme.colorScheme.primary.copy(0.11f),
+    color2: Color = MaterialTheme.colorScheme.primary.copy(0.33f)
 ) {
     Canvas(modifier = modifier) {
         val targetTilePx = tileSizeDp.toPx()

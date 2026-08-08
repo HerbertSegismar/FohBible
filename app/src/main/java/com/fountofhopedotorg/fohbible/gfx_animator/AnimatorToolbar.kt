@@ -57,7 +57,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -84,7 +83,6 @@ fun AnimatorToolbar(
     isFullScreen: Boolean,
     onToggleFullScreen: () -> Unit,
     onChooseFromGallery: () -> Unit,
-    graphicsLayer: GraphicsLayer,
     isLandscape: Boolean = false,
     onSaveVideo: () -> Unit = {},
     isPlayingAnimation: Boolean = false,
@@ -282,9 +280,80 @@ fun AnimatorToolbar(
             SaveAsMenuWithVideo(
                 expanded = viewModel.showSaveMenu,
                 onDismiss = { viewModel.showSaveMenu = false },
-                onSavePng = { coroutineScope.launch { saveCanvasAsImage(graphicsLayer, context, "PNG") } },
-                onSaveJpg = { coroutineScope.launch { saveCanvasAsImage(graphicsLayer, context, "JPG") } },
-                onSavePdf = { coroutineScope.launch { saveCanvasAsPDF(graphicsLayer, context) } },
+                onSavePng = {
+                    coroutineScope.launch {
+                        val bitmaps = loadImageBitmaps(
+                            viewModel.animatorCanvasElements,
+                            context,
+                            canvasWidthPx.toFloat(),
+                            canvasHeightPx.toFloat()
+                        )
+                        val fontCache = preloadFonts(viewModel.animatorCanvasElements, context)
+                        saveCanvasAsImage(
+                            context = context,
+                            elements = viewModel.animatorCanvasElements,
+                            gradientConfigs = viewModel.animatorGradientPairs,
+                            imageBitmaps = bitmaps,
+                            fontCache = fontCache,
+                            canvasWidthPx = canvasWidthPx,
+                            canvasHeightPx = canvasHeightPx,
+                            scaleFactor = 1f, // or resolutionMultiplier if you want higher quality
+                            canvasBackgroundColor = viewModel.canvasBackgroundColor,
+                            canvasBackgroundBrush = viewModel.canvasBackgroundBrush,
+                            timeMs = 0L,
+                            format = "PNG"
+                        )
+                    }
+                },
+                onSaveJpg = {
+                    coroutineScope.launch {
+                        val bitmaps = loadImageBitmaps(
+                            viewModel.animatorCanvasElements,
+                            context,
+                            canvasWidthPx.toFloat(),
+                            canvasHeightPx.toFloat()
+                        )
+                        val fontCache = preloadFonts(viewModel.animatorCanvasElements, context)
+                        saveCanvasAsImage(
+                            context = context,
+                            elements = viewModel.animatorCanvasElements,
+                            gradientConfigs = viewModel.animatorGradientPairs,
+                            imageBitmaps = bitmaps,
+                            fontCache = fontCache,
+                            canvasWidthPx = canvasWidthPx,
+                            canvasHeightPx = canvasHeightPx,
+                            scaleFactor = 1f,
+                            canvasBackgroundColor = viewModel.canvasBackgroundColor,
+                            canvasBackgroundBrush = viewModel.canvasBackgroundBrush,
+                            timeMs = 0L,
+                            format = "JPG"
+                        )
+                    }
+                },
+                onSavePdf = {
+                    coroutineScope.launch {
+                        val bitmaps = loadImageBitmaps(
+                            viewModel.animatorCanvasElements,
+                            context,
+                            canvasWidthPx.toFloat(),
+                            canvasHeightPx.toFloat()
+                        )
+                        val fontCache = preloadFonts(viewModel.animatorCanvasElements, context)
+                        saveCanvasAsPDF(
+                            context = context,
+                            elements = viewModel.animatorCanvasElements,
+                            gradientConfigs = viewModel.animatorGradientPairs,
+                            imageBitmaps = bitmaps,
+                            fontCache = fontCache,
+                            canvasWidthPx = canvasWidthPx,
+                            canvasHeightPx = canvasHeightPx,
+                            scaleFactor = 1f,               // or a higher resolution multiplier
+                            canvasBackgroundColor = viewModel.canvasBackgroundColor,
+                            canvasBackgroundBrush = viewModel.canvasBackgroundBrush,
+                            timeMs = 0L                     // or viewModel.currentTimeMs if available
+                        )
+                    }
+                },
                 onSaveSvg = { coroutineScope.launch { saveCanvasAsSVG(
                     context = context,
                     canvasWidthPx = canvasWidthPx,

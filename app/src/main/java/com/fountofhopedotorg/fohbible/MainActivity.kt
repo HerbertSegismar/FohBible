@@ -163,16 +163,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Handle the intent that started the activity (e.g., user tapped a .foh file)
         handleIntent(intent)
 
         setContent {
             val viewModel: AppViewModel = viewModel()
 
-            // State to hold a URI that the animator screen should load
             var animatorTemplateUri by remember { mutableStateOf<Uri?>(null) }
 
-            // Whenever a new pending URI arrives, pass it to the composable and consume it
             LaunchedEffect(pendingTemplateUri) {
                 pendingTemplateUri?.let {
                     animatorTemplateUri = it

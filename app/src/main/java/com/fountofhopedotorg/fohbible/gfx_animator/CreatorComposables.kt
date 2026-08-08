@@ -1005,6 +1005,9 @@ fun CanvasTextItem(
     val lockedPadding = (24f / density).dp
     val lockedMaxWidth = (750f / density).dp
 
+    // Track whether we've already set the initial size
+    var initialSizeSet by remember { mutableStateOf(false) }
+
     Box(
         modifier = Modifier
             .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
@@ -1022,9 +1025,7 @@ fun CanvasTextItem(
                 .then(
                     if (!isLocked && !isPivotPlacementActive) {
                         Modifier
-                            .pointerInput(Unit) {
-                                detectTapGestures { onSelect() }
-                            }
+                            .pointerInput(Unit) { detectTapGestures { onSelect() } }
                             .pointerInput(Unit) {
                                 detectTransformGestures { _, pan, zoom, rot ->
                                     val angleRad = currentRotation * (PI / 180.0)
@@ -1059,21 +1060,32 @@ fun CanvasTextItem(
                     )
                 }
                 Box(
-                    modifier = Modifier.onSizeChanged { size ->
-                        val newW = size.width.toFloat()
-                        val newH = size.height.toFloat()
-                        val oldW = currentWidth
-                        val oldH = currentHeight
-                        if ((newW - oldW).absoluteValue > 1f || (newH - oldH).absoluteValue > 1f) {
-                            val px = element.pivotX
-                            val py = element.pivotY
-                            val deltaOffsetX = px * (oldW - newW)
-                            val deltaOffsetY = py * (oldH - newH)
-                            val newOffset = Offset(offset.x + deltaOffsetX, offset.y + deltaOffsetY)
-                            offset = newOffset
-                            onUpdatePosition(newOffset, newW, newH, currentRotation)
-                        }
-                    },
+                    modifier = Modifier
+                        .onSizeChanged { size ->
+                            val newW = size.width.toFloat()
+                            val newH = size.height.toFloat()
+                            val oldW = currentWidth
+                            val oldH = currentHeight
+
+                            // First time: just record the size, don't adjust offset
+                            if (!initialSizeSet) {
+                                initialSizeSet = true
+                                // Report the measured size, but keep offset unchanged
+                                onUpdatePosition(offset, newW, newH, currentRotation)
+                                return@onSizeChanged
+                            }
+
+                            // Subsequent size changes: keep the pivot anchored
+                            if ((newW - oldW).absoluteValue > 1f || (newH - oldH).absoluteValue > 1f) {
+                                val px = element.pivotX
+                                val py = element.pivotY
+                                val deltaOffsetX = px * (oldW - newW)
+                                val deltaOffsetY = py * (oldH - newH)
+                                val newOffset = Offset(offset.x + deltaOffsetX, offset.y + deltaOffsetY)
+                                offset = newOffset
+                                onUpdatePosition(newOffset, newW, newH, currentRotation)
+                            }
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     val textShadow = if (element.shadowColor != null && element.shadowColor.alpha > 0f) {
@@ -1141,9 +1153,7 @@ fun CanvasTextItem(
                                         )
                                     )
                                     val paint = Paint().apply {
-                                        xfermode = PorterDuffXfermode(
-                                            PorterDuff.Mode.DST_IN
-                                        )
+                                        xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
                                     }
                                     drawContext.canvas.nativeCanvas.saveLayer(
                                         RectF(0f, 0f, size.width, size.height),
