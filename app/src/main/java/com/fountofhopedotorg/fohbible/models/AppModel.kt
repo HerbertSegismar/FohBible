@@ -82,6 +82,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         "om1.jpg", "om2.jpg", "om3.jpg", "om4.jpg", "om5.jpg"
     )
 
+    var customWidthPx by  mutableIntStateOf(1920)
+    var customHeightPx by mutableIntStateOf(1080)
 
     var animatorColorWheel by mutableStateOf(false)
     var canvasBackgroundColor by mutableStateOf<Color?>(null)
@@ -158,6 +160,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     var lightModalBackgroundColor by mutableStateOf(Color(0xFFEAE7E3))
     var darkModalBackgroundColor by mutableStateOf(Color(0xFF121523))
     var fontSize by mutableIntStateOf(18)
+    var customWidth by mutableIntStateOf(1920)
+    var customHeight by mutableIntStateOf(1080)
     var darkTheme by mutableStateOf(false)
     var selectedColor by mutableStateOf<Color?>(null)
     var isCustomColor by mutableStateOf(false)

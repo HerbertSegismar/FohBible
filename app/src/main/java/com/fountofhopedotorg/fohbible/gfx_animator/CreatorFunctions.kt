@@ -244,7 +244,6 @@ suspend fun saveCanvasAsSVG(
             bitmap.recycle()
         }
 
-        // --- Save to MediaStore (unchanged) ---
         val fileName = "foh_canvas_${System.currentTimeMillis()}.svg"
         val resolver = context.contentResolver
         val contentValues = ContentValues().apply {
@@ -447,10 +446,19 @@ private fun buildShapeSvg(
             return """<polygon points="$points" $fillAttr />"""
         }
         content.startsWith("Shape: Pentagon") -> {
-            val pts = listOf(
-                0.5f to 0f, 1f to 0.4f, 0.8f to 1f, 0.2f to 1f, 0f to 0.4f
-            )
-            val pointsStr = pts.joinToString(" ") { (px, py) -> "${px * w},${py * h}" }
+            val sides = 5
+            val angleOffset = -Math.PI / 2
+            val centerX = w / 2f
+            val centerY = h / 2f
+            val radius = minOf(centerX, centerY)
+
+            val pointsStr = (0 until sides).joinToString(" ") { i ->
+                val angle = angleOffset + 2.0 * Math.PI * i / sides
+                val x = centerX + radius * cos(angle).toFloat()
+                val y = centerY + radius * sin(angle).toFloat()
+                "$x,$y"
+            }
+
             return """<polygon points="$pointsStr" $fillAttr />"""
         }
 

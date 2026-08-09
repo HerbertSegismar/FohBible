@@ -121,10 +121,8 @@ fun AnimatorScreen(
     val graphicsLayer = rememberGraphicsLayer()
     var showCanvasSettingsDialog by remember { mutableStateOf(false) }
 
-    var customWidthPx by rememberSaveable { mutableIntStateOf(if (isLandscape) 1920 else 1080) }
-    var customHeightPx by rememberSaveable { mutableIntStateOf(if (isLandscape) 1080 else 1920) }
-    val canvasWidthPx = customWidthPx
-    val canvasHeightPx = customHeightPx
+    val canvasWidthPx = viewModel.customWidthPx
+    val canvasHeightPx = viewModel.customHeightPx
     val canvasWidthDp = with(density) { canvasWidthPx.toDp() }
     val canvasHeightDp = with(density) { canvasHeightPx.toDp() }
 
@@ -378,8 +376,8 @@ fun AnimatorScreen(
                         val loadedCanvasWidth = root.optInt("canvasWidth", 0).takeIf { it > 0 }
                         val loadedCanvasHeight = root.optInt("canvasHeight", 0).takeIf { it > 0 }
                         if (loadedCanvasWidth != null && loadedCanvasHeight != null) {
-                            customWidthPx = loadedCanvasWidth
-                            customHeightPx = loadedCanvasHeight
+                            viewModel.customWidthPx = loadedCanvasWidth
+                            viewModel.customHeightPx = loadedCanvasHeight
                         }
                     } else {
                         Toast.makeText(context, "Invalid project format", Toast.LENGTH_SHORT).show()
@@ -736,6 +734,9 @@ fun AnimatorScreen(
         }
     }
 
+    val canvasAspectRatio = viewModel.customWidthPx.toFloat() / viewModel.customHeightPx.coerceAtLeast(1).toFloat()
+    val canvasWeight = (0.3f + (canvasAspectRatio * 0.17f)).coerceIn(0.3f, 0.6f)
+    val panelWeight = 1f - canvasWeight
 
     if (isLandscape) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -746,7 +747,7 @@ fun AnimatorScreen(
             ) {
                 Box(
                     modifier = Modifier
-                        .weight(0.6f)
+                        .weight(canvasWeight)
                         .fillMaxHeight()
                 ) {
                     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -849,7 +850,7 @@ fun AnimatorScreen(
 
                 Column(
                     modifier = Modifier
-                        .weight(0.4f)
+                        .weight(panelWeight)
                         .fillMaxHeight()
                 ) {
                     AnimatorCanvasElementsPanel(
@@ -1035,13 +1036,16 @@ fun AnimatorScreen(
                 canvasWidthPx = canvasWidthPx,
                 canvasHeightPx = canvasHeightPx,
                 onLoadCanvasSize = { w, h ->
-                    customWidthPx = w
-                    customHeightPx = h
+                    viewModel.customWidthPx = w
+                    viewModel.customHeightPx = h
                 },
                 onCanvasSettingsClick = { showCanvasSettingsDialog = true }
             )
         }
     } else {
+        val portraitCanvasRatio = viewModel.customHeightPx.toFloat() / viewModel.customWidthPx.coerceAtLeast(1).toFloat()
+        val canvasWeight = (0.3f + (portraitCanvasRatio * 0.17f)).coerceIn(0.3f, 0.6f)
+        val panelWeight = 1f - canvasWeight
         Row(modifier = Modifier.fillMaxSize().padding(top = 20.dp)) {
 
             Column(
@@ -1092,8 +1096,8 @@ fun AnimatorScreen(
                     canvasWidthPx = canvasWidthPx,
                     canvasHeightPx = canvasHeightPx,
                     onLoadCanvasSize = { w, h ->
-                        customWidthPx = w
-                        customHeightPx = h
+                        viewModel.customWidthPx = w
+                        viewModel.customHeightPx = h
                     },
                     onCanvasSettingsClick = { showCanvasSettingsDialog = true }
                 )
@@ -1107,7 +1111,7 @@ fun AnimatorScreen(
                 BoxWithConstraints(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(0.6f)
+                        .weight(canvasWeight)
                 ) {
                     val containerWidthDp = maxWidth
                     val containerHeightDp = maxHeight
@@ -1205,7 +1209,7 @@ fun AnimatorScreen(
 
                 Column(
                     modifier = Modifier
-                        .weight(0.4f)
+                        .weight(panelWeight)
                         .fillMaxWidth()
                 ) {
                     AnimatorCanvasElementsPanel(
@@ -1570,8 +1574,8 @@ fun AnimatorScreen(
             },
             timeMultiplier = 1f,
             initialGradientConfig = elementGradient,
-            canvasWidth = customWidthPx,
-            canvasHeight = customHeightPx,
+            canvasWidth = viewModel.customWidthPx,
+            canvasHeight = viewModel.customHeightPx,
             themeColors = themeColors,
             gradientConfigs = viewModel.animatorGradientPairs
         )
@@ -1722,12 +1726,12 @@ fun AnimatorScreen(
 
     if (showCanvasSettingsDialog) {
         CanvasSettingsDialog(
-            initialWidth = customWidthPx,
-            initialHeight = customHeightPx,
+            initialWidth = viewModel.customWidthPx,
+            initialHeight = viewModel.customHeightPx,
             onDismiss = { showCanvasSettingsDialog = false },
             onConfirmSize = { w, h ->
-                customWidthPx = w
-                customHeightPx = h
+                viewModel.customWidthPx = w
+                viewModel.customHeightPx = h
             },
             onSolidColorSelected = { color ->
                 viewModel.canvasBackgroundColor = color

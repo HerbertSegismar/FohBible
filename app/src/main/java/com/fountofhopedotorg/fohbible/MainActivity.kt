@@ -153,6 +153,8 @@ private val PREDEFINED_HIGHLIGHT_COLORS_KEY = stringPreferencesKey("predefined_h
 private val RENDER_ORBS_KEY = booleanPreferencesKey("show_orbs")
 private val ORBS_COUNT_KEY = intPreferencesKey("orbs_count")
 private val DISABLED_VERSIONS_KEY = stringPreferencesKey("disabled_versions")
+private val CUSTOM_WIDTH_KEY = intPreferencesKey("custom_width")
+private val CUSTOM_HEIGHT_KEY = intPreferencesKey("custom_height")
 
 val ComponentActivity.appDataStore: DataStore<Preferences> by preferencesDataStore(name = "app_preferences")
 
@@ -260,6 +262,8 @@ fun FohBibleApp(
     LaunchedEffect(Unit) {
         val prefs = dataStore.data.first()
         with(viewModel) {
+            customWidth = prefs[CUSTOM_WIDTH_KEY] ?: 1920
+            customHeight = prefs[CUSTOM_HEIGHT_KEY] ?: 1080
             fontSize = prefs[FONT_SIZE_KEY] ?: 18
             lightThemeReaderFontColor = Color(prefs[LIGHT_THEME_READER_FONT_COLOR_KEY] ?: Color(0xFF101015).toArgb())
             darkThemeReaderFontColor = Color(prefs[DARK_THEME_READER_FONT_COLOR_KEY] ?: Color(0xFFFFFFFF).toArgb())
@@ -328,6 +332,8 @@ fun FohBibleApp(
     SavePreference({ viewModel.lightThemeReaderFontColor.toArgb() }, LIGHT_THEME_READER_FONT_COLOR_KEY, dataStore)
     SavePreference({ viewModel.darkThemeReaderFontColor.toArgb() }, DARK_THEME_READER_FONT_COLOR_KEY, dataStore)
     SavePreference({ viewModel.fontSize }, FONT_SIZE_KEY, dataStore)
+    SavePreference({ viewModel.customWidth }, CUSTOM_WIDTH_KEY, dataStore)
+    SavePreference({ viewModel.customHeight }, CUSTOM_HEIGHT_KEY, dataStore)
     SavePreference({ viewModel.darkTheme }, DARK_THEME_KEY, dataStore)
     SavePreference({ viewModel.selectedColor?.toArgb() ?: DefaultPrimaryColor.toArgb() }, SELECTED_COLOR_KEY, dataStore)
     SavePreference({ viewModel.isCustomColor }, IS_CUSTOM_COLOR_KEY, dataStore)
@@ -863,8 +869,7 @@ private fun copyUriToInternalStorage(context: Context, sourceUri: Uri): String? 
         }
         inputStream.close()
         destFile.absolutePath
-    } catch (e: Exception) {
-        e.printStackTrace()
+    } catch (_: Exception) {
         null
     }
 }
