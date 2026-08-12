@@ -297,7 +297,7 @@ fun AnimatorToolbar(
                             fontCache = fontCache,
                             canvasWidthPx = canvasWidthPx,
                             canvasHeightPx = canvasHeightPx,
-                            scaleFactor = 1f, // or resolutionMultiplier if you want higher quality
+                            scaleFactor = 1f,
                             canvasBackgroundColor = viewModel.canvasBackgroundColor,
                             canvasBackgroundBrush = viewModel.canvasBackgroundBrush,
                             timeMs = 0L,

@@ -60,6 +60,7 @@ fun AnimatorCanvasArea(
     canvasBackgroundBrush: Brush? = null,
 ) {
     val viewModel: AppViewModel = viewModel()
+    val bgColor = if (isDark) Color(0xFF1E2937) else Color(0xFFFFFBEE)
 
     Box(
         modifier = modifier
@@ -104,8 +105,7 @@ fun AnimatorCanvasArea(
                             drawRect(color = canvasBackgroundColor)
                         }
                     } else {
-                        val defaultBackgroundColor = if (isDark) Color(0xFF1E2937) else Color.White
-                        drawRect(color = defaultBackgroundColor)
+                        drawRect(color = bgColor)
                     }
 
                     graphicsLayer.record {

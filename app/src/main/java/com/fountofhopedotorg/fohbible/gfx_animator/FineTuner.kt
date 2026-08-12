@@ -204,12 +204,12 @@ fun FineTunerPanel(
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 CompactPropertyField(
-                    label = "X", value = element.offset.x, format = ::formatPosition,
+                    label = "Position X", value = element.offset.x, format = ::formatPosition,
                     onValueChange = { updateProps(it, null, null) },
                     modifier = Modifier.weight(1f)
                 )
                 CompactPropertyField(
-                    label = "Y", value = element.offset.y, format = ::formatPosition,
+                    label = "Position Y", value = element.offset.y, format = ::formatPosition,
                     onValueChange = { updateProps(null, it, null) },
                     modifier = Modifier.weight(1f)
                 )

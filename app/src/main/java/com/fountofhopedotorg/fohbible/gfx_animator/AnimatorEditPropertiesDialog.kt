@@ -145,14 +145,14 @@ fun AnimatorEditPropertiesDialog(
                         OutlinedTextField(
                             value = editX,
                             onValueChange = { editX = it },
-                            label = { Text("X Position") },
+                            label = { Text("Position X") },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                         )
                         OutlinedTextField(
                             value = editY,
                             onValueChange = { editY = it },
-                            label = { Text("Y Position") },
+                            label = { Text("Position Y") },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                         )
