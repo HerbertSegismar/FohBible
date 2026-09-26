@@ -26,6 +26,10 @@ android {
                 "proguard-rules.pro"
             )
         }
+        getByName("debug") {
+            // Appends .debug to your ID, making it: com.fountofhopedotorg.fohbible.debug
+            applicationIdSuffix = ".debug"
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
