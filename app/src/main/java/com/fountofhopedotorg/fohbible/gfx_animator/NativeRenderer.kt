@@ -94,9 +94,9 @@ suspend fun loadImageBitmaps(
     val w = targetWidthPx.roundToInt()
     val h = targetHeightPx.roundToInt()
 
-    for (el in elements) {
-        if (el.content.startsWith("Image: ")) {
-            val uriString = el.content.removePrefix("Image: ").trim()
+    for ((id, content) in elements) {
+        if (content.startsWith("Image: ")) {
+            val uriString = content.removePrefix("Image: ").trim()
             val uri = uriString.toUri()
 
             val request = ImageRequest.Builder(appContext)
@@ -116,7 +116,7 @@ suspend fun loadImageBitmaps(
                         drawable.draw(canvas)
                     }
                 }
-                map[el.id] = bmp
+                map[id] = bmp
             }
         }
     }
@@ -136,7 +136,7 @@ fun drawFrame(
     canvasBackgroundColor: ComposeColor?,
     canvasBackgroundBrush: Brush?,
     fontCache: Map<String, Typeface> = emptyMap(),
-    textSizePxBase: Float = 60f
+    fontScale: Float = 1f
 ) {
     if (canvasBackgroundBrush != null) {
         val composeCanvas = ComposeCanvas(canvas)
@@ -303,7 +303,9 @@ fun drawFrame(
             posY = adjustedOffset.y * scaleFactor
         }
 
-        val textSizePx = textSizePxBase * scaleFactor
+        // Per-element text size: fontSize (sp-like) × fontScale → pixels,
+        // then × scaleFactor for export resolution.
+        val textSizePx = element.fontSize * fontScale * scaleFactor
 
         canvas.withTranslation(posX, posY) {
             val pivotOffsetX = newPivotX * widthPx
@@ -398,7 +400,7 @@ suspend fun nativeExport(
 
     val imageBitmaps = loadImageBitmaps(elements, context, exportWidth.toFloat(), exportHeight.toFloat())
     val fontCache = preloadFonts(elements, context)
-    val textSizePxBase = 60f * context.resources.configuration.fontScale
+    val fontScale = context.resources.configuration.fontScale
 
     val frameDurationMs = 1000L / frameRate
     var currentTimeMs = startTimeMs
@@ -426,7 +428,7 @@ suspend fun nativeExport(
                     canvasBackgroundColor = canvasBackgroundColor,
                     canvasBackgroundBrush = canvasBackgroundBrush,
                     fontCache = fontCache,
-                    textSizePxBase = textSizePxBase
+                    fontScale = fontScale
                 )
                 encoder.inputSurface.unlockCanvasAndPost(canvas)
             }
@@ -635,8 +637,22 @@ class OffscreenVideoEncoder(
     }
 }
 
+/**
+ * Breaks [text] into display lines that each fit within [maxWidth].
+ *
+ * Guards against:
+ *  - non-positive / NaN / infinite [maxWidth] (returns the raw newline split)
+ *  - [Paint.breakText] returning 0 (forces one character of progress so the
+ *    loop can never spin forever, which would freeze the exporter on the
+ *    main thread and get the process killed)
+ */
 private fun wrapTextToLines(text: String, paint: Paint, maxWidth: Float): List<String> {
     val result = mutableListOf<String>()
+
+    if (maxWidth <= 0f || maxWidth.isNaN() || maxWidth.isInfinite()) {
+        return text.split("\n")
+    }
+
     val paragraphs = text.split("\n")
 
     for (paragraph in paragraphs) {
@@ -644,10 +660,21 @@ private fun wrapTextToLines(text: String, paint: Paint, maxWidth: Float): List<S
             result.add("")
             continue
         }
+
         var start = 0
         val len = paragraph.length
+
         while (start < len) {
             val count = paint.breakText(paragraph, start, len, true, maxWidth, null)
+
+            if (count <= 0) {
+                // Cannot fit a single glyph — take one char and move on.
+                val forcedEnd = (start + 1).coerceAtMost(len)
+                result.add(paragraph.substring(start, forcedEnd))
+                start = forcedEnd
+                continue
+            }
+
             var end = start + count
             if (end < len) {
                 val spaceIdx = paragraph.lastIndexOf(' ', end)
@@ -655,6 +682,11 @@ private fun wrapTextToLines(text: String, paint: Paint, maxWidth: Float): List<S
                     end = spaceIdx
                 }
             }
+
+            if (end <= start) {
+                end = (start + 1).coerceAtMost(len)
+            }
+
             result.add(paragraph.substring(start, end).trim())
             start = if (end < len && paragraph[end] == ' ') end + 1 else end
         }
@@ -682,11 +714,24 @@ private fun drawElementContent(
         val typeface = fontCache[fontFamily] ?: Typeface.DEFAULT
 
         val paddingPx = 24f * density
-        val maxWidthPx = 750f * density
+        val boxContentWidth = (width - 2f * paddingPx).coerceAtLeast(1f)
+
+        // Canvas proportional-mode content max (750 logical, minus padding), in export px:
+        val canvasProportionalMax = 750f * density - 2f * paddingPx
 
         val textPaint = Paint(paint).apply {
             textSize = textSizePx
             this.typeface = typeface
+        }
+
+        // Natural width of the whole content on a single line (newlines flattened).
+        val singleLine = element.content.replace('\n', ' ')
+        val naturalSingleLine = textPaint.measureText(singleLine) + 2f * density
+
+        val maxWidthPx = if (naturalSingleLine <= canvasProportionalMax) {
+            naturalSingleLine
+        } else {
+            boxContentWidth
         }
 
         val lines = wrapTextToLines(element.content, textPaint, maxWidthPx)

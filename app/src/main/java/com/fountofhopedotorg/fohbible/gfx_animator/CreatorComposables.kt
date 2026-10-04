@@ -14,8 +14,10 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
@@ -30,6 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -72,6 +75,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -507,6 +511,7 @@ fun CanvasItemSelectionHandles(
     pivotY: Float,
     onUpdatePosition: (Offset, Float, Float, Float) -> Unit,
     onScaleChanged: (Float, Float) -> Unit,
+    onScaleDragStart: () -> Unit = {},
     onDeleteRequested: () -> Unit,
     onColorPickerRequested: () -> Unit,
     onProportionalToggle: () -> Unit,
@@ -514,13 +519,20 @@ fun CanvasItemSelectionHandles(
 ) {
     val handleSizePx = 64f
     val handleRadiusPx = handleSizePx / 2f
-    val latestProportional by rememberUpdatedState(proportionalEditing)
 
+    // ── State read inside gesture handlers must go through rememberUpdatedState ──
+    val latestProportional by rememberUpdatedState(proportionalEditing)
     val latestScaleX by rememberUpdatedState(currentScaleX)
     val latestScaleY by rememberUpdatedState(currentScaleY)
     val latestRotation by rememberUpdatedState(currentRotation)
     val latestPivotX by rememberUpdatedState(pivotX)
     val latestPivotY by rememberUpdatedState(pivotY)
+    val latestBaseSize by rememberUpdatedState(baseSize)
+
+    // Callbacks must be read fresh from the pointerInput block.
+    val latestOnScaleChanged by rememberUpdatedState(onScaleChanged)
+    val latestOnScaleDragStart by rememberUpdatedState(onScaleDragStart)
+    val latestOnUpdatePosition by rememberUpdatedState(onUpdatePosition)
 
     fun offsetAt(localX: Float, localY: Float): IntOffset {
         val pivotLocalX = latestPivotX * baseSize.width
@@ -538,6 +550,7 @@ fun CanvasItemSelectionHandles(
         )
     }
 
+    // ── Delete handle ─────────────────────────────────────────────────────────
     Box(
         modifier = Modifier
             .offset { offsetAt(0f, 0f) }
@@ -547,9 +560,13 @@ fun CanvasItemSelectionHandles(
             .clickable { onDeleteRequested() },
         contentAlignment = Alignment.Center
     ) {
-        Icon(Icons.Default.Close, "Delete", tint = Color.Red, modifier = Modifier.requiredSizePx(handleSizePx, handleSizePx))
+        Icon(
+            Icons.Default.Close, "Delete", tint = Color.Red,
+            modifier = Modifier.requiredSizePx(handleSizePx, handleSizePx)
+        )
     }
 
+    // ── Color-picker handle ───────────────────────────────────────────────────
     Box(
         modifier = Modifier
             .offset { offsetAt(0f, baseSize.height.toFloat()) }
@@ -559,28 +576,36 @@ fun CanvasItemSelectionHandles(
             .clickable { onColorPickerRequested() },
         contentAlignment = Alignment.Center
     ) {
-        Icon(Icons.Default.Palette, "Change Color", tint = Color.Blue, modifier = Modifier.requiredSizePx(handleSizePx, handleSizePx))
+        Icon(
+            Icons.Default.Palette, "Change Color", tint = Color.Blue,
+            modifier = Modifier.requiredSizePx(handleSizePx, handleSizePx)
+        )
     }
 
+    // ── Rotate handle ─────────────────────────────────────────────────────────
+    // Kept with pointerInput(baseSize) because rotation doesn't change layout
+    // size; but callbacks now go through rememberUpdatedState.
     Box(
         modifier = Modifier
             .offset { offsetAt(baseSize.width.toFloat(), 0f) }
             .requiredSizePx(handleSizePx, handleSizePx)
-            .pointerInput(baseSize) {
+            .pointerInput(Unit) {
                 var startRotation = 0f
                 var accumulatedAngle = 0f
                 var currentVector = Offset.Zero
                 detectDragGestures(
                     onDragStart = {
-                        startRotation = currentRotation
+                        startRotation = latestRotation
                         accumulatedAngle = 0f
-                        val pivotLocX = latestPivotX * baseSize.width
-                        val pivotLocY = latestPivotY * baseSize.height
-                        val dx = baseSize.width.toFloat() - pivotLocX
+                        val bsW = latestBaseSize.width.toFloat()
+                        val bsH = latestBaseSize.height.toFloat()
+                        val pivotLocX = latestPivotX * bsW
+                        val pivotLocY = latestPivotY * bsH
+                        val dx = bsW - pivotLocX
                         val dy = 0f - pivotLocY
                         val rad = startRotation * (PI / 180.0)
-                        val scaledDx = dx * currentScaleX
-                        val scaledDy = dy * currentScaleY
+                        val scaledDx = dx * latestScaleX
+                        val scaledDy = dy * latestScaleY
                         val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
                         val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
                         currentVector = Offset(rx.toFloat(), ry.toFloat())
@@ -595,7 +620,7 @@ fun CanvasItemSelectionHandles(
                         else if (deltaAngle < -180f) deltaAngle += 360f
                         accumulatedAngle += deltaAngle
                         val newRotation = startRotation + accumulatedAngle
-                        onUpdatePosition(Offset.Zero, currentWidth, currentHeight, newRotation)
+                        latestOnUpdatePosition(Offset.Zero, currentWidth, currentHeight, newRotation)
                     }
                 )
             }
@@ -603,56 +628,76 @@ fun CanvasItemSelectionHandles(
             .border(width = (1f / density).dp, color = MaterialTheme.colorScheme.primary, shape = CircleShape),
         contentAlignment = Alignment.Center
     ) {
-        Icon(Icons.Default.Refresh, "Rotate", tint = Color.DarkGray, modifier = Modifier.requiredSizePx(handleSizePx, handleSizePx))
+        Icon(
+            Icons.Default.Refresh, "Rotate", tint = Color.DarkGray,
+            modifier = Modifier.requiredSizePx(handleSizePx, handleSizePx)
+        )
     }
 
+    // ── Scale handle ──────────────────────────────────────────────────────────
+    // pointerInput(Unit) + baseSize frozen at drag-start so that resizing the
+    // container during the drag does NOT cancel the gesture.
     Box(
         modifier = Modifier
             .offset { offsetAt(baseSize.width.toFloat(), baseSize.height.toFloat()) }
             .requiredSizePx(handleSizePx, handleSizePx)
-            .pointerInput(baseSize) {
+            .pointerInput(Unit) {
                 var startScaleX = 1f
                 var startScaleY = 1f
                 var fixedRotation = 0f
                 var currentVector = Offset.Zero
+                // Frozen at drag start:
+                var dragBaseW = 0f
+                var dragBaseH = 0f
+                var dragPivotLocalX = 0f
+                var dragPivotLocalY = 0f
+
                 detectDragGestures(
                     onDragStart = {
                         startScaleX = latestScaleX
                         startScaleY = latestScaleY
                         fixedRotation = latestRotation
-                        val pivotLocX = latestPivotX * baseSize.width
-                        val pivotLocY = latestPivotY * baseSize.height
-                        val dx = baseSize.width.toFloat() - pivotLocX
-                        val dy = baseSize.height.toFloat() - pivotLocY
+                        dragBaseW = latestBaseSize.width.toFloat()
+                        dragBaseH = latestBaseSize.height.toFloat()
+                        dragPivotLocalX = latestPivotX * dragBaseW
+                        dragPivotLocalY = latestPivotY * dragBaseH
+
+                        val dx = dragBaseW - dragPivotLocalX
+                        val dy = dragBaseH - dragPivotLocalY
                         val rad = fixedRotation * (PI / 180.0)
                         val scaledDx = dx * startScaleX
                         val scaledDy = dy * startScaleY
                         val rx = scaledDx * cos(rad) - scaledDy * sin(rad)
                         val ry = scaledDx * sin(rad) + scaledDy * cos(rad)
                         currentVector = Offset(rx.toFloat(), ry.toFloat())
+                        latestOnScaleDragStart()
                     },
                     onDrag = { change, dragAmount ->
                         change.consume()
                         currentVector += dragAmount
                         val rad = fixedRotation * (PI / 180.0)
                         val unrotatedRad = -rad
-                        val newScaledDx = currentVector.x * cos(unrotatedRad) - currentVector.y * sin(unrotatedRad)
-                        val newScaledDy = currentVector.x * sin(unrotatedRad) + currentVector.y * cos(unrotatedRad)
+                        val newScaledDx =
+                            currentVector.x * cos(unrotatedRad) - currentVector.y * sin(unrotatedRad)
+                        val newScaledDy =
+                            currentVector.x * sin(unrotatedRad) + currentVector.y * cos(unrotatedRad)
 
-                        val pivotLocX = latestPivotX * baseSize.width
-                        val pivotLocY = latestPivotY * baseSize.height
-                        val dx = baseSize.width.toFloat() - pivotLocX
-                        val dy = baseSize.height.toFloat() - pivotLocY
+                        val dx = dragBaseW - dragPivotLocalX
+                        val dy = dragBaseH - dragPivotLocalY
 
                         if (latestProportional) {
                             val originalDist = sqrt(dx * dx + dy * dy)
                             val newDist = sqrt(newScaledDx * newScaledDx + newScaledDy * newScaledDy)
-                            val uniformScale = if (originalDist > 0f) (newDist / originalDist).toFloat().coerceIn(0.1f, 25f) else 1f
-                            onScaleChanged(uniformScale, uniformScale)
+                            val uniformScale =
+                                if (originalDist > 0f) (newDist / originalDist).toFloat().coerceIn(0.1f, 25f)
+                                else 1f
+                            latestOnScaleChanged(uniformScale, uniformScale)
                         } else {
-                            val newScaleX = if (dx != 0f) (newScaledDx / dx).toFloat().coerceIn(0.1f, 25f) else startScaleX
-                            val newScaleY = if (dy != 0f) (newScaledDy / dy).toFloat().coerceIn(0.1f, 25f) else startScaleY
-                            onScaleChanged(newScaleX, newScaleY)
+                            val newScaleX =
+                                if (dx != 0f) (newScaledDx / dx).toFloat().coerceIn(0.1f, 25f) else startScaleX
+                            val newScaleY =
+                                if (dy != 0f) (newScaledDy / dy).toFloat().coerceIn(0.1f, 25f) else startScaleY
+                            latestOnScaleChanged(newScaleX, newScaleY)
                         }
                     }
                 )
@@ -669,6 +714,7 @@ fun CanvasItemSelectionHandles(
         )
     }
 
+    // ── Proportional-toggle handle ────────────────────────────────────────────
     Box(
         modifier = Modifier
             .offset { offsetAt(baseSize.width.toFloat() / 2f, 0f) }
@@ -794,24 +840,28 @@ fun CanvasSvgItem(
                             .pointerInput(Unit) {
                                 detectTapGestures { onSelect() }
                             }
-                            .pointerInput(Unit) {
-                                detectTransformGestures { _, pan, zoom, rot ->
-                                    val angleRad = currentRotation * (PI / 180.0)
-                                    val localPanX = pan.x * currentScaleX
-                                    val localPanY = pan.y * currentScaleY
+                            .then(
+                                if (isSelected) {
+                                    Modifier.pointerInput(Unit) {
+                                        detectTransformGestures { _, pan, zoom, rot ->
+                                            val angleRad = currentRotation * (PI / 180.0)
+                                            val localPanX = pan.x * currentScaleX
+                                            val localPanY = pan.y * currentScaleY
 
-                                    val screenPanX = localPanX * cos(angleRad) - localPanY * sin(angleRad)
-                                    val screenPanY = localPanX * sin(angleRad) + localPanY * cos(angleRad)
-                                    offset += Offset(screenPanX.toFloat(), screenPanY.toFloat())
+                                            val screenPanX = localPanX * cos(angleRad) - localPanY * sin(angleRad)
+                                            val screenPanY = localPanX * sin(angleRad) + localPanY * cos(angleRad)
+                                            offset += Offset(screenPanX.toFloat(), screenPanY.toFloat())
 
-                                    val newScaleX = (currentScaleX * zoom).coerceIn(0.1f, 25f)
-                                    val newScaleY = (currentScaleY * zoom).coerceIn(0.1f, 25f)
-                                    val newRotation = currentRotation + rot
+                                            val newScaleX = (currentScaleX * zoom).coerceIn(0.1f, 25f)
+                                            val newScaleY = (currentScaleY * zoom).coerceIn(0.1f, 25f)
+                                            val newRotation = currentRotation + rot
 
-                                    onScaleChanged(newScaleX, newScaleY)
-                                    onUpdatePosition(offset, currentWidth, currentHeight, newRotation)
-                                }
-                            }
+                                            onScaleChanged(newScaleX, newScaleY)
+                                            onUpdatePosition(offset, currentWidth, currentHeight, newRotation)
+                                        }
+                                    }
+                                } else Modifier
+                            )
                     } else Modifier
                 )
                 .alpha(if (isLocked) 0.2f else 1f)
@@ -978,78 +1028,131 @@ fun CanvasTextItem(
     onScaleChanged: (Float, Float) -> Unit,
     onColorPickerRequested: () -> Unit,
     onDeleteRequested: () -> Unit,
-    proportionalEditing: Boolean,
     onProportionalToggle: () -> Unit,
+    onTextWrapModeChanged: (Boolean) -> Unit = {},
+    onFontSizeChanged: (Float) -> Unit = {},
     onStartPivotPlacement: () -> Unit = {},
     onPlacePivotLocal: (Float, Float) -> Unit = { _, _ -> },
     isPivotPlacementActive: Boolean = false,
     isActivePivotTarget: Boolean = false
 ) {
     val fontFamily = getFontFamily(element.fontFamily ?: "system")
-    val textAlignment = when (element.textAlign) {
-        "Left"   -> TextAlign.Left
-        "Right"  -> TextAlign.Right
-        "Center" -> TextAlign.Center
-        else     -> TextAlign.Center
+    val textAlignment = remember(element.textAlign) {
+        when (element.textAlign) {
+            "Left"   -> TextAlign.Left
+            "Right"  -> TextAlign.Right
+            "Center" -> TextAlign.Center
+            else     -> TextAlign.Center
+        }
     }
+
     val density = LocalDensity.current.density
     var offset by remember(element.offset) { mutableStateOf(element.offset) }
     var baseSize by remember { mutableStateOf(IntSize.Zero) }
+
     val currentRotation by rememberUpdatedState(element.rotation)
     val currentScaleX by rememberUpdatedState(element.scaleX)
     val currentScaleY by rememberUpdatedState(element.scaleY)
     val currentWidth by rememberUpdatedState(element.width)
     val currentHeight by rememberUpdatedState(element.height)
+    var isProportionalEditing by remember(element.id, element.textWrapMode) {
+        mutableStateOf(!element.textWrapMode)
+    }
+    var fontSizePx by remember(element.id, element.fontSize) {
+        mutableFloatStateOf(element.fontSize)
+    }
+    val lockedFontSize = (fontSizePx / density).sp
 
-    val lockedFontSize = (60f / density).sp
     val lockedPadding = (24f / density).dp
     val lockedMaxWidth = (750f / density).dp
 
-    // Track whether we've already set the initial size
     var initialSizeSet by remember { mutableStateOf(false) }
+    val resizeBoxMode = !isProportionalEditing && currentWidth > 1f && currentHeight > 1f
+
+    var dragStartWidth by remember { mutableFloatStateOf(0f) }
+    var dragStartHeight by remember { mutableFloatStateOf(0f) }
+    var dragStartOffset by remember { mutableStateOf(Offset.Zero) }
+
+    val graphicsScaleX = if (resizeBoxMode) 1f else currentScaleX
+    val graphicsScaleY = if (resizeBoxMode) 1f else currentScaleY
+
+    // ── Bake the proportional scale into font size / box on wrap-mode entry ──
+    var wasProportionalEditing by remember(element.id) { mutableStateOf(isProportionalEditing) }
+    LaunchedEffect(isProportionalEditing) {
+        val enteringWrapMode = wasProportionalEditing && !isProportionalEditing
+        wasProportionalEditing = isProportionalEditing
+        if (!enteringWrapMode) return@LaunchedEffect
+
+        val scale = currentScaleX
+        if (scale <= 0f || scale == 1f) return@LaunchedEffect
+
+        val newFontSize = fontSizePx * scale
+        fontSizePx = newFontSize
+
+        val oldW = currentWidth
+        val oldH = currentHeight
+        val newW = oldW * scale
+        val newH = oldH * scale
+        val newOffset = Offset(
+            offset.x + element.pivotX * (oldW - newW),
+            offset.y + element.pivotY * (oldH - newH)
+        )
+
+        offset = newOffset
+        onUpdatePosition(newOffset, newW, newH, currentRotation)
+        onScaleChanged(1f, 1f)
+        onFontSizeChanged(newFontSize)   // ← persist to ViewModel
+    }
 
     Box(
         modifier = Modifier
             .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
-            .wrapContentSize(unbounded = true)
     ) {
         Box(
             modifier = Modifier
                 .graphicsLayer {
-                    this.scaleX = currentScaleX
-                    this.scaleY = currentScaleY
+                    this.scaleX = graphicsScaleX
+                    this.scaleY = graphicsScaleY
                     rotationZ = currentRotation
                     transformOrigin = TransformOrigin(element.pivotX, element.pivotY)
                 }
+                .then(
+                    if (resizeBoxMode) {
+                        Modifier.requiredSize(
+                            width = (currentWidth / density).dp,
+                            height = (currentHeight / density).dp
+                        )
+                    } else Modifier
+                )
                 .onSizeChanged { baseSize = it }
                 .then(
                     if (!isLocked && !isPivotPlacementActive) {
                         Modifier
                             .pointerInput(Unit) { detectTapGestures { onSelect() } }
-                            .pointerInput(Unit) {
-                                detectTransformGestures { _, pan, zoom, rot ->
-                                    val angleRad = currentRotation * (PI / 180.0)
-                                    val localPanX = pan.x * currentScaleX
-                                    val localPanY = pan.y * currentScaleY
+                            .then(
+                                if (isSelected) {
+                                    Modifier.pointerInput(Unit) {
+                                        detectTransformGestures { _, pan, _, rot ->
+                                            val angleRad = currentRotation * (PI / 180.0)
+                                            val localPanX = pan.x * graphicsScaleX
+                                            val localPanY = pan.y * graphicsScaleY
 
-                                    val screenPanX = localPanX * cos(angleRad) - localPanY * sin(angleRad)
-                                    val screenPanY = localPanX * sin(angleRad) + localPanY * cos(angleRad)
-                                    offset += Offset(screenPanX.toFloat(), screenPanY.toFloat())
+                                            val screenPanX = localPanX * cos(angleRad) - localPanY * sin(angleRad)
+                                            val screenPanY = localPanX * sin(angleRad) + localPanY * cos(angleRad)
+                                            offset += Offset(screenPanX.toFloat(), screenPanY.toFloat())
 
-                                    val newScaleX = (currentScaleX * zoom).coerceIn(0.1f, 25f)
-                                    val newScaleY = (currentScaleY * zoom).coerceIn(0.1f, 25f)
-                                    val newRotation = currentRotation + rot
-
-                                    onScaleChanged(newScaleX, newScaleY)
-                                    onUpdatePosition(offset, currentWidth, currentHeight, newRotation)
-                                }
-                            }
+                                            val newRotation = currentRotation + rot
+                                            onUpdatePosition(offset, currentWidth, currentHeight, newRotation)
+                                        }
+                                    }
+                                } else Modifier
+                            )
                     } else Modifier
                 )
                 .alpha(if (isLocked) 0.2f else 1f)
         ) {
             Box(
-                modifier = Modifier,
+                modifier = Modifier.then(if (resizeBoxMode) Modifier.fillMaxSize() else Modifier),
                 contentAlignment = Alignment.Center
             ) {
                 if (isSelected) {
@@ -1060,32 +1163,32 @@ fun CanvasTextItem(
                     )
                 }
                 Box(
-                    modifier = Modifier
-                        .onSizeChanged { size ->
-                            val newW = size.width.toFloat()
-                            val newH = size.height.toFloat()
-                            val oldW = currentWidth
-                            val oldH = currentHeight
+                    modifier = Modifier.then(
+                        if (!resizeBoxMode) {
+                            Modifier.onSizeChanged { size ->
+                                val newW = size.width.toFloat()
+                                val newH = size.height.toFloat()
+                                val oldW = currentWidth
+                                val oldH = currentHeight
 
-                            // First time: just record the size, don't adjust offset
-                            if (!initialSizeSet) {
-                                initialSizeSet = true
-                                // Report the measured size, but keep offset unchanged
-                                onUpdatePosition(offset, newW, newH, currentRotation)
-                                return@onSizeChanged
-                            }
+                                if (!initialSizeSet) {
+                                    initialSizeSet = true
+                                    onUpdatePosition(offset, newW, newH, currentRotation)
+                                    return@onSizeChanged
+                                }
 
-                            // Subsequent size changes: keep the pivot anchored
-                            if ((newW - oldW).absoluteValue > 1f || (newH - oldH).absoluteValue > 1f) {
-                                val px = element.pivotX
-                                val py = element.pivotY
-                                val deltaOffsetX = px * (oldW - newW)
-                                val deltaOffsetY = py * (oldH - newH)
-                                val newOffset = Offset(offset.x + deltaOffsetX, offset.y + deltaOffsetY)
-                                offset = newOffset
-                                onUpdatePosition(newOffset, newW, newH, currentRotation)
+                                if ((newW - oldW).absoluteValue > 1f || (newH - oldH).absoluteValue > 1f) {
+                                    val px = element.pivotX
+                                    val py = element.pivotY
+                                    val deltaOffsetX = px * (oldW - newW)
+                                    val deltaOffsetY = py * (oldH - newH)
+                                    val newOffset = Offset(offset.x + deltaOffsetX, offset.y + deltaOffsetY)
+                                    offset = newOffset
+                                    onUpdatePosition(newOffset, newW, newH, currentRotation)
+                                }
                             }
-                        },
+                        } else Modifier
+                    ),
                     contentAlignment = Alignment.Center
                 ) {
                     val textShadow = if (element.shadowColor != null && element.shadowColor.alpha > 0f) {
@@ -1099,9 +1202,15 @@ fun CanvasTextItem(
                     val borderColor = element.borderColor
                     val hasBorder = element.borderThickness > 0f && borderColor != null && borderColor.alpha > 0f
 
-                    val commonModifier = Modifier
-                        .padding(lockedPadding)
-                        .widthIn(max = lockedMaxWidth)
+                    val textLayoutModifier = if (resizeBoxMode) {
+                        Modifier
+                            .padding(lockedPadding)
+                            .fillMaxWidth()
+                    } else {
+                        Modifier
+                            .padding(lockedPadding)
+                            .widthIn(max = lockedMaxWidth)
+                    }
 
                     val baseTextStyle = TextStyle(
                         fontSize = lockedFontSize,
@@ -1110,33 +1219,43 @@ fun CanvasTextItem(
                         textAlign = textAlignment
                     )
 
-                    val needsDedicatedShadow = textShadow != null && (hasBorder || gradientConfig != null)
-                    if (needsDedicatedShadow) {
+                    val renderTextLayer = @Composable { style: TextStyle, color: Color, modifier: Modifier ->
                         Text(
                             text = element.content,
-                            color = element.textColor ?: Color.Black,
-                            style = baseTextStyle.copy(shadow = textShadow),
-                            modifier = commonModifier
+                            color = color,
+                            style = style,
+                            softWrap = true,
+                            overflow = TextOverflow.Clip,
+                            modifier = modifier
+                        )
+                    }
+
+                    if (textShadow != null && (hasBorder || gradientConfig != null)) {
+                        renderTextLayer(
+                            baseTextStyle.copy(shadow = textShadow),
+                            element.textColor ?: Color.Black,
+                            textLayoutModifier
                         )
                     }
 
                     if (hasBorder) {
-                        Text(
-                            text = element.content,
-                            color = borderColor,
-                            style = baseTextStyle.copy(
+                        renderTextLayer(
+                            baseTextStyle.copy(
                                 drawStyle = Stroke(
                                     width = element.borderThickness,
                                     join = StrokeJoin.Round
                                 )
                             ),
-                            modifier = commonModifier
+                            borderColor,
+                            textLayoutModifier
                         )
                     }
 
                     if (gradientConfig != null) {
-                        Box(
-                            modifier = Modifier
+                        renderTextLayer(
+                            baseTextStyle,
+                            Color.Black,
+                            textLayoutModifier
                                 .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                                 .drawWithContent {
                                     drawRect(
@@ -1161,24 +1280,15 @@ fun CanvasTextItem(
                                     )
                                     drawContent()
                                     drawContext.canvas.nativeCanvas.restore()
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = element.content,
-                                color = Color.Black,
-                                style = baseTextStyle,
-                                modifier = commonModifier
-                            )
-                        }
+                                }
+                        )
                     } else {
-                        Text(
-                            text = element.content,
-                            color = element.textColor ?: Color.Black,
-                            style = baseTextStyle.copy(
-                                shadow = if (needsDedicatedShadow) null else textShadow
+                        renderTextLayer(
+                            baseTextStyle.copy(
+                                shadow = if (textShadow != null && !hasBorder) textShadow else null
                             ),
-                            modifier = commonModifier
+                            element.textColor ?: Color.Black,
+                            textLayoutModifier
                         )
                     }
                 }
@@ -1189,19 +1299,46 @@ fun CanvasTextItem(
             if (!isPivotPlacementActive) {
                 CanvasItemSelectionHandles(
                     baseSize = baseSize,
-                    currentScaleX = currentScaleX,
-                    currentScaleY = currentScaleY,
+                    currentScaleX = if (resizeBoxMode) 1f else currentScaleX,
+                    currentScaleY = if (resizeBoxMode) 1f else currentScaleY,
                     currentRotation = currentRotation,
                     currentWidth = currentWidth,
                     currentHeight = currentHeight,
-                    proportionalEditing = proportionalEditing,
+                    proportionalEditing = isProportionalEditing,
                     pivotX = element.pivotX,
                     pivotY = element.pivotY,
                     onUpdatePosition = { _, w, h, rot -> onUpdatePosition(offset, w, h, rot) },
-                    onScaleChanged = onScaleChanged,
+                    onScaleDragStart = {
+                        if (resizeBoxMode) {
+                            dragStartWidth = currentWidth
+                            dragStartHeight = currentHeight
+                            dragStartOffset = offset
+                        }
+                    },
+                    onScaleChanged = { sx, sy ->
+                        if (resizeBoxMode) {
+                            val newW = (dragStartWidth * sx).coerceAtLeast(10f)
+                            val newH = (dragStartHeight * sy).coerceAtLeast(10f)
+                            val px = element.pivotX
+                            val py = element.pivotY
+                            val newOffset = Offset(
+                                dragStartOffset.x + px * (dragStartWidth - newW),
+                                dragStartOffset.y + py * (dragStartHeight - newH)
+                            )
+                            offset = newOffset
+                            onUpdatePosition(newOffset, newW, newH, currentRotation)
+                        } else {
+                            onScaleChanged(sx, sy)
+                        }
+                    },
                     onDeleteRequested = onDeleteRequested,
                     onColorPickerRequested = onColorPickerRequested,
-                    onProportionalToggle = onProportionalToggle,
+                    onProportionalToggle = {
+                        val newProportional = !isProportionalEditing
+                        isProportionalEditing = newProportional
+                        onTextWrapModeChanged(!newProportional)
+                        onProportionalToggle()
+                    },
                     density = density
                 )
             }
@@ -1214,15 +1351,14 @@ fun CanvasTextItem(
                 onStartPivotPlacement = onStartPivotPlacement,
                 onPlacePivotLocal = onPlacePivotLocal,
                 currentRotation = currentRotation,
-                currentScaleX = currentScaleX,
-                currentScaleY = currentScaleY,
+                currentScaleX = if (resizeBoxMode) 1f else currentScaleX,
+                currentScaleY = if (resizeBoxMode) 1f else currentScaleY,
                 elementWidth = currentWidth,
                 elementHeight = currentHeight
             )
         }
     }
 }
-
 @Composable
 fun CanvasImageItem(
     element: CanvasElement,
@@ -1281,24 +1417,28 @@ fun CanvasImageItem(
                             .pointerInput(Unit) {
                                 detectTapGestures { onSelect() }
                             }
-                            .pointerInput(Unit) {
-                                detectTransformGestures { _, pan, zoom, rot ->
-                                    val angleRad = rotation * (PI / 180.0)
-                                    val localPanX = pan.x * scaleX
-                                    val localPanY = pan.y * scaleY
+                            .then(
+                                if (isSelected) {
+                                    Modifier.pointerInput(Unit) {
+                                        detectTransformGestures { _, pan, zoom, rot ->
+                                            val angleRad = rotation * (PI / 180.0)
+                                            val localPanX = pan.x * scaleX
+                                            val localPanY = pan.y * scaleY
 
-                                    val screenPanX = localPanX * cos(angleRad) - localPanY * sin(angleRad)
-                                    val screenPanY = localPanX * sin(angleRad) + localPanY * cos(angleRad)
-                                    offset += Offset(screenPanX.toFloat(), screenPanY.toFloat())
+                                            val screenPanX = localPanX * cos(angleRad) - localPanY * sin(angleRad)
+                                            val screenPanY = localPanX * sin(angleRad) + localPanY * cos(angleRad)
+                                            offset += Offset(screenPanX.toFloat(), screenPanY.toFloat())
 
-                                    val newScaleX = (scaleX * zoom).coerceIn(0.1f, 25f)
-                                    val newScaleY = (scaleY * zoom).coerceIn(0.1f, 25f)
-                                    rotation += rot
+                                            val newScaleX = (scaleX * zoom).coerceIn(0.1f, 25f)
+                                            val newScaleY = (scaleY * zoom).coerceIn(0.1f, 25f)
+                                            rotation += rot
 
-                                    onScaleChanged(newScaleX, newScaleY)
-                                    onUpdatePosition(offset, element.width, element.height, rotation)
-                                }
-                            }
+                                            onScaleChanged(newScaleX, newScaleY)
+                                            onUpdatePosition(offset, element.width, element.height, rotation)
+                                        }
+                                    }
+                                } else Modifier
+                            )
                     } else Modifier
                 )
                 .alpha(if (isLocked) 0.2f else 1f)

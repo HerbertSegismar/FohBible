@@ -7,7 +7,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -257,18 +259,137 @@ fun CustomPolygonDialog(
                 .background(Color(0xFFF0F0F0), RoundedCornerShape(4.dp))
                 .onSizeChanged { drawingAreaSize = it }
                 .pointerInput(Unit) {
-                    detectTapGestures { tapOffset ->
-                        if (drawingAreaSize.width > 0 && drawingAreaSize.height > 0) {
-                            val normX = tapOffset.x / drawingAreaSize.width
-                            val normY = tapOffset.y / drawingAreaSize.height
-                            val clamped = Offset(
-                                normX.coerceIn(0f, 1f),
-                                normY.coerceIn(0f, 1f)
-                            )
-                            points = points + BezierNode(clamped, clamped, clamped)
-                            selectedIndex = points.lastIndex
-                            activeControl = ActiveControl.ANCHOR
-                            redoStack = emptyList()
+                    awaitEachGesture {
+                        val size = drawingAreaSize
+                        if (size.width <= 0 || size.height <= 0) return@awaitEachGesture
+
+                        val down = awaitFirstDown(requireUnconsumed = false)
+
+                        // Tighter hit radii so you have to actually tap ON a
+                        // control, not just near it.
+                        val anchorRadius = 22.dp.toPx()
+                        val handleRadius = 18.dp.toPx()
+                        // A tap this close to an existing anchor is treated as
+                        // "I meant to grab this point", not "add a new one".
+                        val addBlockRadius = 32.dp.toPx()
+                        var hitIndex = -1
+                        var hitType: ActiveControl? = null
+
+                        if (activeControl == ActiveControl.HANDLE_IN &&
+                            selectedIndex in points.indices
+                        ) {
+                            val p = points[selectedIndex]
+                            val hiPos = Offset(p.handleIn.x * size.width, p.handleIn.y * size.height)
+                            if ((down.position - hiPos).getDistance() <= handleRadius) {
+                                hitIndex = selectedIndex
+                                hitType = ActiveControl.HANDLE_IN
+                            }
+                        } else if (activeControl == ActiveControl.HANDLE_OUT &&
+                            selectedIndex in points.indices
+                        ) {
+                            val p = points[selectedIndex]
+                            val hoPos = Offset(p.handleOut.x * size.width, p.handleOut.y * size.height)
+                            if ((down.position - hoPos).getDistance() <= handleRadius) {
+                                hitIndex = selectedIndex
+                                hitType = ActiveControl.HANDLE_OUT
+                            }
+                        }
+
+                        // Anchors are always grabbable, and they win ties when
+                        // both a handle and an anchor are nearby.
+                        if (hitType == null) {
+                            var bestDist = Float.MAX_VALUE
+                            points.forEachIndexed { i, p ->
+                                val anchorPos = Offset(
+                                    p.anchor.x * size.width,
+                                    p.anchor.y * size.height
+                                )
+                                val d = (down.position - anchorPos).getDistance()
+                                if (d <= anchorRadius && d < bestDist) {
+                                    bestDist = d
+                                    hitIndex = i
+                                    hitType = ActiveControl.ANCHOR
+                                }
+                            }
+                        }
+
+                        val type = hitType
+                        if (hitIndex in points.indices && type != null) {
+                            // --- DRAG MODE ---
+                            selectedIndex = hitIndex
+                            // Keep the user's current mode when they grab an
+                            // anchor while in a Handle mode — that way they
+                            // can nudge the new point then immediately go back
+                            // to editing its handles.
+                            down.consume()
+
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                if (!change.pressed) break
+
+                                val norm = Offset(
+                                    (change.position.x / size.width).coerceIn(0f, 1f),
+                                    (change.position.y / size.height).coerceIn(0f, 1f)
+                                )
+                                val idx = selectedIndex
+                                if (idx in points.indices) {
+                                    val p = points[idx]
+                                    points = points.toMutableList().also { list ->
+                                        when (type) {
+                                            ActiveControl.ANCHOR -> {
+                                                // Move anchor AND its handles
+                                                // together so the curve shape is
+                                                // preserved while dragging.
+                                                val dx = norm.x - p.anchor.x
+                                                val dy = norm.y - p.anchor.y
+                                                list[idx] = p.copy(
+                                                    anchor = norm,
+                                                    handleIn = Offset(
+                                                        (p.handleIn.x + dx).coerceIn(0f, 1f),
+                                                        (p.handleIn.y + dy).coerceIn(0f, 1f)
+                                                    ),
+                                                    handleOut = Offset(
+                                                        (p.handleOut.x + dx).coerceIn(0f, 1f),
+                                                        (p.handleOut.y + dy).coerceIn(0f, 1f)
+                                                    )
+                                                )
+                                            }
+                                            ActiveControl.HANDLE_IN ->
+                                                list[idx] = p.copy(handleIn = norm)
+
+                                            ActiveControl.HANDLE_OUT ->
+                                                list[idx] = p.copy(handleOut = norm)
+                                        }
+                                    }
+                                }
+                                change.consume()
+                            }
+                        } else {
+                            // --- TAP MODE: possibly add a new point ---
+                            val up = waitForUpOrCancellation()
+                            if (up != null) {
+                                // Don't add a new point if the tap is close to
+                                // an existing anchor — that's almost always an
+                                // accidental miss of an intended grab.
+                                val tooClose = points.any { p ->
+                                    val anchorPos = Offset(
+                                        p.anchor.x * size.width,
+                                        p.anchor.y * size.height
+                                    )
+                                    (up.position - anchorPos).getDistance() <= addBlockRadius
+                                }
+                                if (!tooClose) {
+                                    val clamped = Offset(
+                                        (up.position.x / size.width).coerceIn(0f, 1f),
+                                        (up.position.y / size.height).coerceIn(0f, 1f)
+                                    )
+                                    points = points + BezierNode(clamped, clamped, clamped)
+                                    selectedIndex = points.lastIndex
+                                    activeControl = ActiveControl.ANCHOR
+                                    redoStack = emptyList()
+                                }
+                            }
                         }
                     }
                 }

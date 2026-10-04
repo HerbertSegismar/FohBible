@@ -411,6 +411,8 @@ data class CanvasElement(
     val pivotY: Float = 0.5f,
     val fontFamily: String? = null,
     val textAlign: String? = null,
+    val fontSize: Float = 60f,
+    val textWrapMode: Boolean = false,
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
@@ -445,47 +447,52 @@ data class CanvasElement(
         put("pivotY", pivotY.toDouble())
         put("fontFamily", fontFamily ?: JSONObject.NULL)
         put("textAlign", textAlign ?: JSONObject.NULL)
+        put("fontSize", fontSize.toDouble())
+        put("textWrapMode", textWrapMode)
     }
 
     companion object {
         fun fromJson(json: JSONObject): CanvasElement {
             return CanvasElement(
-                id = json.getString("id"),
-                content = json.getString("content"),
+                id = json.optString("id", UUID.randomUUID().toString()),
+                content = json.optString("content", ""),
                 offset = Offset(
-                    json.getDouble("offsetX").toFloat(),
-                    json.getDouble("offsetY").toFloat()
+                    json.optDouble("offsetX", 0.0).toFloat(),
+                    json.optDouble("offsetY", 0.0).toFloat()
                 ),
-                width = json.getDouble("width").toFloat(),
-                height = json.getDouble("height").toFloat(),
-                rotation = json.getDouble("rotation").toFloat(),
-                backgroundColor = Color(json.getInt("backgroundColor")),
+                width = json.optDouble("width", 200.0).toFloat(),
+                height = json.optDouble("height", 200.0).toFloat(),
+                rotation = json.optDouble("rotation", 0.0).toFloat(),
+                backgroundColor = if (json.isNull("backgroundColor")) Color.White
+                else Color(json.optInt("backgroundColor")),
                 position = Offset(
-                    json.getDouble("positionX").toFloat(),
-                    json.getDouble("positionY").toFloat()
+                    json.optDouble("positionX", 0.0).toFloat(),
+                    json.optDouble("positionY", 0.0).toFloat()
                 ),
-                isVisible = json.getBoolean("isVisible"),
-                isLocked = json.getBoolean("isLocked"),
+                isVisible = json.optBoolean("isVisible", true),
+                isLocked = json.optBoolean("isLocked", false),
                 customName = if (json.isNull("customName")) null else json.getString("customName"),
                 groupId = if (json.isNull("groupId")) null else json.getString("groupId"),
-                scaleX = json.getDouble("scaleX").toFloat(),
-                scaleY = json.getDouble("scaleY").toFloat(),
+                scaleX = json.optDouble("scaleX", 1.0).toFloat(),
+                scaleY = json.optDouble("scaleY", 1.0).toFloat(),
                 textColor = if (json.isNull("textColor")) null else Color(json.getInt("textColor")),
                 shadowColor = if (json.isNull("shadowColor")) null else Color(json.getInt("shadowColor")),
-                shadowOffsetX = json.getDouble("shadowOffsetX").toFloat(),
-                shadowOffsetY = json.getDouble("shadowOffsetY").toFloat(),
-                borderThickness = json.getDouble("borderThickness").toFloat(),
+                shadowOffsetX = json.optDouble("shadowOffsetX", 2.0).toFloat(),
+                shadowOffsetY = json.optDouble("shadowOffsetY", 2.0).toFloat(),
+                borderThickness = json.optDouble("borderThickness", 1.0).toFloat(),
                 borderColor = if (json.isNull("borderColor")) null else Color(json.getInt("borderColor")),
                 keyframes = json.optJSONArray("keyframes")?.let { arr ->
                     (0 until arr.length()).map { CanvasKeyframe.fromJson(arr.getJSONObject(it)) }
                 } ?: emptyList(),
-                alpha = json.getDouble("alpha").toFloat(),
-                startTimeMs = json.getLong("startTimeMs"),
-                endTimeMs = json.getLong("endTimeMs"),
-                pivotX = json.getDouble("pivotX").toFloat(),
-                pivotY = json.getDouble("pivotY").toFloat(),
+                alpha = json.optDouble("alpha", 1.0).toFloat(),
+                startTimeMs = json.optLong("startTimeMs", 0L),
+                endTimeMs = json.optLong("endTimeMs", Long.MAX_VALUE),
+                pivotX = json.optDouble("pivotX", 0.5).toFloat(),
+                pivotY = json.optDouble("pivotY", 0.5).toFloat(),
                 fontFamily = if (json.isNull("fontFamily")) null else json.getString("fontFamily"),
-                textAlign = if (json.isNull("textAlign")) null else json.getString("textAlign")
+                textAlign = if (json.isNull("textAlign")) null else json.getString("textAlign"),
+                fontSize = json.optDouble("fontSize", 60.0).toFloat(),
+                textWrapMode = json.optBoolean("textWrapMode", false)
             )
         }
     }

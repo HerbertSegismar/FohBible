@@ -1,8 +1,10 @@
 package com.fountofhopedotorg.fohbible.gfx_animator
 
+import android.content.Context
 import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
+import android.util.Base64
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -66,6 +68,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
+import java.io.File
 import java.util.UUID
 import kotlin.math.PI
 import kotlin.math.atan2
@@ -104,6 +107,45 @@ fun offsetForPivotChange(
     val deltaOffsetY = rotatedDy - dy
 
     return element.offset + Offset(deltaOffsetX, deltaOffsetY)
+}
+
+private fun copyImageToInternalStorage(context: Context, source: Uri): Uri? = try {
+    val dir = File(context.filesDir, "animator_images").apply { mkdirs() }
+    val extension = context.contentResolver.getType(source)
+        ?.substringAfterLast('/', missingDelimiterValue = "")
+        ?.takeIf { it.isNotBlank() }
+        ?: "bin"
+    val dest = File(dir, "img_${System.currentTimeMillis()}_${UUID.randomUUID()}.$extension")
+    context.contentResolver.openInputStream(source)?.use { input ->
+        dest.outputStream().use { output -> input.copyTo(output) }
+    } ?: return null
+    Uri.fromFile(dest)
+} catch (e: Exception) {
+    e.printStackTrace()
+    null
+}
+
+private fun materializeInlineImage(
+    context: Context,
+    obj: JSONObject,
+    element: CanvasElement
+): CanvasElement {
+    if (!element.content.startsWith("Image:")) return element
+    val b64 = obj.optString("imageBase64", "")
+    if (b64.isBlank()) return element
+
+    return try {
+        val bytes = Base64.decode(b64, Base64.DEFAULT)
+        val mime = obj.optString("imageMimeType", "image/png")
+        val ext = mime.substringAfterLast('/', "bin").ifBlank { "bin" }
+        val dir = File(context.filesDir, "animator_images").apply { mkdirs() }
+        val file = File(dir, "img_${System.currentTimeMillis()}_${UUID.randomUUID()}.$ext")
+        file.writeBytes(bytes)
+        element.copy(content = "Image: ${Uri.fromFile(file)}")
+    } catch (e: Exception) {
+        e.printStackTrace()
+        element
+    }
 }
 
 @RequiresApi(Build.VERSION_CODES.Q)
@@ -271,12 +313,17 @@ fun AnimatorScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
-            viewModel.addToAnimatorCanvas(
-                CanvasElement(
-                    content = "Image: $uri",
-                    backgroundColor = Color.Transparent
+            val localUri = copyImageToInternalStorage(context, uri)
+            if (localUri != null) {
+                viewModel.addToAnimatorCanvas(
+                    CanvasElement(
+                        content = "Image: $localUri",
+                        backgroundColor = Color.Transparent
+                    )
                 )
-            )
+            } else {
+                Toast.makeText(context, "Failed to import image", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -361,7 +408,9 @@ fun AnimatorScreen(
                     if (root.has("elements")) {
                         val elementsArray = root.getJSONArray("elements")
                         val loadedElements = (0 until elementsArray.length()).map { i ->
-                            CanvasElement.fromJson(elementsArray.getJSONObject(i))
+                            val obj = elementsArray.getJSONObject(i)
+                            val element = CanvasElement.fromJson(obj)
+                            materializeInlineImage(context, obj, element)
                         }
                         val gradientsObj = root.optJSONObject("gradients")
                         val loadedGradients = mutableMapOf<String, GradientConfig>()
@@ -385,7 +434,9 @@ fun AnimatorScreen(
                 } else if (trimmed.startsWith("[")) {
                     val jsonArray = JSONArray(trimmed)
                     val loadedElements = (0 until jsonArray.length()).map { i ->
-                        CanvasElement.fromJson(jsonArray.getJSONObject(i))
+                        val obj = jsonArray.getJSONObject(i)
+                        val element = CanvasElement.fromJson(obj)
+                        materializeInlineImage(context, obj, element)
                     }
                     viewModel.animatorCanvasElements.clear()
                     viewModel.animatorCanvasElements.addAll(loadedElements)
@@ -793,6 +844,20 @@ fun AnimatorScreen(
                                             rotation = rotation
                                         )
                                     },
+                                    onFontSizeChanged = { id, size ->
+                                        val idx = viewModel.animatorCanvasElements.indexOfFirst { it.id == id }
+                                        if (idx != -1) {
+                                            val el = viewModel.animatorCanvasElements[idx]
+                                            viewModel.animatorCanvasElements[idx] = el.copy(fontSize = size)
+                                        }
+                                    },
+                                    onTextWrapModeChanged = { id, wrap ->
+                                        val idx = viewModel.animatorCanvasElements.indexOfFirst { it.id == id }
+                                        if (idx != -1) {
+                                            val el = viewModel.animatorCanvasElements[idx]
+                                            viewModel.animatorCanvasElements[idx] = el.copy(textWrapMode = wrap)
+                                        }
+                                    },
                                     onColorPickerRequested = {
                                         viewModel.animatorElementToColorEditId = it
                                         viewModel.animatorShowColorPicker = true
@@ -927,6 +992,7 @@ fun AnimatorScreen(
                             viewModel.animatorEditBorderColorForDialog = element.borderColor
                             viewModel.animatorEditFontFamily = element.fontFamily ?: "system"
                             viewModel.animatorEditTextAlign = element.textAlign ?: "Center"
+                            viewModel.animatorEditFontSize = element.fontSize          // ← new
                             viewModel.animatorEditIsTextElement = isText
                             viewModel.animatorEditPivotX = element.pivotX
                             viewModel.animatorEditPivotY = element.pivotY
@@ -1155,6 +1221,20 @@ fun AnimatorScreen(
                                         rotation = rotation
                                     )
                                 },
+                                onFontSizeChanged = { id, size ->
+                                    val idx = viewModel.animatorCanvasElements.indexOfFirst { it.id == id }
+                                    if (idx != -1) {
+                                        val el = viewModel.animatorCanvasElements[idx]
+                                        viewModel.animatorCanvasElements[idx] = el.copy(fontSize = size)
+                                    }
+                                },
+                                onTextWrapModeChanged = { id, wrap ->
+                                    val idx = viewModel.animatorCanvasElements.indexOfFirst { it.id == id }
+                                    if (idx != -1) {
+                                        val el = viewModel.animatorCanvasElements[idx]
+                                        viewModel.animatorCanvasElements[idx] = el.copy(textWrapMode = wrap)
+                                    }
+                                },
                                 onElementScaleChange = { id, sx, sy -> viewModel.updateAnimatorElementScale(id, sx, sy) },
                                 onColorPickerRequested = {
                                     viewModel.animatorElementToColorEditId = it
@@ -1286,6 +1366,7 @@ fun AnimatorScreen(
                             viewModel.animatorEditBorderColorForDialog = element.borderColor
                             viewModel.animatorEditFontFamily = element.fontFamily ?: "system"
                             viewModel.animatorEditTextAlign = element.textAlign ?: "Center"
+                            viewModel.animatorEditFontSize = element.fontSize          // ← new
                             viewModel.animatorEditIsTextElement = isText
                             viewModel.animatorEditPivotX = element.pivotX
                             viewModel.animatorEditPivotY = element.pivotY
@@ -1364,12 +1445,8 @@ fun AnimatorScreen(
                 initialContent = dialog.initialContent,
                 onDismiss = { viewModel.animatorDialogType = null },
                 onSave = { id, newContent ->
-                    val index = viewModel.animatorCanvasElements.indexOfFirst { it.id == id }
-                    if (index != -1) {
-                        val old = viewModel.animatorCanvasElements[index]
-                        val updated = old.copy(content = newContent)
-                        viewModel.removeFromAnimatorCanvas(index)
-                        viewModel.addToAnimatorCanvas(updated)
+                    if (id != null) {
+                        viewModel.updateAnimatorElementContent(id, newContent)
                     }
                     viewModel.animatorDialogType = null
                 }
@@ -1602,6 +1679,7 @@ fun AnimatorScreen(
         initialGradientConfig = existingGradient,
         initialFontFamily = viewModel.animatorEditFontFamily,
         initialTextAlign = viewModel.animatorEditTextAlign,
+        initialFontSize = viewModel.animatorEditFontSize,                 // ← new
         isTextElement = viewModel.animatorEditIsTextElement,
         initialPivotX = viewModel.animatorEditPivotX,
         initialPivotY = viewModel.animatorEditPivotY,
@@ -1612,7 +1690,7 @@ fun AnimatorScreen(
         onApply = { id, x, y, scaleX, scaleY, rot, color,
                     shadowColor, shadowOffsetX, shadowOffsetY,
                     borderThickness, borderColor,
-                    gradientConfig, fontFamily, textAlign,  pivotX, pivotY ->
+                    gradientConfig, fontFamily, textAlign, fontSize, pivotX, pivotY ->  // ← fontSize added
 
             val index = viewModel.animatorCanvasElements.indexOfFirst { it.id == id }
             if (index != -1) {
@@ -1636,6 +1714,7 @@ fun AnimatorScreen(
                     borderColor = borderColor,
                     fontFamily = fontFamily,
                     textAlign = textAlign,
+                    fontSize = if (isText) fontSize.coerceIn(1f, 1000f) else element.fontSize,  // ← new
                     pivotX = pivotX,
                     pivotY = pivotY
                 )

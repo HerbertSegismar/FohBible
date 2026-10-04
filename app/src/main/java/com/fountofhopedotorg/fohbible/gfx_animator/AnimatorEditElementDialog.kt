@@ -33,15 +33,15 @@ fun AnimatorEditElementDialog(
     themeColors: ThemeColors? = null
 ) {
     if (elementId != null || isNew || fetchMode) {
-        var content by remember { mutableStateOf(initialContent) }
-        var referenceInput by remember { mutableStateOf("") }
-        var fetchError by remember { mutableStateOf<String?>(null) }
-        var fetchedVerses by remember { mutableStateOf<List<Verse>>(emptyList()) }
-        var currentReference by remember { mutableStateOf("") }
+        var content by remember(elementId) { mutableStateOf(initialContent) }
+        var referenceInput by remember(elementId) { mutableStateOf("") }
+        var fetchError by remember(elementId) { mutableStateOf<String?>(null) }
+        var fetchedVerses by remember(elementId) { mutableStateOf<List<Verse>>(emptyList()) }
+        var currentReference by remember(elementId) { mutableStateOf("") }
+
         val isEditMode = elementId != null
         val isManualNew = isNew && !fetchMode
         val showEditableField = isEditMode || isManualNew
-
         val canSave = content.isNotBlank()
 
         if (fetchMode && dbHelper != null && viewModel != null && verseProcessor != null && themeColors != null) {
@@ -50,7 +50,7 @@ fun AnimatorEditElementDialog(
                     fetchError = null
                     fetchedVerses = emptyList()
                     currentReference = ""
-                    content = ""
+                    if (!isEditMode) content = ""
                     return@LaunchedEffect
                 }
                 delay(500.milliseconds)
@@ -113,7 +113,7 @@ fun AnimatorEditElementDialog(
                     ReferenceResult.Invalid -> {
                         fetchedVerses = emptyList()
                         currentReference = ""
-                        content = ""
+                        if (!isEditMode) content = ""
                         fetchError = "Invalid reference or verse not found"
                     }
                 }
@@ -126,7 +126,7 @@ fun AnimatorEditElementDialog(
             title = {
                 Text(
                     when {
-                        fetchMode -> "Fetch Verse"
+                        fetchMode && !isEditMode -> "Fetch Verse"
                         isNew -> "Add Text"
                         else -> "Edit Canvas Element"
                     }
@@ -214,25 +214,12 @@ fun AnimatorEditElementDialog(
                 }
             },
             confirmButton = {
-                if (isNew && fetchMode && viewModel != null) {
-                    TextButton(
-                        onClick = {
-                            viewModel.addToAnimatorCanvas(
-                                CanvasElement(content = content, textColor = getRandomColor())
-                            )
-                            onDismiss()
-                        },
-                        enabled = canSave
-                    ) {
-                        Text("Add to Canvas")
-                    }
-                } else {
-                    TextButton(
-                        onClick = { onSave(elementId, content) },
-                        enabled = canSave
-                    ) {
-                        Text(if (isNew) "Add to Canvas" else "Save")
-                    }
+                val trulyNew = elementId == null
+                TextButton(
+                    onClick = { onSave(elementId, content) },
+                    enabled = canSave
+                ) {
+                    Text(if (trulyNew) "Add to Canvas" else "Save")
                 }
             },
             dismissButton = {

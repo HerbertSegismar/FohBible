@@ -116,48 +116,62 @@ fun AnimatorCanvasElementsPanel(
     canvasWidth: Int = 1000,
     canvasHeight: Int = 1000
 ) {
-    val groupedElements = elements.groupBy { it.groupId }
     val expandedGroups = remember { mutableStateMapOf<String, Boolean>() }
-    val baseItems = buildList {
-        for ((groupId, groupElements) in groupedElements) {
-            if (groupId == null) continue
-            val expanded = expandedGroups[groupId] ?: false
-            val actualChildren = groupElements.filter { element -> element.id != groupId }
-            val groupName = groupNames[groupId] ?: "Group of ${actualChildren.size}"
-            add(
-                DisplayItem.GroupHeader(
-                    groupId = groupId,
-                    groupName = groupName,
-                    memberCount = actualChildren.size,
-                    isExpanded = expanded
+    val elementsSnapshot = elements.toList()
+    val expandedSnapshot = expandedGroups.toMap()
+    val groupNamesSnapshot = groupNames.toMap()
+    val indexById = remember(elementsSnapshot) {
+        elementsSnapshot.withIndex().associate { (i, e) -> e.id to i }
+    }
+
+    val baseItems = remember(elementsSnapshot, indexById, groupNamesSnapshot, expandedSnapshot) {
+        val groupedElements = elementsSnapshot.groupBy { it.groupId }
+        buildList {
+            for ((groupId, groupElements) in groupedElements) {
+                if (groupId == null) continue
+                val expanded = expandedSnapshot[groupId] ?: false
+                val actualChildren = groupElements.filter { element -> element.id != groupId }
+                val groupName = groupNamesSnapshot[groupId] ?: "Group of ${actualChildren.size}"
+                add(
+                    DisplayItem.GroupHeader(
+                        groupId = groupId,
+                        groupName = groupName,
+                        memberCount = actualChildren.size,
+                        isExpanded = expanded
+                    )
                 )
-            )
-            actualChildren.forEach { element ->
-                val originalIndex = elements.indexOf(element)
+                actualChildren.forEach { element ->
+                    add(
+                        DisplayItem.ElementItem(
+                            element = element,
+                            originalIndex = indexById[element.id] ?: 0,
+                            isGrouped = true,
+                            groupId = groupId
+                        )
+                    )
+                }
+            }
+            val ungrouped = groupedElements[null] ?: emptyList()
+            ungrouped.forEach { element ->
                 add(
                     DisplayItem.ElementItem(
                         element = element,
-                        originalIndex = originalIndex,
-                        isGrouped = true,
-                        groupId = groupId
+                        originalIndex = indexById[element.id] ?: 0,
+                        isGrouped = false
                     )
                 )
             }
         }
-        val ungrouped = groupedElements[null] ?: emptyList()
-        ungrouped.forEach { element ->
-            val originalIndex = elements.indexOf(element)
-            add(DisplayItem.ElementItem(element, originalIndex, isGrouped = false))
-        }
     }
-    val displayItems = remember(baseItems, expandedGroups, selectedElementIds) {
+
+    val displayItems = remember(baseItems, expandedSnapshot, selectedElementIds) {
         val mutableList = baseItems.toMutableList()
         var insertionIndex = -1
         for (i in mutableList.indices.reversed()) {
             val item = mutableList[i]
             if (item is DisplayItem.ElementItem &&
                 selectedElementIds.contains(item.element.id) &&
-                (item.groupId == null || expandedGroups[item.groupId] == true)
+                (item.groupId == null || expandedSnapshot[item.groupId] == true)
             ) {
                 insertionIndex = i + 1
                 break
@@ -168,6 +182,7 @@ fun AnimatorCanvasElementsPanel(
         }
         mutableList
     }
+
     val groupBounds = remember(displayItems) {
         val bounds = mutableMapOf<String?, Pair<Int, Int>>()
         displayItems.forEachIndexed { index, item ->
@@ -233,11 +248,11 @@ fun AnimatorCanvasElementsPanel(
         when (activeTab) {
             AnimatorTab.KEYFRAME -> {
                 val activeElementId = selectedElementId ?: fineTunerSelectedElementId
-                val activeElement = elements.find { it.id == activeElementId }
+                val activeElement = elementsSnapshot.find { it.id == activeElementId }
 
                 KeyframeAnimationContent(
                     element = activeElement,
-                    allElements = elements,
+                    allElements = elementsSnapshot,
                     onElementSelected = { onSingleSelect(it) },
                     onCancel = { onTabSelected(AnimatorTab.LAYERS) },
                     onSave = { id, keyframes, startMs, endMs ->
@@ -257,7 +272,7 @@ fun AnimatorCanvasElementsPanel(
                     FineTunerPanel(
                         viewModel = viewModel,
                         selectedElementId = fineTunerSelectedElementId,
-                        elements = elements,
+                        elements = elementsSnapshot,
                         themeColors = themeColors
                     )
                 } else {
@@ -274,7 +289,7 @@ fun AnimatorCanvasElementsPanel(
                     Column {
                         if (displayItems.isEmpty()) {
                             Text(
-                                text =  "No elements on canvas yet",
+                                text = "No elements on canvas yet",
                                 modifier = Modifier.padding(8.dp),
                                 style = MaterialTheme.typography.bodySmall
                             )
@@ -303,7 +318,7 @@ fun AnimatorCanvasElementsPanel(
                                             val isGroupSelected =
                                                 selectedElementId == displayItem.groupId ||
                                                         selectedElementIds.contains(displayItem.groupId) ||
-                                                        elements.any {
+                                                        elementsSnapshot.any {
                                                             it.groupId == displayItem.groupId &&
                                                                     (it.id == selectedElementId || selectedElementIds.contains(
                                                                         it.id
@@ -329,11 +344,7 @@ fun AnimatorCanvasElementsPanel(
                                             val originalIndex = displayItem.originalIndex
                                             val isGrouped = displayItem.isGrouped
                                             val groupId = displayItem.groupId
-                                            val isVisible = if (isGrouped && groupId != null) {
-                                                expandedGroups[groupId] ?: false
-                                            } else {
-                                                true
-                                            }
+                                            val isVisible = !(isGrouped && groupId != null) || expandedSnapshot[groupId] ?: false
 
                                             AnimatedVisibility(
                                                 visible = isVisible,
@@ -350,7 +361,7 @@ fun AnimatorCanvasElementsPanel(
                                                     bounds != null && displayIndex < bounds.second
 
                                                 AnimatorCanvasElementItem(
-                                                    elements = elements,
+                                                    elements = elementsSnapshot,
                                                     onReorder = onReorder,
                                                     element = element,
                                                     originalIndex = originalIndex,
@@ -363,9 +374,7 @@ fun AnimatorCanvasElementsPanel(
                                                     isGrouped = isGrouped,
                                                     onRowTap = { onSingleSelect(element) },
                                                     onToggleGroupSelection = {
-                                                        onToggleGroupSelection(
-                                                            element
-                                                        )
+                                                        onToggleGroupSelection(element)
                                                     },
                                                     onDragStart = { offset ->
                                                         draggedDisplayIndex = displayIndex
@@ -394,11 +403,13 @@ fun AnimatorCanvasElementsPanel(
 
                                                                     if (targetDisplayIdx != fromDisplayIndex) {
                                                                         val targetItem =
-                                                                            displayItems[targetDisplayIdx] as DisplayItem.ElementItem
-                                                                        onReorder(
-                                                                            draggedItem.originalIndex,
-                                                                            targetItem.originalIndex
-                                                                        )
+                                                                            displayItems[targetDisplayIdx] as? DisplayItem.ElementItem
+                                                                        if (targetItem != null) {
+                                                                            onReorder(
+                                                                                draggedItem.originalIndex,
+                                                                                targetItem.originalIndex
+                                                                            )
+                                                                        }
                                                                     }
                                                                 }
                                                             }
@@ -425,7 +436,7 @@ fun AnimatorCanvasElementsPanel(
 
                                         is DisplayItem.ActionRow -> {
                                             val hasGroup =
-                                                elements.any { it.groupId != null && it.id in selectedElementIds }
+                                                elementsSnapshot.any { it.groupId != null && it.id in selectedElementIds }
                                             AnimatorGroupActionRow(
                                                 selectedCount = selectedElementIds.size,
                                                 hasGroup = hasGroup,
@@ -438,7 +449,7 @@ fun AnimatorCanvasElementsPanel(
                                                 onUngroup = { onUngroup(selectedElementIds) },
                                                 onRename = {
                                                     val selectedElements =
-                                                        elements.filter { it.id in selectedElementIds }
+                                                        elementsSnapshot.filter { it.id in selectedElementIds }
                                                     val uniqueGroupIds =
                                                         selectedElements.mapNotNull { it.groupId }
                                                             .distinct()
@@ -456,7 +467,7 @@ fun AnimatorCanvasElementsPanel(
                                                 onEditProperties = {
                                                     if (selectedElementIds.size == 1) {
                                                         val element =
-                                                            elements.find { it.id == selectedElementIds.first() }
+                                                            elementsSnapshot.find { it.id == selectedElementIds.first() }
                                                         if (element != null) onEditProperties(element)
                                                     }
                                                 },
@@ -465,7 +476,7 @@ fun AnimatorCanvasElementsPanel(
                                                 onAnimate = {
                                                     if (selectedElementIds.size == 1) {
                                                         val element =
-                                                            elements.first { it.id in selectedElementIds }
+                                                            elementsSnapshot.first { it.id in selectedElementIds }
                                                         onAnimateKeyframes?.invoke(element)
                                                     }
                                                 }
@@ -732,7 +743,7 @@ private fun AnimatorGroupActionRow(
             }
         }
         IconButton(onClick = onClearSelection, modifier = Modifier.size(18.dp)) {
-            Icon(Icons.Filled.Close,"Clear", tint = MaterialTheme.colorScheme.error)
+            Icon(Icons.Filled.Close, "Clear", tint = MaterialTheme.colorScheme.error)
         }
     }
 }
@@ -873,7 +884,7 @@ fun SaveAsMenuWithVideo(
             )
 
             DropdownMenuItem(
-                text = { Text("Template") },
+                text = { Text("TMP") },
                 onClick = {
                     onDismiss()
                     onSaveTemplate()

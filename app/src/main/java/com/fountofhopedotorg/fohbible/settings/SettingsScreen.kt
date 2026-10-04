@@ -32,7 +32,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -73,7 +72,6 @@ const val MIN_FONT_SIZE = 1
 const val MAX_ORB_COUNT = 20
 const val MIN_ORB_COUNT = 1
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen() {
     var showVersionManagementDialog by remember { mutableStateOf(false) }
@@ -660,14 +658,7 @@ fun SettingsScreen() {
                     subtitle = "Force recopy all database files from assets",
                     onClick = { showRefreshConfirmDialog = true }
                 ) {
-                    if (viewModel.isRefreshingDatabases) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh databases")
-                    }
+                    Icon(Icons.Default.Refresh, contentDescription = "Refresh databases")
                 }
                 Text(
                     text = "This will recopy all Bible versions and dictionaries from the app assets. Useful if databases become corrupted.",

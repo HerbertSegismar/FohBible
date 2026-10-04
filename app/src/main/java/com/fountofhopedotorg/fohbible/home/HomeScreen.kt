@@ -98,7 +98,8 @@ fun HomeScreen(
     onLearnHebrewClick: () -> Unit,
     onLearnGreekClick: () -> Unit,
     onOpenDictionaryClick: () -> Unit = {},
-    onOpenAnimatorClick: () -> Unit = {}
+    onOpenAnimatorClick: () -> Unit = {},
+    onOpenGenerationsClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -224,7 +225,8 @@ fun HomeScreen(
                 onLearnHebrewClick = onLearnHebrewClick,
                 onLearnGreekClick = onLearnGreekClick,
                 onOpenDictionaryClick = onOpenDictionaryClick,
-                onOpenVideoEditorClick = onOpenAnimatorClick
+                onOpenAnimatorClick = onOpenAnimatorClick,
+                onOpenGenerationsClick = onOpenGenerationsClick
             )
         }
 

@@ -1,6 +1,10 @@
 package com.fountofhopedotorg.fohbible.gfx_animator
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.util.Base64
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
@@ -24,6 +28,7 @@ import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
@@ -61,6 +66,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
+import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.data.CanvasElement
 import com.fountofhopedotorg.fohbible.data.GradientConfig
@@ -70,7 +76,74 @@ import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.util.UUID
 import androidx.compose.ui.platform.LocalLocale
+import androidx.core.net.toUri
+
+private fun Context.embedImageIntoJson(json: JSONObject, content: String) {
+    if (!content.startsWith("Image:")) return
+    try {
+        val uriString = content.removePrefix("Image:").trim()
+        val uri = uriString.toUri()
+        val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() }
+        if (bytes == null || bytes.isEmpty()) return
+        val mime = contentResolver.getType(uri)
+            ?: uriString.substringAfterLast('.', "").let {
+                if (it.equals("jpg", true) || it.equals("jpeg", true)) "image/jpeg"
+                else if (it.equals("png", true)) "image/png"
+                else if (it.equals("webp", true)) "image/webp"
+                else if (it.equals("gif", true)) "image/gif"
+                else "image/png"
+            }
+        json.put("imageBase64", Base64.encodeToString(bytes, Base64.NO_WRAP))
+        json.put("imageMimeType", mime)
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+}
+
+private fun Context.materializeInlineImage(obj: JSONObject, element: CanvasElement): CanvasElement {
+    if (!element.content.startsWith("Image:")) return element
+    val b64 = obj.optString("imageBase64", "")
+    if (b64.isBlank()) return element
+
+    return try {
+        val bytes = Base64.decode(b64, Base64.DEFAULT)
+        val mime = obj.optString("imageMimeType", "image/png")
+        val ext = mime.substringAfterLast('/', "bin").ifBlank { "bin" }
+        val dir = File(filesDir, "animator_images").apply { mkdirs() }
+        val file = File(dir, "img_${System.currentTimeMillis()}_${UUID.randomUUID()}.$ext")
+        file.writeBytes(bytes)
+        element.copy(content = "Image: ${Uri.fromFile(file)}")
+    } catch (e: Exception) {
+        e.printStackTrace()
+        element
+    }
+}
+
+private fun shareTemplateViaEmail(context: Context, file: File) {
+    try {
+        val uri: Uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file
+        )
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "message/rfc822"
+            putExtra(Intent.EXTRA_SUBJECT, "FOH Bible Template: ${file.nameWithoutExtension}")
+            putExtra(
+                Intent.EXTRA_TEXT,
+                "Here is my animator template \"${file.nameWithoutExtension}\" " +
+                        "(${file.name}). Open it in the FOH Bible Animator app."
+            )
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(intent, "Share template via email"))
+    } catch (e: Exception) {
+        Toast.makeText(context, "Unable to share via email: ${e.message}", Toast.LENGTH_SHORT).show()
+    }
+}
 
 @RequiresApi(Build.VERSION_CODES.Q)
 @Composable
@@ -347,10 +420,10 @@ fun AnimatorToolbar(
                             fontCache = fontCache,
                             canvasWidthPx = canvasWidthPx,
                             canvasHeightPx = canvasHeightPx,
-                            scaleFactor = 1f,               // or a higher resolution multiplier
+                            scaleFactor = 1f,
                             canvasBackgroundColor = viewModel.canvasBackgroundColor,
                             canvasBackgroundBrush = viewModel.canvasBackgroundBrush,
-                            timeMs = 0L                     // or viewModel.currentTimeMs if available
+                            timeMs = 0L
                         )
                     }
                 },
@@ -503,7 +576,21 @@ fun AnimatorToolbar(
                         coroutineScope.launch {
                             try {
                                 val elementsArray = JSONArray()
-                                viewModel.animatorCanvasElements.forEach { elementsArray.put(it.toJson()) }
+                                var imagesEmbedded = 0
+                                var imagesFailed = 0
+
+                                viewModel.animatorCanvasElements.forEach { element ->
+                                    val obj = element.toJson()
+                                    if (element.content.startsWith("Image:")) {
+                                        context.embedImageIntoJson(obj, element.content)
+                                        if (obj.has("imageBase64")) {
+                                            imagesEmbedded++
+                                        } else {
+                                            imagesFailed++
+                                        }
+                                    }
+                                    elementsArray.put(obj)
+                                }
 
                                 val gradientsObj = JSONObject()
                                 viewModel.animatorGradientPairs.forEach { (id, gradient) ->
@@ -515,11 +602,22 @@ fun AnimatorToolbar(
                                     put("canvasHeight", canvasHeightPx)
                                     put("elements", elementsArray)
                                     put("gradients", gradientsObj)
+                                    put("formatVersion", 2)
                                 }
 
                                 val file = File(templatesDir, "$name.foh")
                                 file.writeText(root.toString())
-                                Toast.makeText(context, "Saved ${file.name}", Toast.LENGTH_SHORT).show()
+
+                                val msg = buildString {
+                                    append("Saved ${file.name}")
+                                    if (imagesEmbedded > 0) append(" • $imagesEmbedded image(s) embedded")
+                                    if (imagesFailed > 0) append(" • $imagesFailed image(s) couldn't be embedded")
+                                }
+                                Toast.makeText(
+                                    context,
+                                    msg,
+                                    if (imagesFailed > 0) Toast.LENGTH_LONG else Toast.LENGTH_SHORT
+                                ).show()
                             } catch (e: Exception) {
                                 Toast.makeText(context, "Save failed: ${e.message}", Toast.LENGTH_SHORT).show()
                             }
@@ -545,6 +643,7 @@ fun AnimatorToolbar(
         val files = templateFilesState.value
         var deleteRequested by remember { mutableStateOf<File?>(null) }
         var pendingLoadFile by remember { mutableStateOf<File?>(null) }
+        var shareMenuFile by remember { mutableStateOf<File?>(null) }
 
         if (pendingLoadFile != null) {
             AlertDialog(
@@ -568,8 +667,10 @@ fun AnimatorToolbar(
                                     val root = JSONObject(jsonString)
                                     if (root.has("elements")) {
                                         val elementsArray = root.getJSONArray("elements")
-                                        loadedElements = (0 until elementsArray.length()).map {
-                                            CanvasElement.fromJson(elementsArray.getJSONObject(it))
+                                        loadedElements = (0 until elementsArray.length()).map { i ->
+                                            val obj = elementsArray.getJSONObject(i)
+                                            val element = CanvasElement.fromJson(obj)
+                                            context.materializeInlineImage(obj, element)
                                         }
                                     } else {
                                         loadedElements = emptyList()
@@ -584,8 +685,10 @@ fun AnimatorToolbar(
                                     loadedCanvasHeight = root.optInt("canvasHeight", 0).takeIf { it > 0 }
                                 } else if (jsonString.startsWith("[")) {
                                     val jsonArray = JSONArray(jsonString)
-                                    loadedElements = (0 until jsonArray.length()).map {
-                                        CanvasElement.fromJson(jsonArray.getJSONObject(it))
+                                    loadedElements = (0 until jsonArray.length()).map { i ->
+                                        val obj = jsonArray.getJSONObject(i)
+                                        val element = CanvasElement.fromJson(obj)
+                                        context.materializeInlineImage(obj, element)
                                     }
                                 } else {
                                     Toast.makeText(context, "Unknown file format", Toast.LENGTH_SHORT).show()
@@ -681,16 +784,51 @@ fun AnimatorToolbar(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
-                                IconButton(
-                                    onClick = { shareTemplateFile(context, file) },
-                                    modifier = Modifier.size(32.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Share,
-                                        contentDescription = "Share template",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(18.dp)
-                                    )
+                                Box {
+                                    IconButton(
+                                        onClick = { shareMenuFile = file },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Share,
+                                            contentDescription = "Share template",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                    DropdownMenu(
+                                        expanded = shareMenuFile == file,
+                                        onDismissRequest = { shareMenuFile = null }
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { Text("Share file") },
+                                            leadingIcon = {
+                                                Icon(
+                                                    imageVector = Icons.Default.Share,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            },
+                                            onClick = {
+                                                shareMenuFile = null
+                                                shareTemplateFile(context, file)
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Share via Email") },
+                                            leadingIcon = {
+                                                Icon(
+                                                    imageVector = Icons.Default.Email,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            },
+                                            onClick = {
+                                                shareMenuFile = null
+                                                shareTemplateViaEmail(context, file)
+                                            }
+                                        )
+                                    }
                                 }
                                 IconButton(
                                     onClick = { deleteRequested = file },

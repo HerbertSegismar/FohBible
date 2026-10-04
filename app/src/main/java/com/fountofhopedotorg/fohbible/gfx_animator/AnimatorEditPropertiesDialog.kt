@@ -48,6 +48,7 @@ import com.fountofhopedotorg.fohbible.color_wheel.ColorWheelDialog
 import com.fountofhopedotorg.fohbible.data.GradientConfig
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.utils.availableFontFamilies
+import com.fountofhopedotorg.fohbible.utils.getFontFamily
 import java.util.Locale
 
 private fun parseFloatSafe(value: String): Float {
@@ -75,6 +76,7 @@ fun AnimatorEditPropertiesDialog(
     initialGradientConfig: GradientConfig? = null,
     initialFontFamily: String? = null,
     initialTextAlign: String? = null,
+    initialFontSize: Float = 60f,                 // ← new
     isTextElement: Boolean = false,
     initialPivotX: Float = 0.5f,
     initialPivotY: Float = 0.5f,
@@ -95,6 +97,7 @@ fun AnimatorEditPropertiesDialog(
         gradientConfig: GradientConfig?,
         fontFamily: String?,
         textAlign: String?,
+        fontSize: Float,                          // ← new
         pivotX: Float,
         pivotY: Float
     ) -> Unit
@@ -118,6 +121,10 @@ fun AnimatorEditPropertiesDialog(
 
             var editPivotX by remember(show, initialPivotX) { mutableStateOf(String.format(Locale.US, "%.3f", initialPivotX)) }
             var editPivotY by remember(show, initialPivotY) { mutableStateOf(String.format(Locale.US, "%.3f", initialPivotY)) }
+
+            var editFontSize by remember(show, initialFontSize) {
+                mutableStateOf(String.format(Locale.US, "%.0f", initialFontSize))
+            }                                          // ← new
 
             var editBorderColor by remember(show, initialBorderColor) { mutableStateOf(initialBorderColor) }
             var editColor by remember(show, initialColor) { mutableStateOf(initialColor) }
@@ -343,6 +350,23 @@ fun AnimatorEditPropertiesDialog(
                         if (isTextElement) {
                             Text("Text Style", style = MaterialTheme.typography.titleSmall)
 
+                            // ── Font size ────────────────────────────────────────
+                            OutlinedTextField(
+                                value = editFontSize,
+                                onValueChange = { newValue ->
+                                    val parsed = newValue.toFloatOrNull()
+                                    if (parsed != null && parsed in 1f..1000f) {
+                                        editFontSize = newValue
+                                    } else if (newValue.isEmpty() || newValue == "." || newValue == "-") {
+                                        editFontSize = newValue
+                                    }
+                                },
+                                label = { Text("Font Size (px, 1 – 1000)") },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
                             var fontExpanded by remember { mutableStateOf(false) }
                             ExposedDropdownMenuBox(
                                 expanded = fontExpanded,
@@ -354,6 +378,7 @@ fun AnimatorEditPropertiesDialog(
                                     readOnly = true,
                                     label = { Text("Font") },
                                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = fontExpanded) },
+                                    textStyle = LocalTextStyle.current.copy(fontFamily = getFontFamily(editFontFamily)),
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true),
@@ -365,7 +390,12 @@ fun AnimatorEditPropertiesDialog(
                                 ) {
                                     availableFontFamilies.forEach { font ->
                                         DropdownMenuItem(
-                                            text = { Text(font) },
+                                            text = {
+                                                Text(
+                                                    text = font.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() },
+                                                    fontFamily = getFontFamily(font)
+                                                )
+                                            },
                                             onClick = {
                                                 editFontFamily = font
                                                 fontExpanded = false
@@ -417,6 +447,8 @@ fun AnimatorEditPropertiesDialog(
                         val pivotXValue = parseFloatSafe(editPivotX)
                         val pivotYValue = parseFloatSafe(editPivotY)
 
+                        val fontSizeValue = parseFloatSafe(editFontSize).coerceIn(1f, 1000f)
+
                         onApply(
                             elementId,
                             editX,
@@ -433,6 +465,7 @@ fun AnimatorEditPropertiesDialog(
                             editGradientConfig,
                             editFontFamily,
                             editTextAlign,
+                            fontSizeValue,                // ← new
                             pivotXValue,
                             pivotYValue
                         )

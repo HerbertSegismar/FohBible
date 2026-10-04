@@ -87,6 +87,7 @@ import com.fountofhopedotorg.fohbible.learn.LearnHebrewScreen
 import com.fountofhopedotorg.fohbible.quiz.BibleQuizScreen
 import com.fountofhopedotorg.fohbible.bookmarks.BookmarksScreen
 import com.fountofhopedotorg.fohbible.color_wheel.ColorThemeDialog
+import com.fountofhopedotorg.fohbible.generations.GenerationsScreen
 import com.fountofhopedotorg.fohbible.home.HomeScreen
 import com.fountofhopedotorg.fohbible.notes.NotesScreen
 import com.fountofhopedotorg.fohbible.reader.ReaderAppBar
@@ -532,7 +533,8 @@ fun FohBibleApp(
                             onLearnHebrewClick = {viewModel.navigateTo(Screen.LearnHebrew)},
                             onLearnGreekClick = {viewModel.navigateTo(Screen.LearnGreek)},
                             onOpenDictionaryClick = { viewModel.navigateTo(Screen.Dictionary) },
-                            onOpenAnimatorClick = { viewModel.navigateTo(Screen.Animator) }
+                            onOpenAnimatorClick = { viewModel.navigateTo(Screen.Animator) },
+                            onOpenGenerationsClick = { viewModel.navigateTo(Screen.Generations) }
                         )
                         is Screen.Reader -> {
                             val passage = currentScreen.passage ?: viewModel.primaryPassage
@@ -595,6 +597,7 @@ fun FohBibleApp(
                             templateUriToLoad = animatorTemplateUri,
                             onTemplateConsumed = onAnimatorTemplateConsumed
                         )
+                        Screen.Generations -> GenerationsScreen()
                     }
                     if (viewModel.showNavigationModal) {
                         NavigationModal(
@@ -857,6 +860,7 @@ sealed class Screen {
     object LearnGreek : Screen()
     object Dictionary : Screen()
     object Animator : Screen()
+    object Generations : Screen()
 }
 
 private fun copyUriToInternalStorage(context: Context, sourceUri: Uri): String? {

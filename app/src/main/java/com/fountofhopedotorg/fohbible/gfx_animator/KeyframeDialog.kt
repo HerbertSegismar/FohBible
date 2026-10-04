@@ -3,7 +3,6 @@ package com.fountofhopedotorg.fohbible.gfx_animator
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -52,7 +51,6 @@ val GradientConfigNullableSaver = Saver<GradientConfig?, String>(
 
 const val MAX_VISIBLE_DURATION_MS = 10_000L
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KeyframeAnimationDialog(
     element: CanvasElement?,

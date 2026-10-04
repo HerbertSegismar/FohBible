@@ -89,7 +89,7 @@ suspend fun saveCanvasAsImage(
             canvasBackgroundColor = canvasBackgroundColor,
             canvasBackgroundBrush = canvasBackgroundBrush,
             fontCache = fontCache,
-            textSizePxBase = 60f * context.resources.configuration.fontScale
+            fontScale = context.resources.configuration.fontScale
         )
 
         val fileName = "foh_canvas_${System.currentTimeMillis()}.${format.lowercase()}"
@@ -160,7 +160,7 @@ suspend fun saveCanvasAsPDF(
             canvasBackgroundColor = canvasBackgroundColor,
             canvasBackgroundBrush = canvasBackgroundBrush,
             fontCache = fontCache,
-            textSizePxBase = 60f * context.resources.configuration.fontScale
+            fontScale = context.resources.configuration.fontScale   // ← changed
         )
 
         val pdfDocument = PdfDocument()
@@ -285,7 +285,7 @@ private suspend fun renderCanvasToBitmap(
     val scaleFactor = 1f
     val imageBitmaps = loadImageBitmaps(elements, context, canvasWidthPx.toFloat(), canvasHeightPx.toFloat())
     val fontCache = preloadFonts(elements, context)
-    val textSizePxBase = 60f * context.resources.configuration.fontScale
+    val fontScale = context.resources.configuration.fontScale    // ← changed
 
     val bitmap = createBitmap(canvasWidthPx, canvasHeightPx)
     val canvas = Canvas(bitmap)
@@ -302,7 +302,7 @@ private suspend fun renderCanvasToBitmap(
         canvasBackgroundColor = canvasBackgroundColor,
         canvasBackgroundBrush = canvasBackgroundBrush,
         fontCache = fontCache,
-        textSizePxBase = textSizePxBase
+        fontScale = fontScale
     )
 
     imageBitmaps.values.forEach { it.recycle() }
@@ -321,10 +321,10 @@ private fun buildVectorSvg(
     val gradDefs = StringBuilder()
     val elementGradientIds = mutableMapOf<String, String>()
 
-    for (element in elements) {
-        val gradConfig = gradientConfigs[element.id] ?: continue
-        val gradId = "grad-${element.id}"
-        elementGradientIds[element.id] = gradId
+    for ((id) in elements) {
+        val gradConfig = gradientConfigs[id] ?: continue
+        val gradId = "grad-$id"
+        elementGradientIds[id] = gradId
 
         val startColor = gradConfig.startColor
         val endColor = gradConfig.endColor
@@ -409,7 +409,7 @@ private fun pathToSvgPathData(path: Path): String {
             PathSegment.Type.Move -> sb.append("M ${points[0]} ${points[1]} ")
             PathSegment.Type.Line -> sb.append("L ${points[0]} ${points[1]} ")
             PathSegment.Type.Quadratic -> sb.append("Q ${points[0]} ${points[1]} ${points[2]} ${points[3]} ")
-            PathSegment.Type.Conic -> sb.append("Q ${points[0]} ${points[1]} ${points[2]} ${points[3]} ") // Map to Quad
+            PathSegment.Type.Conic -> sb.append("Q ${points[0]} ${points[1]} ${points[2]} ${points[3]} ")
             PathSegment.Type.Cubic -> sb.append("C ${points[0]} ${points[1]} ${points[2]} ${points[3]} ${points[4]} ${points[5]} ")
             PathSegment.Type.Close -> sb.append("Z ")
             PathSegment.Type.Done -> {}
@@ -822,7 +822,6 @@ fun getSerializedPointsForShape(shapeType: String): String {
             }
         }
         "moon" -> {
-            // Magic number for a standard circle bezier approximation
             val c = 0.27614f
 
             listOf(

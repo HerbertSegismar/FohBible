@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.QuestionAnswer
 import androidx.compose.material.icons.filled.Refresh
@@ -92,7 +93,8 @@ fun UsefulSpaceGrid(
     onLearnHebrewClick: () -> Unit,
     onLearnGreekClick: () -> Unit,
     onOpenDictionaryClick: () -> Unit = {},
-    onOpenVideoEditorClick: () -> Unit = {}
+    onOpenAnimatorClick: () -> Unit = {},
+    onOpenGenerationsClick: () -> Unit = {}
 ) {
     val viewModel: AppViewModel = viewModel()
     val configuration = LocalConfiguration.current
@@ -140,7 +142,7 @@ fun UsefulSpaceGrid(
                 ) {
                     for (col in 0..2) {
                         val index = row * 3 + col
-                        val isOccupied = index < 5
+                        val isOccupied = index < 6
 
                         Box(
                             modifier = Modifier
@@ -165,7 +167,8 @@ fun UsefulSpaceGrid(
                                                 1 -> onLearnHebrewClick()
                                                 2 -> onLearnGreekClick()
                                                 3 -> onOpenDictionaryClick()
-                                                4 -> onOpenVideoEditorClick()
+                                                4 -> onOpenAnimatorClick()
+                                                5 -> onOpenGenerationsClick()
                                             }
                                         }
                                     ) else Modifier
@@ -185,6 +188,7 @@ fun UsefulSpaceGrid(
                                             2 -> Icons.Filled.School
                                             3 -> Icons.Filled.Book
                                             4 -> Icons.Filled.PlayArrow
+                                            5 -> Icons.Filled.People
                                             else -> Icons.Filled.School
                                         },
                                         contentDescription = null,
@@ -201,6 +205,7 @@ fun UsefulSpaceGrid(
                                             2 -> "Learn Greek"
                                             3 -> "Dictionary"
                                             4 -> "GFX Animator"
+                                            5 -> "Generations"
                                             else -> ""
                                         },
                                         style = textStyle,
