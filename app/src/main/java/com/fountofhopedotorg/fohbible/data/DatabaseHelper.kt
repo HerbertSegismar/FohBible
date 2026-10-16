@@ -381,7 +381,7 @@ class DatabaseHelper(private val context: Context, val databaseName: String) {
 
         val targetLength = excludeWord.length
         val isLatin = excludeWord.matches(Regex("^[A-Za-z]+$"))
-        val answerFirstCharIsUpper = if (isLatin) excludeWord.first().isUpperCase() else false
+        val answerFirstCharIsUpper = isLatin && excludeWord.first().isUpperCase()
         val excludedLower = (setOf(excludeWord) + additionalExcludeWords)
             .map { it.lowercase() }
             .toSet()

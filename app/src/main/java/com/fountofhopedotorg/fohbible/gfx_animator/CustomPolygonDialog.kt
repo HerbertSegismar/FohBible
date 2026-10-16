@@ -264,13 +264,8 @@ fun CustomPolygonDialog(
                         if (size.width <= 0 || size.height <= 0) return@awaitEachGesture
 
                         val down = awaitFirstDown(requireUnconsumed = false)
-
-                        // Tighter hit radii so you have to actually tap ON a
-                        // control, not just near it.
                         val anchorRadius = 22.dp.toPx()
                         val handleRadius = 18.dp.toPx()
-                        // A tap this close to an existing anchor is treated as
-                        // "I meant to grab this point", not "add a new one".
                         val addBlockRadius = 32.dp.toPx()
                         var hitIndex = -1
                         var hitType: ActiveControl? = null
@@ -295,8 +290,6 @@ fun CustomPolygonDialog(
                             }
                         }
 
-                        // Anchors are always grabbable, and they win ties when
-                        // both a handle and an anchor are nearby.
                         if (hitType == null) {
                             var bestDist = Float.MAX_VALUE
                             points.forEachIndexed { i, p ->
@@ -315,12 +308,7 @@ fun CustomPolygonDialog(
 
                         val type = hitType
                         if (hitIndex in points.indices && type != null) {
-                            // --- DRAG MODE ---
                             selectedIndex = hitIndex
-                            // Keep the user's current mode when they grab an
-                            // anchor while in a Handle mode — that way they
-                            // can nudge the new point then immediately go back
-                            // to editing its handles.
                             down.consume()
 
                             while (true) {
@@ -338,9 +326,6 @@ fun CustomPolygonDialog(
                                     points = points.toMutableList().also { list ->
                                         when (type) {
                                             ActiveControl.ANCHOR -> {
-                                                // Move anchor AND its handles
-                                                // together so the curve shape is
-                                                // preserved while dragging.
                                                 val dx = norm.x - p.anchor.x
                                                 val dy = norm.y - p.anchor.y
                                                 list[idx] = p.copy(
@@ -366,12 +351,8 @@ fun CustomPolygonDialog(
                                 change.consume()
                             }
                         } else {
-                            // --- TAP MODE: possibly add a new point ---
                             val up = waitForUpOrCancellation()
                             if (up != null) {
-                                // Don't add a new point if the tap is close to
-                                // an existing anchor — that's almost always an
-                                // accidental miss of an intended grab.
                                 val tooClose = points.any { p ->
                                     val anchorPos = Offset(
                                         p.anchor.x * size.width,

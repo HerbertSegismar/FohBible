@@ -71,7 +71,7 @@ object BibleVersionUtils {
         "afr.sqlite3" to "Bible Afrikaans",
         "ampc.sqlite3" to "Amplified Bible Classic Edition",
         "avd.sqlite3" to "New Van Dyck Bible",
-        "bfc.sqlite3" to "La Bible en français Courant",
+        "bfc.sqlite3" to "La Bible en Français Courant",
         "blp.sqlite3" to "Biblia La Palabra",
         "bm96.sqlite3" to "Alkitab Berita Baik",
         "bmdc.sqlite3" to "Alkitab Berita Baik + Deuterokanonika",
@@ -131,7 +131,6 @@ object BibleVersionUtils {
         "asnd.sqlite3" to "Ang Salita ng Dios",
         "hlgn.sqlite3" to "Ang Pulong Sang Dios",
         "bpv.sqlite3" to "An Marahay Na Bareta Biblia",
-        "jf+.sqlite3" to "Chinese Union Version",
     )
 
     private val versionLanguage: Map<String, String> = mapOf(

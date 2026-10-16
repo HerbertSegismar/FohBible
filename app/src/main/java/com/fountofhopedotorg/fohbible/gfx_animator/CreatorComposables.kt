@@ -520,7 +520,6 @@ fun CanvasItemSelectionHandles(
     val handleSizePx = 64f
     val handleRadiusPx = handleSizePx / 2f
 
-    // ── State read inside gesture handlers must go through rememberUpdatedState ──
     val latestProportional by rememberUpdatedState(proportionalEditing)
     val latestScaleX by rememberUpdatedState(currentScaleX)
     val latestScaleY by rememberUpdatedState(currentScaleY)
@@ -529,7 +528,6 @@ fun CanvasItemSelectionHandles(
     val latestPivotY by rememberUpdatedState(pivotY)
     val latestBaseSize by rememberUpdatedState(baseSize)
 
-    // Callbacks must be read fresh from the pointerInput block.
     val latestOnScaleChanged by rememberUpdatedState(onScaleChanged)
     val latestOnScaleDragStart by rememberUpdatedState(onScaleDragStart)
     val latestOnUpdatePosition by rememberUpdatedState(onUpdatePosition)
@@ -582,9 +580,6 @@ fun CanvasItemSelectionHandles(
         )
     }
 
-    // ── Rotate handle ─────────────────────────────────────────────────────────
-    // Kept with pointerInput(baseSize) because rotation doesn't change layout
-    // size; but callbacks now go through rememberUpdatedState.
     Box(
         modifier = Modifier
             .offset { offsetAt(baseSize.width.toFloat(), 0f) }
@@ -634,9 +629,7 @@ fun CanvasItemSelectionHandles(
         )
     }
 
-    // ── Scale handle ──────────────────────────────────────────────────────────
-    // pointerInput(Unit) + baseSize frozen at drag-start so that resizing the
-    // container during the drag does NOT cancel the gesture.
+    // ── Scale handle ───
     Box(
         modifier = Modifier
             .offset { offsetAt(baseSize.width.toFloat(), baseSize.height.toFloat()) }
@@ -646,7 +639,6 @@ fun CanvasItemSelectionHandles(
                 var startScaleY = 1f
                 var fixedRotation = 0f
                 var currentVector = Offset.Zero
-                // Frozen at drag start:
                 var dragBaseW = 0f
                 var dragBaseH = 0f
                 var dragPivotLocalX = 0f
@@ -1076,7 +1068,6 @@ fun CanvasTextItem(
     val graphicsScaleX = if (resizeBoxMode) 1f else currentScaleX
     val graphicsScaleY = if (resizeBoxMode) 1f else currentScaleY
 
-    // ── Bake the proportional scale into font size / box on wrap-mode entry ──
     var wasProportionalEditing by remember(element.id) { mutableStateOf(isProportionalEditing) }
     LaunchedEffect(isProportionalEditing) {
         val enteringWrapMode = wasProportionalEditing && !isProportionalEditing
@@ -1101,7 +1092,7 @@ fun CanvasTextItem(
         offset = newOffset
         onUpdatePosition(newOffset, newW, newH, currentRotation)
         onScaleChanged(1f, 1f)
-        onFontSizeChanged(newFontSize)   // ← persist to ViewModel
+        onFontSizeChanged(newFontSize)
     }
 
     Box(
