@@ -57,7 +57,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.color_wheel.ColorWheelDialog
-import com.fountofhopedotorg.fohbible.app_composables.RotatingPhoneGraphics
+import com.fountofhopedotorg.fohbible.components.RotatingPhoneGraphics
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.modals.FontModal
 import com.fountofhopedotorg.fohbible.modals.OrbsCountModal

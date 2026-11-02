@@ -68,17 +68,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.fountofhopedotorg.fohbible.R
-import com.fountofhopedotorg.fohbible.gfx_animator.getRandomColor
 import com.fountofhopedotorg.fohbible.data.BibleData
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.data.PopularDevotional
 import com.fountofhopedotorg.fohbible.data.QuickAction
 import com.fountofhopedotorg.fohbible.data.Verse
+import com.fountofhopedotorg.fohbible.gfx_animator.getRandomColor
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
 import com.fountofhopedotorg.fohbible.utils.getFontFamily
@@ -89,6 +88,7 @@ import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun UsefulSpaceGrid(
+    isDarkTheme: Boolean,
     onTakeBibleQuizClick: () -> Unit,
     onLearnHebrewClick: () -> Unit,
     onLearnGreekClick: () -> Unit,
@@ -96,7 +96,6 @@ fun UsefulSpaceGrid(
     onOpenAnimatorClick: () -> Unit = {},
     onOpenGenerationsClick: () -> Unit = {}
 ) {
-    val viewModel: AppViewModel = viewModel()
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
@@ -117,7 +116,7 @@ fun UsefulSpaceGrid(
                 .fillMaxWidth()
                 .then(if (isLandscape) Modifier.widthIn(max = 600.dp) else Modifier)
                 .background(
-                    if (viewModel.darkTheme) Color.Black.copy(0.5f) else MaterialTheme.colorScheme.primary.copy(0.1f),
+                    if (isDarkTheme) Color.Black.copy(0.5f) else MaterialTheme.colorScheme.primary.copy(0.1f),
                     shape = RoundedCornerShape(16.dp)
                 )
                 .padding(20.dp)
@@ -366,6 +365,7 @@ fun QuickActionCarouselItem(action: QuickAction) {
         }
     }
 }
+
 @Composable
 fun DailyVerseCard(
     verses: List<Verse>?,

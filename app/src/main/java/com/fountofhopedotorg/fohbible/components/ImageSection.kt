@@ -1,4 +1,4 @@
-package com.fountofhopedotorg.fohbible.app_composables
+package com.fountofhopedotorg.fohbible.components
 
 import android.content.ContentValues
 import android.content.Context

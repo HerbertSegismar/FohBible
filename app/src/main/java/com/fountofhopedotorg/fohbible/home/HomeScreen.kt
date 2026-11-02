@@ -17,21 +17,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.fountofhopedotorg.fohbible.MainActivity
 import com.fountofhopedotorg.fohbible.Screen
-import com.fountofhopedotorg.fohbible.footer.Footer
-import com.fountofhopedotorg.fohbible.app_composables.ImageSection
-import com.fountofhopedotorg.fohbible.app_composables.FountRain
+import com.fountofhopedotorg.fohbible.components.FountRain
+import com.fountofhopedotorg.fohbible.components.ImageSection
 import com.fountofhopedotorg.fohbible.data.BibleData
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.data.PopularDevotional
 import com.fountofhopedotorg.fohbible.data.QuickAction
 import com.fountofhopedotorg.fohbible.data.Verse
+import com.fountofhopedotorg.fohbible.footer.Footer
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 import com.fountofhopedotorg.fohbible.utils.SimpleVerseProcessor
 import kotlinx.coroutines.Dispatchers
@@ -68,15 +65,13 @@ object VerseShareHelper {
     }
 }
 
-private suspend fun loadRandomVerses(context: Context, dbHelper: DatabaseHelper?): List<Verse> =
+/**
+ * Loads random verses using the *shared* DatabaseHelper instance passed in.
+ * The caller is responsible for lifecycle management.
+ */
+private suspend fun loadRandomVerses(dbHelper: DatabaseHelper): List<Verse> =
     withContext(Dispatchers.IO) {
-        val helper = dbHelper ?: DatabaseHelper(
-            context as MainActivity,
-            databaseName = "kj2.sqlite3"
-        )
-        val verses = helper.getRandomVerses()
-        if (dbHelper == null) helper.close()
-        verses
+        dbHelper.getRandomVerses()
     }
 
 class RandomImageSelector(private val viewModel: AppViewModel) {
@@ -91,6 +86,7 @@ class RandomImageSelector(private val viewModel: AppViewModel) {
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
+    viewModel: AppViewModel,
     onNavigateToReader: (PassageSelection) -> Unit,
     onNavigateToScreen: (Screen) -> Unit,
     databaseHelper: DatabaseHelper? = null,
@@ -101,9 +97,7 @@ fun HomeScreen(
     onOpenAnimatorClick: () -> Unit = {},
     onOpenGenerationsClick: () -> Unit = {}
 ) {
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val viewModel = viewModel<AppViewModel>()
 
     val uniqueQuickActionImages = remember {
         val totalImages = viewModel.textures
@@ -113,8 +107,8 @@ fun HomeScreen(
     var dailyVerses by remember { mutableStateOf<List<Verse>?>(null) }
     var popularDevotionals by remember { mutableStateOf<List<PopularDevotional>>(emptyList()) }
 
-    LaunchedEffect(Unit) {
-        dailyVerses = loadRandomVerses(context, databaseHelper)
+    LaunchedEffect(databaseHelper) {
+        databaseHelper?.let { dailyVerses = loadRandomVerses(it) }
     }
 
     LaunchedEffect(Unit) {
@@ -167,39 +161,42 @@ fun HomeScreen(
 
         item { HomeHeader() }
 
-        item {  ImageSection(
-            onNavigateToReader = onNavigateToReader,
-            databaseHelper = DatabaseHelper(context, viewModel.currentDbName)
-        ) }
+        item {
+            databaseHelper?.let { helper ->
+                ImageSection(
+                    onNavigateToReader = onNavigateToReader,
+                    databaseHelper = helper
+                )
+            }
+        }
 
         item {
-            DailyVerseCard(
-                verses = dailyVerses,
-                onRefresh = {
-                    scope.launch {
-                        dailyVerses = loadRandomVerses(context, databaseHelper)
-                    }
-                },
-                onClick = { verses ->
-                    if (verses.isNotEmpty()) {
-                        val first = verses.first()
-                        val bookNumber = BibleData.getBookByName(first.bookName ?: "")?.customNumber ?: 1
-                        onNavigateToReader(
-                            PassageSelection(
-                                bookNumber = bookNumber,
-                                bookName = first.bookName ?: "Genesis",
-                                chapter = first.chapter ?: 1,
-                                verse = first.verseNumber
+            databaseHelper?.let { helper ->
+                DailyVerseCard(
+                    verses = dailyVerses,
+                    onRefresh = {
+                        scope.launch {
+                            dailyVerses = loadRandomVerses(helper)
+                        }
+                    },
+                    onClick = { verses ->
+                        if (verses.isNotEmpty()) {
+                            val first = verses.first()
+                            val bookNumber = BibleData.getBookByName(first.bookName ?: "")?.customNumber ?: 1
+                            onNavigateToReader(
+                                PassageSelection(
+                                    bookNumber = bookNumber,
+                                    bookName = first.bookName ?: "Genesis",
+                                    chapter = first.chapter ?: 1,
+                                    verse = first.verseNumber
+                                )
                             )
-                        )
-                    }
-                },
-                databaseHelper = databaseHelper ?: DatabaseHelper(
-                    context as MainActivity,
-                    "kj2.sqlite3"
-                ),
-                viewModel = viewModel
-            )
+                        }
+                    },
+                    databaseHelper = helper,
+                    viewModel = viewModel
+                )
+            }
         }
 
         item {
@@ -218,9 +215,11 @@ fun HomeScreen(
                 onNavigateToReader = onNavigateToReader
             )
         }
+
         item {
             Spacer(Modifier.height(16.dp))
             UsefulSpaceGrid(
+                isDarkTheme = viewModel.darkTheme,
                 onTakeBibleQuizClick = onTakeBibleQuizClick,
                 onLearnHebrewClick = onLearnHebrewClick,
                 onLearnGreekClick = onLearnGreekClick,

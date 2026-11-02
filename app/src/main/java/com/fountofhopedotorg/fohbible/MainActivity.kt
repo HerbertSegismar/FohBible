@@ -67,10 +67,10 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.fountofhopedotorg.fohbible.app_composables.BibleVersionInfoDialog
-import com.fountofhopedotorg.fohbible.app_composables.HomeAppBar
-import com.fountofhopedotorg.fohbible.app_composables.SaveNullableStringPreference
-import com.fountofhopedotorg.fohbible.app_composables.SavePreference
+import com.fountofhopedotorg.fohbible.components.BibleVersionInfoDialog
+import com.fountofhopedotorg.fohbible.components.HomeAppBar
+import com.fountofhopedotorg.fohbible.components.SaveNullableStringPreference
+import com.fountofhopedotorg.fohbible.components.SavePreference
 import com.fountofhopedotorg.fohbible.color_wheel.ColorWheelDialog
 import com.fountofhopedotorg.fohbible.data.AppThemeState
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
@@ -517,6 +517,7 @@ fun FohBibleApp(
                     when (currentScreen) {
                         Screen.Home -> HomeScreen(
                             modifier = Modifier.fillMaxSize(),
+                            viewModel = viewModel,
                             onNavigateToReader = { passage ->
                                 viewModel.primaryPassage = passage
                                 if (viewModel.scrollSync) viewModel.secondaryPassage = passage

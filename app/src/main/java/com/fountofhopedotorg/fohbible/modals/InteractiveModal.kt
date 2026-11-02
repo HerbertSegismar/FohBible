@@ -78,7 +78,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.text.HtmlCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.color_wheel.ColorWheelDialog
-import com.fountofhopedotorg.fohbible.app_composables.InteractiveLoadingIndicator
+import com.fountofhopedotorg.fohbible.components.InteractiveLoadingIndicator
 import com.fountofhopedotorg.fohbible.reader.createCommentaryHelperIfExists
 import com.fountofhopedotorg.fohbible.data.BibleData
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
@@ -906,9 +906,9 @@ fun InteractiveModal(
                     val processor = remember(verses) { VerseTextProcessor() }
                     val processedVerses = remember(verses, themeColors) {
                         val result = mutableMapOf<Int, ProcessedVerse>()
-                        for (verse in verses) {
+                        for ((verseNumber, text) in verses) {
                             val processed = processor.processVerse(
-                                verseText = verse.text,
+                                verseText = text,
                                 baseFontSize = (viewModel.fontSize * 0.85f).sp,
                                 themeColors = themeColors,
                                 textColor = themeColors.textColor,
@@ -918,7 +918,7 @@ fun InteractiveModal(
                                 isHighlighted = false,
                                 isOldTestament = currentPage.isOldTestament
                             )
-                            result[verse.verseNumber] = processed
+                            result[verseNumber] = processed
                         }
                         result
                     }

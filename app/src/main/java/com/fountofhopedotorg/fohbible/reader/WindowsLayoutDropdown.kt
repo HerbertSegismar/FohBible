@@ -19,11 +19,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import com.fountofhopedotorg.fohbible.app_composables.DropdownMenuItemWithIcon
-import com.fountofhopedotorg.fohbible.app_composables.RotatingPhoneGraphics
+import com.fountofhopedotorg.fohbible.components.DropdownMenuItemWithIcon
+import com.fountofhopedotorg.fohbible.components.RotatingPhoneGraphics
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WindowsLayoutDropdown(
     viewModel: AppViewModel,

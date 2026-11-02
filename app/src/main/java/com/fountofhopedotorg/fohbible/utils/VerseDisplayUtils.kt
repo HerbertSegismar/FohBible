@@ -127,7 +127,7 @@ class VerseTextProcessor {
             .append("|")
             .append(themeColors.hashCode())
             .append("|")
-            .append(wordHighlights?.hashCode() ?: 0)
+            .append(wordHighlights.hashCode())
             .append("|enableTagClick=$enableTagClick")
             .append("|enableStrongsClick=$enableStrongsClick")
             .append("|enableWordClick=$enableWordClick")

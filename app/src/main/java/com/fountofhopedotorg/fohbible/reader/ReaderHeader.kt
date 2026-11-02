@@ -39,7 +39,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fountofhopedotorg.fohbible.Screen
-import com.fountofhopedotorg.fohbible.app_composables.AnimatedIconButton
+import com.fountofhopedotorg.fohbible.components.AnimatedIconButton
 import com.fountofhopedotorg.fohbible.data.PassageSelection
 import com.fountofhopedotorg.fohbible.models.AppViewModel
 

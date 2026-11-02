@@ -86,11 +86,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fountofhopedotorg.fohbible.Screen
 import com.fountofhopedotorg.fohbible.allScreens
-import com.fountofhopedotorg.fohbible.app_composables.AnimatedIconButton
-import com.fountofhopedotorg.fohbible.app_composables.DropdownMenuItemWithIcon
-import com.fountofhopedotorg.fohbible.app_composables.FontSizeControls
-import com.fountofhopedotorg.fohbible.app_composables.LoadingIndicator
-import com.fountofhopedotorg.fohbible.app_composables.OverlayOpacitySlider
+import com.fountofhopedotorg.fohbible.components.AnimatedIconButton
+import com.fountofhopedotorg.fohbible.components.DropdownMenuItemWithIcon
+import com.fountofhopedotorg.fohbible.components.FontSizeControls
+import com.fountofhopedotorg.fohbible.components.LoadingIndicator
+import com.fountofhopedotorg.fohbible.components.OverlayOpacitySlider
 import com.fountofhopedotorg.fohbible.color_wheel.ColorPickerRow
 import com.fountofhopedotorg.fohbible.data.DatabaseHelper
 import com.fountofhopedotorg.fohbible.data.PassageSelection

@@ -26,15 +26,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -84,9 +80,15 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import com.fountofhopedotorg.fohbible.data.BookUi
+import kotlin.time.Duration.Companion.milliseconds
 
 fun BibleBook.toBookUi(): BookUi {
     return BookUi(
@@ -106,6 +108,7 @@ fun getScopeForBookNumber(bookNumber: Int): String? {
     }
     return null
 }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NavigationModal(
@@ -233,13 +236,13 @@ fun NavigationModal(
     }
     LaunchedEffect(showChapterFlash) {
         if (showChapterFlash) {
-            delay(500)
+            delay(500.milliseconds)
             showChapterFlash = false
         }
     }
     LaunchedEffect(showVerseFlash) {
         if (showVerseFlash) {
-            delay(500)
+            delay(500.milliseconds)
             showVerseFlash = false
         }
     }
@@ -273,7 +276,7 @@ fun NavigationModal(
                 verseInput = pendingVerseDigit!!
                 if (verseNum * 10 > maxVerse) {
                     coroutineScope.launch {
-                        delay(300)
+                        delay(300.milliseconds)
                         performConfirm()
                     }
                 }
@@ -310,7 +313,7 @@ fun NavigationModal(
                 verseInput = newValue
                 if (num * 10 > maxVerse) {
                     coroutineScope.launch {
-                        delay(300)
+                        delay(300.milliseconds)
                         performConfirm()
                     }
                 }
@@ -318,7 +321,7 @@ fun NavigationModal(
                 val currentNum = verseInput.toIntOrNull()
                 if (verseInput.isNotEmpty() && currentNum != null && currentNum in 1..maxVerse) {
                     coroutineScope.launch {
-                        delay(300)
+                        delay(300.milliseconds)
                         performConfirm()
                     }
                 } else {
@@ -378,14 +381,14 @@ fun NavigationModal(
                                     fontSize = 18.sp,
                                 )
                             },
-                            navigationIcon = {
+                            actions = {
                                 IconButton(
                                     onClick = onDismissRequest,
                                     modifier = Modifier.size(45.dp)
                                 ) {
                                     Icon(
-                                        Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = "Back",
+                                        Icons.Filled.Close,
+                                        contentDescription = "Close",
                                         modifier = Modifier.size(22.dp)
                                     )
                                 }
@@ -393,12 +396,12 @@ fun NavigationModal(
                             colors = TopAppBarDefaults.topAppBarColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
                                 titleContentColor = Color.White,
-                                navigationIconContentColor = Color.White,
+                                actionIconContentColor = Color.White,
                             ),
                             modifier = Modifier.height(40.dp)
                         )
                     }
-                }
+                },
             ) { paddingValues ->
                 Box(
                     modifier = Modifier
