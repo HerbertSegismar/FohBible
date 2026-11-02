@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
-import com.fountofhopedotorg.fohbible.app_composables.FloatingOrbsBackground
+import com.fountofhopedotorg.fohbible.components.FloatingOrbsBackground
 
 @Composable
 fun BgModal(
